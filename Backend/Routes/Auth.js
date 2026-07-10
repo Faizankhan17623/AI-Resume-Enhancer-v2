@@ -1,0 +1,25 @@
+const express = require('express')
+const route = express.Router()
+const {Calling} = require('../controllers/AI')
+const {Auth} = require('../Middlewares/Auth.js')
+const { authLimiter, otpLimiter, aiLimiter } = require('../Middlewares/RateLimit.js')
+const {
+    createUser,
+    loginUser,
+    SendOtp,
+    getProfile
+} = require('../controllers/user.js')
+// we are going to start the routing from here sir
+
+// aiLimiter because every call here burns a Groq request + a credit sir
+route.post('/response',aiLimiter,Auth,Calling)
+
+// authLimiter stops brute-force sir, otpLimiter stops email spam
+route.post('/Createuser',authLimiter,createUser)
+route.post('/Login',authLimiter,loginUser)
+route.post('/Send-otp',otpLimiter,SendOtp)
+
+// the account page reads everything from here sir
+route.get('/profile',Auth,getProfile)
+
+module.exports = route

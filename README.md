@@ -1,0 +1,114 @@
+# AI Resume Enhancer
+
+A full-stack web application that helps users improve their resumes using AI-powered feedback, with user authentication, a chat-based review flow, payments, and an admin dashboard.
+
+**Live Demo:** [https://ai-resume-enhancer-xi.vercel.app/](https://ai-resume-enhancer-xi.vercel.app/)
+
+## Features
+
+- **Authentication** — signup/login with OTP email verification and JWT-based sessions
+- **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq
+- **Payments** — subscription/checkout support via Razorpay and Stripe
+- **Reviews** — users can leave reviews after using the platform
+- **Admin Dashboard** — manage users, payments, announcements, and view audit logs
+- **Cloud File Storage** — resume uploads stored via Cloudinary
+
+## Tech Stack
+
+**Frontend**
+- React 19 + Vite
+- Redux Toolkit for state management
+- React Router for routing
+- Tailwind CSS for styling
+- Axios for API calls
+
+**Backend**
+- Node.js + Express
+- MongoDB with Mongoose
+- JWT authentication, bcrypt password hashing
+- Groq SDK for AI-generated resume feedback
+- Cloudinary for file storage
+- Razorpay & Stripe for payments
+- Helmet, CORS, and rate limiting for security
+
+## Project Structure
+
+```
+AiResumeEnhancer/
+├── Backend/              # Express API server
+│   ├── controllers/      # Route handlers
+│   ├── Routes/           # API route definitions
+│   ├── Models/           # Mongoose schemas
+│   ├── Middlewares/      # Auth, rate limiting, etc.
+│   ├── Installation/     # DB & Cloudinary setup
+│   ├── docs/              # OpenAPI/Swagger spec
+│   ├── tests/             # Jest + Supertest integration tests
+│   └── index.js          # Server entry point
+└── ResumeEnhancer/       # React frontend
+    └── src/
+        ├── Components/   # UI components (Home, Login, Dashboard, Admin, etc.)
+        ├── Services/     # API call definitions
+        ├── Slices/       # Redux slices
+        └── reducer/      # Redux store setup
+```
+
+## API Docs
+
+Interactive Swagger UI documentation for all ~30 API endpoints (auth, AI review, chat, payments, admin) is served at:
+
+```
+http://localhost:4000/api-docs
+```
+(available once the backend is running)
+
+## Testing
+
+The backend has an integration test suite (Jest + Supertest + an in-memory MongoDB instance — no mocked DB) covering authentication and payment verification flows:
+
+```bash
+cd Backend
+npm test
+```
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v18+)
+- MongoDB instance (local or Atlas)
+- API keys for Cloudinary, Groq, Razorpay/Stripe, and an SMTP provider (for OTP emails)
+
+### Setup
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/Faizankhan17623/AI-Resume-Enhancer.git
+   cd AI-Resume-Enhancer
+   ```
+
+2. Install dependencies
+   ```bash
+   cd Backend && npm install
+   cd ../ResumeEnhancer && npm install
+   ```
+
+3. Create a `.env` file inside `Backend/` with the required environment variables (Mongo URI, JWT secret, Cloudinary keys, Groq API key, payment gateway keys, SMTP credentials, `FRONTEND_URL`, etc.)
+
+4. Run the app
+
+   From the `ResumeEnhancer` folder, a single command starts **both** the backend and the frontend together:
+   ```bash
+   npm run dev
+   ```
+
+   This uses `concurrently` to run the Express server (via `nodemon`) and the Vite dev server side by side — no need to open a separate terminal for the backend.
+
+   To run only the frontend:
+   ```bash
+   npm run client
+   ```
+
+5. Open the app at `http://localhost:5173`
+
+## License
+
+This project is for personal/portfolio use.

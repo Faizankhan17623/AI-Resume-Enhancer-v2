@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+/* class-based dark mode sir — toggled by adding/removing "dark" on <html>, see ThemeContext */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-inter: 'Inter', sans-serif;
+    --font-mono: 'Roboto Mono', 'monospace';
+
+    /* Color */
+    --color-transparent: '#ffffff00';
+
+    /* Color Rich Black */
+    --color-richblack-5: #F1F2FF;
+    --color-richblack-25: #DBDDEA;
+    --color-richblack-50: #C5C7D4;
+    --color-richblack-100: #AFB2BF;
+    --color-richblack-200: #999DAA;
+    --color-richblack-300: #838894;
+    --color-richblack-400: #6E727F;
+    --color-richblack-500: #585D69;
+    --color-richblack-600: #424854;
+    --color-richblack-700: #2C333F;
+    --color-richblack-800: #161D29;
+    --color-richblack-900: #000814;
+
+    /* Color Yellow */
+    --color-yellow-5: #FFF970;
+    --color-yellow-25: #FFE83D;
+    --color-yellow-50: #FFD60A;
+    --color-yellow-100: #E7C009;
+    --color-yellow-200: #CFAB08;
+    --color-yellow-300: #B69507;
+    --color-yellow-400: #9E8006;
+    --color-yellow-500: #866A04;
+    --color-yellow-600: #6E5503;
+    --color-yellow-700: #553F02;
+    --color-yellow-800: #3D2A01;
+    --color-yellow-900: #251400;
+
+    /* Color Blue */
+    --color-blue-5: #EAF5FF;
+    --color-blue-25: #B4DAEC;
+    --color-blue-50: #7EC0D9;
+    --color-blue-100: #47A5C5;
+    --color-blue-200: #118AB2;
+    --color-blue-300: #0F7A9D;
+    --color-blue-400: #0C6A87;
+    --color-blue-500: #0A5A72;
+    --color-blue-600: #074B5D;
+    --color-blue-700: #053B48;
+    --color-blue-800: #022B32;
+    --color-blue-900: #001B1D;
+
+    /* Color Carib Green — the score-good color sir */
+    --color-caribgreen-5: #C1FFFD;
+    --color-caribgreen-25: #83F1DE;
+    --color-caribgreen-50: #44D7B6;
+    --color-caribgreen-100: #06D6A0;
+    --color-caribgreen-200: #05BF8E;
+    --color-caribgreen-300: #05A77B;
+    --color-caribgreen-400: #049069;
+    --color-caribgreen-500: #037957;
+    --color-caribgreen-600: #026144;
+    --color-caribgreen-700: #014A32;
+    --color-caribgreen-800: #01331F;
+    --color-caribgreen-900: #001B0D;
+
+    /* Color Pink / Red — the score-bad color sir */
+    --color-pink-5: #FFF1F1;
+    --color-pink-25: #FBC7D1;
+    --color-pink-50: #F79CB0;
+    --color-pink-100: #F37290;
+    --color-pink-200: #EF476F;
+    --color-pink-300: #D43D63;
+    --color-pink-400: #BA3356;
+    --color-pink-500: #9F294A;
+    --color-pink-600: #841E3E;
+    --color-pink-700: #691432;
+    --color-pink-800: #4F0A25;
+    --color-pink-900: #340019;
+}
+
+/* light mode sir — the richblack scale is inverted (5 <-> 900) so surfaces/text flip,
+   accents (yellow/blue/caribgreen/pink) stay put since they're used as accents either way.
+   Defaults to :root so a no-JS/first-paint flash favors light; ThemeContext adds .dark immediately after. */
+:root {
+    --color-richblack-5: #161D29;
+    --color-richblack-25: #2C333F;
+    --color-richblack-50: #424854;
+    --color-richblack-100: #585D69;
+    --color-richblack-200: #6E727F;
+    --color-richblack-300: #838894;
+    --color-richblack-400: #999DAA;
+    --color-richblack-500: #AFB2BF;
+    --color-richblack-600: #C5C7D4;
+    --color-richblack-700: #DBDDEA;
+    --color-richblack-800: #F1F2FF;
+    --color-richblack-900: #FFFFFF;
+}
+
+.dark {
+    --color-richblack-5: #F1F2FF;
+    --color-richblack-25: #DBDDEA;
+    --color-richblack-50: #C5C7D4;
+    --color-richblack-100: #AFB2BF;
+    --color-richblack-200: #999DAA;
+    --color-richblack-300: #838894;
+    --color-richblack-400: #6E727F;
+    --color-richblack-500: #585D69;
+    --color-richblack-600: #424854;
+    --color-richblack-700: #2C333F;
+    --color-richblack-800: #161D29;
+    --color-richblack-900: #000814;
+}
+
+body {
+    font-family: var(--font-inter);
+    background-color: var(--color-richblack-900);
+    transition: background-color 0.2s ease;
+}
+
+/* the fade-in used on page containers sir */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out both;
+}
+
+/* the dev-banner marquee sir — slides one full copy of the strip, then loops seamlessly */
+@keyframes marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-marquee {
+    animation: marquee 28s linear infinite;
+}
+
+/* thin styled scrollbar for the chat thread sir */
+.thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-richblack-800);
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-richblack-600);
+    border-radius: 9999px;
+}
