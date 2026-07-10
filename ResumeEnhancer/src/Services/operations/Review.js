@@ -1,13 +1,13 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import {
-    setReview, setReviewId, setAllReviews, setProgress, setLoading,
+    setReview, setReviewId, setShareState, setAllReviews, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
 
 const { createreview } = AtsReview
-const { allreviews, progress, singlereview, downloadpdf } = ReviewHistory
+const { allreviews, progress, singlereview, downloadpdf, sharereview, publicreview } = ReviewHistory
 const { checkgrammar } = GrammarCheckApi
 const { streak } = StreakApi
 const { leaderboard } = LeaderboardApi
@@ -127,9 +127,60 @@ export function GetSingleReview(reviewId, token) {
 
             dispatch(setReview(response.data.review.review))
             dispatch(setReviewId(response.data.review._id))
+            dispatch(setShareState({
+                isPublic: response.data.review.isPublic,
+                shareId: response.data.review.shareId
+            }))
         } catch (error) {
             console.error("Error fetching the review", error)
             toast.error(error?.response?.data?.message || "Could not load the review")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// flips the review's public share link on/off sir
+export function ToggleShare(reviewId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("POST", `${sharereview}/${reviewId}/share`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setShareState({
+                isPublic: response.data.isPublic,
+                shareId: response.data.shareId
+            }))
+
+            toast.success(response.data.isPublic ? "Share link created" : "Share link turned off")
+        } catch (error) {
+            console.error("Error toggling the share link", error)
+            toast.error(error?.response?.data?.message || "Could not update the share link")
+        }
+    }
+}
+
+// public report card sir — no auth, no token needed
+export function GetPublicReview(shareId) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", `${publicreview}/${shareId}`)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data.report
+        } catch (error) {
+            console.error("Error fetching the shared report", error)
+            toast.error(error?.response?.data?.message || "This shared report was not found")
+            return null
         } finally {
             dispatch(setLoading(false))
         }

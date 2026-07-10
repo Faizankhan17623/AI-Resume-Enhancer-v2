@@ -14,7 +14,8 @@ export const ReviewHistory = {
     progress: BASE_URL + "/reviews/progress",
     singlereview: BASE_URL + "/reviews",          // + /:reviewId
     downloadpdf: BASE_URL + "/reviews",           // + /:reviewId/pdf
-    sharereview: BASE_URL + "/reviews"            // + /:reviewId/share
+    sharereview: BASE_URL + "/reviews",           // + /:reviewId/share
+    publicreview: BASE_URL + "/public/reviews"    // + /:shareId — no auth
 }
 
 export const StreakApi = {
