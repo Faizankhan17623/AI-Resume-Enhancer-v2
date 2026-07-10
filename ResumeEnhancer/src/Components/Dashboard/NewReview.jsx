@@ -100,8 +100,8 @@ const NewReview = () => {
                   onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
                   onDragLeave={() => setDragging(false)}
                   onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center gap-2.5 rounded-xl border-1.5 border-dashed p-10 cursor-pointer transition-all duration-200 ${
-                    dragging ? 'border-yellow-50 bg-richblack-800' : 'border-richblack-600 bg-richblack-800/50 hover:border-richblack-400'
+                  className={`flex flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed p-10 cursor-pointer transition-all duration-200 ${
+                    dragging ? 'border-yellow-50 bg-yellow-900/10' : 'border-richblack-600 bg-yellow-900/5 hover:border-richblack-400'
                   }`}
                 >
                   <FaCloudUploadAlt className="text-3xl text-yellow-50" />
@@ -118,7 +118,7 @@ const NewReview = () => {
 
               {/* Free instant grammar/spell pre-check sir — no AI credit spent */}
               {pdfFile && (grammarChecking || grammar) && (
-                <div className="mt-4 rounded-xl bg-richblack-800 border border-richblack-700 p-4">
+                <div className="mt-4 rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
                   {grammarChecking ? (
                     <div className="flex items-center gap-2 text-sm text-richblack-300">
                       <FaSpellCheck className="animate-pulse" />

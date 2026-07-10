@@ -6,7 +6,7 @@ import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import { LoginUser } from '../../Services/operations/Auth'
 
-const inputClass = "w-full rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const labelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
 const errorClass = "mt-1 text-xs text-pink-200"
 
@@ -31,8 +31,8 @@ const User = () => {
 
         {/* Welcome Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-richblack-5 tracking-tight">
-            WELCOME <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">BACK</span>
+          <h1 className="font-display text-4xl text-richblack-5 tracking-tight">
+            Welcome <span className="italic text-warm-200">back</span>
           </h1>
           <p className="mt-2 text-richblack-200 text-base">
             Your score is waiting &mdash; <span className="text-blue-50 font-medium">let's push it higher</span>

@@ -39,19 +39,19 @@ const Payments = () => {
         {/* Money stat cards sir */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <p className="text-xs text-richblack-300 mb-2">MRR (last 30 days)</p>
-              <p className="text-2xl font-extrabold text-caribgreen-100 font-mono">₹{stats.mrrRupees}</p>
+              <p className="font-display text-2xl text-caribgreen-100">₹{stats.mrrRupees}</p>
             </div>
-            <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <p className="text-xs text-richblack-300 mb-2">Paid Orders</p>
-              <p className="text-2xl font-extrabold text-richblack-5 font-mono">{stats.byStatus?.paid?.count || 0}</p>
+              <p className="font-display text-2xl text-richblack-5">{stats.byStatus?.paid?.count || 0}</p>
             </div>
-            <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <p className="text-xs text-richblack-300 mb-2">Failure Rate</p>
-              <p className={`text-2xl font-extrabold font-mono ${stats.failureRate > 10 ? 'text-pink-200' : 'text-richblack-5'}`}>{stats.failureRate}%</p>
+              <p className={`font-display text-2xl ${stats.failureRate > 10 ? 'text-pink-200' : 'text-richblack-5'}`}>{stats.failureRate}%</p>
             </div>
-            <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <p className="text-xs text-richblack-300 mb-2">Revenue by Plan</p>
               <div className="space-y-1">
                 {(stats.byPlan || []).map((p) => (
@@ -82,7 +82,7 @@ const Payments = () => {
         {loading ? (
           <Loading text="Loading the payments..." />
         ) : (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 overflow-x-auto">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-x-auto">
             <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">

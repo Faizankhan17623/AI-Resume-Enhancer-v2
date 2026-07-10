@@ -38,9 +38,9 @@ const NewChatModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-richblack-800 border border-richblack-600 p-7 animate-fadeIn">
+      <div className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-7 animate-fadeIn">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-richblack-5 font-bold text-lg">New Chat</h2>
+          <h2 className="font-display text-lg text-richblack-5">New Chat</h2>
           <button onClick={onClose} className="text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer">
             <FaTimes />
           </button>
@@ -58,7 +58,7 @@ const NewChatModal = ({ onClose }) => {
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-richblack-600 p-6 cursor-pointer hover:border-richblack-400 transition-colors duration-200">
+            <label className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-richblack-600 bg-yellow-900/5 p-6 cursor-pointer hover:border-richblack-400 transition-colors duration-200">
               <FaFilePdf className="text-2xl text-yellow-50" />
               <p className="text-xs text-richblack-200">Click to upload your resume PDF</p>
               <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
@@ -70,7 +70,7 @@ const NewChatModal = ({ onClose }) => {
             onChange={(e) => setJd(e.target.value)}
             placeholder="Paste the job description here..."
             rows={5}
-            className="w-full rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
+            className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
           />
 
           <IconBtn type="submit" text={loading ? "Creating..." : "Start the chat"} disabled={loading} customClasses="w-full justify-center" />
@@ -134,11 +134,11 @@ const Chat = () => {
       text: 'All its messages will be gone forever',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#EF476F',
-      cancelButtonColor: '#2C333F',
+      confirmButtonColor: '#C1443C',
+      cancelButtonColor: '#3A3428',
       confirmButtonText: 'Yes, delete it',
-      background: '#161D29',
-      color: '#F1F2FF'
+      background: '#1F1C16',
+      color: '#F3EFE6'
     }).then((result) => {
       if (result.isConfirmed) {
         dispatch(DeleteChat(id, token, navigate))
@@ -192,10 +192,10 @@ const Chat = () => {
           {!chatId ? (
             // no chat open — the empty landing sir
             <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
-              <div className="w-16 h-16 rounded-full bg-richblack-800 border border-richblack-700 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-yellow-900/15 flex items-center justify-center">
                 <FaComments className="text-2xl text-yellow-50" />
               </div>
-              <h2 className="text-xl font-bold text-richblack-5">Your AI Resume Coach</h2>
+              <h2 className="font-display text-xl text-richblack-5">Your AI Resume Coach</h2>
               <p className="text-sm text-richblack-300 text-center max-w-sm">
                 Pick a chat from the left, or start a new one with your resume and a job description.
               </p>
@@ -242,7 +242,7 @@ const Chat = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Ask your resume coach..."
-                  className="flex-1 rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                  className="flex-1 rounded-full bg-richblack-800 border border-richblack-600 px-5 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
                 />
                 <IconBtn type="submit" text="" disabled={replying || !message.trim()} customClasses="px-4">
                   <FaPaperPlane />

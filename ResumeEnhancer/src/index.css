@@ -7,39 +7,43 @@
 @theme {
     --font-inter: 'Inter', sans-serif;
     --font-mono: 'Roboto Mono', 'monospace';
+    /* warm-editorial display face sir — headings only, body/UI stays on Inter.
+       System serif stack, no webfont download needed. */
+    --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
 
     /* Color */
     --color-transparent: '#ffffff00';
 
-    /* Color Rich Black */
-    --color-richblack-5: #F1F2FF;
-    --color-richblack-25: #DBDDEA;
-    --color-richblack-50: #C5C7D4;
-    --color-richblack-100: #AFB2BF;
-    --color-richblack-200: #999DAA;
-    --color-richblack-300: #838894;
-    --color-richblack-400: #6E727F;
-    --color-richblack-500: #585D69;
-    --color-richblack-600: #424854;
-    --color-richblack-700: #2C333F;
-    --color-richblack-800: #161D29;
-    --color-richblack-900: #000814;
+    /* Color Rich Black — repurposed as the warm "paper" scale sir (dark mode: warm charcoal-brown,
+       same 12-step structure/usage as before, only the hues changed) */
+    --color-richblack-5: #F3EFE6;
+    --color-richblack-25: #E3DCCC;
+    --color-richblack-50: #C9BFA9;
+    --color-richblack-100: #B9B0A0;
+    --color-richblack-200: #A79D8A;
+    --color-richblack-300: #8A8271;
+    --color-richblack-400: #706A5C;
+    --color-richblack-500: #564E42;
+    --color-richblack-600: #3A3428;
+    --color-richblack-700: #26221A;
+    --color-richblack-800: #1F1C16;
+    --color-richblack-900: #17140F;
 
-    /* Color Yellow */
-    --color-yellow-5: #FFF970;
-    --color-yellow-25: #FFE83D;
-    --color-yellow-50: #FFD60A;
-    --color-yellow-100: #E7C009;
-    --color-yellow-200: #CFAB08;
-    --color-yellow-300: #B69507;
-    --color-yellow-400: #9E8006;
-    --color-yellow-500: #866A04;
-    --color-yellow-600: #6E5503;
-    --color-yellow-700: #553F02;
-    --color-yellow-800: #3D2A01;
-    --color-yellow-900: #251400;
+    /* Color Yellow — repurposed as the teal accent scale sir (was the brand accent, still is) */
+    --color-yellow-5: #C9F0E4;
+    --color-yellow-25: #8FDCC4;
+    --color-yellow-50: #6FBFA8;
+    --color-yellow-100: #4E9C87;
+    --color-yellow-200: #2F6F5E;
+    --color-yellow-300: #285F51;
+    --color-yellow-400: #214F43;
+    --color-yellow-500: #1A3F36;
+    --color-yellow-600: #1F4C40;
+    --color-yellow-700: #163329;
+    --color-yellow-800: #0F241D;
+    --color-yellow-900: #091712;
 
-    /* Color Blue */
+    /* Color Blue — kept as the info accent sir, unchanged hue family */
     --color-blue-5: #EAF5FF;
     --color-blue-25: #B4DAEC;
     --color-blue-50: #7EC0D9;
@@ -53,66 +57,82 @@
     --color-blue-800: #022B32;
     --color-blue-900: #001B1D;
 
-    /* Color Carib Green — the score-good color sir */
-    --color-caribgreen-5: #C1FFFD;
-    --color-caribgreen-25: #83F1DE;
-    --color-caribgreen-50: #44D7B6;
-    --color-caribgreen-100: #06D6A0;
-    --color-caribgreen-200: #05BF8E;
-    --color-caribgreen-300: #05A77B;
-    --color-caribgreen-400: #049069;
-    --color-caribgreen-500: #037957;
-    --color-caribgreen-600: #026144;
-    --color-caribgreen-700: #014A32;
-    --color-caribgreen-800: #01331F;
-    --color-caribgreen-900: #001B0D;
+    /* Color Carib Green — the score-good color sir, kept teal-adjacent but distinct from the accent */
+    --color-caribgreen-5: #D9F5EA;
+    --color-caribgreen-25: #A6E6CC;
+    --color-caribgreen-50: #6FBFA8;
+    --color-caribgreen-100: #2F6F5E;
+    --color-caribgreen-200: #276054;
+    --color-caribgreen-300: #21534A;
+    --color-caribgreen-400: #1B453E;
+    --color-caribgreen-500: #163832;
+    --color-caribgreen-600: #112B26;
+    --color-caribgreen-700: #0C1F1B;
+    --color-caribgreen-800: #081412;
+    --color-caribgreen-900: #040A09;
 
-    /* Color Pink / Red — the score-bad color sir */
-    --color-pink-5: #FFF1F1;
-    --color-pink-25: #FBC7D1;
-    --color-pink-50: #F79CB0;
-    --color-pink-100: #F37290;
-    --color-pink-200: #EF476F;
-    --color-pink-300: #D43D63;
-    --color-pink-400: #BA3356;
-    --color-pink-500: #9F294A;
-    --color-pink-600: #841E3E;
-    --color-pink-700: #691432;
-    --color-pink-800: #4F0A25;
-    --color-pink-900: #340019;
+    /* Color Pink / Red — the score-bad color sir, muted/earthy per the mockup instead of neon */
+    --color-pink-5: #F8E4E2;
+    --color-pink-25: #EFC0BC;
+    --color-pink-50: #DE9691;
+    --color-pink-100: #CD6D66;
+    --color-pink-200: #C1443C;
+    --color-pink-300: #A63A33;
+    --color-pink-400: #8C312B;
+    --color-pink-500: #712723;
+    --color-pink-600: #571E1A;
+    --color-pink-700: #3D1512;
+    --color-pink-800: #240C0A;
+    --color-pink-900: #140504;
+
+    /* Color Warm — new secondary accent sir, coral/terracotta, used sparingly
+       (hero highlight, streak chip, one accent border) not as a primary palette */
+    --color-warm-5: #FCEADB;
+    --color-warm-25: #F8CDA9;
+    --color-warm-50: #F2A06F;
+    --color-warm-100: #EC9761;
+    --color-warm-200: #E8834F;
+    --color-warm-300: #C96E41;
+    --color-warm-400: #AB5A35;
+    --color-warm-500: #8C4629;
+    --color-warm-600: #6E351F;
+    --color-warm-700: #4F2515;
+    --color-warm-800: #31160C;
+    --color-warm-900: #1A0B06;
 }
 
 /* light mode sir — the richblack scale is inverted (5 <-> 900) so surfaces/text flip,
    accents (yellow/blue/caribgreen/pink) stay put since they're used as accents either way.
-   Defaults to :root so a no-JS/first-paint flash favors light; ThemeContext adds .dark immediately after. */
+   Defaults to :root so a no-JS/first-paint flash favors light; ThemeContext adds .dark immediately after.
+   Warm-editorial palette sir — light mode is the warm paper tones, dark mode is warm charcoal-brown. */
 :root {
-    --color-richblack-5: #161D29;
-    --color-richblack-25: #2C333F;
-    --color-richblack-50: #424854;
-    --color-richblack-100: #585D69;
-    --color-richblack-200: #6E727F;
-    --color-richblack-300: #838894;
-    --color-richblack-400: #999DAA;
-    --color-richblack-500: #AFB2BF;
-    --color-richblack-600: #C5C7D4;
-    --color-richblack-700: #DBDDEA;
-    --color-richblack-800: #F1F2FF;
-    --color-richblack-900: #FFFFFF;
+    --color-richblack-5: #1F1C16;
+    --color-richblack-25: #26221A;
+    --color-richblack-50: #3A3428;
+    --color-richblack-100: #564E42;
+    --color-richblack-200: #706A5C;
+    --color-richblack-300: #8B93A0;
+    --color-richblack-400: #A79D8A;
+    --color-richblack-500: #C9BFA9;
+    --color-richblack-600: #E6DDD0;
+    --color-richblack-700: #F1ECE3;
+    --color-richblack-800: #FFFFFF;
+    --color-richblack-900: #FAF7F2;
 }
 
 .dark {
-    --color-richblack-5: #F1F2FF;
-    --color-richblack-25: #DBDDEA;
-    --color-richblack-50: #C5C7D4;
-    --color-richblack-100: #AFB2BF;
-    --color-richblack-200: #999DAA;
-    --color-richblack-300: #838894;
-    --color-richblack-400: #6E727F;
-    --color-richblack-500: #585D69;
-    --color-richblack-600: #424854;
-    --color-richblack-700: #2C333F;
-    --color-richblack-800: #161D29;
-    --color-richblack-900: #000814;
+    --color-richblack-5: #F3EFE6;
+    --color-richblack-25: #E3DCCC;
+    --color-richblack-50: #C9BFA9;
+    --color-richblack-100: #B9B0A0;
+    --color-richblack-200: #A79D8A;
+    --color-richblack-300: #8A8271;
+    --color-richblack-400: #706A5C;
+    --color-richblack-500: #564E42;
+    --color-richblack-600: #3A3428;
+    --color-richblack-700: #26221A;
+    --color-richblack-800: #1F1C16;
+    --color-richblack-900: #17140F;
 }
 
 body {

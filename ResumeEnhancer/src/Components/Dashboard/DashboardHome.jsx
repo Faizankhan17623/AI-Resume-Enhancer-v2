@@ -55,32 +55,32 @@ const DashboardHome = () => {
             Hey <span className="text-richblack-5 font-semibold">{user?.firstName}</span> — here's how your resume is doing.
           </p>
           <Link to="/Dashboard/New-Review">
-            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-lg hover:bg-yellow-25 transition-all duration-200 cursor-pointer">
+            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:bg-yellow-25 transition-all duration-200 cursor-pointer">
               <FaPlus className="text-xs" /> New review
             </button>
           </Link>
         </div>
 
-        {/* Stat cards sir — tighter icon-chip treatment from the mockup */}
+        {/* Stat cards sir — tighter icon-chip treatment from the mockup, soft shadow instead of a hard border */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, index) => (
-            <div key={index} className="rounded-xl bg-richblack-800 border border-richblack-700 p-4">
+            <div key={index} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-richblack-700 flex items-center justify-center text-sm text-richblack-200">
+                <div className="w-8 h-8 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
                   {card.icon}
                 </div>
                 <span className="text-xs font-semibold text-richblack-400">{card.label}</span>
               </div>
-              <p className={`text-2xl font-extrabold font-mono ${card.valueClass || 'text-richblack-5'}`}>{card.value}</p>
+              <p className={`font-display text-2xl ${card.valueClass || 'text-richblack-5'}`}>{card.value}</p>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-5">
           {/* Score Progress Graph sir */}
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-richblack-5 font-bold text-sm">Score progress</h2>
+              <h2 className="font-display text-lg text-richblack-5">Score progress</h2>
               <span className="text-xs text-richblack-400">Last {chartData.length} reviews</span>
             </div>
             {chartData.length < 2 ? (
@@ -90,23 +90,23 @@ const DashboardHome = () => {
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2C333F" />
-                  <XAxis dataKey="name" stroke="#838894" fontSize={12} />
-                  <YAxis domain={[0, 100]} stroke="#838894" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                  <XAxis dataKey="name" stroke="#8B93A0" fontSize={12} />
+                  <YAxis domain={[0, 100]} stroke="#8B93A0" fontSize={12} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#161D29', border: '1px solid #2C333F', borderRadius: '8px', color: '#F1F2FF' }}
-                    labelStyle={{ color: '#999DAA' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E6DDD0', borderRadius: '10px', color: '#1F2937' }}
+                    labelStyle={{ color: '#5B6472' }}
                   />
-                  <Line type="monotone" dataKey="score" stroke="#FFD60A" strokeWidth={2.5} dot={{ fill: '#FFD60A', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="score" stroke="#2F6F5E" strokeWidth={2.5} dot={{ fill: '#2F6F5E', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
 
           {/* Recent Reviews sir */}
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-richblack-5 font-bold text-sm">Recent reviews</h2>
+              <h2 className="font-display text-lg text-richblack-5">Recent reviews</h2>
               <Link to="/Dashboard/History" className="text-xs font-semibold text-yellow-50 hover:underline">View all</Link>
             </div>
             {allReviews.length === 0 ? (

@@ -8,7 +8,7 @@ import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
 
-const swalDark = { background: '#161D29', color: '#F1F2FF', confirmButtonColor: '#FFD60A', cancelButtonColor: '#2C333F' }
+const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
 const Users = () => {
   const [search, setSearch] = useState('')
@@ -55,7 +55,7 @@ const Users = () => {
       inputPlaceholder: 'Reason for the ban',
       showCancelButton: true,
       confirmButtonText: 'Suspend',
-      confirmButtonColor: '#EF476F',
+      confirmButtonColor: '#C1443C',
     })
     if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search))
   }
@@ -68,7 +68,7 @@ const Users = () => {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete forever',
-      confirmButtonColor: '#EF476F',
+      confirmButtonColor: '#C1443C',
     }).then((result) => {
       if (result.isConfirmed) dispatch(DeleteUser(target._id, token, page, search))
     })
@@ -96,7 +96,7 @@ const Users = () => {
               className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-10 pr-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
             />
           </div>
-          <button type="submit" className="px-4 py-2.5 text-sm font-semibold bg-yellow-50 text-richblack-900 rounded-lg hover:brightness-110 transition-all duration-200 cursor-pointer">
+          <button type="submit" className="px-4 py-2.5 text-sm font-semibold bg-yellow-50 text-richblack-900 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
             Search
           </button>
         </form>
@@ -105,7 +105,7 @@ const Users = () => {
           <Loading text="Loading the users..." />
         ) : (
           <>
-            <div className="rounded-xl bg-richblack-800 border border-richblack-700 overflow-x-auto">
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-x-auto">
               <table className="w-full text-sm min-w-[900px]">
                 <thead>
                   <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">

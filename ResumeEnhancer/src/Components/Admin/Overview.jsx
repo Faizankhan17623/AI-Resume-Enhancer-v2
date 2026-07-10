@@ -8,7 +8,7 @@ import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import { GetDashboardStats, GetAiStats, GetHealth } from '../../Services/operations/Admin'
 
-const tooltipStyle = { backgroundColor: '#161D29', border: '1px solid #2C333F', borderRadius: '8px', color: '#F1F2FF' }
+const tooltipStyle = { backgroundColor: '#FFFFFF', border: '1px solid #E6DDD0', borderRadius: '10px', color: '#1F2937' }
 
 // green/red status dot sir
 const HealthDot = ({ ok, label, latency }) => (
@@ -63,12 +63,12 @@ const Overview = () => {
         {/* Stat cards sir */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, index) => (
-            <div key={index} className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
+            <div key={index} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-lg bg-richblack-700 flex items-center justify-center">{card.icon}</div>
+                <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center">{card.icon}</div>
                 <span className="text-xs font-medium text-richblack-300">{card.label}</span>
               </div>
-              <p className="text-2xl font-extrabold text-richblack-5 font-mono">{card.value}</p>
+              <p className="font-display text-2xl text-richblack-5">{card.value}</p>
               <p className="text-xs text-richblack-400 mt-1">{card.sub}</p>
             </div>
           ))}
@@ -76,8 +76,8 @@ const Overview = () => {
 
         {/* Health + AI row sir */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
-            <h2 className="text-richblack-5 font-bold mb-4 flex items-center gap-2"><FaHeartbeat className="text-pink-100" /> System Health</h2>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaHeartbeat className="text-pink-100" /> System Health</h2>
             {health ? (
               <div className="space-y-3">
                 <HealthDot ok={health.db?.ok} label="MongoDB" latency={health.db?.latencyMs} />
@@ -92,24 +92,24 @@ const Overview = () => {
             )}
           </div>
 
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
-            <h2 className="text-richblack-5 font-bold mb-4 flex items-center gap-2"><FaRobot className="text-blue-100" /> AI — last 24 hours</h2>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaRobot className="text-blue-100" /> AI — last 24 hours</h2>
             {aiStats ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-2xl font-extrabold text-richblack-5 font-mono">{aiStats.today.calls}</p>
+                  <p className="font-display text-2xl text-richblack-5">{aiStats.today.calls}</p>
                   <p className="text-xs text-richblack-400">LLM calls</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold text-richblack-5 font-mono">{aiStats.today.tokens.toLocaleString()}</p>
+                  <p className="font-display text-2xl text-richblack-5">{aiStats.today.tokens.toLocaleString()}</p>
                   <p className="text-xs text-richblack-400">tokens burned</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold text-richblack-5 font-mono">{aiStats.today.avgLatencyMs}ms</p>
+                  <p className="font-display text-2xl text-richblack-5">{aiStats.today.avgLatencyMs}ms</p>
                   <p className="text-xs text-richblack-400">avg latency</p>
                 </div>
                 <div>
-                  <p className={`text-2xl font-extrabold font-mono ${aiStats.today.errorRate > 5 ? 'text-pink-200' : 'text-caribgreen-100'}`}>{aiStats.today.errorRate}%</p>
+                  <p className={`font-display text-2xl ${aiStats.today.errorRate > 5 ? 'text-pink-200' : 'text-caribgreen-100'}`}>{aiStats.today.errorRate}%</p>
                   <p className="text-xs text-richblack-400">error rate</p>
                 </div>
               </div>
@@ -121,41 +121,41 @@ const Overview = () => {
 
         {/* 30-day charts sir */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
-            <h3 className="text-richblack-5 font-bold text-sm mb-4">Signups — 30 days</h3>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <h3 className="font-display text-base text-richblack-5 mb-4">Signups — 30 days</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={charts?.signupsPerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C333F" />
-                <XAxis dataKey="_id" stroke="#838894" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#838894" fontSize={10} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill="#47A5C5" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="count" fill="#118AB2" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
-            <h3 className="text-richblack-5 font-bold text-sm mb-4">Reviews — 30 days</h3>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <h3 className="font-display text-base text-richblack-5 mb-4">Reviews — 30 days</h3>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={charts?.reviewsPerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C333F" />
-                <XAxis dataKey="_id" stroke="#838894" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#838894" fontSize={10} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="count" stroke="#FFD60A" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="count" stroke="#2F6F5E" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-5">
-            <h3 className="text-richblack-5 font-bold text-sm mb-4">Revenue (paise) — 30 days</h3>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (paise) — 30 days</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={charts?.revenuePerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C333F" />
-                <XAxis dataKey="_id" stroke="#838894" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#838894" fontSize={10} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke="#8B93A0" fontSize={10} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="amount" fill="#06D6A0" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="amount" fill="#2F6F5E" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

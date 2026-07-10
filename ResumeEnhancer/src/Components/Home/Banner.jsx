@@ -14,8 +14,12 @@ const Banner = () => {
   ]
 
   return (
-    <div className="w-full bg-richblack-900">
-      <div className="max-w-7xl mx-auto px-6 pt-20 pb-16 flex flex-col lg:flex-row items-center justify-between gap-14 animate-fadeIn">
+    <div className="relative w-full bg-richblack-900 overflow-hidden">
+      {/* soft blurred accent shapes sir — warm-editorial hero decoration, low opacity so text stays crisp */}
+      <div className="pointer-events-none absolute -top-24 right-[-60px] w-[420px] h-[420px] rounded-full bg-yellow-900/25 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-80px] left-[8%] w-[280px] h-[280px] rounded-full bg-warm-900/30 blur-3xl" />
+
+      <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-16 flex flex-col lg:flex-row items-center justify-between gap-14 animate-fadeIn">
 
         {/* Left Side - the pitch sir */}
         <div className="w-full lg:w-[55%] flex flex-col items-start">
@@ -23,10 +27,10 @@ const Banner = () => {
             AI-POWERED ATS RESUME REVIEWER
           </span>
 
-          <h1 className="text-5xl lg:text-6xl font-extrabold text-richblack-5 tracking-tight leading-tight">
+          <h1 className="font-display text-5xl lg:text-6xl text-richblack-5 tracking-tight leading-tight">
             Beat the <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">ATS.</span>
             <br />
-            Land the <span className="bg-gradient-to-r from-blue-50 to-caribgreen-50 bg-clip-text text-transparent">interview.</span>
+            Land the <span className="italic text-warm-200">interview.</span>
           </h1>
 
           <p className="mt-6 text-richblack-200 text-lg max-w-xl leading-relaxed">
@@ -42,7 +46,7 @@ const Banner = () => {
               </IconBtn>
             </Link>
             <Link to="/Pricing">
-              <button className="px-6 py-3 text-base font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
+              <button className="px-6 py-3 text-base font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
                 See pricing
               </button>
             </Link>
@@ -78,18 +82,21 @@ const Banner = () => {
       {/* How it works sir */}
       <div className="max-w-7xl mx-auto px-6 pb-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 hover:border-richblack-500 hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-lg bg-richblack-700 flex items-center justify-center mb-4">
-                {step.icon}
+          {steps.map((step, index) => {
+            const borderColors = ['border-l-pink-200', 'border-l-blue-100', 'border-l-caribgreen-100']
+            return (
+              <div
+                key={index}
+                className={`rounded-xl bg-richblack-800 shadow-lg shadow-richblack-900/20 border-l-4 ${borderColors[index]} p-6 hover:-translate-y-1 transition-all duration-300`}
+              >
+                <div className="w-12 h-12 rounded-lg bg-richblack-700 flex items-center justify-center mb-4">
+                  {step.icon}
+                </div>
+                <h3 className="text-richblack-5 font-bold text-lg mb-2">{step.title}</h3>
+                <p className="text-richblack-300 text-sm leading-relaxed">{step.desc}</p>
               </div>
-              <h3 className="text-richblack-5 font-bold text-lg mb-2">{step.title}</h3>
-              <p className="text-richblack-300 text-sm leading-relaxed">{step.desc}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

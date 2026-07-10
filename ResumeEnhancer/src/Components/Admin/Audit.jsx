@@ -42,13 +42,13 @@ const Audit = () => {
         {loading ? (
           <Loading text="Loading the audit trail..." />
         ) : auditLogs.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
             <p className="text-richblack-300 text-sm">No admin actions recorded yet.</p>
           </div>
         ) : (
           <div className="space-y-2">
             {auditLogs.map((log) => (
-              <div key={log._id} className="rounded-lg bg-richblack-800 border border-richblack-700 px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+              <div key={log._id} className="rounded-lg bg-richblack-800 shadow-sm shadow-richblack-900/10 px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full border w-fit ${actionChip(log.action)}`}>
                   {log.action.replace(/_/g, ' ')}
                 </span>
