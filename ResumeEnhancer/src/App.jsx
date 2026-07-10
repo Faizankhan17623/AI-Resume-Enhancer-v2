@@ -28,6 +28,7 @@ const AdminUsers = lazy(() => import('./Components/Admin/Users'))
 const AdminPayments = lazy(() => import('./Components/Admin/Payments'))
 const AdminAudit = lazy(() => import('./Components/Admin/Audit'))
 const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements'))
+const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
 
 const PageLoader = () => (
   <div className="min-h-screen bg-richblack-900 flex items-center justify-center">
@@ -63,6 +64,7 @@ function App() {
           {/* Public sir */}
           <Route path="/" element={<Homelayout />} />
           <Route path="/Pricing" element={<Pricing />} />
+          <Route path="/Shared/:shareId" element={<SharedReport />} />
 
           {/* Only for the logged-OUT sir */}
           <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />

@@ -4,6 +4,9 @@ const initialState = {
     // the review the user is looking at right now sir
     review: null,
     reviewId: null,
+    // share state for the review currently open sir
+    isPublic: false,
+    shareId: null,
     // the history list + the progress graph data
     allReviews: [],
     progress: null,
@@ -25,6 +28,10 @@ const reviewSlice = createSlice({
         },
         setReviewId(state, value) {
             state.reviewId = value.payload
+        },
+        setShareState(state, value) {
+            state.isPublic = value.payload.isPublic
+            state.shareId = value.payload.shareId ?? null
         },
         setAllReviews(state, value) {
             state.allReviews = value.payload
@@ -51,7 +58,7 @@ const reviewSlice = createSlice({
 })
 
 export const {
-    setReview, setReviewId, setAllReviews, setProgress, setLoading,
+    setReview, setReviewId, setShareState, setAllReviews, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard
 } = reviewSlice.actions
 export default reviewSlice.reducer
