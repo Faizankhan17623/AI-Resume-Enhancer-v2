@@ -5,6 +5,7 @@ import chatReducer from '../Slices/chatSlice'
 import paymentReducer from '../Slices/paymentSlice'
 import profileReducer from '../Slices/profileSlice'
 import adminReducer from '../Slices/adminSlice'
+import coverLetterReducer from '../Slices/coverLetterSlice'
 
 const rootReduers = combineReducers({
     auth: authReducer,
@@ -13,6 +14,7 @@ const rootReduers = combineReducers({
     payment: paymentReducer,
     profile: profileReducer,
     admin: adminReducer,
+    coverLetter: coverLetterReducer,
 })
 
 
