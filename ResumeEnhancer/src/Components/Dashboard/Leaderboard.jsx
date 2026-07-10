@@ -37,7 +37,7 @@ const Leaderboard = () => {
       <div className="h-full overflow-y-auto max-w-3xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
 
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-extrabold text-richblack-5 tracking-tight flex items-center justify-center gap-3">
+          <h1 className="font-display text-2xl text-richblack-5 tracking-tight flex items-center justify-center gap-3">
             <FaTrophy className="text-yellow-50" /> Leaderboard
           </h1>
           <p className="mt-2 text-richblack-300 text-sm">
@@ -48,11 +48,11 @@ const Leaderboard = () => {
         {loading ? (
           <Loading text="Loading the leaderboard..." />
         ) : leaderboard.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-10 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-10 text-center">
             <p className="text-richblack-300 text-sm">No scores yet — be the first to show up here.</p>
           </div>
         ) : (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 overflow-hidden">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-hidden">
             <div className="divide-y divide-richblack-700">
               {leaderboard.map((row) => (
                 <div

@@ -10,7 +10,7 @@ const Footer = () => {
         {/* Left - brand sir */}
         <div className="flex items-center gap-2">
           <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
-          <span className="text-lg font-extrabold text-richblack-5">
+          <span className="font-display text-lg text-richblack-5">
             Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
           </span>
         </div>

@@ -37,8 +37,8 @@ const OTP = () => {
           <FiMail className="text-3xl text-yellow-50" />
         </div>
 
-        <h1 className="text-3xl font-extrabold text-richblack-5 tracking-tight text-center">
-          CHECK YOUR <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">EMAIL</span>
+        <h1 className="font-display text-3xl text-richblack-5 tracking-tight text-center">
+          Check your <span className="italic text-warm-200">email</span>
         </h1>
         <p className="mt-3 text-richblack-200 text-sm text-center">
           We sent a 6-digit code to <span className="text-blue-50 font-medium">{signupData.email}</span>
@@ -55,7 +55,7 @@ const OTP = () => {
                 {...props}
                 placeholder="•"
                 style={{ width: '48px' }}
-                className="h-14 mx-1.5 rounded-lg bg-richblack-800 border border-richblack-600 text-richblack-5 text-xl font-bold text-center focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                className="h-14 mx-1.5 rounded-xl bg-richblack-800 border border-richblack-600 text-richblack-5 text-xl font-bold text-center focus:outline-none focus:border-yellow-50 transition-colors duration-200"
               />
             )}
           />

@@ -40,7 +40,7 @@ const Pricing = () => {
 
         {/* Header sir */}
         <div className="text-center mb-14">
-          <h1 className="text-4xl lg:text-5xl font-extrabold text-richblack-5 tracking-tight">
+          <h1 className="font-display text-4xl lg:text-5xl text-richblack-5 tracking-tight">
             Simple <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">pricing</span>
           </h1>
           <p className="mt-3 text-richblack-200 text-lg">Start free. Upgrade when your job hunt gets serious.</p>
@@ -54,7 +54,7 @@ const Pricing = () => {
             <p className="text-richblack-200">Could not load the plans — is the server awake?</p>
             <button
               onClick={() => dispatch(GetAllPlans())}
-              className="mt-5 px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-lg hover:brightness-110 transition-all duration-200 cursor-pointer"
+              className="mt-5 px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer"
             >
               Try again
             </button>
@@ -103,13 +103,13 @@ const Pricing = () => {
 
                   <div className="mt-8">
                     {isCurrent ? (
-                      <button className="w-full py-2.5 text-sm font-bold rounded-lg bg-richblack-700 text-caribgreen-100 border border-richblack-600 cursor-default">
+                      <button className="w-full py-2.5 text-sm font-bold rounded-full bg-richblack-700 text-caribgreen-100 border border-richblack-600 cursor-default">
                         Your current plan
                       </button>
                     ) : plan.priceInRupees === 0 ? (
                       <button
                         onClick={() => navigate(token ? "/Dashboard" : "/Signup")}
-                        className="w-full py-2.5 text-sm font-semibold rounded-lg text-richblack-100 border border-richblack-600 hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+                        className="w-full py-2.5 text-sm font-semibold rounded-full text-richblack-100 border border-richblack-600 hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
                       >
                         {token ? "Included free" : "Start free"}
                       </button>

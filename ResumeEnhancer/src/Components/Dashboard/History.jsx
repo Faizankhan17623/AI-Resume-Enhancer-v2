@@ -40,7 +40,7 @@ const History = () => {
         {loading ? (
           <Loading text="Loading your history..." />
         ) : allReviews.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
             <p className="text-richblack-200 mb-6">No reviews yet sir — your first honest ATS score is waiting.</p>
             <Link to="/Dashboard/New-Review" className="inline-block">
               <IconBtn text="Run my first review" />
@@ -52,13 +52,13 @@ const History = () => {
               <Link
                 key={review._id}
                 to={`/Dashboard/Review/${review._id}`}
-                className="flex items-center justify-between rounded-xl bg-richblack-800 border border-richblack-700 p-5 hover:border-richblack-500 hover:-translate-y-0.5 transition-all duration-200"
+                className="flex items-center justify-between rounded-xl bg-richblack-800 shadow-sm shadow-richblack-900/10 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-richblack-5 truncate">{review.jdTitle || 'Job Description'}</p>
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-xs text-richblack-400">{new Date(review.createdAt).toDateString()}</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-yellow-900/15 text-yellow-100">
                       {review.plan}
                     </span>
                     <span className="text-xs text-richblack-400">{review.verdict}</span>

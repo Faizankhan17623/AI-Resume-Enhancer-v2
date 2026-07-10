@@ -44,8 +44,8 @@ const Announcements = () => {
 
         {/* Composer sir — Admin only, Support can just view the list */}
         {isAdmin && (
-          <form onSubmit={handlePublish} className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 space-y-4">
-            <h2 className="text-richblack-5 font-bold flex items-center gap-2"><FaBullhorn className="text-yellow-50" /> Broadcast to every user</h2>
+          <form onSubmit={handlePublish} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 space-y-4">
+            <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2"><FaBullhorn className="text-yellow-50" /> Broadcast to every user</h2>
             <input
               type="text"
               value={title}
@@ -68,7 +68,7 @@ const Announcements = () => {
 
         {/* The list sir */}
         <div className="space-y-3">
-          <h2 className="text-richblack-5 font-bold">All announcements</h2>
+          <h2 className="font-display text-lg text-richblack-5">All announcements</h2>
           {announcements.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing broadcast yet sir.</p>
           ) : (

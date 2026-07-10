@@ -50,12 +50,12 @@ const Account = () => {
       <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
 
         {/* Profile card sir */}
-        <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 flex flex-col md:flex-row md:items-center gap-6">
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 flex flex-col md:flex-row md:items-center gap-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-50 flex items-center justify-center shrink-0">
             <FaUser className="text-2xl text-richblack-900" />
           </div>
           <div className="flex-1">
-            <p className="text-xl font-bold text-richblack-5">{user.firstName} {user.lastName}</p>
+            <p className="font-display text-xl text-richblack-5">{user.firstName} {user.lastName}</p>
             <p className="text-sm text-richblack-300 mt-0.5">{user.email}</p>
             <p className="text-sm text-richblack-400 mt-0.5">{user.CountryCode} {user.number}</p>
           </div>
@@ -63,7 +63,7 @@ const Account = () => {
             <span className="text-xs text-richblack-400">Member since {new Date(user.createdAt).toDateString()}</span>
             <button
               onClick={() => dispatch(LogoutUser(navigate))}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-pink-100 border border-pink-700 rounded-lg hover:bg-pink-700/20 transition-all duration-200 cursor-pointer"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 transition-all duration-200 cursor-pointer"
             >
               <FaSignOutAlt /> Logout
             </button>
@@ -74,10 +74,10 @@ const Account = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Plan card */}
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-richblack-5 font-bold">Your Plan</h2>
-              <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
+              <h2 className="font-display text-lg text-richblack-5">Your Plan</h2>
+              <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/15 text-yellow-100">
                 <FaCrown /> {plan.name}
               </span>
             </div>
@@ -112,17 +112,17 @@ const Account = () => {
           </div>
 
           {/* Activity card */}
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
-            <h2 className="text-richblack-5 font-bold mb-5">Your Activity</h2>
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-5">Your Activity</h2>
             <div className="grid grid-cols-2 gap-4">
-              <Link to="/Dashboard/History" className="rounded-lg bg-richblack-900/50 border border-richblack-700 p-4 hover:border-richblack-500 transition-colors duration-200">
+              <Link to="/Dashboard/History" className="rounded-lg bg-yellow-900/5 shadow-sm shadow-richblack-900/10 p-4 hover:shadow-md transition-all duration-200">
                 <FaFileAlt className="text-blue-100 mb-2" />
-                <p className="text-2xl font-extrabold text-richblack-5 font-mono">{activity.reviewCount}</p>
+                <p className="font-display text-2xl text-richblack-5">{activity.reviewCount}</p>
                 <p className="text-xs text-richblack-300 mt-0.5">ATS Reviews</p>
               </Link>
-              <Link to="/Dashboard/Chats" className="rounded-lg bg-richblack-900/50 border border-richblack-700 p-4 hover:border-richblack-500 transition-colors duration-200">
+              <Link to="/Dashboard/Chats" className="rounded-lg bg-yellow-900/5 shadow-sm shadow-richblack-900/10 p-4 hover:shadow-md transition-all duration-200">
                 <FaComments className="text-caribgreen-100 mb-2" />
-                <p className="text-2xl font-extrabold text-richblack-5 font-mono">{activity.chatCount}</p>
+                <p className="font-display text-2xl text-richblack-5">{activity.chatCount}</p>
                 <p className="text-xs text-richblack-300 mt-0.5">Coach Chats</p>
               </Link>
             </div>
@@ -130,8 +130,8 @@ const Account = () => {
         </div>
 
         {/* Payment history sir */}
-        <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
-          <h2 className="text-richblack-5 font-bold mb-4">Payment History</h2>
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-4">Payment History</h2>
           {history.length === 0 ? (
             <p className="text-sm text-richblack-300 py-4 text-center">No payments yet — you are on the free plan.</p>
           ) : (

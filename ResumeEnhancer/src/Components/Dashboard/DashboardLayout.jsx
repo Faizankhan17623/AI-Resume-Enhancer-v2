@@ -31,7 +31,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
   <>
     <Link to="/Dashboard" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
       <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
-      <span className="text-base font-extrabold text-richblack-5 tracking-tight">
+      <span className="font-display text-base text-richblack-5 tracking-tight">
         Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
       </span>
     </Link>
@@ -46,7 +46,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
             key={link.path}
             to={link.path}
             onClick={onNavigate}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
               active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
             }`}
           >
@@ -66,7 +66,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
             key={link.path}
             to={link.path}
             onClick={onNavigate}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
               active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
             }`}
           >
@@ -79,7 +79,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
         <Link
           to="/Admin"
           onClick={onNavigate}
-          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
             pathname.startsWith('/Admin') ? 'bg-pink-900/15 text-pink-100' : 'text-pink-200/80 hover:bg-pink-900/10 hover:text-pink-100'
           }`}
         >
@@ -90,11 +90,11 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
 
     <div className="mt-auto flex flex-col gap-2.5">
       {streak?.currentStreak > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-yellow-900/10 border border-yellow-800/40 text-xs font-bold text-yellow-50">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-yellow-900/10 border border-yellow-800/40 text-xs font-bold text-yellow-50">
           <FaFire className="text-pink-200 shrink-0" /> {streak.currentStreak}-day streak
         </div>
       )}
-      <div className="px-3 py-2.5 rounded-lg bg-richblack-700/60 border border-richblack-600 text-xs">
+      <div className="px-3 py-2.5 rounded-xl bg-richblack-700/60 border border-richblack-600 text-xs">
         <div className="flex items-center gap-1.5 font-bold text-richblack-5">
           <FaCrown className="text-yellow-50 text-[11px]" /> {user?.SubType || 'Basic'} plan
         </div>
@@ -147,24 +147,24 @@ const DashboardLayout = ({ title, children }) => {
             >
               <FiMenu className="text-lg" />
             </button>
-            <h1 className="text-lg font-bold text-richblack-5 truncate">{title}</h1>
+            <h1 className="font-display text-xl text-richblack-5 truncate">{title}</h1>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="p-2 text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+              className="p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
             >
               {theme === 'dark' ? <FiSun className="text-base" /> : <FiMoon className="text-base" />}
             </button>
             <button
               onClick={() => dispatch(LogoutUser(navigate))}
               aria-label="Logout"
-              className="hidden sm:flex p-2 text-richblack-100 border border-richblack-600 rounded-lg hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
+              className="hidden sm:flex p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
             >
               <FaSignOutAlt className="text-sm" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-richblack-600 flex items-center justify-center text-xs font-bold text-richblack-5 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-yellow-900/30 flex items-center justify-center text-xs font-bold text-yellow-100 shrink-0">
               {initials || <FaUser className="text-[10px]" />}
             </div>
           </div>

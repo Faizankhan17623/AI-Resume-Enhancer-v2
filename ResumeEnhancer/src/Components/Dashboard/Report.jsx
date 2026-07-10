@@ -24,8 +24,8 @@ const priorityBadge = {
 
 // one section card wrapper so every block looks the same sir
 const Section = ({ title, children }) => (
-  <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6">
-    <h2 className="text-richblack-5 font-bold text-lg mb-4">{title}</h2>
+  <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+    <h2 className="font-display text-lg text-richblack-5 mb-4">{title}</h2>
     {children}
   </div>
 )
@@ -70,10 +70,10 @@ const Report = () => {
       <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
 
         {/* Header row sir — score + verdict + PDF */}
-        <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8">
+        <div className="rounded-2xl bg-richblack-800 shadow-lg shadow-richblack-900/10 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8">
           <ScoreRing score={review.atsScore} />
           <div className="flex-1 text-center md:text-left">
-            <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600 mb-3">
+            <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/15 text-yellow-100 mb-3">
               {review.verdict}
             </span>
             <p className="text-richblack-100 leading-relaxed">{review.summary}</p>
@@ -86,7 +86,7 @@ const Report = () => {
                 <FaDownload />
               </IconBtn>
               <Link to="/Dashboard/New-Review">
-                <button className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
+                <button className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
                   Re-score after edits
                 </button>
               </Link>
@@ -101,9 +101,9 @@ const Report = () => {
               const value = review.scoreBreakdown[key]
               if (typeof value !== 'number') return null
               return (
-                <div key={key} className="rounded-xl bg-richblack-800 border border-richblack-700 p-4">
+                <div key={key} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
                   <p className="text-xs font-semibold text-richblack-400 mb-2">{label}</p>
-                  <p className={`text-2xl font-extrabold font-mono mb-2 ${scoreColor(value)}`}>{value}</p>
+                  <p className={`font-display text-2xl mb-2 ${scoreColor(value)}`}>{value}</p>
                   <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden">
                     <div
                       className={`h-full rounded-full ${barColor(value)} transition-all duration-1000`}
@@ -210,7 +210,7 @@ const Report = () => {
           <Section title="Improvements">
             <div className="space-y-5">
               {review.improvements.map((imp, index) => (
-                <div key={index} className="rounded-lg border border-richblack-700 bg-richblack-900/50 p-5">
+                <div key={index} className="rounded-lg bg-richblack-700/40 p-5">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <p className="text-sm font-semibold text-richblack-5">{index + 1}. {imp.issue}</p>
                     <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${priorityBadge[imp.priority] || priorityBadge.low}`}>
@@ -274,7 +274,7 @@ const Report = () => {
           <Section title="Interview Prep">
             <div className="space-y-5">
               {review.interviewPrep.map((q, index) => (
-                <div key={index} className="rounded-lg border border-richblack-700 bg-richblack-900/50 p-5">
+                <div key={index} className="rounded-lg bg-richblack-700/40 p-5">
                   <p className="text-sm font-bold text-richblack-5 flex gap-2">
                     <FaComments className="text-blue-100 shrink-0 mt-0.5" /> Q{index + 1}. {q.question}
                   </p>

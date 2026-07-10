@@ -25,7 +25,7 @@ const Navbar = () => {
         {/* Logo sir */}
         <Link to="/" className="flex items-center gap-2 group">
           <MdOutlineDocumentScanner className="text-3xl text-yellow-50 group-hover:rotate-6 transition-transform duration-300" />
-          <span className="text-xl font-extrabold text-richblack-5 tracking-tight">
+          <span className="font-display text-xl text-richblack-5 tracking-tight">
             Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
           </span>
         </Link>
@@ -90,14 +90,14 @@ const Navbar = () => {
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="p-2 text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            className="p-2 text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
           >
             {theme === 'dark' ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
           </button>
           {token === null ? (
             <>
               <Link to="/Login">
-                <button className="px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
+                <button className="px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
                   Log in
                 </button>
               </Link>
@@ -114,7 +114,7 @@ const Navbar = () => {
               <span className="text-sm text-richblack-100 hidden sm:inline">Hi, {user?.firstName}</span>
               <button
                 onClick={() => dispatch(LogoutUser(navigate))}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
               >
                 <FiLogOut /> Logout
               </button>
