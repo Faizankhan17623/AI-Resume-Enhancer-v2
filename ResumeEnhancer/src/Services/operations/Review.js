@@ -5,8 +5,10 @@ import {
     setGrammar, setGrammarChecking, setStreak, setLeaderboard
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
+import { ResumeData } from '../Apis/ResumeApi.js'
 
 const { createreview } = AtsReview
+const { reviewFromResume } = ResumeData
 const { allreviews, progress, singlereview, downloadpdf, sharereview, publicreview } = ReviewHistory
 const { checkgrammar } = GrammarCheckApi
 const { streak } = StreakApi
@@ -24,6 +26,35 @@ export function CreateReview(pdfFile, jd, token, navigate) {
             formData.append("jd", jd)
 
             const response = await apiConnector("POST", createreview, formData, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setReview(response.data.review))
+            dispatch(setReviewId(response.data.reviewId))
+
+            toast.success("Your review is ready")
+            if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
+        } catch (error) {
+            console.error("Error creating the review", error)
+            toast.error(error?.response?.data?.message || "Could not analyze the resume")
+        } finally {
+            dispatch(setLoading(false))
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// same as CreateReview sir, but re-scores a previously saved resume — no PDF re-upload needed
+export function CreateReviewFromResume(resumeId, jd, token, navigate) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        const toastId = toast.loading("Analyzing your resume — this takes a few seconds...")
+        try {
+            const response = await apiConnector("POST", `${reviewFromResume}/${resumeId}`, { jd }, {
                 Authorization: `Bearer ${token}`
             })
 

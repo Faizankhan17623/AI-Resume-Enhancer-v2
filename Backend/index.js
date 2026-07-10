@@ -21,6 +21,7 @@ const review = require('./Routes/Review.js')
 const admin = require('./Routes/Admin.js')
 const grammarCheck = require('./Routes/GrammarCheck.js')
 const coverLetter = require('./Routes/CoverLetter.js')
+const resume = require('./Routes/Resume.js')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
 
@@ -54,6 +55,7 @@ app.use('/api/v1',review)
 app.use('/api/v1',admin)
 app.use('/api/v1',grammarCheck)
 app.use('/api/v1',coverLetter)
+app.use('/api/v1',resume)
 
 // interactive API docs sir — http://localhost:5000/api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))

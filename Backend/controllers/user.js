@@ -115,6 +115,10 @@ exports.createUser = async (req, res) => {
     }
 };
 
+// account lockout policy sir — tune ONLY here
+const MAX_FAILED_ATTEMPTS = 5
+const LOCK_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+
 // ============================================================
 // LOGIN USER
 // ============================================================
@@ -142,16 +146,40 @@ exports.loginUser = async (req, res) => {
             });
         }
 
+        // locked sir — per-ACCOUNT lockout, on top of the IP rate limiter, so a distributed
+        // brute-force (many IPs, one target account) still gets stopped
+        if (existingUser.lockUntil && existingUser.lockUntil > Date.now()) {
+            const minutesLeft = Math.ceil((existingUser.lockUntil - Date.now()) / 60000)
+            return res.status(423).json({
+                success: false,
+                message: `Too many failed login attempts, please try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}`,
+            });
+        }
+
         // compare the entered password with the stored hash sir
         const Comparing = await bcrypt.compare(password, existingUser.password)
 
         // not case sir — the password does not match the stored one
         if (!Comparing) {
+            const attempts = existingUser.failedLoginAttempts + 1
+            const update = { failedLoginAttempts: attempts }
+            // lock only once the threshold is crossed sir — a past lock has already expired by now
+            if (attempts >= MAX_FAILED_ATTEMPTS) {
+                update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS)
+                update.failedLoginAttempts = 0
+            }
+            await User.findByIdAndUpdate(existingUser._id, update)
+
             return res.status(401).json({
                 success: false,
                 field: 'password',
                 message: 'Incorrect password, please try again',
             });
+        }
+
+        // a successful login clears any prior strikes sir
+        if (existingUser.failedLoginAttempts > 0 || existingUser.lockUntil) {
+            await User.findByIdAndUpdate(existingUser._id, { failedLoginAttempts: 0, lockUntil: null })
         }
 
         User.id =existingUser._id

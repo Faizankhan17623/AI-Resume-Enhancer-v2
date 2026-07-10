@@ -18,6 +18,7 @@ const Login = lazy(() => import('./Components/Login/User'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
+const Resumes = lazy(() => import('./Components/Dashboard/Resumes'))
 const Report = lazy(() => import('./Components/Dashboard/Report'))
 const History = lazy(() => import('./Components/Dashboard/History'))
 const Leaderboard = lazy(() => import('./Components/Dashboard/Leaderboard'))
@@ -75,6 +76,7 @@ function App() {
           {/* Only for the logged-IN sir */}
           <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
           <Route path="/Dashboard/New-Review" element={<PrivateRoute><NewReview /></PrivateRoute>} />
+          <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />
           <Route path="/Dashboard/Review/:reviewId" element={<PrivateRoute><Report /></PrivateRoute>} />
           <Route path="/Dashboard/History" element={<PrivateRoute><History /></PrivateRoute>} />
           <Route path="/Dashboard/Leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />

@@ -6,6 +6,7 @@ import paymentReducer from '../Slices/paymentSlice'
 import profileReducer from '../Slices/profileSlice'
 import adminReducer from '../Slices/adminSlice'
 import coverLetterReducer from '../Slices/coverLetterSlice'
+import resumeReducer from '../Slices/resumeSlice'
 
 const rootReduers = combineReducers({
     auth: authReducer,
@@ -15,6 +16,7 @@ const rootReduers = combineReducers({
     profile: profileReducer,
     admin: adminReducer,
     coverLetter: coverLetterReducer,
+    resume: resumeReducer,
 })
 
 
