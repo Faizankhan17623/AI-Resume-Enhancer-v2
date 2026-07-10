@@ -1,0 +1,9 @@
+# dependencies
+node_modules/
+
+# secrets sir — API keys, JWT keys, Razorpay secrets live here, NEVER push this
+.env
+.env.*
+
+# logs
+*.log

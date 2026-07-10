@@ -1,0 +1,17 @@
+const BASE_URL = import.meta.env.VITE_MAIN_BACKEND_URL
+
+export const CreateUser = {
+    createuser: BASE_URL + "/Createuser"
+}
+
+export const SendOtp = {
+    createotp: BASE_URL + "/Send-otp"
+}
+
+export const Login = {
+    login: BASE_URL + "/Login"
+}
+
+export const Profile = {
+    getprofile: BASE_URL + "/profile"
+}
