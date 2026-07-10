@@ -54,12 +54,21 @@ AiResumeEnhancer/
 
 ## API Docs
 
-Interactive Swagger UI documentation for all ~30 API endpoints (auth, AI review, chat, payments, admin) is served at:
+Interactive Swagger UI documentation for all ~35 API endpoints (auth, AI review, chat, payments, reviews, grammar check, streaks, leaderboard, admin) is served directly from the backend at `/api-docs`.
 
+**Production:**
+```
+https://ai-resume-enhancer-88nm.onrender.com/api-docs
+```
+
+**Local development** (once the backend is running via `npm run dev`):
 ```
 http://localhost:4000/api-docs
 ```
-(available once the backend is running)
+
+The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Backend/index.js` via `swagger-ui-express`. Every route is grouped under a tag (Auth, AI Review, Chat, Reviews, Grammar, Streak, Leaderboard, Payment, Admin, Announcements) and documents its request body, path params, and response codes. Bearer JWT auth is pre-wired in the Swagger UI — click **Authorize** and paste a token from `/Login` to try authenticated endpoints directly from the docs page.
+
+> Note: Render's free tier spins the service down after periods of inactivity, so the first request to the production docs link may take 30-60 seconds to wake it up.
 
 ## Testing
 
