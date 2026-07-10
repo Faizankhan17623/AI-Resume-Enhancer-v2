@@ -2,13 +2,34 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt } from 'react-icons/fa'
+import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
-import { GetProfile } from '../../Services/operations/User'
+import { GetProfile, UpdateNotificationPrefs } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser } from '../../Services/operations/Auth'
+
+// small on/off switch sir — used only for the notification preferences below
+const Toggle = ({ checked, onChange, label, hint }) => (
+  <div className="flex items-center justify-between py-3">
+    <div>
+      <p className="text-sm font-medium text-richblack-5">{label}</p>
+      {hint && <p className="text-xs text-richblack-400 mt-0.5">{hint}</p>}
+    </div>
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 cursor-pointer ${checked ? 'bg-yellow-50' : 'bg-richblack-600'}`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-richblack-900 transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+      />
+    </button>
+  </div>
+)
 
 const statusChip = {
   paid: 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700',
@@ -126,6 +147,34 @@ const Account = () => {
                 <p className="text-xs text-richblack-300 mt-0.5">Coach Chats</p>
               </Link>
             </div>
+          </div>
+        </div>
+
+        {/* Notification preferences sir — per-type opt-out, all on by default */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaBell className="text-yellow-50 text-base" /> Email Notifications
+          </h2>
+          <p className="text-xs text-richblack-400 mb-2">Choose which emails you'd like to receive from us.</p>
+          <div className="divide-y divide-richblack-700">
+            <Toggle
+              label="Streak reminders"
+              hint="A nudge when your activity streak is about to break"
+              checked={user.notifyStreak !== false}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyStreak: value }, token))}
+            />
+            <Toggle
+              label="Win-back emails"
+              hint="A note if you haven't reviewed a resume in a couple weeks"
+              checked={user.notifyWinBack !== false}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyWinBack: value }, token))}
+            />
+            <Toggle
+              label="Weekly digest"
+              hint="A weekly summary of your review activity and score progress"
+              checked={user.notifyDigest !== false}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyDigest: value }, token))}
+            />
           </div>
         </div>
 

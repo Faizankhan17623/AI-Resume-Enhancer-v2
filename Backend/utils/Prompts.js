@@ -198,4 +198,24 @@ RULES:
 - If asked something unrelated to resumes, careers, or this JD, politely steer back to the resume.`
 }
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt }
+// ---------- COVER LETTER PROMPT (controllers/CoverLetter.js) ----------
+
+// a cover letter is Pro+ everywhere else in the app (see CHAT_TIER_RULES above) sir — one prompt is enough,
+// there is no "depth" tier for a single letter the way there is for the multi-section ATS review
+const buildCoverLetterPrompt = (resumeText, jd) => `You are an expert career coach writing a cover letter for a candidate applying to a specific job.
+
+=== THE CANDIDATE'S RESUME ===
+${resumeText}
+
+=== THE JOB DESCRIPTION ===
+${jd}
+
+RULES:
+- Ground every claim strictly in the resume. Do NOT invent experience, employers, certifications, or metrics the candidate does not have.
+- Address why the candidate fits THIS role specifically, referencing real experience from the resume and language from the JD.
+- 3-4 paragraphs: an opening hook, one or two body paragraphs on relevant experience/skills, a closing call to action.
+- Professional but warm tone, no clichés like "I am writing to express my interest".
+- Do not invent a company name, hiring manager name, or address — write the body only, no letterhead or signature block beyond "Sincerely," followed by a "[Your Name]" placeholder.
+- Respond with plain text only — no markdown, no JSON, no commentary before or after.`
+
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt }

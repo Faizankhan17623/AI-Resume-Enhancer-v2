@@ -110,6 +110,19 @@ const UserCreation = new mongoose.Schema(
         },
         lastActivityDate: {
             type: Date
+        },
+        // per-type opt-out sir — all on by default, the account page lets a user flip these off individually
+        notifyStreak: {
+            type: Boolean,
+            default: true
+        },
+        notifyWinBack: {
+            type: Boolean,
+            default: true
+        },
+        notifyDigest: {
+            type: Boolean,
+            default: true
         }
     }, { timestamps: true }
 )

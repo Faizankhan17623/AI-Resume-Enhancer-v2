@@ -1,8 +1,9 @@
+import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
-import { setProfile, setLoading } from '../../Slices/profileSlice.js'
+import { setProfile, setLoading, setNotificationPrefs } from '../../Slices/profileSlice.js'
 import { Profile } from '../Apis/UserApi.js'
 
-const { getprofile } = Profile
+const { getprofile, updatenotifications } = Profile
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -22,6 +23,30 @@ export function GetProfile(token) {
             console.error("Error fetching the profile", error)
         } finally {
             dispatch(setLoading(false))
+        }
+    }
+}
+
+// flips one notification preference sir — { notifyStreak } or { notifyWinBack } or { notifyDigest }
+export function UpdateNotificationPrefs(prefs, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", updatenotifications, prefs, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setNotificationPrefs({
+                notifyStreak: response.data.notifyStreak,
+                notifyWinBack: response.data.notifyWinBack,
+                notifyDigest: response.data.notifyDigest,
+            }))
+        } catch (error) {
+            console.error("Error updating notification preferences", error)
+            toast.error(error?.response?.data?.message || "Could not update notification preferences")
         }
     }
 }

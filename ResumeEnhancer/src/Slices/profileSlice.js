@@ -15,9 +15,14 @@ const profileSlice = createSlice({
         },
         setLoading(state, value) {
             state.loading = value.payload
+        },
+        setNotificationPrefs(state, value) {
+            if (state.profile?.user) {
+                Object.assign(state.profile.user, value.payload)
+            }
         }
     }
 })
 
-export const { setProfile, setLoading } = profileSlice.actions
+export const { setProfile, setLoading, setNotificationPrefs } = profileSlice.actions
 export default profileSlice.reducer
