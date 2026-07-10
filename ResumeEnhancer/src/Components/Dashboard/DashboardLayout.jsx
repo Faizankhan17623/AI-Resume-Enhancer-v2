@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import { LogoutUser } from '../../Services/operations/Auth'
 
@@ -14,6 +14,7 @@ const workspaceLinks = [
   { name: 'New Review', path: '/Dashboard/New-Review', icon: FaFilePdf },
   { name: 'History', path: '/Dashboard/History', icon: FaHistory },
   { name: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments, matchPrefix: '/Dashboard/Chat' },
+  { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
 ]
 
 const communityLinks = [

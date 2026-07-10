@@ -13,5 +13,6 @@ export const Login = {
 }
 
 export const Profile = {
-    getprofile: BASE_URL + "/profile"
+    getprofile: BASE_URL + "/profile",
+    updatenotifications: BASE_URL + "/profile/notifications"
 }

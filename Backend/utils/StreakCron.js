@@ -62,7 +62,7 @@ const sendWeeklyDigest = async () => {
         byUser.get(key).push(r.atsScore)
     }
 
-    const users = await User.find({ _id: { $in: [...byUser.keys()] } }).select('email firstName')
+    const users = await User.find({ _id: { $in: [...byUser.keys()] }, notifyDigest: true }).select('email firstName')
 
     for (const user of users) {
         const scores = byUser.get(String(user._id)) || []
@@ -84,6 +84,7 @@ const sendStreakBreakNudges = async () => {
     const users = await User.find({
         lastActivityDate: { $gte: start, $lt: end },
         currentStreak: { $gte: 6 },
+        notifyStreak: true,
     }).select('email firstName currentStreak')
 
     for (const user of users) {
@@ -97,6 +98,7 @@ const sendWinBackNudges = async () => {
     const { start, end } = dayWindow(14)
     const users = await User.find({
         lastActivityDate: { $gte: start, $lt: end },
+        notifyWinBack: true,
     }).select('email firstName')
 
     for (const user of users) {

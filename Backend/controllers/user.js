@@ -803,7 +803,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt')
+            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest')
 
         if (!user) {
             return res.status(404).json({
@@ -845,6 +845,53 @@ exports.getProfile = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to get the profile',
+        });
+    }
+};
+
+// ============================================================
+// UPDATE NOTIFICATION PREFERENCES — per-type email opt-out sir
+// ============================================================
+exports.updateNotificationPrefs = async (req, res) => {
+    try {
+        const userId = req.User.id;
+        const { notifyStreak, notifyWinBack, notifyDigest } = req.body;
+
+        // only touch the fields the caller actually sent sir, so a partial update never resets the others
+        const updates = {};
+        if (typeof notifyStreak === 'boolean') updates.notifyStreak = notifyStreak;
+        if (typeof notifyWinBack === 'boolean') updates.notifyWinBack = notifyWinBack;
+        if (typeof notifyDigest === 'boolean') updates.notifyDigest = notifyDigest;
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'At least one notification preference is required',
+            });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
+            .select('notifyStreak notifyWinBack notifyDigest');
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Notification preferences updated',
+            notifyStreak: updatedUser.notifyStreak,
+            notifyWinBack: updatedUser.notifyWinBack,
+            notifyDigest: updatedUser.notifyDigest,
+        });
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update notification preferences',
         });
     }
 };
