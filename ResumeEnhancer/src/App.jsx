@@ -22,6 +22,7 @@ const Report = lazy(() => import('./Components/Dashboard/Report'))
 const History = lazy(() => import('./Components/Dashboard/History'))
 const Leaderboard = lazy(() => import('./Components/Dashboard/Leaderboard'))
 const Chat = lazy(() => import('./Components/Dashboard/Chat'))
+const CoverLetter = lazy(() => import('./Components/Dashboard/CoverLetter'))
 const Account = lazy(() => import('./Components/Dashboard/Account'))
 const AdminOverview = lazy(() => import('./Components/Admin/Overview'))
 const AdminUsers = lazy(() => import('./Components/Admin/Users'))
@@ -79,6 +80,7 @@ function App() {
           <Route path="/Dashboard/Leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
           <Route path="/Dashboard/Chats" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/Dashboard/Chat/:chatId" element={<PrivateRoute><Chat /></PrivateRoute>} />
+          <Route path="/Dashboard/Cover-Letter" element={<PrivateRoute><CoverLetter /></PrivateRoute>} />
           <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
 
           {/* Admin and Support only sir — the backend re-checks the role on every call anyway */}

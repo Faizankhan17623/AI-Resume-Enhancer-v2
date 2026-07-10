@@ -7,7 +7,8 @@ const {
     createUser,
     loginUser,
     SendOtp,
-    getProfile
+    getProfile,
+    updateNotificationPrefs
 } = require('../controllers/user.js')
 // we are going to start the routing from here sir
 
@@ -21,5 +22,6 @@ route.post('/Send-otp',otpLimiter,SendOtp)
 
 // the account page reads everything from here sir
 route.get('/profile',Auth,getProfile)
+route.patch('/profile/notifications',Auth,updateNotificationPrefs)
 
 module.exports = route
