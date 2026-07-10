@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import { GetProfile } from '../../Services/operations/User'
@@ -31,10 +31,9 @@ const Account = () => {
 
   if (loading || !profile) {
     return (
-      <div className="min-h-screen w-full bg-richblack-900">
-        <Navbar />
+      <DashboardLayout title="My account">
         <Loading text="Loading your account..." />
-      </div>
+      </DashboardLayout>
     )
   }
 
@@ -43,17 +42,12 @@ const Account = () => {
   const creditsPercent = plan.creditsLimit ? Math.min(100, (plan.creditsUsed / plan.creditsLimit) * 100) : 0
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <DashboardLayout title="My account">
       <Helmet>
         <title>My Account | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-6 animate-fadeIn">
-
-        <h1 className="text-3xl font-extrabold text-richblack-5 tracking-tight">
-          My <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Account</span>
-        </h1>
+      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
 
         {/* Profile card sir */}
         <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 flex flex-col md:flex-row md:items-center gap-6">
@@ -172,7 +166,7 @@ const Account = () => {
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 

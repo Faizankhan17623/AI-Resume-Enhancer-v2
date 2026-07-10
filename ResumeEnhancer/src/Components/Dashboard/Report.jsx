@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import ScoreRing from '../extra/ScoreRing'
 import IconBtn from '../extra/IconBtn'
@@ -48,10 +48,9 @@ const Report = () => {
 
   if (loading || !review) {
     return (
-      <div className="min-h-screen w-full bg-richblack-900">
-        <Navbar />
+      <DashboardLayout title="Loading review...">
         <Loading text="Loading your review..." />
-      </div>
+      </DashboardLayout>
     )
   }
 
@@ -63,16 +62,15 @@ const Report = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <DashboardLayout title={review.jdTitle || 'ATS review'}>
       <Helmet>
         <title>ATS Report | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-6 animate-fadeIn">
+      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
 
         {/* Header row sir — score + verdict + PDF */}
-        <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-8 flex flex-col md:flex-row items-center gap-8">
+        <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8">
           <ScoreRing score={review.atsScore} />
           <div className="flex-1 text-center md:text-left">
             <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600 mb-3">
@@ -96,30 +94,26 @@ const Report = () => {
           </div>
         </div>
 
-        {/* Score Breakdown bars */}
+        {/* Score Breakdown — card grid sir */}
         {review.scoreBreakdown && (
-          <Section title="Score Breakdown">
-            <div className="space-y-4">
-              {Object.entries(breakdownLabels).map(([key, label]) => {
-                const value = review.scoreBreakdown[key]
-                if (typeof value !== 'number') return null
-                return (
-                  <div key={key}>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-richblack-100">{label}</span>
-                      <span className={`font-bold font-mono ${scoreColor(value)}`}>{value}</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-richblack-700 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${barColor(value)} transition-all duration-1000`}
-                        style={{ width: `${value}%` }}
-                      />
-                    </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Object.entries(breakdownLabels).map(([key, label]) => {
+              const value = review.scoreBreakdown[key]
+              if (typeof value !== 'number') return null
+              return (
+                <div key={key} className="rounded-xl bg-richblack-800 border border-richblack-700 p-4">
+                  <p className="text-xs font-semibold text-richblack-400 mb-2">{label}</p>
+                  <p className={`text-2xl font-extrabold font-mono mb-2 ${scoreColor(value)}`}>{value}</p>
+                  <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${barColor(value)} transition-all duration-1000`}
+                      style={{ width: `${value}%` }}
+                    />
                   </div>
-                )
-              })}
-            </div>
-          </Section>
+                </div>
+              )
+            })}
+          </div>
         )}
 
         {/* ProMax: recruiter first impression sir */}
@@ -314,7 +308,7 @@ const Report = () => {
           </Section>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 

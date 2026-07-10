@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { FaPlus } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import { GetAllReviews } from '../../Services/operations/Review'
@@ -22,18 +22,14 @@ const History = () => {
   }, [])
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <DashboardLayout title="Review history">
       <Helmet>
         <title>Review History | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-10 animate-fadeIn">
+      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
 
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-extrabold text-richblack-5 tracking-tight">
-            Review <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">History</span>
-          </h1>
+        <div className="flex items-center justify-end mb-6">
           <Link to="/Dashboard/New-Review">
             <IconBtn text="New Review" customClasses="text-sm">
               <FaPlus />
@@ -76,7 +72,7 @@ const History = () => {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 

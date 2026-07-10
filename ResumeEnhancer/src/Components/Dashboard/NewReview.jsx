@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaSpellCheck, FaCheckCircle } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import { CreateReview, CheckGrammar } from '../../Services/operations/Review'
@@ -63,29 +63,21 @@ const NewReview = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <DashboardLayout title="New ATS review">
       <Helmet>
         <title>New Review | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-12 animate-fadeIn">
-
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-richblack-5 tracking-tight">
-            New <span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">ATS Review</span>
-          </h1>
-          <p className="mt-2 text-richblack-200">Upload your resume, paste the JD, get the truth.</p>
-        </div>
+      <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
 
         {loading ? (
           <Loading text="The AI is reading your resume — give it a few seconds..." />
         ) : (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Left - PDF dropzone sir */}
             <div>
-              <label className="text-sm font-medium text-richblack-100 mb-2 block">Your Resume (PDF)</label>
+              <label className="text-sm font-semibold text-richblack-100 mb-2 block">Your resume</label>
               {pdfFile ? (
                 <div className="flex items-center justify-between rounded-xl bg-richblack-800 border border-caribgreen-300 p-5">
                   <div className="flex items-center gap-3 min-w-0">
@@ -108,12 +100,12 @@ const NewReview = () => {
                   onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
                   onDragLeave={() => setDragging(false)}
                   onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 cursor-pointer transition-all duration-200 ${
+                  className={`flex flex-col items-center justify-center gap-2.5 rounded-xl border-1.5 border-dashed p-10 cursor-pointer transition-all duration-200 ${
                     dragging ? 'border-yellow-50 bg-richblack-800' : 'border-richblack-600 bg-richblack-800/50 hover:border-richblack-400'
                   }`}
                 >
-                  <FaCloudUploadAlt className="text-4xl text-yellow-50" />
-                  <p className="text-sm text-richblack-100 font-medium">Drag & drop your PDF here</p>
+                  <FaCloudUploadAlt className="text-3xl text-yellow-50" />
+                  <p className="text-sm text-richblack-100 font-semibold">Drop your PDF here</p>
                   <p className="text-xs text-richblack-400">or click to browse · max 5 MB</p>
                   <input
                     type="file"
@@ -134,9 +126,9 @@ const NewReview = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-semibold text-richblack-5 flex items-center gap-2">
-                          <FaSpellCheck /> Grammar &amp; Spelling
+                          <FaSpellCheck className="text-yellow-50" /> Grammar &amp; Spelling
                         </p>
                         <span className={`text-sm font-bold font-mono ${grammarScoreColor(grammar.score)}`}>
                           {grammar.score}/100
@@ -174,7 +166,7 @@ const NewReview = () => {
 
             {/* Right - JD textarea */}
             <div>
-              <label className="text-sm font-medium text-richblack-100 mb-2 block">Job Description</label>
+              <label className="text-sm font-semibold text-richblack-100 mb-2 block">Job description</label>
               <textarea
                 value={jd}
                 onChange={(e) => setJd(e.target.value)}
@@ -183,16 +175,16 @@ const NewReview = () => {
                 className="w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
               />
               <p className="mt-1.5 text-xs text-richblack-400 text-right">{jd.length} characters</p>
-            </div>
 
-            {/* Submit spans both sir */}
-            <div className="lg:col-span-2 flex justify-center">
-              <IconBtn type="submit" text="Analyze my resume" customClasses="px-10 py-3 text-base" />
+              {/* Submit sir */}
+              <div className="flex justify-end mt-4">
+                <IconBtn type="submit" text="Analyze my resume →" customClasses="px-8 py-3 text-sm" />
+              </div>
             </div>
           </form>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 
