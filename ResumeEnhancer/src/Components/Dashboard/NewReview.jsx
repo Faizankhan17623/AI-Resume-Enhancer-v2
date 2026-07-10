@@ -1,26 +1,44 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaSpellCheck, FaCheckCircle } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaSpellCheck, FaCheckCircle, FaFolderOpen } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
-import { CreateReview, CheckGrammar } from '../../Services/operations/Review'
+import { CreateReview, CreateReviewFromResume, CheckGrammar } from '../../Services/operations/Review'
+import { GetResumes } from '../../Services/operations/Resume'
 import { setGrammar } from '../../Slices/reviewSlice'
 
 const grammarScoreColor = (score) =>
   score >= 85 ? 'text-caribgreen-100' : score >= 60 ? 'text-yellow-50' : 'text-pink-200'
 
 const NewReview = () => {
+  const [source, setSource] = useState('upload') // 'upload' | 'saved'
   const [pdfFile, setPdfFile] = useState(null)
+  const [savedResumeId, setSavedResumeId] = useState('')
   const [jd, setJd] = useState('')
   const [dragging, setDragging] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { loading, grammar, grammarChecking } = useSelector((state) => state.review)
+  const { resumes } = useSelector((state) => state.resume)
+
+  useEffect(() => {
+    dispatch(GetResumes(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // pre-select the default resume once the library loads sir
+  useEffect(() => {
+    if (!savedResumeId && resumes.length > 0) {
+      const def = resumes.find((r) => r.isDefault) || resumes[0]
+      setSavedResumeId(def._id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumes])
 
   // only PDFs get through sir
   const handleFile = (file) => {
@@ -51,12 +69,22 @@ const NewReview = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!pdfFile) {
-      toast.error("Please upload your resume PDF")
-      return
-    }
     if (!jd.trim()) {
       toast.error("Please paste the job description")
+      return
+    }
+
+    if (source === 'saved') {
+      if (!savedResumeId) {
+        toast.error("Please choose a saved resume")
+        return
+      }
+      dispatch(CreateReviewFromResume(savedResumeId, jd.trim(), token, navigate))
+      return
+    }
+
+    if (!pdfFile) {
+      toast.error("Please upload your resume PDF")
       return
     }
     dispatch(CreateReview(pdfFile, jd.trim(), token, navigate))
@@ -75,10 +103,51 @@ const NewReview = () => {
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            {/* Left - PDF dropzone sir */}
+            {/* Left - PDF dropzone or saved-resume picker sir */}
             <div>
-              <label className="text-sm font-semibold text-richblack-100 mb-2 block">Your resume</label>
-              {pdfFile ? (
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-richblack-100 block">Your resume</label>
+                {resumes.length > 0 && (
+                  <div className="flex rounded-full bg-richblack-800 border border-richblack-600 p-0.5 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setSource('upload')}
+                      className={`px-3 py-1 rounded-full transition-colors duration-150 cursor-pointer ${source === 'upload' ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-200'}`}
+                    >
+                      Upload new
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSource('saved')}
+                      className={`px-3 py-1 rounded-full transition-colors duration-150 cursor-pointer ${source === 'saved' ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-200'}`}
+                    >
+                      Choose saved
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {source === 'saved' ? (
+                <div className="rounded-xl bg-richblack-800 border border-richblack-600 p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FaFolderOpen className="text-xl text-yellow-50 shrink-0" />
+                    <select
+                      value={savedResumeId}
+                      onChange={(e) => setSavedResumeId(e.target.value)}
+                      className="flex-1 rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50"
+                    >
+                      {resumes.map((r) => (
+                        <option key={r._id} value={r._id}>
+                          {r.label || r.originalFilename}{r.isDefault ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Link to="/Dashboard/Resumes" className="text-xs text-yellow-50 hover:underline">
+                    Manage saved resumes
+                  </Link>
+                </div>
+              ) : pdfFile ? (
                 <div className="flex items-center justify-between rounded-xl bg-richblack-800 border border-caribgreen-300 p-5">
                   <div className="flex items-center gap-3 min-w-0">
                     <FaFilePdf className="text-2xl text-pink-200 shrink-0" />

@@ -123,6 +123,16 @@ const UserCreation = new mongoose.Schema(
         notifyDigest: {
             type: Boolean,
             default: true
+        },
+        // brute-force lockout sir — on top of the IP rate limiter, this is PER-ACCOUNT so a
+        // distributed attack (many IPs, one target account) still gets stopped
+        failedLoginAttempts: {
+            type: Number,
+            default: 0
+        },
+        // set only while locked sir — null/past means the account can log in again
+        lockUntil: {
+            type: Date
         }
     }, { timestamps: true }
 )

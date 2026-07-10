@@ -1,6 +1,6 @@
 const express = require('express')
 const route = express.Router()
-const {Calling} = require('../controllers/AI')
+const {Calling, CallingFromSavedResume} = require('../controllers/AI')
 const {Auth} = require('../Middlewares/Auth.js')
 const { authLimiter, otpLimiter, aiLimiter } = require('../Middlewares/RateLimit.js')
 const {
@@ -14,6 +14,7 @@ const {
 
 // aiLimiter because every call here burns a Groq request + a credit sir
 route.post('/response',aiLimiter,Auth,Calling)
+route.post('/response/from-resume/:resumeId',aiLimiter,Auth,CallingFromSavedResume)
 
 // authLimiter stops brute-force sir, otpLimiter stops email spam
 route.post('/Createuser',authLimiter,createUser)

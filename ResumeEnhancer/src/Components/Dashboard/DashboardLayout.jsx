@@ -3,23 +3,42 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import { LogoutUser } from '../../Services/operations/Auth'
 
 // one shared shell for every logged-in page sir — sidebar + topbar, matching the approved mockup.
 // Admin keeps its own Navbar + AdminNav, this is only for the regular user dashboard area.
-const workspaceLinks = [
-  { name: 'Overview', path: '/Dashboard', icon: FaChartPie, exact: true },
-  { name: 'New Review', path: '/Dashboard/New-Review', icon: FaFilePdf },
-  { name: 'History', path: '/Dashboard/History', icon: FaHistory },
-  { name: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments, matchPrefix: '/Dashboard/Chat' },
-  { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
-]
-
-const communityLinks = [
-  { name: 'Leaderboard', path: '/Dashboard/Leaderboard', icon: FaTrophy },
-  { name: 'Account', path: '/Dashboard/Account', icon: FaUser },
+// grouped into small labeled sections sir — keeps the list scannable as features keep landing here
+const navSections = [
+  {
+    label: 'Overview',
+    links: [
+      { name: 'Overview', path: '/Dashboard', icon: FaChartPie, exact: true },
+    ],
+  },
+  {
+    label: 'Resumes',
+    links: [
+      { name: 'New Review', path: '/Dashboard/New-Review', icon: FaFilePdf },
+      { name: 'My Resumes', path: '/Dashboard/Resumes', icon: FaFolderOpen },
+      { name: 'History', path: '/Dashboard/History', icon: FaHistory },
+    ],
+  },
+  {
+    label: 'Coach',
+    links: [
+      { name: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments, matchPrefix: '/Dashboard/Chat' },
+      { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
+    ],
+  },
+  {
+    label: 'Community',
+    links: [
+      { name: 'Leaderboard', path: '/Dashboard/Leaderboard', icon: FaTrophy },
+      { name: 'Account', path: '/Dashboard/Account', icon: FaUser },
+    ],
+  },
 ]
 
 const isActive = (link, pathname) => {
@@ -37,57 +56,45 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
       </span>
     </Link>
 
-    <nav className="flex flex-col gap-0.5">
-      <span className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-richblack-400">Workspace</span>
-      {workspaceLinks.map((link) => {
-        const Icon = link.icon
-        const active = isActive(link, pathname)
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            onClick={onNavigate}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-              active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
-            }`}
-          >
-            <Icon className="text-[15px] shrink-0 opacity-90" /> {link.name}
-          </Link>
-        )
-      })}
-    </nav>
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 pr-0.5">
+      {navSections.map((section) => (
+        <nav key={section.label} className="flex flex-col gap-0.5">
+          <span className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-richblack-400">{section.label}</span>
+          {section.links.map((link) => {
+            const Icon = link.icon
+            const active = isActive(link, pathname)
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={onNavigate}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                  active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
+                }`}
+              >
+                <Icon className="text-[15px] shrink-0 opacity-90" /> {link.name}
+              </Link>
+            )
+          })}
+        </nav>
+      ))}
 
-    <nav className="flex flex-col gap-0.5">
-      <span className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-richblack-400">Community</span>
-      {communityLinks.map((link) => {
-        const Icon = link.icon
-        const active = isActive(link, pathname)
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            onClick={onNavigate}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-              active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
-            }`}
-          >
-            <Icon className="text-[15px] shrink-0 opacity-90" /> {link.name}
-          </Link>
-        )
-      })}
       {/* the admin door sir — same role gate as the old Navbar */}
       {['Admin', 'Support'].includes(user?.role) && (
-        <Link
-          to="/Admin"
-          onClick={onNavigate}
-          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-            pathname.startsWith('/Admin') ? 'bg-pink-900/15 text-pink-100' : 'text-pink-200/80 hover:bg-pink-900/10 hover:text-pink-100'
-          }`}
-        >
-          <FaChartPie className="text-[15px] shrink-0 opacity-90" /> Admin
-        </Link>
+        <nav className="flex flex-col gap-0.5">
+          <span className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-richblack-400">Admin</span>
+          <Link
+            to="/Admin"
+            onClick={onNavigate}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
+              pathname.startsWith('/Admin') ? 'bg-pink-900/15 text-pink-100' : 'text-pink-200/80 hover:bg-pink-900/10 hover:text-pink-100'
+            }`}
+          >
+            <FaChartPie className="text-[15px] shrink-0 opacity-90" /> Admin
+          </Link>
+        </nav>
       )}
-    </nav>
+    </div>
 
     <div className="mt-auto flex flex-col gap-2.5">
       {streak?.currentStreak > 0 && (
