@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { FaPlus, FaPaperPlane, FaTrash, FaRobot, FaFilePdf, FaTimes, FaComments } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import { GetAllChats, GetSingleChat, SendMessage, CreateChat, DeleteChat } from '../../Services/operations/Chat'
@@ -147,13 +147,12 @@ const Chat = () => {
   }
 
   return (
-    <div className="h-screen w-full bg-richblack-900 flex flex-col overflow-hidden">
+    <DashboardLayout title="AI Coach">
       <Helmet>
         <title>AI Coach | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="flex-1 max-w-7xl mx-auto w-full flex min-h-0">
+      <div className="h-full max-w-7xl mx-auto w-full flex min-h-0">
 
         {/* Left - chat list sidebar sir */}
         <div className="w-72 shrink-0 border-r border-richblack-700 flex flex-col">
@@ -255,7 +254,7 @@ const Chat = () => {
       </div>
 
       {showModal && <NewChatModal onClose={() => setShowModal(false)} />}
-    </div>
+    </DashboardLayout>
   )
 }
 

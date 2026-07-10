@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { FaTrophy, FaMedal, FaFire } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import { FaTrophy, FaMedal } from 'react-icons/fa'
+import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import { GetLeaderboard, GetStreak } from '../../Services/operations/Review'
 
@@ -20,7 +20,7 @@ const scoreColor = (score) =>
 const Leaderboard = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { leaderboard, loading, streak } = useSelector((state) => state.review)
+  const { leaderboard, loading } = useSelector((state) => state.review)
 
   useEffect(() => {
     dispatch(GetLeaderboard(token))
@@ -29,26 +29,20 @@ const Leaderboard = () => {
   }, [])
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <DashboardLayout title="Leaderboard">
       <Helmet>
         <title>Leaderboard | ResumeEnhancer</title>
       </Helmet>
-      <Navbar />
 
-      <div className="max-w-3xl mx-auto px-6 py-10 animate-fadeIn">
+      <div className="h-full overflow-y-auto max-w-3xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
 
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-richblack-5 tracking-tight flex items-center justify-center gap-3">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-extrabold text-richblack-5 tracking-tight flex items-center justify-center gap-3">
             <FaTrophy className="text-yellow-50" /> Leaderboard
           </h1>
           <p className="mt-2 text-richblack-300 text-sm">
             Top ATS scores across everyone using ResumeEnhancer — fully anonymous, no resume content is ever shown.
           </p>
-          {streak?.currentStreak > 0 && (
-            <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-richblack-800 border border-yellow-800/40 text-sm font-bold text-yellow-50">
-              <FaFire className="text-pink-200" /> Your streak: {streak.currentStreak} days
-            </span>
-          )}
         </div>
 
         {loading ? (
@@ -84,7 +78,7 @@ const Leaderboard = () => {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 
