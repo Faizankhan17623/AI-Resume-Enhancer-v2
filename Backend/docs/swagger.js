@@ -37,6 +37,9 @@ const swaggerDocument = {
         { name: 'Auth', description: 'Signup, login, OTP, profile' },
         { name: 'AI Review', description: 'ATS resume review' },
         { name: 'Chat', description: 'AI resume coach chat' },
+        { name: 'Resumes', description: 'Saved resume library — save once, reuse across reviews/chats/cover letters' },
+        { name: 'Cover Letter', description: 'AI-drafted cover letters (Pro+ feature)' },
+        { name: 'Job Search', description: 'Live web job search via Tavily (Pro+ feature)' },
         { name: 'Payment', description: 'Plans and Razorpay checkout' },
         { name: 'Reviews', description: 'Saved review history and PDF export' },
         { name: 'Grammar', description: 'Free grammar/spell pre-check (no AI credit spent)' },
@@ -77,8 +80,9 @@ const swaggerDocument = {
         '/Login': {
             post: {
                 tags: ['Auth'], summary: 'Log in and receive a JWT', security: [],
+                description: 'Per-account lockout: 5 consecutive failed attempts locks the account for 15 minutes, on top of the IP-based rate limiter.',
                 requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { email: { type: 'string' }, password: { type: 'string' } }, required: ['email', 'password'] } } } },
-                responses: { 200: { description: 'Logged in, token + user returned' }, 401: { description: 'Wrong password' }, 404: { description: 'No account with this email' } },
+                responses: { 200: { description: 'Logged in, token + user returned' }, 401: { description: 'Wrong password' }, 404: { description: 'No account with this email' }, 423: { description: 'Account locked from too many failed attempts, try again later' } },
             },
         },
         '/profile': {
@@ -87,11 +91,26 @@ const swaggerDocument = {
                 responses: { 200: { description: 'Profile data' }, 401: { description: 'Not authenticated' } },
             },
         },
+        '/profile/notifications': {
+            patch: {
+                tags: ['Auth'], summary: 'Update per-type email notification preferences',
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { notifyStreak: { type: 'boolean' }, notifyWinBack: { type: 'boolean' }, notifyDigest: { type: 'boolean' } } } } } },
+                responses: { 200: { description: 'Updated preferences' }, 400: { description: 'At least one preference is required' } },
+            },
+        },
         '/response': {
             post: {
                 tags: ['AI Review'], summary: 'Upload a resume PDF + job description for an AI ATS review (consumes a credit)',
                 requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { resume: { type: 'string', format: 'binary' }, jd: { type: 'string' } } } } } },
                 responses: { 200: { description: 'AI review generated and saved' }, 400: { description: 'Out of credits / bad input' } },
+            },
+        },
+        '/response/from-resume/{resumeId}': {
+            post: {
+                tags: ['AI Review'], summary: 'Run an AI ATS review using a previously saved resume (consumes a credit)',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { jd: { type: 'string' } } } } } },
+                responses: { 200: { description: 'AI review generated and saved' }, 404: { description: 'Saved resume not found' } },
             },
         },
         '/chat': {
@@ -122,6 +141,55 @@ const swaggerDocument = {
                 parameters: [{ name: 'chatId', in: 'path', required: true, schema: { type: 'string' } }],
                 requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
                 responses: { 200: { description: 'AI reply appended' }, 400: { description: 'Message cap reached for this plan' } },
+            },
+        },
+        '/resumes': {
+            post: {
+                tags: ['Resumes'], summary: 'Save a parsed resume to the library for reuse (no AI call, no credit spent)',
+                requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { PDf: { type: 'string', format: 'binary' }, label: { type: 'string' } }, required: ['PDf'] } } } },
+                responses: { 201: { description: 'Resume saved' }, 400: { description: 'Missing/invalid file' } },
+            },
+            get: {
+                tags: ['Resumes'], summary: 'List the logged-in user\'s saved resumes (newest first)',
+                responses: { 200: { description: 'Resume list (label/filename/isDefault, no text)' } },
+            },
+        },
+        '/resumes/{resumeId}': {
+            patch: {
+                tags: ['Resumes'], summary: 'Rename a saved resume or set it as the default',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { label: { type: 'string' }, isDefault: { type: 'boolean' } } } } } },
+                responses: { 200: { description: 'Resume updated' }, 404: { description: 'Not found' } },
+            },
+            delete: {
+                tags: ['Resumes'], summary: 'Delete a saved resume (promotes the next most recent to default, if the deleted one was it)',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: { 200: { description: 'Deleted' }, 404: { description: 'Not found' } },
+            },
+        },
+        '/cover-letter': {
+            post: {
+                tags: ['Cover Letter'], summary: 'Generate an AI-drafted cover letter from a resume PDF + JD (Pro+ feature)',
+                requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { PDf: { type: 'string', format: 'binary' }, jd: { type: 'string' } }, required: ['PDf', 'jd'] } } } },
+                responses: { 200: { description: 'Cover letter generated and saved' }, 400: { description: 'Missing file or JD' }, 403: { description: 'Basic plan — upgrade required' } },
+            },
+            get: {
+                tags: ['Cover Letter'], summary: 'List the logged-in user\'s saved cover letters (newest first)',
+                responses: { 200: { description: 'Cover letter list' } },
+            },
+        },
+        '/cover-letter/{coverLetterId}': {
+            get: {
+                tags: ['Cover Letter'], summary: 'Get one saved cover letter',
+                parameters: [{ name: 'coverLetterId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: { 200: { description: 'Cover letter detail' }, 404: { description: 'Not found' } },
+            },
+        },
+        '/job-search': {
+            post: {
+                tags: ['Job Search'], summary: 'Search the live web for job postings matching a query, via Tavily (Pro+ feature)',
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } } },
+                responses: { 200: { description: 'Job results (title/url/snippet/score)' }, 400: { description: 'Missing query' }, 403: { description: 'Basic plan — upgrade required' } },
             },
         },
         '/payment/plans': {
