@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import { LogoutUser } from '../../Services/operations/Auth'
 
@@ -30,6 +30,7 @@ const navSections = [
     links: [
       { name: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments, matchPrefix: '/Dashboard/Chat' },
       { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
+      { name: 'Job Search', path: '/Dashboard/Job-Search', icon: FaSearch },
     ],
   },
   {
