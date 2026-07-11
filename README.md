@@ -6,10 +6,14 @@ A full-stack web application that helps users improve their resumes using AI-pow
 
 ## Features
 
-- **Authentication** — signup/login with OTP email verification and JWT-based sessions
+- **Authentication** — signup/login with OTP email verification, JWT-based sessions, and per-account brute-force lockout (5 failed attempts locks the account for 15 minutes)
 - **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq
+- **Resume Library** — save parsed resumes for reuse across reviews, chats, and cover letters without re-uploading; supports renaming and a default resume
+- **AI Cover Letter Generator** — generate a tailored cover letter from a resume + job description (Pro+ feature)
+- **Job Search** — live web search for matching job postings via Tavily (Pro+ feature)
 - **Payments** — subscription/checkout support via Razorpay and Stripe
 - **Reviews** — users can leave reviews after using the platform
+- **Notification Preferences** — per-type opt-in/opt-out for streak, win-back, and digest emails
 - **Admin Dashboard** — manage users, payments, announcements, and view audit logs
 - **Cloud File Storage** — resume uploads stored via Cloudinary
 
@@ -46,7 +50,7 @@ AiResumeEnhancer/
 │   └── index.js          # Server entry point
 └── ResumeEnhancer/       # React frontend
     └── src/
-        ├── Components/   # UI components (Home, Login, Dashboard, Admin, etc.)
+        ├── Components/   # UI components (Home, Login, Dashboard incl. Resumes/CoverLetter/JobSearch, Admin, etc.)
         ├── Services/     # API call definitions
         ├── Slices/       # Redux slices
         └── reducer/      # Redux store setup
@@ -54,7 +58,7 @@ AiResumeEnhancer/
 
 ## API Docs
 
-Interactive Swagger UI documentation for all ~35 API endpoints (auth, AI review, chat, payments, reviews, grammar check, streaks, leaderboard, admin) is served directly from the backend at `/api-docs`.
+Interactive Swagger UI documentation for all ~47 API endpoints (auth, AI review, chat, resume library, cover letters, job search, payments, reviews, grammar check, streaks, leaderboard, admin) is served directly from the backend at **`/api-docs`**.
 
 **Production:**
 ```
@@ -66,7 +70,7 @@ https://ai-resume-enhancer-88nm.onrender.com/api-docs
 http://localhost:4000/api-docs
 ```
 
-The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Backend/index.js` via `swagger-ui-express`. Every route is grouped under a tag (Auth, AI Review, Chat, Reviews, Grammar, Streak, Leaderboard, Payment, Admin, Announcements) and documents its request body, path params, and response codes. Bearer JWT auth is pre-wired in the Swagger UI — click **Authorize** and paste a token from `/Login` to try authenticated endpoints directly from the docs page.
+The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Backend/index.js` via `swagger-ui-express`. Every route is grouped under a tag (Auth, AI Review, Chat, Resumes, Cover Letter, Job Search, Reviews, Grammar, Streak, Leaderboard, Payment, Admin, Announcements) and documents its request body, path params, and response codes. Bearer JWT auth is pre-wired in the Swagger UI — click **Authorize** and paste a token from `/Login` to try authenticated endpoints directly from the docs page.
 
 > Note: Render's free tier spins the service down after periods of inactivity, so the first request to the production docs link may take 30-60 seconds to wake it up.
 
