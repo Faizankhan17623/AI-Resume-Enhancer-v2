@@ -136,6 +136,7 @@
 }
 
 body {
+    margin: 0;
     font-family: var(--font-inter);
     background-color: var(--color-richblack-900);
     transition: background-color 0.2s ease;

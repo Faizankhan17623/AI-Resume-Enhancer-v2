@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { Helmet } from 'react-helmet-async'
 import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
+import TemplateSlider from './Components/Home/TemplateSlider'
 import Footer from './Components/Home/Footer'
 import OpenRoute from './Hooks/OpenRoute'
 import PrivateRoute from './Hooks/PrivateRoute'
@@ -48,6 +49,7 @@ const Homelayout = () => {
       <Navbar />
       <div className="flex-1">
         <Banner />
+        <TemplateSlider />
       </div>
       <Footer />
     </div>

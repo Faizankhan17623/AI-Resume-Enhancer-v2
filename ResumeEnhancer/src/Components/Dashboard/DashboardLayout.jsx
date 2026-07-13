@@ -50,7 +50,7 @@ const isActive = (link, pathname) => {
 
 const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
   <>
-    <Link to="/Dashboard" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
+    <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
       <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
       <span className="font-display text-base text-richblack-5 tracking-tight">
         Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
@@ -124,7 +124,7 @@ const DashboardLayout = ({ title, children }) => {
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()
 
   return (
-    <div className="h-screen w-full flex bg-richblack-900 overflow-hidden">
+    <div className="fixed inset-0 flex bg-richblack-900 overflow-hidden">
       {/* Desktop sidebar sir */}
       <aside className="hidden lg:flex w-60 shrink-0 flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4">
         <SidebarContent pathname={location.pathname} user={user} streak={streak} />
