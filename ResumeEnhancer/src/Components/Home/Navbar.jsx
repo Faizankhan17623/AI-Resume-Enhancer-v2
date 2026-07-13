@@ -1,10 +1,81 @@
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
-import { FiLogOut, FiSun, FiMoon } from 'react-icons/fi'
+import { FiLogOut, FiSun, FiMoon, FiChevronDown } from 'react-icons/fi'
+import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 import { LogoutUser } from '../../Services/operations/Auth'
 import useTheme from '../../Hooks/useTheme'
+
+// Resume dropdown sir — every review/library feature we actually ship, so every link goes somewhere real
+const resumeMenu = [
+  { name: 'New Review', desc: 'Score your resume against a job description', path: '/Dashboard/New-Review', icon: FaFilePdf },
+  { name: 'My Resumes', desc: 'Your saved resume library', path: '/Dashboard/Resumes', icon: FaFolderOpen },
+  { name: 'History', desc: 'Every review you have run', path: '/Dashboard/History', icon: FaHistory },
+  { name: 'Cover Letter', desc: 'Generate a tailored cover letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
+]
+
+// Tools dropdown sir — the non-resume-specific features
+const toolsMenu = [
+  { name: 'AI Coach', desc: 'Chat with the AI about your career', path: '/Dashboard/Chats', icon: FaComments },
+  { name: 'Job Search', desc: 'Find roles that match your resume', path: '/Dashboard/Job-Search', icon: FaSearch },
+  { name: 'Leaderboard', desc: 'See how your score stacks up', path: '/Dashboard/Leaderboard', icon: FaTrophy },
+]
+
+// Shared dropdown sir — logged-out users land on Login first, the target page opens right after
+const NavDropdown = ({ label, items, active }) => {
+  const [open, setOpen] = useState(false)
+  const closeTimer = useRef(null)
+  const { token } = useSelector((state) => state.auth)
+
+  const openNow = () => {
+    clearTimeout(closeTimer.current)
+    setOpen(true)
+  }
+  const closeSoon = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), 150)
+  }
+
+  useEffect(() => () => clearTimeout(closeTimer.current), [])
+
+  return (
+    <div className="relative" onMouseEnter={openNow} onMouseLeave={closeSoon}>
+      <button
+        className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200 cursor-pointer ${
+          active ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+        }`}
+      >
+        {label} <FiChevronDown className={`text-xs transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-72 animate-fadeIn">
+          <div className="rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl p-2">
+            {items.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.name}
+                  to={token ? item.path : '/Login'}
+                  className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-richblack-700/60 transition-colors duration-150"
+                >
+                  <div className="w-8 h-8 shrink-0 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
+                    <Icon />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-richblack-5">{item.name}</p>
+                    <p className="text-xs text-richblack-400 mt-0.5">{item.desc}</p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const Navbar = () => {
   const { token, user } = useSelector((state) => state.auth)
@@ -13,10 +84,8 @@ const Navbar = () => {
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
 
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Pricing', path: '/Pricing' },
-  ]
+  const resumeActive = resumeMenu.some((item) => location.pathname === item.path)
+  const toolsActive = toolsMenu.some((item) => location.pathname === item.path)
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-richblack-700 bg-richblack-900/90 backdrop-blur-md">
@@ -32,44 +101,25 @@ const Navbar = () => {
 
         {/* Center Links */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
+          <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
+          <Link
+            to="/Pricing"
+            className={`text-sm font-medium transition-colors duration-200 ${
+              location.pathname === '/Pricing' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+            }`}
+          >
+            Pricing
+          </Link>
+          {token && (
             <Link
-              key={link.name}
-              to={link.path}
+              to="/Dashboard"
               className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname === link.path ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+                location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
               }`}
             >
-              {link.name}
+              Dashboard
             </Link>
-          ))}
-          {token && (
-            <>
-              <Link
-                to="/Dashboard"
-                className={`text-sm font-medium transition-colors duration-200 ${
-                  location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
-                }`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/Dashboard/Chats"
-                className={`text-sm font-medium transition-colors duration-200 ${
-                  location.pathname.startsWith('/Dashboard/Chat') ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
-                }`}
-              >
-                AI Coach
-              </Link>
-              <Link
-                to="/Dashboard/Account"
-                className={`text-sm font-medium transition-colors duration-200 ${
-                  location.pathname === '/Dashboard/Account' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
-                }`}
-              >
-                Account
-              </Link>
-            </>
           )}
           {/* the admin door sir — only Admin and Support ever see this link */}
           {token && ['Admin', 'Support'].includes(user?.role) && (
