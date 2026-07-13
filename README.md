@@ -1,3 +1,61 @@
+<!--
+Full feature list (internal reference — not rendered as part of the public README body)
+
+Auth & Account
+- Signup/login with OTP email verification, JWT session cookie
+- Per-account brute-force lockout: 5 failed attempts locks the account for 15 minutes
+- Profile page: plan, activity counts
+- Per-type email notification preferences (streak, win-back, digest)
+
+AI Resume Review
+- Upload resume PDF + job description for an ATS-style AI review (consumes a credit)
+- Run a review from a previously saved resume (no re-upload)
+- Score breakdown, strengths, missing keywords, before/after rewrites
+- Pro: keyword analysis, section-by-section feedback, quick wins
+- ProMax: recruiter first-impression, red flags, rewritten summary, interview prep, learning roadmap
+- Saved review history, progress-over-time chart, PDF export, public share links
+- Free grammar/spelling pre-check (no AI credit spent)
+- ATS formatting scan: deterministic structural check (via pdfjs-dist) for multi-column layouts, embedded images, missing text layer, non-standard fonts — the stuff that breaks real ATS parsers but a text-only AI review can't see
+
+Resume Library
+- Save parsed resumes for reuse across reviews/chats/cover letters
+- Rename, delete, set a default resume
+
+AI Coach Chat
+- Start a chat from a resume + JD (consumes a credit)
+- Threaded conversation with streaming AI replies, plan-limited message caps
+
+Cover Letter Generator (Pro+)
+- Generate a tailored cover letter from a resume + JD
+- Saved cover letter history
+
+Job Search (Pro+)
+- Live web search for matching job postings via Tavily
+
+Gamification / Community
+- Consecutive-day activity streak
+- Anonymized leaderboard of top ATS scores
+
+Payments
+- Basic / Pro / ProMax plans
+- Razorpay checkout + signature verification, payment history
+
+Admin Dashboard (role-gated: Admin/Support)
+- Stats overview, system health, AI usage/cost stats, 30-day charts
+- User management: search, role/plan change, credit adjust, ban/unban, delete, impersonate
+- Payments dashboard, audit log
+- Site-wide announcement banners
+
+Onboarding
+- Dashboard "Get started" checklist for new users, derived from real activity (first review, first saved resume, first chat, first cover letter), dismissible and never reappears once done
+
+Platform
+- Cloud file storage via Cloudinary
+- Helmet, CORS, rate limiting (IP + account-level)
+- Interactive Swagger API docs at /api-docs (~48 endpoints)
+- Dark/light theme toggle, responsive dashboard layout
+-->
+
 # AI Resume Enhancer
 
 A full-stack web application that helps users improve their resumes using AI-powered feedback, with user authentication, a chat-based review flow, payments, and an admin dashboard.
@@ -8,7 +66,9 @@ A full-stack web application that helps users improve their resumes using AI-pow
 
 - **Authentication** — signup/login with OTP email verification, JWT-based sessions, and per-account brute-force lockout (5 failed attempts locks the account for 15 minutes)
 - **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq
+- **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded images, missing text layer, non-standard fonts) that catches parsing issues real ATS software chokes on, independent of the AI's subjective review
 - **Resume Library** — save parsed resumes for reuse across reviews, chats, and cover letters without re-uploading; supports renaming and a default resume
+- **Onboarding Checklist** — a dashboard "Get started" progress card for new users that tracks real activity and dismisses itself for good once complete
 - **AI Cover Letter Generator** — generate a tailored cover letter from a resume + job description (Pro+ feature)
 - **Job Search** — live web search for matching job postings via Tavily (Pro+ feature)
 - **Payments** — subscription/checkout support via Razorpay and Stripe

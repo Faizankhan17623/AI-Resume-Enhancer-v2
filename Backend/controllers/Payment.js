@@ -60,7 +60,8 @@ exports.createOrder = async (req, res) => {
         const order = await RazorpayInstance.orders.create({
             amount: PLANS[plan].price,
             currency: 'INR',
-            receipt: `rcpt_${id}_${Date.now()}`,
+            // razorpay caps receipt at 40 chars sir — id (24) + timestamp (13) alone is already 37, so drop the prefix/separators
+            receipt: `${id}${Date.now()}`,
             notes: {
                 userId: String(id),
                 plan

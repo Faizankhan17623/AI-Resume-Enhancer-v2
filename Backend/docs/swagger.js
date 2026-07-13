@@ -98,11 +98,18 @@ const swaggerDocument = {
                 responses: { 200: { description: 'Updated preferences' }, 400: { description: 'At least one preference is required' } },
             },
         },
+        '/profile/onboarding': {
+            patch: {
+                tags: ['Auth'], summary: 'Mark the dashboard onboarding checklist as complete/dismissed',
+                responses: { 200: { description: 'onboardingCompleted set to true' }, 404: { description: 'User not found' } },
+            },
+        },
         '/response': {
             post: {
                 tags: ['AI Review'], summary: 'Upload a resume PDF + job description for an AI ATS review (consumes a credit)',
+                description: 'Response also includes formattingCheck — a deterministic scan (multi-column layout, embedded images, missing text layer, non-standard fonts) for structural issues that break real ATS parsers, separate from the AI\'s subjective review.',
                 requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { resume: { type: 'string', format: 'binary' }, jd: { type: 'string' } } } } } },
-                responses: { 200: { description: 'AI review generated and saved' }, 400: { description: 'Out of credits / bad input' } },
+                responses: { 200: { description: 'AI review generated and saved, includes formattingCheck' }, 400: { description: 'Out of credits / bad input' } },
             },
         },
         '/response/from-resume/{resumeId}': {
@@ -110,7 +117,7 @@ const swaggerDocument = {
                 tags: ['AI Review'], summary: 'Run an AI ATS review using a previously saved resume (consumes a credit)',
                 parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
                 requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { jd: { type: 'string' } } } } } },
-                responses: { 200: { description: 'AI review generated and saved' }, 404: { description: 'Saved resume not found' } },
+                responses: { 200: { description: 'AI review generated and saved, includes the saved resume\'s formattingCheck' }, 404: { description: 'Saved resume not found' } },
             },
         },
         '/chat': {
@@ -146,8 +153,9 @@ const swaggerDocument = {
         '/resumes': {
             post: {
                 tags: ['Resumes'], summary: 'Save a parsed resume to the library for reuse (no AI call, no credit spent)',
+                description: 'Also runs a one-time structural ATS formatting scan (formattingCheck) on the PDF, reused by every future review run against this saved resume.',
                 requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { PDf: { type: 'string', format: 'binary' }, label: { type: 'string' } }, required: ['PDf'] } } } },
-                responses: { 201: { description: 'Resume saved' }, 400: { description: 'Missing/invalid file' } },
+                responses: { 201: { description: 'Resume saved, includes formattingCheck' }, 400: { description: 'Missing/invalid file' } },
             },
             get: {
                 tags: ['Resumes'], summary: 'List the logged-in user\'s saved resumes (newest first)',

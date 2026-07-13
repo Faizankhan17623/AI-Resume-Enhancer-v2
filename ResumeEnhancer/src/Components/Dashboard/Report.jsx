@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt } from 'react-icons/fa'
+import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import ScoreRing from '../extra/ScoreRing'
@@ -39,7 +39,7 @@ const Report = () => {
   const { reviewId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { review, loading, isPublic, shareId } = useSelector((state) => state.review)
+  const { review, loading, isPublic, shareId, formattingCheck } = useSelector((state) => state.review)
   const shareUrl = shareId ? `${window.location.origin}/Shared/${shareId}` : null
 
   useEffect(() => {
@@ -135,6 +135,36 @@ const Report = () => {
               )
             })}
           </div>
+        )}
+
+        {/* ATS structural formatting scan sir — deterministic, separate from the AI's subjective formatting score above */}
+        {formattingCheck && (
+          <Section title="ATS Formatting Scan">
+            <div className="flex items-center gap-4 mb-4">
+              <p className={`font-display text-3xl ${scoreColor(formattingCheck.score)}`}>{formattingCheck.score}</p>
+              <p className="text-sm text-richblack-300">
+                {formattingCheck.issues?.length > 0
+                  ? `${formattingCheck.issues.length} formatting issue${formattingCheck.issues.length > 1 ? 's' : ''} that could trip up real ATS parsers`
+                  : 'No structural parsing issues detected — this resume should parse cleanly.'}
+              </p>
+            </div>
+            {formattingCheck.issues?.length > 0 ? (
+              <ul className="space-y-3">
+                {formattingCheck.issues.map((issue, index) => (
+                  <li key={index} className="flex gap-3 items-start">
+                    <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border mt-0.5 ${priorityBadge[issue.severity] || priorityBadge.low}`}>
+                      {issue.severity}
+                    </span>
+                    <p className="text-sm text-richblack-100">{issue.message}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex items-center gap-2.5 text-sm text-caribgreen-100">
+                <FaCheckCircle /> Single-column, text-based, standard fonts — parser-friendly.
+              </div>
+            )}
+          </Section>
         )}
 
         {/* ProMax: recruiter first impression sir */}

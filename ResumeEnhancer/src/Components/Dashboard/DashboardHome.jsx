@@ -3,21 +3,38 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus } from 'react-icons/fa'
+import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import { GetProgress, GetAllReviews, GetStreak } from '../../Services/operations/Review'
+import { GetProfile, CompleteOnboarding } from '../../Services/operations/User'
 
 const DashboardHome = () => {
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { progress, allReviews } = useSelector((state) => state.review)
+  const { profile } = useSelector((state) => state.profile)
 
   useEffect(() => {
     dispatch(GetProgress(token))
     dispatch(GetAllReviews(token))
     dispatch(GetStreak(token))
+    dispatch(GetProfile(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const activity = profile?.activity
+  const onboardingCompleted = profile?.user?.onboardingCompleted
+
+  const onboardingSteps = [
+    { label: 'Run your first AI resume review', done: (activity?.reviewCount ?? 0) > 0, to: '/Dashboard/New-Review' },
+    { label: 'Save a resume to your library', done: (activity?.resumeCount ?? 0) > 0, to: '/Dashboard/Resumes' },
+    { label: 'Start a chat with the AI coach', done: (activity?.chatCount ?? 0) > 0, to: '/Dashboard/Chats' },
+    { label: 'Generate a tailored cover letter', done: (activity?.coverLetterCount ?? 0) > 0, to: '/Dashboard/Cover-Letter' },
+  ]
+  const completedSteps = onboardingSteps.filter((s) => s.done).length
+  const showOnboarding = activity && onboardingCompleted === false && completedSteps < onboardingSteps.length
+
+  const dismissOnboarding = () => dispatch(CompleteOnboarding(token))
 
   const stats = progress?.stats
   // the graph wants friendly labels sir
@@ -48,7 +65,7 @@ const DashboardHome = () => {
         <title>Dashboard | ResumeEnhancer</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto px-4 lg:px-6 py-6 flex flex-col gap-6 animate-fadeIn">
+      <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6 animate-fadeIn">
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-richblack-300">
@@ -60,6 +77,49 @@ const DashboardHome = () => {
             </button>
           </Link>
         </div>
+
+        {/* Onboarding checklist sir — shows until every step is done or the user dismisses it, never again after that */}
+        {showOnboarding && (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display text-lg text-richblack-5">Get started</h2>
+                <p className="text-xs text-richblack-400 mt-0.5">{completedSteps} of {onboardingSteps.length} done</p>
+              </div>
+              <button
+                onClick={dismissOnboarding}
+                className="text-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer p-1"
+                title="Dismiss"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden mb-5">
+              <div
+                className="h-full rounded-full bg-yellow-50 transition-all duration-700"
+                style={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {onboardingSteps.map((step) => (
+                <Link
+                  key={step.label}
+                  to={step.to}
+                  className={`flex items-center gap-2.5 text-sm rounded-lg px-3 py-2.5 transition-colors duration-200 ${
+                    step.done ? 'text-richblack-400' : 'text-richblack-100 hover:bg-richblack-700/60'
+                  }`}
+                >
+                  {step.done ? (
+                    <FaCheckCircle className="text-caribgreen-100 shrink-0" />
+                  ) : (
+                    <FaRegCircle className="text-richblack-400 shrink-0" />
+                  )}
+                  <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stat cards sir — tighter icon-chip treatment from the mockup, soft shadow instead of a hard border */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -77,8 +137,8 @@ const DashboardHome = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-5">
-          {/* Score Progress Graph sir */}
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+          {/* Score Progress Graph sir — min-w-0 stops the ResponsiveContainer from overflowing its grid track and causing a page-wide x-axis scrollbar */}
+          <div className="min-w-0 rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display text-lg text-richblack-5">Score progress</h2>
               <span className="text-xs text-richblack-400">Last {chartData.length} reviews</span>

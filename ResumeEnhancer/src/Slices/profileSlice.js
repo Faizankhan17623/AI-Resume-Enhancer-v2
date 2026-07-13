@@ -20,9 +20,14 @@ const profileSlice = createSlice({
             if (state.profile?.user) {
                 Object.assign(state.profile.user, value.payload)
             }
+        },
+        setOnboardingCompleted(state, value) {
+            if (state.profile?.user) {
+                state.profile.user.onboardingCompleted = value.payload
+            }
         }
     }
 })
 
-export const { setProfile, setLoading, setNotificationPrefs } = profileSlice.actions
+export const { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted } = profileSlice.actions
 export default profileSlice.reducer
