@@ -9,13 +9,14 @@ const { consumeCredit } = require('../utils/Plans');
 const { buildReviewSystemPrompt } = require('../utils/Prompts');
 const { logAi } = require('../utils/AdminLog');
 const { updateStreak } = require('../utils/Streak');
+const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 
 const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 
 // shared core sir — both a fresh PDF upload and a re-score from a saved resume land here once
 // the resume text is in hand. Spends one credit, calls Groq, saves the Review, returns the same
 // response shape either way.
-const runReview = async (req, res, { userId, resumeText }) => {
+const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     const spend = await consumeCredit(userId)
 
     if (!spend.ok) {
@@ -112,6 +113,7 @@ const runReview = async (req, res, { userId, resumeText }) => {
             verdict: review.verdict,
             scoreBreakdown: review.scoreBreakdown,
             review,
+            formattingCheck,
         })
         reviewId = saved._id
     } catch (saveErr) {
@@ -124,7 +126,8 @@ const runReview = async (req, res, { userId, resumeText }) => {
     return res.status(200).json({
         success: true,
         reviewId,
-        review
+        review,
+        formattingCheck,
     });
 }
 
@@ -153,7 +156,16 @@ exports.Calling = async (req,res) =>{
             });
         }
 
-        return await runReview(req, res, { userId: id, resumeText: result.text })
+        // structural ATS parse-safety scan sir — runs on the raw PDF bytes, separate from the
+        // Groq call, so it never eats a credit or blocks the review if it fails
+        let formattingCheck = null
+        try {
+            formattingCheck = await checkAtsFormatting(PDf.data)
+        } catch (fmtErr) {
+            console.log('ATS formatting check failed:', fmtErr.message)
+        }
+
+        return await runReview(req, res, { userId: id, resumeText: result.text, formattingCheck })
     } catch (error) {
         console.log(error)
         console.log(error.message)
@@ -180,7 +192,7 @@ exports.CallingFromSavedResume = async (req, res) => {
             })
         }
 
-        return await runReview(req, res, { userId: id, resumeText: resume.resumeText })
+        return await runReview(req, res, { userId: id, resumeText: resume.resumeText, formattingCheck: resume.formattingCheck })
     } catch (error) {
         console.log(error)
         console.log(error.message)

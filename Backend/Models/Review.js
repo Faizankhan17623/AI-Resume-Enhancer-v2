@@ -34,6 +34,17 @@ const ReviewCreation = new mongoose.Schema(
             skillsCoverage: Number,
             formatting: Number,
         },
+        // structural ATS parse-safety check sir — separate from the AI's subjective "formatting"
+        // score above, this is a deterministic scan (pdfjs) for things that break real ATS parsers:
+        // multi-column layout, embedded images, missing text layer, non-standard fonts
+        formattingCheck: {
+            score: Number,
+            issues: [{
+                type: String,
+                severity: { type: String, enum: ['high', 'medium', 'low'] },
+                message: String,
+            }],
+        },
         // the complete JSON the model returned sir — shape differs per plan so keep it flexible
         review: {
             type: mongoose.Schema.Types.Mixed,

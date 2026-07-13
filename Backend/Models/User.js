@@ -133,6 +133,12 @@ const UserCreation = new mongoose.Schema(
         // set only while locked sir — null/past means the account can log in again
         lockUntil: {
             type: Date
+        },
+        // dashboard onboarding checklist sir — true once dismissed or every step is done,
+        // false forever after that so the checklist never reappears
+        onboardingCompleted: {
+            type: Boolean,
+            default: false
         }
     }, { timestamps: true }
 )

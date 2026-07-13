@@ -30,6 +30,16 @@ const resumeSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // structural ATS parse-safety scan sir, run once at save time so it's reusable across
+        // every review that uses this saved resume without re-scanning the PDF each time
+        formattingCheck: {
+            score: Number,
+            issues: [{
+                type: String,
+                severity: { type: String, enum: ['high', 'medium', 'low'] },
+                message: String,
+            }],
+        },
     }, { timestamps: true }
 )
 

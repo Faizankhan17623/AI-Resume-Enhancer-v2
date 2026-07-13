@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import {
-    setReview, setReviewId, setShareState, setAllReviews, setProgress, setLoading,
+    setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
@@ -35,6 +35,7 @@ export function CreateReview(pdfFile, jd, token, navigate) {
 
             dispatch(setReview(response.data.review))
             dispatch(setReviewId(response.data.reviewId))
+            dispatch(setFormattingCheck(response.data.formattingCheck))
 
             toast.success("Your review is ready")
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
@@ -64,6 +65,7 @@ export function CreateReviewFromResume(resumeId, jd, token, navigate) {
 
             dispatch(setReview(response.data.review))
             dispatch(setReviewId(response.data.reviewId))
+            dispatch(setFormattingCheck(response.data.formattingCheck))
 
             toast.success("Your review is ready")
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
@@ -158,6 +160,7 @@ export function GetSingleReview(reviewId, token) {
 
             dispatch(setReview(response.data.review.review))
             dispatch(setReviewId(response.data.review._id))
+            dispatch(setFormattingCheck(response.data.review.formattingCheck))
             dispatch(setShareState({
                 isPublic: response.data.review.isPublic,
                 shareId: response.data.review.shareId

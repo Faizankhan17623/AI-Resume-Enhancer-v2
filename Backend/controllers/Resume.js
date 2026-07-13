@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const { PDFParse } = require('pdf-parse')
 
 const Resume = require('../Models/Resume')
+const { checkAtsFormatting } = require('../utils/atsFormatCheck')
 
 // POST /resumes — save a parsed resume for reuse sir, no AI call, no credit spent
 exports.saveResume = async (req, res) => {
@@ -30,12 +31,22 @@ exports.saveResume = async (req, res) => {
         // first saved resume becomes the default automatically sir
         const isDefault = existingCount === 0
 
+        // structural ATS parse-safety scan sir — done once here so every future review that
+        // reuses this saved resume gets it for free instead of re-scanning the PDF each time
+        let formattingCheck = null
+        try {
+            formattingCheck = await checkAtsFormatting(PDf.data)
+        } catch (fmtErr) {
+            console.log('ATS formatting check failed:', fmtErr.message)
+        }
+
         const resume = await Resume.create({
             user: id,
             originalFilename: PDf.name,
             label: (req.body.label || PDf.name || 'My resume').trim().slice(0, 80),
             resumeText: result.text,
             isDefault,
+            formattingCheck,
         })
 
         return res.status(201).json({
@@ -47,6 +58,7 @@ exports.saveResume = async (req, res) => {
                 originalFilename: resume.originalFilename,
                 isDefault: resume.isDefault,
                 createdAt: resume.createdAt,
+                formattingCheck: resume.formattingCheck,
             },
         })
     } catch (error) {

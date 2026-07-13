@@ -7,6 +7,9 @@ const initialState = {
     // share state for the review currently open sir
     isPublic: false,
     shareId: null,
+    // structural ATS parse-safety scan for the review currently open sir — separate from the
+    // AI's subjective review JSON above
+    formattingCheck: null,
     // the history list + the progress graph data
     allReviews: [],
     progress: null,
@@ -28,6 +31,9 @@ const reviewSlice = createSlice({
         },
         setReviewId(state, value) {
             state.reviewId = value.payload
+        },
+        setFormattingCheck(state, value) {
+            state.formattingCheck = value.payload
         },
         setShareState(state, value) {
             state.isPublic = value.payload.isPublic
@@ -58,7 +64,7 @@ const reviewSlice = createSlice({
 })
 
 export const {
-    setReview, setReviewId, setShareState, setAllReviews, setProgress, setLoading,
+    setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard
 } = reviewSlice.actions
 export default reviewSlice.reducer

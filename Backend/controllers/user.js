@@ -831,7 +831,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest')
+            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest onboardingCompleted')
 
         if (!user) {
             return res.status(404).json({
@@ -844,12 +844,16 @@ exports.getProfile = async (req, res) => {
         const { getEffectivePlan } = require('../utils/Plans')
         const plan = getEffectivePlan(user)
 
-        // activity counts for the account page sir
+        // activity counts for the account page + the dashboard onboarding checklist sir
         const Review = require('../Models/Review')
         const Chat = require('../Models/Chat')
-        const [reviewCount, chatCount] = await Promise.all([
+        const Resume = require('../Models/Resume')
+        const CoverLetter = require('../Models/CoverLetter')
+        const [reviewCount, chatCount, resumeCount, coverLetterCount] = await Promise.all([
             Review.countDocuments({ user: id }),
             Chat.countDocuments({ user: id }),
+            Resume.countDocuments({ user: id }),
+            CoverLetter.countDocuments({ user: id }),
         ])
 
         return res.status(200).json({
@@ -866,6 +870,8 @@ exports.getProfile = async (req, res) => {
             activity: {
                 reviewCount,
                 chatCount,
+                resumeCount,
+                coverLetterCount,
             }
         });
     } catch (error) {
@@ -920,6 +926,37 @@ exports.updateNotificationPrefs = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to update notification preferences',
+        });
+    }
+};
+
+// ============================================================
+// COMPLETE ONBOARDING — dismiss the dashboard checklist for good sir
+// ============================================================
+exports.completeOnboarding = async (req, res) => {
+    try {
+        const userId = req.User.id;
+
+        const updatedUser = await User.findByIdAndUpdate(userId, { onboardingCompleted: true }, { new: true })
+            .select('onboardingCompleted');
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Onboarding marked complete',
+            onboardingCompleted: updatedUser.onboardingCompleted,
+        });
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update onboarding status',
         });
     }
 };

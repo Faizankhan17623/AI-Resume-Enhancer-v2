@@ -1,9 +1,9 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
-import { setProfile, setLoading, setNotificationPrefs } from '../../Slices/profileSlice.js'
+import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted } from '../../Slices/profileSlice.js'
 import { Profile } from '../Apis/UserApi.js'
 
-const { getprofile, updatenotifications } = Profile
+const { getprofile, updatenotifications, completeonboarding } = Profile
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -47,6 +47,25 @@ export function UpdateNotificationPrefs(prefs, token) {
         } catch (error) {
             console.error("Error updating notification preferences", error)
             toast.error(error?.response?.data?.message || "Could not update notification preferences")
+        }
+    }
+}
+
+// dismisses the dashboard onboarding checklist for good sir — silent, no toast, it's a background action
+export function CompleteOnboarding(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", completeonboarding, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setOnboardingCompleted(response.data.onboardingCompleted))
+        } catch (error) {
+            console.error("Error completing onboarding", error)
         }
     }
 }
