@@ -77,7 +77,7 @@ const Users = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Admin — Users | ResumeEnhancer</title>
+        <title>Admin — Users | Resumify</title>
       </Helmet>
       <Navbar />
       <AdminNav />

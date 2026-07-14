@@ -3,13 +3,14 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { Helmet } from 'react-helmet-async'
 import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
+import HowItWorks from './Components/Home/HowItWorks'
 import TemplateSlider from './Components/Home/TemplateSlider'
+import FAQ from './Components/Home/FAQ'
 import Footer from './Components/Home/Footer'
 import OpenRoute from './Hooks/OpenRoute'
 import PrivateRoute from './Hooks/PrivateRoute'
 import AdminRoute from './Hooks/AdminRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
-import DevBanner from './Components/extra/DevBanner'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 
 // Lazy-loaded route components — split into separate chunks for faster initial load sir
@@ -19,6 +20,8 @@ const Login = lazy(() => import('./Components/Login/User'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
+const BuildResumePicker = lazy(() => import('./Components/ResumeBuilder/BuildResumePicker'))
+const BuilderEditor = lazy(() => import('./Components/ResumeBuilder/BuilderEditor'))
 const Resumes = lazy(() => import('./Components/Dashboard/Resumes'))
 const Report = lazy(() => import('./Components/Dashboard/Report'))
 const History = lazy(() => import('./Components/Dashboard/History'))
@@ -44,12 +47,14 @@ const Homelayout = () => {
   return (
     <div className="bg-richblack-900 min-h-screen flex flex-col">
       <Helmet>
-        <title>ResumeEnhancer — Beat the ATS</title>
+        <title>Resumify — Beat the ATS</title>
       </Helmet>
       <Navbar />
       <div className="flex-1">
         <Banner />
+        <HowItWorks />
         <TemplateSlider />
+        <FAQ />
       </div>
       <Footer />
     </div>
@@ -59,8 +64,6 @@ const Homelayout = () => {
 function App() {
   return (
     <>
-      {/* the under-development strip sir — above the navbar on every page */}
-      <DevBanner />
       {/* the live admin broadcast sir — shows only when one is published */}
       <AnnouncementBanner />
       <ScrollToTop />
@@ -79,6 +82,8 @@ function App() {
           {/* Only for the logged-IN sir */}
           <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
           <Route path="/Dashboard/New-Review" element={<PrivateRoute><NewReview /></PrivateRoute>} />
+          <Route path="/Dashboard/Build-Resume" element={<PrivateRoute><BuildResumePicker /></PrivateRoute>} />
+          <Route path="/Dashboard/Build-Resume/:resumeId" element={<PrivateRoute><BuilderEditor /></PrivateRoute>} />
           <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />
           <Route path="/Dashboard/Review/:reviewId" element={<PrivateRoute><Report /></PrivateRoute>} />
           <Route path="/Dashboard/History" element={<PrivateRoute><History /></PrivateRoute>} />

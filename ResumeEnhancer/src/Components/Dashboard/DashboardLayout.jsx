@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import { LogoutUser } from '../../Services/operations/Auth'
 
@@ -21,6 +21,7 @@ const navSections = [
     label: 'Resumes',
     links: [
       { name: 'New Review', path: '/Dashboard/New-Review', icon: FaFilePdf },
+      { name: 'Build Resume', path: '/Dashboard/Build-Resume', icon: FaMagic },
       { name: 'My Resumes', path: '/Dashboard/Resumes', icon: FaFolderOpen },
       { name: 'History', path: '/Dashboard/History', icon: FaHistory },
     ],
@@ -52,8 +53,8 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
   <>
     <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
       <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
-      <span className="font-display text-base text-richblack-5 tracking-tight">
-        Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
+      <span className="font-display font-bold text-base text-richblack-5 tracking-tight">
+        Resum<span className="text-warm-200">ify</span>
       </span>
     </Link>
 

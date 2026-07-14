@@ -149,7 +149,7 @@ const Chat = () => {
   return (
     <DashboardLayout title="AI Coach">
       <Helmet>
-        <title>AI Coach | ResumeEnhancer</title>
+        <title>AI Coach | Resumify</title>
       </Helmet>
 
       <div className="h-full max-w-7xl mx-auto w-full flex min-h-0">

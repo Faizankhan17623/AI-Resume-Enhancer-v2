@@ -42,14 +42,14 @@ const SharedReport = () => {
   return (
     <div className="min-h-screen bg-richblack-900 flex flex-col">
       <Helmet>
-        <title>Shared ATS Report | ResumeEnhancer</title>
+        <title>Shared ATS Report | Resumify</title>
       </Helmet>
 
       <div className="border-b border-richblack-700 bg-richblack-900/90 py-4">
         <Link to="/" className="flex items-center gap-2 w-fit mx-auto">
           <MdOutlineDocumentScanner className="text-3xl text-yellow-50" />
-          <span className="font-display text-xl text-richblack-5 tracking-tight">
-            Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
+          <span className="font-display font-bold text-xl text-richblack-5 tracking-tight">
+            Resum<span className="text-warm-200">ify</span>
           </span>
         </Link>
       </div>
@@ -109,7 +109,7 @@ const SharedReport = () => {
             <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 text-center">
               <p className="text-sm text-richblack-200 mb-3">Want to see how your resume scores?</p>
               <Link to="/Signup" className="inline-block px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:bg-yellow-25 transition-all duration-200">
-                Try ResumeEnhancer free
+                Try Resumify free
               </Link>
             </div>
           </div>

@@ -35,7 +35,7 @@ const Announcements = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Admin — Announcements | ResumeEnhancer</title>
+        <title>Admin — Announcements | Resumify</title>
       </Helmet>
       <Navbar />
       <AdminNav />

@@ -63,7 +63,7 @@ export function BuyPlan(plan, token, user, navigate) {
                 amount: order.amount,
                 currency: order.currency,
                 order_id: order.id,
-                name: "AI Resume Enhancer",
+                name: "Resumify",
                 description: `${plan} plan purchase`,
                 prefill: {
                     name: `${user?.firstName || ''} ${user?.lastName || ''}`,

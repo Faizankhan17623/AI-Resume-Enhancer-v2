@@ -65,7 +65,7 @@ const Account = () => {
   return (
     <DashboardLayout title="My account">
       <Helmet>
-        <title>My Account | ResumeEnhancer</title>
+        <title>My Account | Resumify</title>
       </Helmet>
 
       <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">

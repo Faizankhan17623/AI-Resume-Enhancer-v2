@@ -53,7 +53,7 @@ const Overview = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Admin | ResumeEnhancer</title>
+        <title>Admin | Resumify</title>
       </Helmet>
       <Navbar />
       <AdminNav />
