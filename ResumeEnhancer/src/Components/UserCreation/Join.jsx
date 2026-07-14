@@ -28,7 +28,7 @@ const Join = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Sign up | ResumeEnhancer</title>
+        <title>Sign up | Resumify</title>
       </Helmet>
       <Navbar />
 
@@ -115,7 +115,7 @@ const Join = () => {
                   className={inputClass}
                   {...register("number", {
                     required: "Phone number is required",
-                    minLength: { value: 10, message: "Enter a valid number" }
+                    pattern: { value: /^[0-9]{10}$/, message: "Enter a valid 10-digit number" }
                   })}
                 />
                 {errors.number && <p className={errorClass}>{errors.number.message}</p>}

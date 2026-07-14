@@ -44,7 +44,8 @@ const UserCreation = new mongoose.Schema(
         },
         number:{
             type: String,
-            required: true
+            required: true,
+            match: [/^[0-9]{10}$/, 'Phone number must be exactly 10 digits']
         },
         CountryCode:{
             type: String,
