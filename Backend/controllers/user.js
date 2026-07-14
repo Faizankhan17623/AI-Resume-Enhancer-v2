@@ -26,6 +26,15 @@ exports.createUser = async (req, res) => {
             });
         }
 
+        // phone number must be exactly 10 digits sir — same rule as the frontend
+        if (!/^[0-9]{10}$/.test(number)) {
+            return res.status(400).json({
+                success: false,
+                field: 'number',
+                message: 'Phone number must be exactly 10 digits',
+            });
+        }
+
         // duplication checks sir — separate so the UI can show a field-specific error
 
         // firstName already taken
@@ -538,8 +547,17 @@ exports.updateNumber = async (req, res) => {
             });
         }
 
-        // findOne checker sir — is this number already taken (model field is `Number`)
-        const existingNumber = await User.findOne({ Number: number });
+        // phone number must be exactly 10 digits sir — same rule as the frontend
+        if (!/^[0-9]{10}$/.test(number)) {
+            return res.status(400).json({
+                success: false,
+                field: 'number',
+                message: 'Phone number must be exactly 10 digits',
+            });
+        }
+
+        // findOne checker sir — is this number already taken
+        const existingNumber = await User.findOne({ number: number });
         if (existingNumber) {
             return res.status(409).json({
                 success: false,
