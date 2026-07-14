@@ -12,7 +12,7 @@ const aiLogSchema = new mongoose.Schema(
         // which feature burned the tokens sir
         type: {
             type: String,
-            enum: ['review', 'chat', 'cover-letter'],
+            enum: ['review', 'chat', 'cover-letter', 'resume-generate', 'resume-tailor'],
             required: true,
         },
         // which plan tier made the call sir — this is what per-tier cost tracking groups by
