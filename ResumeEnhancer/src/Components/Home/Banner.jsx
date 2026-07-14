@@ -88,28 +88,27 @@ const Banner = () => {
         <div className="relative mt-4 max-w-sm mx-auto">
           <div className="rounded-2xl bg-richblack-5 border border-richblack-700 p-7 shadow-2xl text-left transition-transform duration-500 hover:-translate-y-1.5 hover:rotate-0 rotate-[-1deg]">
             <div className="flex items-center gap-3 pb-4 border-b-2 border-richblack-900/10">
-              <div className="w-12 h-12 rounded-full bg-warm-200 shrink-0" />
+              <div className="w-12 h-12 rounded-full bg-warm-200 shrink-0 flex items-center justify-center text-richblack-900 font-bold text-sm">
+                AS
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="h-3 w-2/3 rounded-full bg-richblack-900/70" />
-                <div className="h-2 w-1/2 rounded-full bg-richblack-900/30 mt-2" />
+                <p className="text-sm font-bold text-richblack-900 truncate">Aditi Sharma</p>
+                <p className="text-xs text-richblack-900/50 truncate">Senior Frontend Engineer</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-4">
               <div>
-                <div className="h-2 w-24 rounded-full bg-blue-100/70 mb-2.5" />
-                <div className="space-y-1.5">
-                  <div className="h-1.5 w-full rounded-full bg-richblack-900/15" />
-                  <div className="h-1.5 w-11/12 rounded-full bg-richblack-900/15" />
-                  <div className="h-1.5 w-4/5 rounded-full bg-richblack-900/15" />
-                </div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-200 mb-1.5">Experience</p>
+                <p className="text-xs font-semibold text-richblack-900/80">Northwind Labs — Frontend Engineer</p>
+                <p className="text-[11px] text-richblack-900/50 mt-1 leading-relaxed">
+                  Led a checkout redesign that lifted conversion by 18% across 2M+ monthly sessions.
+                </p>
               </div>
               <div>
-                <div className="h-2 w-28 rounded-full bg-blue-100/70 mb-2.5" />
-                <div className="space-y-1.5">
-                  <div className="h-1.5 w-full rounded-full bg-richblack-900/15" />
-                  <div className="h-1.5 w-3/4 rounded-full bg-richblack-900/15" />
-                </div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-200 mb-1.5">Education</p>
+                <p className="text-xs font-semibold text-richblack-900/80">B.Tech, Computer Science</p>
+                <p className="text-[11px] text-richblack-900/50 mt-1">National Institute of Technology</p>
               </div>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {['React', 'Node.js', 'SQL', 'AWS'].map((skill) => (
