@@ -10,7 +10,7 @@ const {
     getPublicReview
 } = require('../controllers/Review.js')
 const { getStreak } = require('../controllers/Streak.js')
-const { getLeaderboard } = require('../controllers/Leaderboard.js')
+const { getLeaderboard, getWeeklyReviewsLeaderboard, getStreaksLeaderboard } = require('../controllers/Leaderboard.js')
 
 // review history, the score-progress graph and the PDF export live here sir
 
@@ -28,7 +28,9 @@ route.get('/public/reviews/:shareId', getPublicReview)
 // activity streak for the dashboard badge sir
 route.get('/streak', Auth, getStreak)
 
-// anonymized leaderboard sir
+// anonymized leaderboards sir — three boards, same anonymization pattern
 route.get('/leaderboard', Auth, getLeaderboard)
+route.get('/leaderboard/weekly-reviews', Auth, getWeeklyReviewsLeaderboard)
+route.get('/leaderboard/streaks', Auth, getStreaksLeaderboard)
 
 module.exports = route

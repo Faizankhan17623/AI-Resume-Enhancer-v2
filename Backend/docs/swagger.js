@@ -286,6 +286,12 @@ const swaggerDocument = {
         '/leaderboard': {
             get: { tags: ['Leaderboard'], summary: 'Anonymized top ATS scores across all users', responses: { 200: { description: 'Leaderboard rows' } } },
         },
+        '/leaderboard/weekly-reviews': {
+            get: { tags: ['Leaderboard'], summary: 'Anonymized most-active-this-week board (review count, last 7 days)', responses: { 200: { description: 'Leaderboard rows' } } },
+        },
+        '/leaderboard/streaks': {
+            get: { tags: ['Leaderboard'], summary: 'Anonymized longest current activity streaks', responses: { 200: { description: 'Leaderboard rows' } } },
+        },
         '/admin/stats': { get: { tags: ['Admin'], summary: 'Dashboard stats (Support+)', responses: { 200: { description: 'OK' }, 403: { description: 'Forbidden' } } } },
         '/admin/users': { get: { tags: ['Admin'], summary: 'Paginated/searchable user list (Support+)', responses: { 200: { description: 'OK' } } } },
         '/admin/users/{userId}/reviews': { get: { tags: ['Admin'], summary: 'A user\'s reviews (Support+)', parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'OK' } } } },
