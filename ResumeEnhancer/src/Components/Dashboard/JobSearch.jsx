@@ -25,7 +25,7 @@ const JobSearch = () => {
   return (
     <DashboardLayout title="Job search">
       <Helmet>
-        <title>Job Search | ResumeEnhancer</title>
+        <title>Job Search | Resumify</title>
       </Helmet>
 
       <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">

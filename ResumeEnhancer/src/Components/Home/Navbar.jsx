@@ -91,11 +91,11 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full border-b border-richblack-700 bg-richblack-900/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* Logo sir */}
+        {/* Logo sir — navy + coral split wordmark, MyPerfectResume-style */}
         <Link to="/" className="flex items-center gap-2 group">
           <MdOutlineDocumentScanner className="text-3xl text-yellow-50 group-hover:rotate-6 transition-transform duration-300" />
-          <span className="font-display text-xl text-richblack-5 tracking-tight">
-            Resume<span className="bg-gradient-to-r from-yellow-200 to-yellow-50 bg-clip-text text-transparent">Enhancer</span>
+          <span className="font-display font-bold text-xl text-richblack-5 tracking-tight">
+            Resum<span className="text-warm-200">ify</span>
           </span>
         </Link>
 

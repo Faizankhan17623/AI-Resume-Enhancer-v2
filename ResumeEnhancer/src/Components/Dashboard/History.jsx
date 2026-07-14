@@ -24,7 +24,7 @@ const History = () => {
   return (
     <DashboardLayout title="Review history">
       <Helmet>
-        <title>Review History | ResumeEnhancer</title>
+        <title>Review History | Resumify</title>
       </Helmet>
 
       <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">

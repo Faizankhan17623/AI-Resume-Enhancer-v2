@@ -27,7 +27,7 @@ const OTP = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Verify OTP | ResumeEnhancer</title>
+        <title>Verify OTP | Resumify</title>
       </Helmet>
       <Navbar />
 

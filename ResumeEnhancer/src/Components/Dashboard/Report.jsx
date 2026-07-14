@@ -65,7 +65,7 @@ const Report = () => {
   return (
     <DashboardLayout title={review.jdTitle || 'ATS review'}>
       <Helmet>
-        <title>ATS Report | ResumeEnhancer</title>
+        <title>ATS Report | Resumify</title>
       </Helmet>
 
       <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">

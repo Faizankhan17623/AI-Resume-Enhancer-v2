@@ -23,7 +23,7 @@ const User = () => {
   return (
     <div className="min-h-screen w-full bg-richblack-900">
       <Helmet>
-        <title>Log in | ResumeEnhancer</title>
+        <title>Log in | Resumify</title>
       </Helmet>
       <Navbar />
 

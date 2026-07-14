@@ -62,7 +62,7 @@ const DashboardHome = () => {
   return (
     <DashboardLayout title="Overview">
       <Helmet>
-        <title>Dashboard | ResumeEnhancer</title>
+        <title>Dashboard | Resumify</title>
       </Helmet>
 
       <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6 animate-fadeIn">
