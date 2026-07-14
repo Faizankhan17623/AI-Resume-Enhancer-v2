@@ -22,6 +22,7 @@ const admin = require('./Routes/Admin.js')
 const grammarCheck = require('./Routes/GrammarCheck.js')
 const coverLetter = require('./Routes/CoverLetter.js')
 const resume = require('./Routes/Resume.js')
+const builtResume = require('./Routes/BuiltResume.js')
 const jobSearch = require('./Routes/JobSearch.js')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
@@ -34,15 +35,22 @@ app.use(helmet())
 
 app.use(express.json())
 // credentials:true so the payment-session cookie flows sir — the frontend must call axios with withCredentials:true
-// FRONTEND_URL supports a comma-separated list, e.g. "https://myapp.vercel.app,http://localhost:5173"
-// trailing slashes are stripped sir — an Origin header never has one, and a mismatch silently kills CORS
-const allowedOrigins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
-    : true
+// TEMP sir — wide open to any origin while the Vite port keeps drifting during dev (5173/5174/5175...).
+// origin:'*' cannot be combined with credentials:true (browsers reject it), so we reflect whatever
+// Origin header shows up instead, which is the credentials-safe equivalent of "allow anything".
+// REVERT this back to the FRONTEND_URL allowlist below once the frontend port is stable again.
 app.use(cors({
-    origin: allowedOrigins,
+    origin: true,
     credentials: true
 }))
+// --- previous allowlist, restore this and delete the block above when done ---
+// const allowedOrigins = process.env.FRONTEND_URL
+//     ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
+//     : true
+// app.use(cors({
+//     origin: allowedOrigins,
+//     credentials: true
+// }))
 app.use(cookieParser())
 app.use(fileUpload())
 
@@ -57,6 +65,7 @@ app.use('/api/v1',admin)
 app.use('/api/v1',grammarCheck)
 app.use('/api/v1',coverLetter)
 app.use('/api/v1',resume)
+app.use('/api/v1',builtResume)
 app.use('/api/v1',jobSearch)
 
 // interactive API docs sir — http://localhost:5000/api-docs
