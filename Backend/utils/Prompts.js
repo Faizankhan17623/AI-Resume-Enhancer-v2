@@ -218,4 +218,69 @@ RULES:
 - Do not invent a company name, hiring manager name, or address — write the body only, no letterhead or signature block beyond "Sincerely," followed by a "[Your Name]" placeholder.
 - Respond with plain text only — no markdown, no JSON, no commentary before or after.`
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt }
+// ---------- RESUME BUILDER PROMPTS (controllers/BuiltResume.js) ----------
+
+// the exact JSON shape a BuiltResume document expects sir — shared by both AI builder features
+// so the frontend always gets back something it can drop straight into the template preview
+const BUILT_RESUME_SHAPE = `{
+  "title": "a short label for this resume, e.g. 'Frontend Developer Resume'",
+  "personalInfo": {
+    "fullName": "string, keep from the source if given, else empty string",
+    "email": "string, keep from the source if given, else empty string",
+    "phone": "string, keep from the source if given, else empty string",
+    "location": "string, keep from the source if given, else empty string",
+    "linkedin": "string, keep from the source if given, else empty string",
+    "website": "string, keep from the source if given, else empty string"
+  },
+  "summary": "a 2-4 sentence professional summary tailored to the target role",
+  "experience": [
+    {
+      "company": "string",
+      "role": "string",
+      "location": "string",
+      "startDate": "string, e.g. 'Jan 2022'",
+      "endDate": "string, e.g. 'Present'",
+      "current": false,
+      "bullets": ["achievement-focused bullet using strong action verbs and a metric where reasonable"]
+    }
+  ],
+  "education": [
+    { "school": "string", "degree": "string", "field": "string", "startDate": "string", "endDate": "string", "gpa": "string" }
+  ],
+  "skills": ["skill or keyword relevant to the target role"],
+  "projects": [
+    { "name": "string", "description": "string", "link": "string", "bullets": ["short bullet"] }
+  ],
+  "certifications": [
+    { "name": "string", "issuer": "string", "date": "string" }
+  ]
+}`
+
+const BUILT_RESUME_RULES = `RULES:
+- Do NOT invent employers, job titles, dates, schools, or metrics that are not implied by the source material. Use placeholders like "[X]%" only where a metric is clearly implied but not given.
+- Write every bullet in the achievement-focused STAR style (what you did + impact), using strong action verbs.
+- Keep arrays empty ([]) rather than fabricated if the source material has nothing for that section.
+- Respond ONLY with a valid JSON object in EXACTLY the shape shown — no markdown fences, no commentary, no text before or after.`
+
+// feature: user gives their own raw career info (no existing resume), LLM drafts a full resume sir
+const buildResumeGeneratorPrompt = () => `You are an expert resume writer with 10+ years of technical recruiting experience.
+
+You will be given a candidate's raw, unstructured description of their own background, skills and experience (and optionally a target role/job description). Turn it into a complete, well-organized, ATS-friendly resume.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape:
+${BUILT_RESUME_SHAPE}
+
+${BUILT_RESUME_RULES}`
+
+// feature: user gives an OLD resume's text + a target JD, LLM rewrites it tailored to that job sir
+const buildResumeTailorPrompt = () => `You are an expert resume writer and ATS optimization specialist with 10+ years of technical recruiting experience.
+
+You will be given a candidate's EXISTING resume text and a target JOB DESCRIPTION. Rewrite and restructure the resume so it is tightly tailored to this specific job: reorder and reword bullets to foreground the most relevant experience, naturally weave in JD keywords and skills the candidate genuinely has, and tighten the summary to pitch the candidate directly at this role.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape:
+${BUILT_RESUME_SHAPE}
+
+${BUILT_RESUME_RULES}
+- Every fact must come from the candidate's EXISTING resume — the JD guides emphasis and wording only, never invents new experience.`
+
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt }

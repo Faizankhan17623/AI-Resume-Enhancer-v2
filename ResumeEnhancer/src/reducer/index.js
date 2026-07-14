@@ -7,6 +7,7 @@ import profileReducer from '../Slices/profileSlice'
 import adminReducer from '../Slices/adminSlice'
 import coverLetterReducer from '../Slices/coverLetterSlice'
 import resumeReducer from '../Slices/resumeSlice'
+import builtResumeReducer from '../Slices/builtResumeSlice'
 import jobSearchReducer from '../Slices/jobSearchSlice'
 
 const rootReduers = combineReducers({
@@ -18,6 +19,7 @@ const rootReduers = combineReducers({
     admin: adminReducer,
     coverLetter: coverLetterReducer,
     resume: resumeReducer,
+    builtResume: builtResumeReducer,
     jobSearch: jobSearchReducer,
 })
 
