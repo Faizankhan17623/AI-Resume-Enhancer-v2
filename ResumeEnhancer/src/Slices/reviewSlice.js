@@ -17,9 +17,11 @@ const initialState = {
     // free grammar/spell pre-check sir — separate from the paid AI review
     grammar: null,
     grammarChecking: false,
-    // activity streak badge + the anonymized leaderboard sir
+    // activity streak badge + the anonymized leaderboards sir — three boards, same list shape
     streak: null,
-    leaderboard: []
+    leaderboard: [],
+    weeklyReviewsLeaderboard: [],
+    streaksLeaderboard: []
 };
 
 const reviewSlice = createSlice({
@@ -59,12 +61,18 @@ const reviewSlice = createSlice({
         },
         setLeaderboard(state, value) {
             state.leaderboard = value.payload
+        },
+        setWeeklyReviewsLeaderboard(state, value) {
+            state.weeklyReviewsLeaderboard = value.payload
+        },
+        setStreaksLeaderboard(state, value) {
+            state.streaksLeaderboard = value.payload
         }
     }
 })
 
 export const {
     setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
-    setGrammar, setGrammarChecking, setStreak, setLeaderboard
+    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard
 } = reviewSlice.actions
 export default reviewSlice.reducer

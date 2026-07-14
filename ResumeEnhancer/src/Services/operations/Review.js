@@ -2,7 +2,7 @@ import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import {
     setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
-    setGrammar, setGrammarChecking, setStreak, setLeaderboard
+    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
 import { ResumeData } from '../Apis/ResumeApi.js'
@@ -12,7 +12,7 @@ const { reviewFromResume } = ResumeData
 const { allreviews, progress, singlereview, downloadpdf, sharereview, publicreview } = ReviewHistory
 const { checkgrammar } = GrammarCheckApi
 const { streak } = StreakApi
-const { leaderboard } = LeaderboardApi
+const { leaderboard, weeklyReviews, streaks } = LeaderboardApi
 
 // the big one sir — upload the PDF + JD and get the full ATS review back
 // FormData because the backend reads req.files.PDf
@@ -261,6 +261,52 @@ export function GetLeaderboard(token) {
         } catch (error) {
             console.error("Error fetching the leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the leaderboard")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// "resumes reviewed this week" board sir — rewards activity, counts every review run in the last 7 days
+export function GetWeeklyReviewsLeaderboard(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", weeklyReviews, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setWeeklyReviewsLeaderboard(response.data.leaderboard))
+        } catch (error) {
+            console.error("Error fetching the weekly reviews leaderboard", error)
+            toast.error(error?.response?.data?.message || "Could not load the weekly leaderboard")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// longest current activity streaks sir
+export function GetStreaksLeaderboard(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", streaks, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setStreaksLeaderboard(response.data.leaderboard))
+        } catch (error) {
+            console.error("Error fetching the streaks leaderboard", error)
+            toast.error(error?.response?.data?.message || "Could not load the streaks leaderboard")
         } finally {
             dispatch(setLoading(false))
         }

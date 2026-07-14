@@ -23,5 +23,7 @@ export const StreakApi = {
 }
 
 export const LeaderboardApi = {
-    leaderboard: BASE_URL + "/leaderboard"
+    leaderboard: BASE_URL + "/leaderboard",
+    weeklyReviews: BASE_URL + "/leaderboard/weekly-reviews",
+    streaks: BASE_URL + "/leaderboard/streaks"
 }
