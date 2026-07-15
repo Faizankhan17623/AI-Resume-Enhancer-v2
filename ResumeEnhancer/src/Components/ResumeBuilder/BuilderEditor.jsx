@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { FaPlus, FaTrash, FaDownload, FaSave } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
-import { getTemplateById } from './Templates/templateRegistry'
-import { GetBuiltResume, SaveBuiltResume } from '../../Services/operations/BuiltResume'
+import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
@@ -22,10 +22,15 @@ const sectionClass = "rounded-2xl bg-richblack-800 border border-richblack-700 p
 const BuilderEditor = () => {
   const { resumeId } = useParams()
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { current, loading, saving } = useSelector((state) => state.builtResume)
+  const { loading: reviewLoading } = useSelector((state) => state.review)
   const printRef = useRef(null)
   const saveTimer = useRef(null)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [scoreModalOpen, setScoreModalOpen] = useState(false)
+  const [scoreJd, setScoreJd] = useState('')
 
   useEffect(() => {
     dispatch(GetBuiltResume(resumeId, token))
@@ -52,6 +57,19 @@ const BuilderEditor = () => {
 
   const patchPersonalInfo = (field, value) => {
     patch({ personalInfo: { ...current.personalInfo, [field]: value } })
+  }
+
+  // template swap sir — same data, different renderer. Saves immediately (not debounced like
+  // form typing) since picking a template is one discrete click, not a stream of keystrokes.
+  const handleSwapTemplate = (templateId) => {
+    if (templateId === current.templateId) {
+      setTemplatePickerOpen(false)
+      return
+    }
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    dispatch(patchCurrentResume({ templateId }))
+    dispatch(SaveBuiltResume(resumeId, { ...current, templateId }, token, { silent: true }))
+    setTemplatePickerOpen(false)
   }
 
   const patchListItem = (listKey, index, field, value) => {
@@ -97,6 +115,15 @@ const BuilderEditor = () => {
     window.print()
   }
 
+  const handleScore = async () => {
+    if (!scoreJd.trim()) return
+    // save first sir — the score should reflect what's actually in the editor right now, not a stale autosave
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
+    dispatch(ReviewBuiltResume(resumeId, scoreJd.trim(), token, navigate))
+    setScoreModalOpen(false)
+  }
+
   const Template = useMemo(() => (current ? getTemplateById(current.templateId).Component : null), [current])
 
   if (loading || !current) {
@@ -132,6 +159,46 @@ const BuilderEditor = () => {
             placeholder="Untitled resume"
           />
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={() => setTemplatePickerOpen((o) => !o)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+              >
+                <FaSwatchbook /> Change template
+              </button>
+              {templatePickerOpen && (
+                <>
+                  {/* click-outside catcher sir */}
+                  <div className="fixed inset-0 z-40" onClick={() => setTemplatePickerOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-50 w-[420px] max-h-96 overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-3 grid grid-cols-3 gap-2.5">
+                    {TEMPLATE_REGISTRY.map((t) => {
+                      const active = t.id === current.templateId
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => handleSwapTemplate(t.id)}
+                          className={`relative text-left rounded-lg overflow-hidden border transition-all duration-200 cursor-pointer ${
+                            active ? 'border-warm-200 ring-2 ring-warm-200/40' : 'border-richblack-700 hover:border-richblack-500'
+                          }`}
+                        >
+                          <div className="aspect-[3/4] bg-richblack-5 overflow-hidden">
+                            <div className="w-full h-full origin-top-left scale-[0.12] pointer-events-none">
+                              <t.Component data={current} />
+                            </div>
+                          </div>
+                          {active && (
+                            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-warm-200 text-richblack-900 flex items-center justify-center">
+                              <FaCheck className="text-[8px]" />
+                            </span>
+                          )}
+                          <p className="px-1.5 py-1 text-[10px] font-semibold text-richblack-5 truncate bg-richblack-800">{t.name}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={handleManualSave}
               disabled={saving}
@@ -139,11 +206,49 @@ const BuilderEditor = () => {
             >
               <FaSave /> {saving ? 'Saving...' : 'Save'}
             </button>
+            <button
+              onClick={() => setScoreModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-caribgreen-100 border border-caribgreen-300/40 rounded-full hover:bg-caribgreen-100/10 transition-all duration-200 cursor-pointer"
+            >
+              <FaChartLine /> Score this resume
+            </button>
             <IconBtn text="Download PDF" onclick={handlePrint} customClasses="text-sm px-5">
               <FaDownload />
             </IconBtn>
           </div>
         </div>
+
+        {/* score modal sir — needs a JD before it can send this resume through the AI Review pipeline */}
+        {scoreModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
+            <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setScoreModalOpen(false)} />
+            <div className="relative w-full max-w-lg rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6 animate-fadeIn">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-bold text-lg text-richblack-5">Score this resume</h3>
+                <button onClick={() => setScoreModalOpen(false)} className="text-richblack-400 hover:text-richblack-5 cursor-pointer">
+                  <FaTimes />
+                </button>
+              </div>
+              <label className={labelClass}>Paste the job description</label>
+              <textarea
+                value={scoreJd}
+                onChange={(e) => setScoreJd(e.target.value)}
+                placeholder="Paste the job description you're targeting..."
+                rows={8}
+                className={`${fieldClass} resize-none`}
+              />
+              <p className="mt-2 text-xs text-richblack-400">This runs the same AI ATS review as an uploaded resume and spends one credit.</p>
+              <div className="flex justify-end mt-4">
+                <IconBtn
+                  text={reviewLoading ? "Analyzing..." : "Run ATS review"}
+                  onclick={handleScore}
+                  disabled={reviewLoading || !scoreJd.trim()}
+                  customClasses="text-sm px-6"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-8">
 

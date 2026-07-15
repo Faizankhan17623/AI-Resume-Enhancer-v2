@@ -6,6 +6,8 @@ const BuiltResume = require('../Models/BuiltResume')
 const { consumeCredit } = require('../utils/Plans')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
+const { builtResumeToText } = require('../utils/BuiltResumeText')
+const { runReview } = require('./AI')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -183,6 +185,42 @@ exports.deleteBuiltResume = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the resume',
+        })
+    }
+}
+
+// POST /built-resumes/:resumeId/review — score a built resume against a JD sir, same AI Review
+// pipeline as an uploaded PDF (runReview, exported from controllers/AI.js), just fed structured
+// data flattened to text instead of a parsed PDF. No formattingCheck — a built resume from one
+// of our own templates never has the multi-column/missing-text-layer problems that scan catches.
+exports.reviewBuiltResume = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const resumeText = builtResumeToText(resume)
+        return await runReview(req, res, { userId: id, resumeText, formattingCheck: null })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while reviewing the resume',
         })
     }
 }

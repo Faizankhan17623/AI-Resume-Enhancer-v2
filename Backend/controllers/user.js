@@ -197,7 +197,7 @@ exports.loginUser = async (req, res) => {
 
         const JwtCreation = await jwt.sign({
             id: _id, firstName: firstName, lastName: lastName
-        },process.env.JWT_PRIVATE_KEY,{  expiresIn: 7 * 24 * 60 * 60 * 1000 })
+        },process.env.JWT_PRIVATE_KEY,{  expiresIn: 7 * 24 * 60 * 60 })
 
         const Updation = await User.findByIdAndUpdate(User.id,{token:JwtCreation,Verified:true})
 

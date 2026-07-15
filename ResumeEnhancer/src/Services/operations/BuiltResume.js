@@ -1,9 +1,10 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating } from '../../Slices/builtResumeSlice.js'
+import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor
 export function CreateBuiltResume(templateId, token, navigate) {
@@ -171,6 +172,37 @@ export function TailorResume(pdfFile, jd, templateId, token, navigate) {
             return null
         } finally {
             dispatch(setGenerating(false))
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// score a built resume against a JD sir — same ATS review pipeline as an upload, just the data
+// is already structured. Consumes a credit, lands on the exact same Report page as any other review.
+export function ReviewBuiltResume(resumeId, jd, token, navigate) {
+    return async (dispatch) => {
+        dispatch(setReviewLoading(true))
+        const toastId = toast.loading("Analyzing your resume — this takes a few seconds...")
+        try {
+            const response = await apiConnector("POST", `${review}/${resumeId}/review`, { jd }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setReview(response.data.review))
+            dispatch(setReviewId(response.data.reviewId))
+            dispatch(setFormattingCheck(response.data.formattingCheck))
+
+            toast.success("Your review is ready")
+            if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
+        } catch (error) {
+            console.error("Error reviewing the resume", error)
+            toast.error(error?.response?.data?.message || "Could not analyze the resume")
+        } finally {
+            dispatch(setReviewLoading(false))
             toast.dismiss(toastId)
         }
     }

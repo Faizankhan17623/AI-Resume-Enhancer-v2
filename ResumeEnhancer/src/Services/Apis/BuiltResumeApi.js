@@ -8,4 +8,5 @@ export const BuiltResumeData = {
     remove: BASE_URL + "/built-resumes",          // + /:resumeId
     generate: BASE_URL + "/built-resumes/generate",
     tailor: BASE_URL + "/built-resumes/tailor",
+    review: BASE_URL + "/built-resumes",          // + /:resumeId/review
 }

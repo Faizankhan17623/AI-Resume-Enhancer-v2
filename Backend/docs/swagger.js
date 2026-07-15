@@ -175,6 +175,56 @@ const swaggerDocument = {
                 responses: { 200: { description: 'Deleted' }, 404: { description: 'Not found' } },
             },
         },
+        '/built-resumes': {
+            post: {
+                tags: ['Resume Builder'], summary: 'Create a new template-based resume (usually right after picking a template)',
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { templateId: { type: 'string' } }, required: ['templateId'] } } } },
+                responses: { 201: { description: 'Resume created' }, 400: { description: 'No template selected' } },
+            },
+            get: {
+                tags: ['Resume Builder'], summary: 'List the logged-in user\'s built resumes (most recently edited first)',
+                responses: { 200: { description: 'Resume list (title/templateId/dates only)' } },
+            },
+        },
+        '/built-resumes/generate': {
+            post: {
+                tags: ['Resume Builder'], summary: 'AI-draft a full resume from the candidate\'s raw description (consumes a credit)',
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { rawInfo: { type: 'string' }, targetRole: { type: 'string' }, templateId: { type: 'string' } }, required: ['rawInfo', 'templateId'] } } } },
+                responses: { 201: { description: 'Resume generated' }, 403: { description: 'Out of credits' } },
+            },
+        },
+        '/built-resumes/tailor': {
+            post: {
+                tags: ['Resume Builder'], summary: 'AI-rewrite an uploaded old resume tailored to a target JD (consumes a credit)',
+                requestBody: { content: { 'multipart/form-data': { schema: { type: 'object', properties: { PDf: { type: 'string', format: 'binary' }, jd: { type: 'string' }, templateId: { type: 'string' } }, required: ['PDf', 'jd', 'templateId'] } } } },
+                responses: { 201: { description: 'Resume tailored' }, 403: { description: 'Out of credits' } },
+            },
+        },
+        '/built-resumes/{resumeId}': {
+            get: {
+                tags: ['Resume Builder'], summary: 'Full structured data for one built resume (for the editor/preview)',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: { 200: { description: 'Full resume document' }, 404: { description: 'Not found' } },
+            },
+            put: {
+                tags: ['Resume Builder'], summary: 'Full-document save (used by the builder\'s autosave)',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: { 200: { description: 'Resume saved' }, 404: { description: 'Not found' } },
+            },
+            delete: {
+                tags: ['Resume Builder'], summary: 'Delete a built resume',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: { 200: { description: 'Deleted' }, 404: { description: 'Not found' } },
+            },
+        },
+        '/built-resumes/{resumeId}/review': {
+            post: {
+                tags: ['Resume Builder'], summary: 'Score a built resume against a JD through the same AI Review pipeline as an uploaded PDF (consumes a credit)',
+                parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { jd: { type: 'string' } }, required: ['jd'] } } } },
+                responses: { 200: { description: 'ATS review, same shape as /response' }, 403: { description: 'Out of credits' }, 404: { description: 'Not found' } },
+            },
+        },
         '/cover-letter': {
             post: {
                 tags: ['Cover Letter'], summary: 'Generate an AI-drafted cover letter from a resume PDF + JD (Pro+ feature)',

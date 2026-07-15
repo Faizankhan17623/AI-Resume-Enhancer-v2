@@ -17,6 +17,16 @@ const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 // the resume text is in hand. Spends one credit, calls Groq, saves the Review, returns the same
 // response shape either way.
 const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
+    const jd = req.body.jd
+
+    // not case sir
+    if (!jd || typeof jd !== 'string' || !jd.trim()) {
+        return res.status(400).json({
+            success: false,
+            message: 'Job Description and Resume are required',
+        });
+    }
+
     const spend = await consumeCredit(userId)
 
     if (!spend.ok) {
@@ -24,16 +34,6 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
             success: false,
             message: spend.message
         })
-    }
-
-    const jd = req.body.jd
-
-    // not case sir
-    if (!jd) {
-        return res.status(400).json({
-            success: false,
-            message: 'Job Description and Resume are required',
-        });
     }
 
     // plan-aware system prompt sir — Basic gets the core review, Pro adds keyword/section analysis, ProMax gets the full deep report
@@ -130,6 +130,10 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
         formattingCheck,
     });
 }
+
+// exported sir — controllers/BuiltResume.js reuses this same core to score a built resume
+// against a JD without duplicating the credit-spend/Groq-call/save logic
+exports.runReview = runReview
 
 exports.Calling = async (req,res) =>{
     try {

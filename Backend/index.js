@@ -35,22 +35,13 @@ app.use(helmet())
 
 app.use(express.json())
 // credentials:true so the payment-session cookie flows sir — the frontend must call axios with withCredentials:true
-// TEMP sir — wide open to any origin while the Vite port keeps drifting during dev (5173/5174/5175...).
-// origin:'*' cannot be combined with credentials:true (browsers reject it), so we reflect whatever
-// Origin header shows up instead, which is the credentials-safe equivalent of "allow anything".
-// REVERT this back to the FRONTEND_URL allowlist below once the frontend port is stable again.
+const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
+    : true
 app.use(cors({
-    origin: true,
+    origin: allowedOrigins,
     credentials: true
 }))
-// --- previous allowlist, restore this and delete the block above when done ---
-// const allowedOrigins = process.env.FRONTEND_URL
-//     ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
-//     : true
-// app.use(cors({
-//     origin: allowedOrigins,
-//     credentials: true
-// }))
 app.use(cookieParser())
 app.use(fileUpload())
 
