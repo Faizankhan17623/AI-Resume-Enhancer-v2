@@ -17,6 +17,8 @@ import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 const Join = lazy(() => import('./Components/UserCreation/Join'))
 const OTP = lazy(() => import('./Components/UserCreation/OTP'))
 const Login = lazy(() => import('./Components/Login/User'))
+const ForgotPassword = lazy(() => import('./Components/Login/ForgotPassword'))
+const ResetPassword = lazy(() => import('./Components/Login/ResetPassword'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
@@ -78,6 +80,8 @@ function App() {
           <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />
           <Route path="/Verify-Otp" element={<OpenRoute><OTP /></OpenRoute>} />
           <Route path="/Login" element={<OpenRoute><Login /></OpenRoute>} />
+          <Route path="/Forgot-Password" element={<OpenRoute><ForgotPassword /></OpenRoute>} />
+          <Route path="/reset-password/:token" element={<OpenRoute><ResetPassword /></OpenRoute>} />
 
           {/* Only for the logged-IN sir */}
           <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />

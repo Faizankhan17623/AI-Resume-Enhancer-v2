@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
-import { FaGithub, FaLinkedin, FaTwitter, FaStar } from 'react-icons/fa'
+import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 
 const footerColumns = [
@@ -89,22 +89,6 @@ const Footer = () => {
               ))}
             </div>
           ))}
-        </div>
-
-        {/* Trust row sir — rating + badge, MyPerfectResume-style credibility strip */}
-        <div className="mt-12 pt-8 border-t border-richblack-700 flex flex-wrap items-center gap-8">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-richblack-400">Excellent</p>
-            <div className="flex items-center gap-1 mt-1.5">
-              {[...Array(5)].map((_, i) => (
-                <FaStar key={i} className="text-warm-200 text-sm" />
-              ))}
-            </div>
-          </div>
-          <div className="h-10 w-px bg-richblack-700 hidden sm:block" />
-          <p className="text-sm text-richblack-300 max-w-sm">
-            Built to help real job seekers beat the ATS — honest scoring, no fluff.
-          </p>
         </div>
       </div>
 

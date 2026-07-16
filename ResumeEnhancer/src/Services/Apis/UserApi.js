@@ -12,6 +12,12 @@ export const Login = {
     login: BASE_URL + "/Login"
 }
 
+export const Password = {
+    forgotpassword: BASE_URL + "/forgot-password",
+    resetpassword: BASE_URL + "/reset-password",
+    changepassword: BASE_URL + "/change-password"
+}
+
 export const Profile = {
     getprofile: BASE_URL + "/profile",
     updatenotifications: BASE_URL + "/profile/notifications",
