@@ -129,7 +129,7 @@ exports.updateBuiltResume = async (req, res) => {
         const resume = await BuiltResume.findOneAndUpdate(
             { _id: resumeId, user: id },
             { $set: pickWritable(req.body) },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         )
 
         if (!resume) {

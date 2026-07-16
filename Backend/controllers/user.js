@@ -629,7 +629,7 @@ exports.forgotPassword = async (req, res) => {
                 token: token,
                 resetPasswordExpires: Date.now() + 3600000,
             },
-            { new: true }
+            { returnDocument: 'after' }
 
             )
 
@@ -713,7 +713,7 @@ exports.resetPassword = async (req, res) => {
     await User.findOneAndUpdate(
       { token: token },
       { password: encryptedPassword, token: null, resetPasswordExpires: null },
-      { new: true }
+      { returnDocument: 'after' }
     )
         return res.status(200).json({
             success: true,

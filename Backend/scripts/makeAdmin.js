@@ -18,7 +18,7 @@ const run = async () => {
     const user = await User.findOneAndUpdate(
         { email: email.toLowerCase().trim() },
         { role: 'Admin' },
-        { new: true }
+        { returnDocument: 'after' }
     ).select('firstName lastName email role')
 
     if (!user) {
