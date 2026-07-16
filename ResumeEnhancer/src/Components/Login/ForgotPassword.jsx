@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { FaEnvelopeOpenText } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import { ForgotPassword as SendForgotPassword } from '../../Services/operations/Auth'
@@ -32,49 +33,64 @@ const ForgotPassword = () => {
 
       <div className="w-full max-w-md mx-auto px-6 py-16 animate-fadeIn">
 
-        <div className="text-center mb-10">
-          <h1 className="font-display text-4xl text-richblack-5 tracking-tight">
-            Forgot <span className="italic text-warm-200">password</span>
-          </h1>
-          <p className="mt-2 text-richblack-200 text-base">
-            {emailSent
-              ? "We've emailed you a link to reset your password"
-              : "Enter your email and we'll send you a reset link"}
-          </p>
-        </div>
-
         {emailSent ? (
           <div className="text-center">
-            <IconBtn
-              onclick={() => dispatch(SendForgotPassword(sentEmail, setEmailSent))}
-              text="Resend the email"
-              outline
-              customClasses="mx-auto"
-            />
+            <div className="mx-auto w-16 h-16 rounded-full bg-caribgreen-900/15 flex items-center justify-center mb-6">
+              <FaEnvelopeOpenText className="text-2xl text-caribgreen-100" />
+            </div>
+            <h1 className="font-display text-3xl text-richblack-5 tracking-tight">
+              Check your <span className="italic text-warm-200">email</span>
+            </h1>
+            <p className="mt-3 text-richblack-200 text-base leading-relaxed">
+              We've sent a password reset link to<br />
+              <span className="text-richblack-5 font-medium">{sentEmail}</span>
+            </p>
+            <p className="mt-6 text-sm text-richblack-400">
+              Didn't get it?{' '}
+              <button
+                type="button"
+                onClick={() => dispatch(SendForgotPassword(sentEmail, setEmailSent))}
+                disabled={loading}
+                className="text-yellow-50 font-semibold hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? "Resending..." : "Resend the email"}
+              </button>
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div>
-              <label className={labelClass}>Email Address</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                className={inputClass}
-                {...register("email", {
-                  required: "Email is required",
-                  pattern: { value: /^\S+@\S+\.\S+$/, message: "Enter a valid email" }
-                })}
-              />
-              {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+          <>
+            <div className="text-center mb-10">
+              <h1 className="font-display text-4xl text-richblack-5 tracking-tight">
+                Forgot <span className="italic text-warm-200">password</span>
+              </h1>
+              <p className="mt-2 text-richblack-200 text-base">
+                Enter your email and we'll send you a reset link
+              </p>
             </div>
 
-            <IconBtn
-              type="submit"
-              text={loading ? "Sending..." : "Send reset link"}
-              disabled={loading}
-              customClasses="w-full justify-center"
-            />
-          </form>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <div>
+                <label className={labelClass}>Email Address</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  className={inputClass}
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: { value: /^\S+@\S+\.\S+$/, message: "Enter a valid email" }
+                  })}
+                />
+                {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+              </div>
+
+              <IconBtn
+                type="submit"
+                text={loading ? "Sending..." : "Send reset link"}
+                disabled={loading}
+                customClasses="w-full justify-center"
+              />
+            </form>
+          </>
         )}
 
         <p className="text-center text-sm text-richblack-300 mt-6">
