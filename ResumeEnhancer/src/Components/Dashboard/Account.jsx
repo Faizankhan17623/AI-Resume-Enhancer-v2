@@ -1,14 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell } from 'react-icons/fa'
+import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
-import { GetProfile, UpdateNotificationPrefs } from '../../Services/operations/User'
+import PasswordInput from '../extra/PasswordInput'
+import { GetProfile, UpdateNotificationPrefs, ChangePassword } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser } from '../../Services/operations/Auth'
+
+const passwordInputClass = "w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+const passwordLabelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
+const passwordErrorClass = "mt-1 text-xs text-pink-200"
 
 // small on/off switch sir — used only for the notification preferences below
 const Toggle = ({ checked, onChange, label, hint }) => (
@@ -43,12 +49,20 @@ const Account = () => {
   const { token } = useSelector((state) => state.auth)
   const { profile, loading } = useSelector((state) => state.profile)
   const { history } = useSelector((state) => state.payment)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
   useEffect(() => {
     dispatch(GetProfile(token))
     dispatch(GetPaymentHistory(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const onChangePassword = async (data) => {
+    setChangingPassword(true)
+    await dispatch(ChangePassword(data.oldPassword, data.newPassword, data.confirmNewPassword, token, () => resetPasswordForm()))
+    setChangingPassword(false)
+  }
 
   if (loading || !profile) {
     return (
@@ -176,6 +190,63 @@ const Account = () => {
               onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyDigest: value }, token))}
             />
           </div>
+        </div>
+
+        {/* Change password sir */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaLock className="text-yellow-50 text-base" /> Change Password
+          </h2>
+          <p className="text-xs text-richblack-400 mb-4">Use a strong password you don't use anywhere else.</p>
+
+          <form onSubmit={handlePasswordSubmit(onChangePassword)} className="max-w-md space-y-4">
+            <div>
+              <label className={passwordLabelClass}>Current Password</label>
+              <PasswordInput
+                inputClass={passwordInputClass}
+                register={registerPassword}
+                name="oldPassword"
+                validation={{ required: "Current password is required" }}
+              />
+              {passwordErrors.oldPassword && <p className={passwordErrorClass}>{passwordErrors.oldPassword.message}</p>}
+            </div>
+
+            <div>
+              <label className={passwordLabelClass}>New Password</label>
+              <PasswordInput
+                inputClass={passwordInputClass}
+                register={registerPassword}
+                name="newPassword"
+                validation={{
+                  required: "New password is required",
+                  minLength: { value: 8, message: "Minimum 8 characters" },
+                  validate: (value) => value !== watchPassword("oldPassword") || "New password cannot be the same as your current password"
+                }}
+              />
+              {passwordErrors.newPassword && <p className={passwordErrorClass}>{passwordErrors.newPassword.message}</p>}
+            </div>
+
+            <div>
+              <label className={passwordLabelClass}>Confirm New Password</label>
+              <PasswordInput
+                inputClass={passwordInputClass}
+                register={registerPassword}
+                name="confirmNewPassword"
+                validation={{
+                  required: "Please confirm the new password",
+                  validate: (value) => value === watchPassword("newPassword") || "Passwords do not match"
+                }}
+              />
+              {passwordErrors.confirmNewPassword && <p className={passwordErrorClass}>{passwordErrors.confirmNewPassword.message}</p>}
+            </div>
+
+            <IconBtn
+              type="submit"
+              text={changingPassword ? "Updating..." : "Update password"}
+              disabled={changingPassword}
+              customClasses="text-sm"
+            />
+          </form>
         </div>
 
         {/* Payment history sir */}

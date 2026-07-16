@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
+import PasswordInput from '../extra/PasswordInput'
 import { LoginUser } from '../../Services/operations/Auth'
 
 const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
@@ -58,12 +59,17 @@ const User = () => {
 
           {/* Password */}
           <div>
-            <label className={labelClass}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              className={inputClass}
-              {...register("password", { required: "Password is required" })}
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelClass + " mb-0"}>Password</label>
+              <Link to="/Forgot-Password" className="text-xs font-medium text-yellow-50 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+            <PasswordInput
+              inputClass={inputClass}
+              register={register}
+              name="password"
+              validation={{ required: "Password is required" }}
             />
             {errors.password && <p className={errorClass}>{errors.password.message}</p>}
           </div>

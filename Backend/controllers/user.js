@@ -451,6 +451,16 @@ exports.updatePassword = async (req, res) => {
             });
         }
 
+        // not case sir — new password can't be the same as the current one
+        const SameAsOld = await bcrypt.compare(newPassword, existingUser.password);
+        if (SameAsOld) {
+            return res.status(400).json({
+                success: false,
+                field: 'newPassword',
+                message: 'New password cannot be the same as your current password',
+            });
+        }
+
         // hash the new password before saving sir
         const saltRounds = 10;
         const hashing = await bcrypt.hash(newPassword, saltRounds);
@@ -689,7 +699,16 @@ exports.resetPassword = async (req, res) => {
         message: `Token is Expired, Please Regenerate Your Token`,
       })
     }
-    
+
+    // not case sir — new password can't be the same as the current one
+    const SameAsOld = await bcrypt.compare(newPassword, userDetails.password)
+    if (SameAsOld) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password cannot be the same as your current password',
+      })
+    }
+
       const encryptedPassword = await bcrypt.hash(newPassword, 10)
     await User.findOneAndUpdate(
       { token: token },

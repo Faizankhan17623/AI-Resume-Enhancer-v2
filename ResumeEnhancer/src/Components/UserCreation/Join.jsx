@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
+import PasswordInput from '../extra/PasswordInput'
 import { setSignupData } from '../../Slices/authSlice'
 import { SendTheOtp } from '../../Services/operations/Auth'
 import CountryCode from '../../utils/CountryCode.json'
@@ -126,27 +127,27 @@ const Join = () => {
             <div className="flex gap-4">
               <div className="w-1/2">
                 <label className={labelClass}>Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className={inputClass}
-                  {...register("password", {
+                <PasswordInput
+                  inputClass={inputClass}
+                  register={register}
+                  name="password"
+                  validation={{
                     required: "Password is required",
                     minLength: { value: 8, message: "Minimum 8 characters" }
-                  })}
+                  }}
                 />
                 {errors.password && <p className={errorClass}>{errors.password.message}</p>}
               </div>
               <div className="w-1/2">
                 <label className={labelClass}>Confirm Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className={inputClass}
-                  {...register("confirmpassword", {
+                <PasswordInput
+                  inputClass={inputClass}
+                  register={register}
+                  name="confirmpassword"
+                  validation={{
                     required: "Please confirm the password",
                     validate: (value) => value === watch("password") || "Passwords do not match"
-                  })}
+                  }}
                 />
                 {errors.confirmpassword && <p className={errorClass}>{errors.confirmpassword.message}</p>}
               </div>

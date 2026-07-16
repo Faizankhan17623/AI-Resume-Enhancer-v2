@@ -9,7 +9,10 @@ const {
     SendOtp,
     getProfile,
     updateNotificationPrefs,
-    completeOnboarding
+    completeOnboarding,
+    forgotPassword,
+    resetPassword,
+    updatePassword
 } = require('../controllers/user.js')
 // we are going to start the routing from here sir
 
@@ -21,6 +24,11 @@ route.post('/response/from-resume/:resumeId',aiLimiter,Auth,CallingFromSavedResu
 route.post('/Createuser',authLimiter,createUser)
 route.post('/Login',authLimiter,loginUser)
 route.post('/Send-otp',otpLimiter,SendOtp)
+
+// authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
+route.post('/forgot-password',authLimiter,forgotPassword)
+route.post('/reset-password',authLimiter,resetPassword)
+route.put('/change-password',Auth,updatePassword)
 
 // the account page reads everything from here sir
 route.get('/profile',Auth,getProfile)
