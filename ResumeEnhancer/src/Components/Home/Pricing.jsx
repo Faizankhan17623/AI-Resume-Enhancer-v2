@@ -2,12 +2,14 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { motion } from 'motion/react'
 import { FaCheck, FaHeart, FaStar, FaTimes } from 'react-icons/fa'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import { GetAllPlans, BuyPlan } from '../../Services/operations/Payment'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 
 // full capability matrix sir — one row per real capability across ALL plans, so every
 // card can show both what it has (check) and what it's missing versus the tier above it.
@@ -73,7 +75,12 @@ const Pricing = () => {
       </Helmet>
       <Navbar />
 
-      <div className="flex-1 max-w-7xl mx-auto px-6 py-16 w-full animate-fadeIn">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 max-w-7xl mx-auto px-6 py-16 w-full"
+      >
 
         {/* Header sir */}
         <div className="text-center mb-14">
@@ -100,7 +107,12 @@ const Pricing = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-4">
+          <motion.div
+            variants={staggerContainer(0.1)}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-4"
+          >
             {plans.map((plan) => {
               const isPro = plan.key === 'Pro'
               const isProMax = plan.key === 'ProMax'
@@ -108,8 +120,9 @@ const Pricing = () => {
               const meta = PLAN_META[plan.key] || {}
 
               return (
-                <div
+                <motion.div
                   key={plan.key}
+                  variants={fadeUp}
                   className={`relative flex flex-col rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-2 ${
                     isPro
                       ? 'bg-richblack-800 border-warm-200 shadow-[0_0_40px_-12px_rgba(232,131,79,0.35)]'
@@ -199,12 +212,12 @@ const Pricing = () => {
                       />
                     )}
                   </div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       <Footer />
     </div>

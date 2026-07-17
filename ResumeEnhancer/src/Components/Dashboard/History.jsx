@@ -2,10 +2,13 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { motion } from 'motion/react'
 import { FaPlus } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAllReviews } from '../../Services/operations/Review'
 
 const scoreColor = (score) =>
@@ -27,7 +30,7 @@ const History = () => {
         <title>Review History | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8">
 
         <div className="flex items-center justify-end mb-6">
           <Link to="/Dashboard/New-Review">
@@ -47,10 +50,10 @@ const History = () => {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="show" className="space-y-3">
             {allReviews.map((review) => (
+              <motion.div key={review._id} variants={fadeUp}>
               <Link
-                key={review._id}
                 to={`/Dashboard/Review/${review._id}`}
                 className="flex items-center justify-between rounded-xl bg-richblack-800 shadow-sm shadow-richblack-900/10 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
               >
@@ -68,10 +71,11 @@ const History = () => {
                   {review.atsScore}
                 </span>
               </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

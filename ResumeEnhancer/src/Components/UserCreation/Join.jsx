@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
+import PageTransition from '../extra/PageTransition'
 import { setSignupData } from '../../Slices/authSlice'
 import { SendTheOtp } from '../../Services/operations/Auth'
 import CountryCode from '../../utils/CountryCode.json'
@@ -33,7 +34,7 @@ const Join = () => {
       </Helmet>
       <Navbar />
 
-      <div className="w-full max-w-7xl mx-auto px-6 py-12 flex flex-col lg:flex-row items-start justify-between gap-10 animate-fadeIn">
+      <PageTransition className="w-full max-w-7xl mx-auto px-6 py-12 flex flex-col lg:flex-row items-start justify-between gap-10">
 
         {/* Left Side - Form Area */}
         <div className="w-full lg:w-[50%] flex flex-col items-center">
@@ -180,7 +181,7 @@ const Join = () => {
             <div className="mt-6 w-full h-1 bg-gradient-to-r from-yellow-50 via-caribgreen-100 to-blue-100 rounded-full" />
           </div>
         </div>
-      </div>
+      </PageTransition>
     </div>
   )
 }

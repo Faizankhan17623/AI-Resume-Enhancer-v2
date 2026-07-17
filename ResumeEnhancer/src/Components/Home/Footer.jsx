@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
+import useGsapReveal from '../../Hooks/useGsapReveal'
 
 const footerColumns = [
   {
@@ -32,8 +33,10 @@ const footerColumns = [
 ]
 
 const Footer = () => {
+  const scope = useGsapReveal({ y: 14, start: 'top 95%' })
+
   return (
-    <footer className="relative w-full bg-richblack-800 dark:bg-richblack-900">
+    <footer ref={scope} className="relative w-full bg-richblack-800 dark:bg-richblack-900">
       {/* wave divider sir — curved corner cut into the section above, MyPerfectResume-style */}
       <svg
         className="absolute -top-px left-0 w-full h-10 text-richblack-800 dark:text-richblack-900"
@@ -44,7 +47,7 @@ const Footer = () => {
         <path fill="currentColor" d="M0,60 C480,0 960,0 1440,60 L1440,0 L0,0 Z" />
       </svg>
 
-      <div className="max-w-7xl mx-auto px-6 pt-16 pb-10">
+      <div data-reveal className="max-w-7xl mx-auto px-6 pt-16 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
 
           {/* Brand + socials sir */}

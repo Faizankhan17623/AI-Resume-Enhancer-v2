@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { motion } from 'motion/react'
 import { FaQuestionCircle, FaPlus } from 'react-icons/fa'
+import useGsapReveal from '../../Hooks/useGsapReveal'
 
 const faqs = [
   {
@@ -35,9 +37,13 @@ const FAQItem = ({ item, open, onToggle }) => (
       className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer"
     >
       <span className="font-semibold text-richblack-5">{item.q}</span>
-      <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${open ? 'bg-warm-200 text-richblack-900 rotate-45' : 'bg-richblack-700 text-warm-200'}`}>
+      <motion.span
+        animate={{ rotate: open ? 45 : 0 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${open ? 'bg-warm-200 text-richblack-900' : 'bg-richblack-700 text-warm-200'}`}
+      >
         <FaPlus className="text-xs" />
-      </span>
+      </motion.span>
     </button>
     <div
       className="grid transition-all duration-300 ease-in-out"
@@ -52,9 +58,10 @@ const FAQItem = ({ item, open, onToggle }) => (
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(0)
+  const scope = useGsapReveal()
 
   return (
-    <div className="relative max-w-3xl mx-auto px-6 py-20">
+    <div ref={scope} className="relative max-w-3xl mx-auto px-6 py-20">
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-warm-200/5 blur-[100px]" />
 
       <div className="relative text-center mb-12">
@@ -69,12 +76,13 @@ const FAQ = () => {
 
       <div className="relative flex flex-col gap-3">
         {faqs.map((item, i) => (
-          <FAQItem
-            key={i}
-            item={item}
-            open={openIndex === i}
-            onToggle={() => setOpenIndex(openIndex === i ? -1 : i)}
-          />
+          <div key={i} data-reveal>
+            <FAQItem
+              item={item}
+              open={openIndex === i}
+              onToggle={() => setOpenIndex(openIndex === i ? -1 : i)}
+            />
+          </div>
         ))}
       </div>
     </div>

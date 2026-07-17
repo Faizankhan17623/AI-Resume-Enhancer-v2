@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async'
 import { FiMail } from 'react-icons/fi'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
 import { CreateTheUser, SendTheOtp } from '../../Services/operations/Auth'
 
 const OTP = () => {
@@ -31,7 +32,7 @@ const OTP = () => {
       </Helmet>
       <Navbar />
 
-      <div className="w-full max-w-md mx-auto px-6 py-20 flex flex-col items-center animate-fadeIn">
+      <PageTransition className="w-full max-w-md mx-auto px-6 py-20 flex flex-col items-center">
 
         <div className="w-16 h-16 rounded-full bg-richblack-800 border border-richblack-700 flex items-center justify-center mb-6">
           <FiMail className="text-3xl text-yellow-50" />
@@ -75,7 +76,7 @@ const OTP = () => {
         >
           Didn't get it? Resend the OTP
         </button>
-      </div>
+      </PageTransition>
     </div>
   )
 }

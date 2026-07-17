@@ -5,6 +5,7 @@ import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { FaMagic } from 'react-icons/fa'
 import { TEMPLATE_REGISTRY } from '../ResumeBuilder/Templates/templateRegistry'
 import { SAMPLE_RESUME_DATA } from '../ResumeBuilder/Templates/sampleResumeData'
+import useGsapReveal from '../../Hooks/useGsapReveal'
 
 // real template components sir, rendered tiny with sample content — no more pure-CSS mockups and
 // no more empty pages. Same trick as the picker page: scale a full-size template down so the card
@@ -29,6 +30,7 @@ const TemplateCard = ({ name, Component, linkTo }) => (
 const TemplateSlider = () => {
   const trackRef = useRef(null)
   const { token } = useSelector((state) => state.auth)
+  const scope = useGsapReveal({ y: 16 })
 
   const scrollBy = (dir) => {
     trackRef.current?.scrollBy({ left: dir * 240, behavior: 'smooth' })
@@ -39,8 +41,8 @@ const TemplateSlider = () => {
   const linkTo = token ? '/Dashboard/Build-Resume' : '/Signup'
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
-      <div className="flex items-end justify-between mb-10">
+    <div ref={scope} className="max-w-7xl mx-auto px-6 py-20">
+      <div data-reveal className="flex items-end justify-between mb-10">
         <div>
           <span className="inline-block mb-3 px-3.5 py-1 text-xs font-bold rounded-full bg-richblack-800 text-warm-200 border border-richblack-700">
             TEMPLATES
@@ -68,6 +70,7 @@ const TemplateSlider = () => {
 
       <div
         ref={trackRef}
+        data-reveal
         className="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 thin-scrollbar scroll-smooth"
       >
         {TEMPLATE_REGISTRY.map((t) => (

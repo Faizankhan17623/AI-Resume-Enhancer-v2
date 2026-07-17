@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn } from 'react-icons/fa'
 
 // the admin section switcher sir — sits under the navbar on every admin page
@@ -22,13 +23,18 @@ const AdminNav = () => {
             <Link
               key={tab.name}
               to={tab.path}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors duration-200 ${
-                active
-                  ? 'border-yellow-50 text-yellow-50'
-                  : 'border-transparent text-richblack-300 hover:text-richblack-5'
+              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+                active ? 'text-yellow-50' : 'text-richblack-300 hover:text-richblack-5'
               }`}
             >
               {tab.icon} {tab.name}
+              {active && (
+                <motion.span
+                  layoutId="admin-nav-underline"
+                  className="absolute left-0 right-0 -bottom-px h-0.5 bg-yellow-50"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
             </Link>
           )
         })}

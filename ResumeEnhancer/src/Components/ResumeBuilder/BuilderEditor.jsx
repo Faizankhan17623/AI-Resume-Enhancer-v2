@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaPlus, FaTrash, FaDownload, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
+import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
 import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
@@ -150,7 +153,7 @@ const BuilderEditor = () => {
         }
       `}</style>
 
-      <div className="h-full overflow-y-auto px-4 lg:px-6 py-6 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto px-4 lg:px-6 py-6">
         <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
           <input
             value={current.title || ''}
@@ -166,11 +169,18 @@ const BuilderEditor = () => {
               >
                 <FaSwatchbook /> Change template
               </button>
+              <AnimatePresence>
               {templatePickerOpen && (
                 <>
                   {/* click-outside catcher sir */}
                   <div className="fixed inset-0 z-40" onClick={() => setTemplatePickerOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 z-50 w-[420px] max-h-96 overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-3 grid grid-cols-3 gap-2.5">
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-2 z-50 w-[420px] max-h-96 overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-3 grid grid-cols-3 gap-2.5"
+                  >
                     {TEMPLATE_REGISTRY.map((t) => {
                       const active = t.id === current.templateId
                       return (
@@ -195,9 +205,10 @@ const BuilderEditor = () => {
                         </button>
                       )
                     })}
-                  </div>
+                  </motion.div>
                 </>
               )}
+              </AnimatePresence>
             </div>
             <button
               onClick={handleManualSave}
@@ -219,10 +230,14 @@ const BuilderEditor = () => {
         </div>
 
         {/* score modal sir — needs a JD before it can send this resume through the AI Review pipeline */}
+        <AnimatePresence>
         {scoreModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
+          <motion.div
+            initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          >
             <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setScoreModalOpen(false)} />
-            <div className="relative w-full max-w-lg rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6 animate-fadeIn">
+            <motion.div variants={modalPanel} className="relative w-full max-w-lg rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display font-bold text-lg text-richblack-5">Score this resume</h3>
                 <button onClick={() => setScoreModalOpen(false)} className="text-richblack-400 hover:text-richblack-5 cursor-pointer">
@@ -246,9 +261,10 @@ const BuilderEditor = () => {
                   customClasses="text-sm px-6"
                 />
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-8">
 
@@ -305,7 +321,7 @@ const BuilderEditor = () => {
               </div>
               <div className="flex flex-col gap-4">
                 {(current.experience || []).map((exp, i) => (
-                  <div key={i} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4">
+                  <motion.div key={i} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4">
                     <div className="flex justify-end mb-2">
                       <button onClick={() => removeListItem('experience', i)} className="text-richblack-400 hover:text-pink-200 cursor-pointer">
                         <FaTrash className="text-xs" />
@@ -338,7 +354,7 @@ const BuilderEditor = () => {
                         <FaPlus className="text-[10px]" /> Add bullet
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {(current.experience || []).length === 0 && (
                   <p className="text-xs text-richblack-400">No experience added yet.</p>
@@ -455,7 +471,7 @@ const BuilderEditor = () => {
             </div>
           </div>
         </div>
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

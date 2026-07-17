@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
+import PageTransition from '../extra/PageTransition'
 import { ResetPassword as SubmitResetPassword } from '../../Services/operations/Auth'
 
 const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
@@ -29,7 +30,7 @@ const ResetPassword = () => {
       </Helmet>
       <Navbar />
 
-      <div className="w-full max-w-md mx-auto px-6 py-16 animate-fadeIn">
+      <PageTransition className="w-full max-w-md mx-auto px-6 py-16">
 
         <div className="text-center mb-10">
           <h1 className="font-display text-4xl text-richblack-5 tracking-tight">
@@ -82,7 +83,7 @@ const ResetPassword = () => {
             <Link to="/Login" className="text-yellow-50 font-semibold hover:underline">Log in</Link>
           </p>
         </form>
-      </div>
+      </PageTransition>
     </div>
   )
 }

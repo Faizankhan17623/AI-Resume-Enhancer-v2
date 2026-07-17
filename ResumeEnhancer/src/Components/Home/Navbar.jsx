@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiLogOut, FiSun, FiMoon, FiChevronDown } from 'react-icons/fi'
 import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy } from 'react-icons/fa'
@@ -49,30 +50,38 @@ const NavDropdown = ({ label, items, active }) => {
         {label} <FiChevronDown className={`text-xs transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-72 animate-fadeIn">
-          <div className="rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl p-2">
-            {items.map((item) => {
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.name}
-                  to={token ? item.path : '/Login'}
-                  className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-richblack-700/60 transition-colors duration-150"
-                >
-                  <div className="w-8 h-8 shrink-0 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
-                    <Icon />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-richblack-5">{item.name}</p>
-                    <p className="text-xs text-richblack-400 mt-0.5">{item.desc}</p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-72"
+          >
+            <div className="rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl p-2">
+              {items.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    to={token ? item.path : '/Login'}
+                    className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-richblack-700/60 transition-colors duration-150"
+                  >
+                    <div className="w-8 h-8 shrink-0 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
+                      <Icon />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-richblack-5">{item.name}</p>
+                      <p className="text-xs text-richblack-400 mt-0.5">{item.desc}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

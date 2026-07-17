@@ -8,6 +8,7 @@ import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import ScoreRing from '../extra/ScoreRing'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
 import { GetSingleReview, DownloadReviewPdf, ToggleShare } from '../../Services/operations/Review'
 
 // score → color, same rule everywhere sir
@@ -68,7 +69,7 @@ const Report = () => {
         <title>ATS Report | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5">
 
         {/* Header row sir — score + verdict + PDF */}
         <div className="rounded-2xl bg-richblack-800 shadow-lg shadow-richblack-900/10 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8">
@@ -358,7 +359,7 @@ const Report = () => {
             </div>
           </Section>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

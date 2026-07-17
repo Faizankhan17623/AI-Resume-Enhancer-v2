@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { GetAuditLogs } from '../../Services/operations/Admin'
 
 // color per action type sir — bans red, money yellow, the rest neutral
@@ -33,7 +34,7 @@ const Audit = () => {
       <Navbar />
       <AdminNav />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 animate-fadeIn">
+      <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
         <p className="text-sm text-richblack-300 mb-6">
           Every admin action is recorded here sir — who did what, to whom, and when. Nothing gets edited, nothing gets deleted.
@@ -71,7 +72,7 @@ const Audit = () => {
             ))}
           </div>
         )}
-      </div>
+      </PageTransition>
     </div>
   )
 }

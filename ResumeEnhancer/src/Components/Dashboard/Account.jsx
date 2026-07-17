@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { motion } from 'motion/react'
 import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
+import PageTransition from '../extra/PageTransition'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser } from '../../Services/operations/Auth'
@@ -30,8 +32,11 @@ const Toggle = ({ checked, onChange, label, hint }) => (
       aria-checked={checked}
       className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 cursor-pointer ${checked ? 'bg-yellow-50' : 'bg-richblack-600'}`}
     >
-      <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-richblack-900 transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+      <motion.span
+        layout
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-richblack-900"
+        style={{ x: checked ? 20 : 0 }}
       />
     </button>
   </div>
@@ -82,7 +87,7 @@ const Account = () => {
         <title>My Account | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5">
 
         {/* Profile card sir */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 flex flex-col md:flex-row md:items-center gap-6">
@@ -285,7 +290,7 @@ const Account = () => {
             </div>
           )}
         </div>
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }
