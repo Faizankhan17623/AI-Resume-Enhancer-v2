@@ -4,11 +4,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaPlus, FaPaperPlane, FaTrash, FaRobot, FaFilePdf, FaTimes, FaComments } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import { GetAllChats, GetSingleChat, SendMessage, CreateChat, DeleteChat } from '../../Services/operations/Chat'
+import { modalBackdrop, modalPanel } from '../../utils/motion'
 
 // ---------- the new-chat modal sir — resume PDF + JD, costs one credit ----------
 const NewChatModal = ({ onClose }) => {
@@ -37,8 +39,14 @@ const NewChatModal = ({ onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-7 animate-fadeIn">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      variants={modalBackdrop}
+      className="fixed inset-0 z-50 bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4"
+    >
+      <motion.div variants={modalPanel} className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-7">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-display text-lg text-richblack-5">New Chat</h2>
           <button onClick={onClose} className="text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer">
@@ -75,14 +83,19 @@ const NewChatModal = ({ onClose }) => {
 
           <IconBtn type="submit" text={loading ? "Creating..." : "Start the chat"} disabled={loading} customClasses="w-full justify-center" />
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 // ---------- one message bubble sir ----------
 const Message = ({ role, content }) => (
-  <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
+  <motion.div
+    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+    className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'}`}
+  >
     <div
       className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
         role === 'user'
@@ -92,7 +105,7 @@ const Message = ({ role, content }) => (
     >
       {content}
     </div>
-  </div>
+  </motion.div>
 )
 
 const Chat = () => {
@@ -253,7 +266,9 @@ const Chat = () => {
         </div>
       </div>
 
-      {showModal && <NewChatModal onClose={() => setShowModal(false)} />}
+      <AnimatePresence>
+        {showModal && <NewChatModal onClose={() => setShowModal(false)} />}
+      </AnimatePresence>
     </DashboardLayout>
   )
 }

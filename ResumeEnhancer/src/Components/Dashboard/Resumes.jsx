@@ -3,10 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaFilePdf, FaStar, FaRegStar, FaTrash, FaPen, FaCloudUploadAlt, FaCheck, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetResumes, SaveResume, RenameResume, SetDefaultResume, DeleteResume } from '../../Services/operations/Resume'
 
 const Resumes = () => {
@@ -56,7 +59,7 @@ const Resumes = () => {
         <title>My Resumes | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-richblack-300">
@@ -80,10 +83,14 @@ const Resumes = () => {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="show" className="space-y-3">
+            <AnimatePresence>
             {resumes.map((resume) => (
-              <div
+              <motion.div
                 key={resume._id}
+                layout
+                variants={fadeUp}
+                exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                 className="flex items-center justify-between gap-3 rounded-xl bg-richblack-800 shadow-sm shadow-richblack-900/10 p-5"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -132,11 +139,12 @@ const Resumes = () => {
                     <FaTrash className="text-sm" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+            </AnimatePresence>
+          </motion.div>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

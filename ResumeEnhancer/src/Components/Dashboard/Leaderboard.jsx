@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { FaTrophy, FaMedal, FaFire, FaFileAlt } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { GetLeaderboard, GetWeeklyReviewsLeaderboard, GetStreaksLeaderboard, GetStreak } from '../../Services/operations/Review'
+import { Flip, prefersReducedMotion } from '../../utils/gsap'
 
 const rankColor = (rank) =>
   rank === 1 ? 'text-yellow-50' : rank === 2 ? 'text-richblack-100' : rank === 3 ? 'text-pink-200' : 'text-richblack-300'
@@ -56,6 +58,7 @@ const Leaderboard = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { leaderboard, weeklyReviewsLeaderboard, streaksLeaderboard, loading } = useSelector((state) => state.review)
+  const rowsRef = useRef(null)
 
   useEffect(() => {
     dispatch(GetLeaderboard(token))
@@ -74,13 +77,26 @@ const Leaderboard = () => {
   const board = BOARDS.find((b) => b.id === activeBoard)
   const rows = boardData[activeBoard]
 
+  const switchBoard = (id) => {
+    if (id === activeBoard) return
+    if (prefersReducedMotion() || !rowsRef.current) {
+      setActiveBoard(id)
+      return
+    }
+    const state = Flip.getState(rowsRef.current.children)
+    setActiveBoard(id)
+    requestAnimationFrame(() => {
+      Flip.from(state, { duration: 0.4, ease: 'power2.out', absolute: true, fade: true })
+    })
+  }
+
   return (
     <DashboardLayout title="Leaderboard">
       <Helmet>
         <title>Leaderboard | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-3xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-3xl mx-auto px-4 lg:px-6 py-8">
 
         <div className="text-center mb-6">
           <h1 className="font-display text-2xl text-richblack-5 tracking-tight flex items-center justify-center gap-3">
@@ -98,7 +114,7 @@ const Leaderboard = () => {
               return (
                 <button
                   key={b.id}
-                  onClick={() => setActiveBoard(b.id)}
+                  onClick={() => switchBoard(b.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
                     active ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-200 hover:text-richblack-5'
                   }`}
@@ -118,7 +134,7 @@ const Leaderboard = () => {
           </div>
         ) : (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-hidden">
-            <div className="divide-y divide-richblack-700">
+            <div ref={rowsRef} className="divide-y divide-richblack-700">
               {rows.map((row) => (
                 <div
                   key={row.rank}
@@ -142,7 +158,7 @@ const Leaderboard = () => {
             </div>
           </div>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

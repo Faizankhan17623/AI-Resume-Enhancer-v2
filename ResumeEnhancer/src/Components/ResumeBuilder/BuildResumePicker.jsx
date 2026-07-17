@@ -3,9 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { TEMPLATE_REGISTRY } from './Templates/templateRegistry'
 import { SAMPLE_RESUME_DATA } from './Templates/sampleResumeData'
 import { CreateBuiltResume, GenerateResume, TailorResume } from '../../Services/operations/BuiltResume'
@@ -86,7 +89,7 @@ const BuildResumePicker = () => {
         <title>Build Resume | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-6xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-6xl mx-auto px-4 lg:px-6 py-8">
 
         {/* Mode switch sir */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
@@ -94,10 +97,12 @@ const BuildResumePicker = () => {
             const Icon = m.icon
             const active = mode === m.id
             return (
-              <button
+              <motion.button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`text-left rounded-2xl p-5 border transition-all duration-200 cursor-pointer ${
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={`text-left rounded-2xl p-5 border transition-colors duration-200 cursor-pointer ${
                   active
                     ? 'bg-richblack-800 border-warm-200 shadow-[0_0_30px_-14px_rgba(232,131,79,0.4)]'
                     : 'bg-richblack-800 border-richblack-700 hover:border-richblack-500'
@@ -108,14 +113,21 @@ const BuildResumePicker = () => {
                 </div>
                 <p className="font-semibold text-richblack-5 text-sm">{m.label}</p>
                 <p className="text-xs text-richblack-400 mt-1 leading-relaxed">{m.desc}</p>
-              </button>
+              </motion.button>
             )
           })}
         </div>
 
         {/* generate/tailor inputs sir — shown above the template grid, since both need a template picked at the end */}
+        <AnimatePresence>
         {mode === 'generate' && (
-          <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-8 overflow-hidden"
+          >
             <label className="text-sm font-semibold text-richblack-100 mb-2 block">Tell the AI about yourself</label>
             <textarea
               value={rawInfo}
@@ -131,11 +143,17 @@ const BuildResumePicker = () => {
               placeholder="e.g. Frontend Developer"
               className="w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
             />
-          </div>
+          </motion.div>
         )}
 
         {mode === 'tailor' && (
-          <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden"
+          >
             <div>
               <label className="text-sm font-semibold text-richblack-100 mb-2 block">Your existing resume</label>
               {pdfFile ? (
@@ -167,19 +185,24 @@ const BuildResumePicker = () => {
                 className="w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
               />
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* Template grid sir — always shown, since every mode ends in "which template renders this data" */}
         <p className="text-sm font-semibold text-richblack-100 mb-4">
           {mode === 'blank' ? 'Pick a template to start' : 'Pick a template for the result'}
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+        <motion.div layout variants={staggerContainer(0.04)} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
           {TEMPLATE_REGISTRY.map((t) => (
-            <button
+            <motion.button
               key={t.id}
+              layout
+              variants={fadeUp}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handlePickTemplate(t.id)}
-              className={`group text-left rounded-xl overflow-hidden border transition-all duration-200 cursor-pointer ${
+              className={`group text-left rounded-xl overflow-hidden border transition-colors duration-200 cursor-pointer ${
                 selectedTemplate === t.id ? 'border-warm-200 ring-2 ring-warm-200/40' : 'border-richblack-700 hover:border-richblack-500'
               }`}
             >
@@ -198,9 +221,9 @@ const BuildResumePicker = () => {
                 <p className="text-sm font-semibold text-richblack-5">{t.name}</p>
                 <p className="text-[11px] text-richblack-400 mt-0.5 line-clamp-1">{t.description}</p>
               </div>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Confirm button for generate/tailor sir — blank mode already navigates on template click */}
         {mode === 'generate' && (
@@ -223,7 +246,7 @@ const BuildResumePicker = () => {
             />
           </div>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

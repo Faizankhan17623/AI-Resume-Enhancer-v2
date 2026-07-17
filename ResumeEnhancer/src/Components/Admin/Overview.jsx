@@ -2,10 +2,13 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { motion } from 'motion/react'
 import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetDashboardStats, GetAiStats, GetHealth } from '../../Services/operations/Admin'
 
 const tooltipStyle = { backgroundColor: '#FFFFFF', border: '1px solid #E6DDD0', borderRadius: '10px', color: '#1F2937' }
@@ -58,21 +61,21 @@ const Overview = () => {
       <Navbar />
       <AdminNav />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6 animate-fadeIn">
+      <PageTransition className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
         {/* Stat cards sir */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, index) => (
-            <div key={index} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <motion.div key={index} variants={fadeUp} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center">{card.icon}</div>
                 <span className="text-xs font-medium text-richblack-300">{card.label}</span>
               </div>
               <p className="font-display text-2xl text-richblack-5">{card.value}</p>
               <p className="text-xs text-richblack-400 mt-1">{card.sub}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Health + AI row sir */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -160,7 +163,7 @@ const Overview = () => {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </PageTransition>
     </div>
   )
 }

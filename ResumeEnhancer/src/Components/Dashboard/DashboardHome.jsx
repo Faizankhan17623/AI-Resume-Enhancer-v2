@@ -2,9 +2,12 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetProgress, GetAllReviews, GetStreak } from '../../Services/operations/Review'
 import { GetProfile, CompleteOnboarding } from '../../Services/operations/User'
 
@@ -65,7 +68,7 @@ const DashboardHome = () => {
         <title>Dashboard | Resumify</title>
       </Helmet>
 
-      <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6 animate-fadeIn">
+      <PageTransition className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6">
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-richblack-300">
@@ -79,52 +82,67 @@ const DashboardHome = () => {
         </div>
 
         {/* Onboarding checklist sir — shows until every step is done or the user dismisses it, never again after that */}
-        {showOnboarding && (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-display text-lg text-richblack-5">Get started</h2>
-                <p className="text-xs text-richblack-400 mt-0.5">{completedSteps} of {onboardingSteps.length} done</p>
-              </div>
-              <button
-                onClick={dismissOnboarding}
-                className="text-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer p-1"
-                title="Dismiss"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden mb-5">
-              <div
-                className="h-full rounded-full bg-yellow-50 transition-all duration-700"
-                style={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {onboardingSteps.map((step) => (
-                <Link
-                  key={step.label}
-                  to={step.to}
-                  className={`flex items-center gap-2.5 text-sm rounded-lg px-3 py-2.5 transition-colors duration-200 ${
-                    step.done ? 'text-richblack-400' : 'text-richblack-100 hover:bg-richblack-700/60'
-                  }`}
+        <AnimatePresence>
+          {showOnboarding && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5 overflow-hidden"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-display text-lg text-richblack-5">Get started</h2>
+                  <p className="text-xs text-richblack-400 mt-0.5">{completedSteps} of {onboardingSteps.length} done</p>
+                </div>
+                <button
+                  onClick={dismissOnboarding}
+                  className="text-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer p-1"
+                  title="Dismiss"
                 >
-                  {step.done ? (
-                    <FaCheckCircle className="text-caribgreen-100 shrink-0" />
-                  ) : (
-                    <FaRegCircle className="text-richblack-400 shrink-0" />
-                  )}
-                  <span className={step.done ? 'line-through' : ''}>{step.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+                  <FaTimes />
+                </button>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden mb-5">
+                <motion.div
+                  className="h-full rounded-full bg-yellow-50"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(completedSteps / onboardingSteps.length) * 100}%` }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {onboardingSteps.map((step) => (
+                  <Link
+                    key={step.label}
+                    to={step.to}
+                    className={`flex items-center gap-2.5 text-sm rounded-lg px-3 py-2.5 transition-colors duration-200 ${
+                      step.done ? 'text-richblack-400' : 'text-richblack-100 hover:bg-richblack-700/60'
+                    }`}
+                  >
+                    {step.done ? (
+                      <FaCheckCircle className="text-caribgreen-100 shrink-0" />
+                    ) : (
+                      <FaRegCircle className="text-richblack-400 shrink-0" />
+                    )}
+                    <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Stat cards sir — tighter icon-chip treatment from the mockup, soft shadow instead of a hard border */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          variants={staggerContainer(0.06)}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        >
           {statCards.map((card, index) => (
-            <div key={index} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
+            <motion.div key={index} variants={fadeUp} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
                   {card.icon}
@@ -132,9 +150,9 @@ const DashboardHome = () => {
                 <span className="text-xs font-semibold text-richblack-400">{card.label}</span>
               </div>
               <p className={`font-display text-2xl ${card.valueClass || 'text-richblack-5'}`}>{card.value}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-5">
           {/* Score Progress Graph sir — min-w-0 stops the ResponsiveContainer from overflowing its grid track and causing a page-wide x-axis scrollbar */}
@@ -194,7 +212,7 @@ const DashboardHome = () => {
             )}
           </div>
         </div>
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

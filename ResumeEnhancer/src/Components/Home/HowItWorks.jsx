@@ -1,4 +1,5 @@
 import { FaRocket, FaSmile, FaEdit, FaCheckCircle, FaLightbulb, FaBriefcase } from 'react-icons/fa'
+import useGsapReveal from '../../Hooks/useGsapReveal'
 
 const tiles = [
   {
@@ -46,8 +47,10 @@ const tiles = [
 ]
 
 const HowItWorks = () => {
+  const scope = useGsapReveal()
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
+    <div ref={scope} className="max-w-7xl mx-auto px-6 py-20">
       <div className="text-center mb-14">
         <span className="inline-block mb-4 px-3.5 py-1 text-xs font-bold rounded-full bg-richblack-800 text-warm-200 border border-richblack-700">
           HOW IT WORKS
@@ -64,6 +67,7 @@ const HowItWorks = () => {
         {tiles.map((tile, i) => (
           <div
             key={i}
+            data-reveal
             className="group relative rounded-2xl bg-richblack-800 border border-richblack-700 p-7 transition-all duration-300 hover:-translate-y-2 hover:border-richblack-500 hover:shadow-2xl hover:shadow-richblack-900/40"
           >
             <div className={`w-14 h-14 rounded-full ${tile.bg} ring-4 ring-transparent ${tile.ring} flex items-center justify-center mb-5 text-xl text-richblack-900 transition-all duration-300`}>

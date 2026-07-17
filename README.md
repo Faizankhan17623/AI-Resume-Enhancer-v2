@@ -60,7 +60,7 @@ Platform
 
 A full-stack web application that helps users improve their resumes using AI-powered feedback, with user authentication, a chat-based review flow, payments, and an admin dashboard.
 
-**Live Demo:** [https://ai-resume-enhancer-xi.vercel.app/](https://ai-resume-enhancer-xi.vercel.app/)
+**Live Demo:** [https://ai-resume-enhancer-v2.vercel.app/](https://ai-resume-enhancer-v2.vercel.app/)
 
 ## Features
 

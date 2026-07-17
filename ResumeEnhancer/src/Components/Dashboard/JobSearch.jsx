@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { FaSearch, FaExternalLinkAlt, FaCrown, FaBriefcase } from 'react-icons/fa'
+import { motion } from 'motion/react'
+import { FaExternalLinkAlt, FaCrown, FaBriefcase } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { SearchJobs } from '../../Services/operations/JobSearch'
 
 const JobSearch = () => {
@@ -28,7 +31,7 @@ const JobSearch = () => {
         <title>Job Search | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
         {isBasic ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
@@ -58,13 +61,14 @@ const JobSearch = () => {
             {searching ? (
               <Loading text="Searching the web for matching jobs — give it a few seconds..." />
             ) : jobs.length > 0 ? (
-              <div className="space-y-4">
+              <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="space-y-4">
                 <p className="text-xs text-richblack-400">
                   Showing results for <span className="text-richblack-100 font-semibold">"{lastQuery}"</span>
                 </p>
                 {jobs.map((job, idx) => (
-                  <a
+                  <motion.a
                     key={idx}
+                    variants={fadeUp}
                     href={job.url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -80,9 +84,9 @@ const JobSearch = () => {
                       </div>
                       <FaExternalLinkAlt className="text-richblack-400 group-hover:text-yellow-50 transition-colors duration-200 shrink-0 mt-1" />
                     </div>
-                  </a>
+                  </motion.a>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center">
                 <FaBriefcase className="text-3xl text-richblack-400 mx-auto mb-4" />
@@ -92,7 +96,7 @@ const JobSearch = () => {
             )}
           </>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

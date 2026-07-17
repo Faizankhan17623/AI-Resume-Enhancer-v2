@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaBullhorn, FaTrash } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import IconBtn from '../extra/IconBtn'
+import PageTransition from '../extra/PageTransition'
+import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAnnouncements, CreateAnnouncement, ToggleAnnouncement, DeleteAnnouncement } from '../../Services/operations/Admin'
 
 const Announcements = () => {
@@ -40,7 +43,7 @@ const Announcements = () => {
       <Navbar />
       <AdminNav />
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8 animate-fadeIn">
+      <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-8">
 
         {/* Composer sir — Admin only, Support can just view the list */}
         {isAdmin && (
@@ -72,14 +75,25 @@ const Announcements = () => {
           {announcements.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing broadcast yet sir.</p>
           ) : (
-            announcements.map((item) => (
-              <div key={item._id} className={`rounded-xl border p-5 flex items-start justify-between gap-4 ${item.active ? 'bg-richblack-800 border-richblack-600' : 'bg-richblack-800/40 border-richblack-700 opacity-70'}`}>
+            <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="show" className="space-y-3">
+            <AnimatePresence>
+            {announcements.map((item) => (
+              <motion.div key={item._id} layout variants={fadeUp} exit={{ opacity: 0, x: -20 }} className={`rounded-xl border p-5 flex items-start justify-between gap-4 ${item.active ? 'bg-richblack-800 border-richblack-600' : 'bg-richblack-800/40 border-richblack-700 opacity-70'}`}>
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
                     <p className="font-bold text-richblack-5">{item.title}</p>
+                    <AnimatePresence>
                     {item.active && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700">LIVE</span>
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.7 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.7 }}
+                        className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700"
+                      >
+                        LIVE
+                      </motion.span>
                     )}
+                    </AnimatePresence>
                   </div>
                   <p className="text-sm text-richblack-200 mt-1">{item.message}</p>
                   <p className="text-xs text-richblack-400 mt-2">
@@ -106,11 +120,13 @@ const Announcements = () => {
                     </button>
                   </div>
                 )}
-              </div>
-            ))
+              </motion.div>
+            ))}
+            </AnimatePresence>
+            </motion.div>
           )}
         </div>
-      </div>
+      </PageTransition>
     </div>
   )
 }

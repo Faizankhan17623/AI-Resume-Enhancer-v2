@@ -3,12 +3,12 @@
 // a real BuiltResume always starts from empty fields (see BuildResumePicker's createBuiltResume call).
 export const SAMPLE_RESUME_DATA = {
   personalInfo: {
-    fullName: 'Aditi Sharma',
-    email: 'aditi.sharma@email.com',
+    fullName: 'John Doe',
+    email: 'john.doe@email.com',
     phone: '98765 43210',
     location: 'Bengaluru, India',
-    linkedin: 'linkedin.com/in/aditisharma',
-    website: 'aditisharma.dev',
+    linkedin: 'linkedin.com/in/johndoe',
+    website: 'johndoe.dev',
   },
   summary: 'Frontend engineer with 4+ years building fast, accessible web apps in React and TypeScript. Led the redesign of a checkout flow that lifted conversion by 18%.',
   experience: [
@@ -53,7 +53,7 @@ export const SAMPLE_RESUME_DATA = {
     {
       name: 'OpenBoard',
       description: 'A real-time collaborative whiteboard used by 5,000+ students.',
-      link: 'github.com/aditisharma/openboard',
+      link: 'github.com/johndoe/openboard',
       bullets: ['Built with React, WebSockets and Canvas API'],
     },
   ],

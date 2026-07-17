@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaSpellCheck, FaCheckCircle, FaFolderOpen } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { CreateReview, CreateReviewFromResume, CheckGrammar } from '../../Services/operations/Review'
 import { GetResumes } from '../../Services/operations/Resume'
 import { setGrammar } from '../../Slices/reviewSlice'
@@ -96,7 +98,7 @@ const NewReview = () => {
         <title>New Review | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
+      <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
         {loading ? (
           <Loading text="The AI is reading your resume — give it a few seconds..." />
@@ -186,8 +188,15 @@ const NewReview = () => {
               )}
 
               {/* Free instant grammar/spell pre-check sir — no AI credit spent */}
+              <AnimatePresence>
               {pdfFile && (grammarChecking || grammar) && (
-                <div className="mt-4 rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
+                <motion.div
+                  initial={{ opacity: 0, y: -8, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="mt-4 rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4 overflow-hidden"
+                >
                   {grammarChecking ? (
                     <div className="flex items-center gap-2 text-sm text-richblack-300">
                       <FaSpellCheck className="animate-pulse" />
@@ -229,8 +238,9 @@ const NewReview = () => {
                       </p>
                     </>
                   )}
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
 
             {/* Right - JD textarea */}
@@ -252,7 +262,7 @@ const NewReview = () => {
             </div>
           </form>
         )}
-      </div>
+      </PageTransition>
     </DashboardLayout>
   )
 }

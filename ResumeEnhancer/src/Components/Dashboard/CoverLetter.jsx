@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCopy, FaCrown } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { GenerateCoverLetter } from '../../Services/operations/CoverLetter'
 import { setContent } from '../../Slices/coverLetterSlice'
 
@@ -71,21 +73,23 @@ const CoverLetter = () => {
         <title>Cover Letter | Resumify</title>
       </Helmet>
 
-      <div className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8 animate-fadeIn">
-
+      <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
+      <AnimatePresence mode="wait">
         {isBasic ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <motion.div key="upsell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Cover letters are a Pro feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade your plan to generate a tailored cover letter from your resume and a job description.</p>
             <Link to="/Pricing" className="inline-block">
               <IconBtn text="View plans" />
             </Link>
-          </div>
+          </motion.div>
         ) : generating ? (
-          <Loading text="The AI is drafting your cover letter — give it a few seconds..." />
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <Loading text="The AI is drafting your cover letter — give it a few seconds..." />
+          </motion.div>
         ) : content ? (
-          <div className="space-y-5">
+          <motion.div key="content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="space-y-5">
             <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 md:p-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-lg text-richblack-5">Your cover letter</h2>
@@ -107,9 +111,9 @@ const CoverLetter = () => {
                 Write another
               </button>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.form key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Left - PDF dropzone sir */}
             <div>
@@ -169,9 +173,10 @@ const CoverLetter = () => {
                 <IconBtn type="submit" text="Write my cover letter →" customClasses="px-8 py-3 text-sm" />
               </div>
             </div>
-          </form>
+          </motion.form>
         )}
-      </div>
+      </AnimatePresence>
+      </PageTransition>
     </DashboardLayout>
   )
 }

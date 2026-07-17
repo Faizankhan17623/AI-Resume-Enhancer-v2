@@ -6,6 +6,7 @@ import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
@@ -82,7 +83,7 @@ const Users = () => {
       <Navbar />
       <AdminNav />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 animate-fadeIn">
+      <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
         {/* Search sir */}
         <form onSubmit={handleSearch} className="flex gap-3 mb-6 max-w-md">
@@ -209,7 +210,7 @@ const Users = () => {
             )}
           </>
         )}
-      </div>
+      </PageTransition>
     </div>
   )
 }

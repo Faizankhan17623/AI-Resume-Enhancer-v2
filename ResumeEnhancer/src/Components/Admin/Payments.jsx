@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
+import PageTransition from '../extra/PageTransition'
 import { GetPayments } from '../../Services/operations/Admin'
 
 const statusChip = {
@@ -34,7 +35,7 @@ const Payments = () => {
       <Navbar />
       <AdminNav />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 animate-fadeIn">
+      <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
         {/* Money stat cards sir */}
         {stats && (
@@ -140,7 +141,7 @@ const Payments = () => {
             </button>
           </div>
         )}
-      </div>
+      </PageTransition>
     </div>
   )
 }

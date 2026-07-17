@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
 import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
+import QuickActionsFab from '../extra/QuickActionsFab'
 import { LogoutUser } from '../../Services/operations/Auth'
 
 // one shared shell for every logged-in page sir — sidebar + topbar, matching the approved mockup.
@@ -132,20 +134,35 @@ const DashboardLayout = ({ title, children }) => {
       </aside>
 
       {/* Mobile slide-over sir — hidden by default, hamburger-triggered */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-richblack-900/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 flex flex-col gap-6 bg-richblack-800 border-r border-richblack-700 p-4 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-richblack-400">Menu</span>
-              <button onClick={() => setMobileOpen(false)} className="text-richblack-300 hover:text-richblack-5 cursor-pointer">
-                <FiX />
-              </button>
-            </div>
-            <SidebarContent pathname={location.pathname} user={user} streak={streak} onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
-      )}
+      <AnimatePresence>
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-richblack-900/70 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col gap-6 bg-richblack-800 border-r border-richblack-700 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-richblack-400">Menu</span>
+                <button onClick={() => setMobileOpen(false)} className="text-richblack-300 hover:text-richblack-5 cursor-pointer">
+                  <FiX />
+                </button>
+              </div>
+              <SidebarContent pathname={location.pathname} user={user} streak={streak} onNavigate={() => setMobileOpen(false)} />
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center justify-between px-4 lg:px-6 py-4 border-b border-richblack-700 shrink-0">
@@ -186,6 +203,8 @@ const DashboardLayout = ({ title, children }) => {
           {children}
         </div>
       </div>
+
+      <QuickActionsFab />
     </div>
   )
 }
