@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaPlus, FaFilePdf, FaMagic, FaComments, FaEnvelopeOpenText } from 'react-icons/fa'
+import { buttonHover, buttonTap } from '../../utils/motion'
 
 // quick-actions FAB sir — same shortcuts the sidebar already links to, just one thumb-tap away.
 // pattern: motion.dev/examples/react-floating-action-button — staggered vertical menu, spring pop, tooltip labels.
@@ -40,8 +41,8 @@ export default function QuickActionsFab() {
                   </span>
                   <Link to={action.path} onClick={() => setOpen(false)}>
                     <motion.span
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.92 }}
+                      whileHover={buttonHover}
+                      whileTap={buttonTap}
                       className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center text-base ${action.color}`}
                     >
                       <Icon />
@@ -56,8 +57,8 @@ export default function QuickActionsFab() {
 
       <motion.button
         onClick={() => setOpen((o) => !o)}
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.92 }}
+        whileHover={buttonHover}
+        whileTap={buttonTap}
         aria-label="Quick actions"
         className="w-14 h-14 rounded-full bg-yellow-50 text-richblack-900 shadow-xl shadow-yellow-900/30 flex items-center justify-center text-xl cursor-pointer"
       >

@@ -8,6 +8,7 @@ import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire,
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import { LogoutUser } from '../../Services/operations/Auth'
+import { modalBackdrop } from '../../utils/motion'
 
 // one shared shell for every logged-in page sir — sidebar + topbar, matching the approved mockup.
 // Admin keeps its own Navbar + AdminNav, this is only for the regular user dashboard area.
@@ -136,13 +137,13 @@ const DashboardLayout = ({ title, children }) => {
       {/* Mobile slide-over sir — hidden by default, hamburger-triggered */}
       <AnimatePresence>
         {mobileOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <>
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-richblack-900/70 backdrop-blur-sm"
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              variants={modalBackdrop}
+              className="fixed inset-0 z-50 bg-richblack-900/70 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
@@ -150,7 +151,7 @@ const DashboardLayout = ({ title, children }) => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col gap-6 bg-richblack-800 border-r border-richblack-700 p-4"
+              className="fixed left-0 top-0 bottom-0 z-50 w-64 flex flex-col gap-6 bg-richblack-800 border-r border-richblack-700 p-4 lg:hidden"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-richblack-400">Menu</span>
@@ -160,7 +161,7 @@ const DashboardLayout = ({ title, children }) => {
               </div>
               <SidebarContent pathname={location.pathname} user={user} streak={streak} onNavigate={() => setMobileOpen(false)} />
             </motion.aside>
-          </div>
+          </>
         )}
       </AnimatePresence>
 
