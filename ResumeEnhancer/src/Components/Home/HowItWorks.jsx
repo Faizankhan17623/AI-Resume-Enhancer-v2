@@ -75,11 +75,6 @@ const HowItWorks = () => {
             </div>
             <h3 className="font-display font-bold text-lg text-richblack-5 mb-2">{tile.title}</h3>
             <p className="text-richblack-300 text-sm leading-relaxed">{tile.desc}</p>
-
-            {/* index number sir — small editorial touch, echoes the step-by-step feel */}
-            <span className="absolute top-6 right-7 font-display font-bold text-2xl text-richblack-700 group-hover:text-richblack-600 transition-colors duration-300">
-              {String(i + 1).padStart(2, '0')}
-            </span>
           </div>
         ))}
       </div>
