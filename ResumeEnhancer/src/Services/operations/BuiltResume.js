@@ -1,10 +1,10 @@
 import toast from "react-hot-toast";
-import { apiConnector } from '../apiConnector.js'
+import { apiConnector, axiosinstance } from '../apiConnector.js'
 import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating } from '../../Slices/builtResumeSlice.js'
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor
 export function CreateBuiltResume(templateId, token, navigate) {
@@ -205,5 +205,35 @@ export function ReviewBuiltResume(resumeId, jd, token, navigate) {
             dispatch(setReviewLoading(false))
             toast.dismiss(toastId)
         }
+    }
+}
+
+// downloads the resume as a real .docx file sir — blob response, same pattern as DownloadReviewPdf
+export async function DownloadBuiltResumeDocx(resumeId, title, token) {
+    const toastId = toast.loading("Preparing your DOCX...")
+    try {
+        const response = await axiosinstance({
+            method: "GET",
+            url: `${downloadDocx}/${resumeId}/docx`,
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: "blob"
+        })
+
+        const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${(title || 'resume').replace(/[^a-z0-9-_]+/gi, '_')}.docx`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        toast.success("DOCX downloaded")
+    } catch (error) {
+        console.error("Error downloading the DOCX", error)
+        toast.error(error?.response?.data?.message || "Could not download the DOCX")
+    } finally {
+        toast.dismiss(toastId)
     }
 }

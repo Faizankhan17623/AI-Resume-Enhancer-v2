@@ -3,14 +3,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaPlus, FaTrash, FaDownload, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
-import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume } from '../../Services/operations/BuiltResume'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
@@ -116,6 +116,13 @@ const BuilderEditor = () => {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  // ATS-safe export sir — a real .docx (single column, real text, no images), unlike the print-to-PDF button
+  const handleDownloadDocx = async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
+    DownloadBuiltResumeDocx(resumeId, current.title, token)
   }
 
   const handleScore = async () => {
@@ -226,6 +233,12 @@ const BuilderEditor = () => {
             <IconBtn text="Download PDF" onclick={handlePrint} customClasses="text-sm px-5">
               <FaDownload />
             </IconBtn>
+            <button
+              onClick={handleDownloadDocx}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            >
+              <FaFileWord /> Download DOCX
+            </button>
           </div>
         </div>
 

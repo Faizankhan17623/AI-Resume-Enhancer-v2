@@ -9,4 +9,5 @@ export const BuiltResumeData = {
     generate: BASE_URL + "/built-resumes/generate",
     tailor: BASE_URL + "/built-resumes/tailor",
     review: BASE_URL + "/built-resumes",          // + /:resumeId/review
+    downloadDocx: BASE_URL + "/built-resumes",    // + /:resumeId/docx
 }

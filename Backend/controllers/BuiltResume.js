@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
+const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx')
 
 const BuiltResume = require('../Models/BuiltResume')
 const { consumeCredit } = require('../utils/Plans')
@@ -222,6 +223,128 @@ exports.reviewBuiltResume = async (req, res) => {
             success: false,
             message: 'Something went wrong while reviewing the resume',
         })
+    }
+}
+
+// ---------- DOCX EXPORT ----------
+
+// same section order as utils/BuiltResumeText.js sir — keeps every export of a resume consistent
+const buildResumeDocxSections = (resume) => {
+    const info = resume.personalInfo || {}
+    const children = []
+
+    if (info.fullName) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, text: info.fullName }))
+    }
+    const contactLine = [info.email, info.phone, info.location, info.linkedin, info.website].filter(Boolean).join('  |  ')
+    if (contactLine) {
+        children.push(new Paragraph({ children: [new TextRun({ text: contactLine, size: 20, color: '555555' })] }))
+    }
+
+    if (resume.summary) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Summary', spacing: { before: 240 } }))
+        children.push(new Paragraph({ text: resume.summary }))
+    }
+
+    if (resume.experience?.length) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Experience', spacing: { before: 240 } }))
+        for (const exp of resume.experience) {
+            const header = [exp.role, exp.company].filter(Boolean).join(' at ')
+            const dates = [exp.startDate, exp.current ? 'Present' : exp.endDate].filter(Boolean).join(' - ')
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: header, bold: true }),
+                    ...(dates ? [new TextRun({ text: `   ${dates}`, italics: true, color: '777777' })] : []),
+                ],
+                spacing: { before: 120 },
+            }))
+            if (exp.location) {
+                children.push(new Paragraph({ children: [new TextRun({ text: exp.location, size: 20, color: '777777' })] }))
+            }
+            for (const bullet of exp.bullets || []) {
+                if (bullet) children.push(new Paragraph({ text: bullet, bullet: { level: 0 } }))
+            }
+        }
+    }
+
+    if (resume.education?.length) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Education', spacing: { before: 240 } }))
+        for (const edu of resume.education) {
+            const header = [edu.degree, edu.field].filter(Boolean).join(' in ')
+            const dates = [edu.startDate, edu.endDate].filter(Boolean).join(' - ')
+            const line = [edu.school, header, dates, edu.gpa ? `GPA: ${edu.gpa}` : null].filter(Boolean).join(' | ')
+            children.push(new Paragraph({ text: line, spacing: { before: 80 } }))
+        }
+    }
+
+    if (resume.skills?.length) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Skills', spacing: { before: 240 } }))
+        children.push(new Paragraph({ text: resume.skills.join(', ') }))
+    }
+
+    if (resume.projects?.length) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Projects', spacing: { before: 240 } }))
+        for (const proj of resume.projects) {
+            const header = [proj.name, proj.link].filter(Boolean).join(' | ')
+            children.push(new Paragraph({ children: [new TextRun({ text: header, bold: true })], spacing: { before: 120 } }))
+            if (proj.description) children.push(new Paragraph({ text: proj.description }))
+            for (const bullet of proj.bullets || []) {
+                if (bullet) children.push(new Paragraph({ text: bullet, bullet: { level: 0 } }))
+            }
+        }
+    }
+
+    if (resume.certifications?.length) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, text: 'Certifications', spacing: { before: 240 } }))
+        for (const cert of resume.certifications) {
+            const line = [cert.name, cert.issuer, cert.date].filter(Boolean).join(' | ')
+            children.push(new Paragraph({ text: line, spacing: { before: 80 } }))
+        }
+    }
+
+    return children
+}
+
+// GET /built-resumes/:resumeId/docx — export a built resume as a real .docx file sir,
+// an ATS-safe alternative to the print-to-PDF button (single column, no images, real text)
+exports.downloadBuiltResumeDocx = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const doc = new Document({
+            sections: [{ children: buildResumeDocxSections(resume) }],
+        })
+        const buffer = await Packer.toBuffer(doc)
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        res.setHeader('Content-Disposition', `attachment; filename="${(resume.title || 'resume').replace(/[^a-z0-9-_]+/gi, '_')}.docx"`)
+        return res.send(buffer)
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        if (!res.headersSent) {
+            return res.status(500).json({
+                success: false,
+                message: 'Something went wrong while generating the DOCX file',
+            })
+        }
+        res.end()
     }
 }
 
