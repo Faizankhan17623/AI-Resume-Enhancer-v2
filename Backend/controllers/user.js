@@ -662,6 +662,9 @@ exports.forgotPassword = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to send reset email',
+            // temporary sir — DEBUG_ERRORS=true surfaces the real error in the response itself so it's
+            // visible without digging through Render's dashboard. Remove once the SMTP issue is fixed.
+            ...(process.env.DEBUG_ERRORS === 'true' ? { debug: { message: error.message, code: error.code } } : {}),
         });
     }
 };
