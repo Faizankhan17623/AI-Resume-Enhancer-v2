@@ -5,6 +5,7 @@ import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
 import TemplateSlider from './Components/Home/TemplateSlider'
+import Testimonials from './Components/Home/Testimonials'
 import FAQ from './Components/Home/FAQ'
 import Footer from './Components/Home/Footer'
 import OpenRoute from './Hooks/OpenRoute'
@@ -56,6 +57,7 @@ const Homelayout = () => {
         <Banner />
         <HowItWorks />
         <TemplateSlider />
+        <Testimonials />
         <FAQ />
       </div>
       <Footer />
