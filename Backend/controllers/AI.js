@@ -9,6 +9,7 @@ const { consumeCredit } = require('../utils/Plans');
 const { buildReviewSystemPrompt } = require('../utils/Prompts');
 const { logAi } = require('../utils/AdminLog');
 const { updateStreak } = require('../utils/Streak');
+const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 
 const grok = new Grok({apiKey:process.env.GROK_API_KEY})
@@ -122,6 +123,7 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
 
     // fire-and-forget sir — a streak failure must never break the review response
     updateStreak(userId)
+    recordFeatureUse(userId)
 
     return res.status(200).json({
         success: true,
