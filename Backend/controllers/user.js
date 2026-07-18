@@ -609,8 +609,8 @@ exports.updateNumber = async (req, res) => {
 // FORGOT PASSWORD (send reset link via email)
 // ============================================================
 exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
     try {
-        const { email } = req.body;
         // const userid  = req.User.id
 
         // not case sir
@@ -657,6 +657,7 @@ exports.forgotPassword = async (req, res) => {
             message: 'Password reset email sent',
         });
     } catch (error) {
+        console.log(`[forgotPassword] failed for email="${email}" at ${new Date().toISOString()}`)
         console.log(error);
         return res.status(500).json({
             success: false,
