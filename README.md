@@ -14,6 +14,7 @@ AI Resume Review
 - Pro: keyword analysis, section-by-section feedback, quick wins
 - ProMax: recruiter first-impression, red flags, rewritten summary, interview prep, learning roadmap
 - Saved review history, progress-over-time chart, PDF export, public share links
+- Resume Builder: DOCX export (real text layer, ATS-safe) alongside the existing print-to-PDF download
 - Free grammar/spelling pre-check (no AI credit spent)
 - ATS formatting scan: deterministic structural check (via pdfjs-dist) for multi-column layouts, embedded images, missing text layer, non-standard fonts — the stuff that breaks real ATS parsers but a text-only AI review can't see
 
@@ -66,6 +67,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 
 - **Authentication** — signup/login with OTP email verification, JWT-based sessions, and per-account brute-force lockout (5 failed attempts locks the account for 15 minutes)
 - **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq
+- **Resume Builder** — build a resume from structured form data with a live template preview; export it as a print-ready PDF or a real, ATS-safe **DOCX** file
 - **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded images, missing text layer, non-standard fonts) that catches parsing issues real ATS software chokes on, independent of the AI's subjective review
 - **Resume Library** — save parsed resumes for reuse across reviews, chats, and cover letters without re-uploading; supports renaming and a default resume
 - **Onboarding Checklist** — a dashboard "Get started" progress card for new users that tracks real activity and dismisses itself for good once complete
@@ -91,6 +93,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - MongoDB with Mongoose
 - JWT authentication, bcrypt password hashing
 - Groq SDK for AI-generated resume feedback
+- pdfkit (PDF) & docx (DOCX) for resume/report file generation
 - Cloudinary for file storage
 - Razorpay & Stripe for payments
 - Helmet, CORS, and rate limiting for security
