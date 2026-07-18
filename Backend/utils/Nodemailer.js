@@ -30,14 +30,16 @@ const mailSender = async (email, title, body) => {
       // fall back to the hostname as-is sir — worst case we're back to the original behavior
     }
 
+    // 465 (implicit TLS) instead of 587 (STARTTLS) sir — Render's free tier appears to block
+    // outbound 587 entirely (connection timeout regardless of IPv4/IPv6), 465 is the standard fallback
     let transporter = nodemailer.createTransport({
       host: connectHost,
-      port: 587,
+      port: 465,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
       },
-      secure: false,
+      secure: true,
       tls: {
         rejectUnauthorized: false,
         ...(servername ? { servername } : {}),
