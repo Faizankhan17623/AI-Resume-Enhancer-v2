@@ -8,6 +8,7 @@ const { consumeCredit, getUserPlan } = require('../utils/Plans')
 const { buildChatSystemPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { updateStreak } = require('../utils/Streak')
+const { recordFeatureUse } = require('../utils/FeatureUsage')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -225,6 +226,7 @@ exports.sendMessage = async (req, res) => {
 
         // fire-and-forget sir — a streak failure must never break the chat response
         updateStreak(id)
+        recordFeatureUse(id)
 
         writeLine({ type: 'done' })
         return res.end()

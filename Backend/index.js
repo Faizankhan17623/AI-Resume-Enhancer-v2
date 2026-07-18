@@ -24,6 +24,7 @@ const coverLetter = require('./Routes/CoverLetter.js')
 const resume = require('./Routes/Resume.js')
 const builtResume = require('./Routes/BuiltResume.js')
 const jobSearch = require('./Routes/JobSearch.js')
+const feedback = require('./Routes/Feedback.js')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
 
@@ -58,6 +59,7 @@ app.use('/api/v1',coverLetter)
 app.use('/api/v1',resume)
 app.use('/api/v1',builtResume)
 app.use('/api/v1',jobSearch)
+app.use('/api/v1',feedback)
 
 // interactive API docs sir — http://localhost:5000/api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))

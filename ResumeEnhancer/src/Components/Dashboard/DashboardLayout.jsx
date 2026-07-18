@@ -7,6 +7,7 @@ import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
 import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
+import FeedbackModal from '../extra/FeedbackModal'
 import { LogoutUser } from '../../Services/operations/Auth'
 import { modalBackdrop } from '../../utils/motion'
 
@@ -206,6 +207,7 @@ const DashboardLayout = ({ title, children }) => {
       </div>
 
       <QuickActionsFab />
+      <FeedbackModal />
     </div>
   )
 }

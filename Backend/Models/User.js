@@ -140,6 +140,18 @@ const UserCreation = new mongoose.Schema(
         onboardingCompleted: {
             type: Boolean,
             default: false
+        },
+        // bumped on every completed feature use (review, chat, cover letter, job search) sir —
+        // drives when the feedback popup is due, independent of the daily activity streak above
+        featureUseCount: {
+            type: Number,
+            default: 0
+        },
+        // true once the user has submitted the feedback popup (star rating + referral score) sir —
+        // the popup stops nagging them for good after this flips
+        feedbackSubmitted: {
+            type: Boolean,
+            default: false
         }
     }, { timestamps: true }
 )

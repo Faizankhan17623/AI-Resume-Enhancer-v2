@@ -1,4 +1,5 @@
 const { getUserPlan } = require('../utils/Plans')
+const { recordFeatureUse } = require('../utils/FeatureUsage')
 
 // POST /job-search — Pro+ feature sir, searches the live web via Tavily for real job postings
 // matching the user's query. No Groq call, no credit spend — same reasoning as cover letter's
@@ -55,6 +56,9 @@ exports.searchJobs = async (req, res) => {
             snippet: r.content,
             score: r.score,
         }))
+
+        // fire-and-forget sir — same rule as the review/chat controllers
+        recordFeatureUse(id)
 
         return res.status(200).json({
             success: true,

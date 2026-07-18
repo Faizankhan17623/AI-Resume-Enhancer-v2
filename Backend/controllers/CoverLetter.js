@@ -6,6 +6,7 @@ const CoverLetter = require('../Models/CoverLetter')
 const { getUserPlan } = require('../utils/Plans')
 const { buildCoverLetterPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
+const { recordFeatureUse } = require('../utils/FeatureUsage')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -100,6 +101,9 @@ exports.generateCoverLetter = async (req, res) => {
         } catch (saveErr) {
             console.log('cover letter save failed:', saveErr.message)
         }
+
+        // fire-and-forget sir — same rule as the review/chat controllers
+        recordFeatureUse(id)
 
         return res.status(200).json({
             success: true,
