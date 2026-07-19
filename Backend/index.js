@@ -32,8 +32,24 @@ const { startStreakCron } = require('./utils/StreakCron.js')
 // deployed behind a proxy (Render/Railway/nginx) sir — needed so the rate limiter sees the REAL client IP
 app.set('trust proxy', 1)
 
-// security headers on every response sir
-app.use(helmet())
+// security headers on every response sir — CSP explicit rather than helmet's bare defaults.
+// 'unsafe-inline' on style/script is only here because swagger-ui-express injects inline
+// style/script tags to render /api-docs sir; every other route on this app is pure JSON and
+// never reads these directives at all, so it doesn't loosen anything for the real API surface
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            baseUri: ["'self'"],
+        },
+    },
+}))
 
 app.use(express.json())
 // express.json() leaves req.body undefined (not {}) when a request has no body sir —
@@ -44,9 +60,12 @@ app.use((req, res, next) => {
     next()
 })
 // credentials:true so the payment-session cookie flows sir — the frontend must call axios with withCredentials:true
+// FAIL SAFE: an unset FRONTEND_URL in production must lock CORS down, not open it to every origin —
+// origin:true + credentials:true would let ANY site make authenticated cross-origin requests using
+// a victim's cookie. Only fall back to permissive (true) outside production, for local dev convenience.
 const allowedOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
-    : true
+    : (process.env.NODE_ENV === 'production' ? [] : true)
 app.use(cors({
     origin: allowedOrigins,
     credentials: true
