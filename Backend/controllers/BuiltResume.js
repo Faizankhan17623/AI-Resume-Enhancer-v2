@@ -8,6 +8,7 @@ const { consumeCredit } = require('../utils/Plans')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
+const { AI_MODEL } = require('../utils/AiModel')
 const { runReview } = require('./AI')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
@@ -359,13 +360,13 @@ const runBuilderAi = async ({ userId, plan, type, systemPrompt, userContent }) =
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userContent },
             ],
-            model: 'qwen/qwen3-32b',
+            model: AI_MODEL,
             temperature: 0,
             response_format: { type: 'json_object' },
         })
-        logAi({ user: userId, type, plan, model: 'qwen/qwen3-32b', usage: completion.usage, latencyMs: Date.now() - t0, success: true })
+        logAi({ user: userId, type, plan, model: AI_MODEL, usage: completion.usage, latencyMs: Date.now() - t0, success: true })
     } catch (aiErr) {
-        logAi({ user: userId, type, plan, model: 'qwen/qwen3-32b', latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+        logAi({ user: userId, type, plan, model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
         throw aiErr
     }
 

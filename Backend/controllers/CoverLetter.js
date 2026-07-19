@@ -7,6 +7,7 @@ const { getUserPlan } = require('../utils/Plans')
 const { buildCoverLetterPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
+const { AI_MODEL } = require('../utils/AiModel')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -67,12 +68,12 @@ exports.generateCoverLetter = async (req, res) => {
         try {
             Invoking = await grok.chat.completions.create({
                 messages: Messages,
-                model: 'qwen/qwen3-32b',
+                model: AI_MODEL,
                 temperature: 0.4,
             })
-            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: 'qwen/qwen3-32b', usage: Invoking.usage, latencyMs: Date.now() - t0, success: true })
+            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: AI_MODEL, usage: Invoking.usage, latencyMs: Date.now() - t0, success: true })
         } catch (aiErr) {
-            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: 'qwen/qwen3-32b', latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
             throw aiErr
         }
 
