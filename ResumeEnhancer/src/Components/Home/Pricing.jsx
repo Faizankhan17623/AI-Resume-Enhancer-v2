@@ -27,7 +27,7 @@ const CAPABILITY_MATRIX = [
   { label: 'Recruiter first-impression + red flags', tiers: ['ProMax'] },
   { label: 'Interview prep + learning roadmap', tiers: ['ProMax'] },
   { label: 'Full career coach: mock interviews, salary negotiation, LinkedIn', tiers: ['ProMax'] },
-  { label: 'Unlimited AI uses & chat messages', tiers: ['ProMax'] },
+  { label: 'Highest limits: 300 AI uses & 500 msgs/chat', tiers: ['ProMax'] },
 ]
 
 const PLAN_META = {
@@ -42,9 +42,9 @@ const PLAN_META = {
     messages: '200 messages / chat',
   },
   ProMax: {
-    tagline: 'Unlimited everything, plus a full career coach.',
-    credits: 'Unlimited AI uses',
-    messages: 'Unlimited messages',
+    tagline: 'Our highest limits, plus a full career coach.',
+    credits: '300 AI uses / month',
+    messages: '500 messages / chat',
   },
 }
 

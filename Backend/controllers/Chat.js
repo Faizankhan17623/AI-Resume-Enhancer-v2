@@ -121,7 +121,7 @@ exports.sendMessage = async (req, res) => {
             })
         }
 
-        // cap the chat length by the user's plan sir — Basic 60, Pro 200, ProMax unlimited
+        // cap the chat length by the user's plan sir — Basic 60, Pro 200, ProMax 500
         const plan = await getUserPlan(id)
         if (plan && plan.maxMessagesPerChat !== null && chat.messages.length >= plan.maxMessagesPerChat) {
             return res.status(403).json({

@@ -38,13 +38,13 @@ const PLANS = {
         key: 'ProMax',
         name: 'Pro Max',
         price: 49900,
-        credits: null,
-        maxMessagesPerChat: null,
+        credits: 300,
+        maxMessagesPerChat: 500,
         contextWindow: 30,
         validityDays: 30,
         features: [
-            'Unlimited AI uses (ATS reviews + new chats)',
-            'Unlimited messages per chat',
+            '300 AI uses per month (ATS reviews + new chats)',
+            'Up to 500 messages per chat',
             'Everything in Pro + interview prep, red flags, learning roadmap',
             'Full career coach in chat: mock interviews, salary negotiation, LinkedIn',
             'Valid for 30 days',
@@ -97,10 +97,13 @@ const consumeCredit = async (userId) => {
     )
 
     if (!updated) {
+        // top plan has nothing to upgrade to sir — tell them the credits renew instead
         const message =
             plan.key === 'Basic'
                 ? 'The Free tier for using this project is over pleases make the purchase'
-                : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
+                : plan.key === 'ProMax'
+                    ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
+                    : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
         return { ok: false, message, plan: plan.key }
     }
 
