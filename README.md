@@ -38,7 +38,7 @@ Gamification / Community
 - Anonymized leaderboard of top ATS scores
 
 Payments
-- Basic / Pro / ProMax plans
+- Basic / Pro / ProMax plans (5 / 100 / 300 AI uses per month, 60 / 200 / 500 messages per chat)
 - Razorpay checkout + signature verification, payment history
 
 Admin Dashboard (role-gated: Admin/Support)
@@ -55,6 +55,9 @@ Platform
 - Helmet, CORS, rate limiting (IP + account-level)
 - Interactive Swagger API docs at /api-docs (~48 endpoints)
 - Dark/light theme toggle, responsive dashboard layout
+- Backend wake-up ping on app load (starts Render's free-tier cold boot before the user's first real action)
+- Cookie consent card (localStorage-remembered, shown once)
+- AI model centralized in Backend/utils/AiModel.js (openai/gpt-oss-120b, overridable via GROQ_MODEL env)
 -->
 
 # AI Resume Enhancer
@@ -66,7 +69,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 ## Features
 
 - **Authentication** — signup/login with OTP email verification, JWT-based sessions, and per-account brute-force lockout (5 failed attempts locks the account for 15 minutes)
-- **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq
+- **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq (`openai/gpt-oss-120b`)
 - **Resume Builder** — build a resume from structured form data with a live template preview; export it as a print-ready PDF or a real, ATS-safe **DOCX** file
 - **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded images, missing text layer, non-standard fonts) that catches parsing issues real ATS software chokes on, independent of the AI's subjective review
 - **Resume Library** — save parsed resumes for reuse across reviews, chats, and cover letters without re-uploading; supports renaming and a default resume
@@ -92,7 +95,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - Node.js + Express
 - MongoDB with Mongoose
 - JWT authentication, bcrypt password hashing
-- Groq SDK for AI-generated resume feedback
+- Groq SDK for AI-generated resume feedback — model is `openai/gpt-oss-120b`, set once in `Backend/utils/AiModel.js` and overridable via the `GROQ_MODEL` env var
 - pdfkit (PDF) & docx (DOCX) for resume/report file generation
 - Cloudinary for file storage
 - Razorpay & Stripe for payments
@@ -135,7 +138,7 @@ http://localhost:4000/api-docs
 
 The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Backend/index.js` via `swagger-ui-express`. Every route is grouped under a tag (Auth, AI Review, Chat, Resumes, Cover Letter, Job Search, Reviews, Grammar, Streak, Leaderboard, Payment, Admin, Announcements) and documents its request body, path params, and response codes. Bearer JWT auth is pre-wired in the Swagger UI — click **Authorize** and paste a token from `/Login` to try authenticated endpoints directly from the docs page.
 
-> Note: Render's free tier spins the service down after periods of inactivity, so the first request to the production docs link may take 30-60 seconds to wake it up.
+> Note: Render's free tier spins the service down after periods of inactivity, so the first request to the production docs link may take 30-60 seconds to wake it up. (The frontend mitigates this for app users by pinging the backend the moment anyone lands on the site, so the cold boot starts before their first real action.)
 
 ## Testing
 
