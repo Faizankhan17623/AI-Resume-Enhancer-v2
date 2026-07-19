@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setJobs, setLastQuery, setSearching } from '../../Slices/jobSearchSlice.js'
 import { JobSearchData } from '../Apis/JobSearchApi.js'
 
@@ -28,7 +29,7 @@ export function SearchJobs(query, token) {
                 toast.success(`Found ${response.data.jobs.length} matching jobs`)
             }
         } catch (error) {
-            console.error("Error searching for jobs", error)
+            logApiError("Error searching for jobs", error)
             toast.error(error?.response?.data?.message || "Could not search for jobs right now")
         } finally {
             dispatch(setSearching(false))

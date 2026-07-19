@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setPayments,
     setAuditLogs, setAnnouncements, setAiStats, setHealth, setTraffic, setLoading
@@ -28,7 +29,7 @@ export function GetDashboardStats(token) {
             dispatch(setStats(response.data.stats))
             dispatch(setCharts(response.data.charts))
         } catch (error) {
-            console.error("Error fetching the admin stats", error)
+            logApiError("Error fetching the admin stats", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -48,7 +49,7 @@ export function GetAiStats(token) {
 
             dispatch(setAiStats(response.data))
         } catch (error) {
-            console.error("Error fetching the AI stats", error)
+            logApiError("Error fetching the AI stats", error)
         }
     }
 }
@@ -66,7 +67,7 @@ export function GetHealth(token) {
 
             dispatch(setHealth(response.data.health))
         } catch (error) {
-            console.error("Error fetching the health", error)
+            logApiError("Error fetching the health", error)
         }
     }
 }
@@ -84,7 +85,7 @@ export function GetTraffic(token, range = 'week') {
 
             dispatch(setTraffic(response.data))
         } catch (error) {
-            console.error("Error fetching the traffic stats", error)
+            logApiError("Error fetching the traffic stats", error)
         }
     }
 }
@@ -106,7 +107,7 @@ export function GetUsers(token, page = 1, search = "") {
             dispatch(setUsers(response.data.users))
             dispatch(setUsersPagination(response.data.pagination))
         } catch (error) {
-            console.error("Error fetching the users", error)
+            logApiError("Error fetching the users", error)
             toast.error(error?.response?.data?.message || "Could not load the users")
         } finally {
             dispatch(setLoading(false))
@@ -130,7 +131,7 @@ const userAction = (method, url, body, token, page, search, loadingText) => {
             toast.success(response.data.message)
             dispatch(GetUsers(token, page, search))
         } catch (error) {
-            console.error("Admin user action failed", error)
+            logApiError("Admin user action failed", error)
             toast.error(error?.response?.data?.message || "The action failed")
         } finally {
             toast.dismiss(toastId)
@@ -169,7 +170,7 @@ export function GetPayments(token, page = 1, status = "") {
 
             dispatch(setPayments(response.data))
         } catch (error) {
-            console.error("Error fetching the payments", error)
+            logApiError("Error fetching the payments", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -192,7 +193,7 @@ export function GetAuditLogs(token, page = 1) {
 
             dispatch(setAuditLogs(response.data.logs))
         } catch (error) {
-            console.error("Error fetching the audit logs", error)
+            logApiError("Error fetching the audit logs", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -214,7 +215,7 @@ export function GetAnnouncements(token) {
 
             dispatch(setAnnouncements(response.data.announcements))
         } catch (error) {
-            console.error("Error fetching the announcements", error)
+            logApiError("Error fetching the announcements", error)
         }
     }
 }
@@ -234,7 +235,7 @@ export function CreateAnnouncement(title, message, token) {
             toast.success("Announcement is live")
             dispatch(GetAnnouncements(token))
         } catch (error) {
-            console.error("Error creating the announcement", error)
+            logApiError("Error creating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not publish")
         } finally {
             toast.dismiss(toastId)
@@ -256,7 +257,7 @@ export function ToggleAnnouncement(announcementId, active, token) {
             toast.success(response.data.message)
             dispatch(GetAnnouncements(token))
         } catch (error) {
-            console.error("Error toggling the announcement", error)
+            logApiError("Error toggling the announcement", error)
             toast.error(error?.response?.data?.message || "Could not update")
         }
     }
@@ -276,7 +277,7 @@ export function DeleteAnnouncement(announcementId, token) {
             toast.success("Announcement deleted")
             dispatch(GetAnnouncements(token))
         } catch (error) {
-            console.error("Error deleting the announcement", error)
+            logApiError("Error deleting the announcement", error)
             toast.error(error?.response?.data?.message || "Could not delete")
         }
     }

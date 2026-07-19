@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setAllChats, setCurrentChat, setLoading, setReplying, appendStreamingReply, resetStreamingReply } from '../../Slices/chatSlice.js'
 import { ChatData } from '../Apis/ChatApi.js'
 
@@ -27,7 +28,7 @@ export function CreateChat(pdfFile, jd, token, navigate) {
             dispatch(GetAllChats(token))
             if (navigate) navigate(`/Dashboard/Chat/${response.data.chatId}`)
         } catch (error) {
-            console.error("Error creating the chat", error)
+            logApiError("Error creating the chat", error)
             toast.error(error?.response?.data?.message || "Could not create the chat")
         } finally {
             dispatch(setLoading(false))
@@ -49,7 +50,7 @@ export function GetAllChats(token) {
 
             dispatch(setAllChats(response.data.chats))
         } catch (error) {
-            console.error("Error fetching the chats", error)
+            logApiError("Error fetching the chats", error)
         }
     }
 }
@@ -68,7 +69,7 @@ export function GetSingleChat(chatId, token) {
 
             dispatch(setCurrentChat(response.data.chat))
         } catch (error) {
-            console.error("Error fetching the chat", error)
+            logApiError("Error fetching the chat", error)
             toast.error(error?.response?.data?.message || "Could not load the chat")
         } finally {
             dispatch(setLoading(false))
@@ -146,7 +147,7 @@ export function SendMessage(chatId, message, token, currentChat) {
                 messages: [...withUserBubble.messages, { role: 'assistant', content: fullReply }]
             }))
         } catch (error) {
-            console.error("Error sending the message", error)
+            logApiError("Error sending the message", error)
             toast.error(error?.message || "Could not send the message")
             // roll the optimistic bubble back sir
             dispatch(setCurrentChat(currentChat))
@@ -174,7 +175,7 @@ export function DeleteChat(chatId, token, navigate) {
             dispatch(GetAllChats(token))
             if (navigate) navigate("/Dashboard/Chats")
         } catch (error) {
-            console.error("Error deleting the chat", error)
+            logApiError("Error deleting the chat", error)
             toast.error(error?.response?.data?.message || "Could not delete the chat")
         } finally {
             toast.dismiss(toastId)

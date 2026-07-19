@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted } from '../../Slices/profileSlice.js'
 import { Profile, Password } from '../Apis/UserApi.js'
 
@@ -21,7 +22,7 @@ export function GetProfile(token) {
 
             dispatch(setProfile(response.data))
         } catch (error) {
-            console.error("Error fetching the profile", error)
+            logApiError("Error fetching the profile", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -46,7 +47,7 @@ export function UpdateNotificationPrefs(prefs, token) {
                 notifyDigest: response.data.notifyDigest,
             }))
         } catch (error) {
-            console.error("Error updating notification preferences", error)
+            logApiError("Error updating notification preferences", error)
             toast.error(error?.response?.data?.message || "Could not update notification preferences")
         }
     }
@@ -70,7 +71,7 @@ export function ChangePassword(oldPassword, newPassword, confirmNewPassword, tok
             toast.success("Password updated successfully")
             if (onSuccess) onSuccess()
         } catch (error) {
-            console.error("Error updating the password", error)
+            logApiError("Error updating the password", error)
             toast.error(error?.response?.data?.message || "Could not update the password")
         } finally {
             toast.dismiss(toastId)
@@ -92,7 +93,7 @@ export function CompleteOnboarding(token) {
 
             dispatch(setOnboardingCompleted(response.data.onboardingCompleted))
         } catch (error) {
-            console.error("Error completing onboarding", error)
+            logApiError("Error completing onboarding", error)
         }
     }
 }

@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setContent, setLetterId, setAllLetters, setLoading, setGenerating } from '../../Slices/coverLetterSlice.js'
 import { CoverLetterData } from '../Apis/CoverLetterApi.js'
 
@@ -27,7 +28,7 @@ export function GenerateCoverLetter(pdfFile, jd, token) {
             dispatch(setLetterId(response.data.coverLetterId))
             toast.success("Your cover letter is ready")
         } catch (error) {
-            console.error("Error generating the cover letter", error)
+            logApiError("Error generating the cover letter", error)
             toast.error(error?.response?.data?.message || "Could not generate the cover letter")
         } finally {
             dispatch(setGenerating(false))
@@ -50,7 +51,7 @@ export function GetAllCoverLetters(token) {
 
             dispatch(setAllLetters(response.data.letters))
         } catch (error) {
-            console.error("Error fetching the cover letters", error)
+            logApiError("Error fetching the cover letters", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -72,7 +73,7 @@ export function GetSingleCoverLetter(coverLetterId, token) {
             dispatch(setContent(response.data.letter.content))
             dispatch(setLetterId(response.data.letter._id))
         } catch (error) {
-            console.error("Error fetching the cover letter", error)
+            logApiError("Error fetching the cover letter", error)
             toast.error(error?.response?.data?.message || "Could not load the cover letter")
         } finally {
             dispatch(setLoading(false))

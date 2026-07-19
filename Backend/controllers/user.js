@@ -114,7 +114,14 @@ exports.createUser = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: 'User created successfully',
-            user: Creation,
+            // never the raw doc sir — Creation carries the bcrypt password/confirmpassword hash,
+            // and the frontend only needs to know it worked before redirecting to /Login
+            user: {
+                _id: Creation._id,
+                firstName: Creation.firstName,
+                lastName: Creation.lastName,
+                email: Creation.email,
+            },
         });
     } catch (error) {
         console.log(error.message);
@@ -670,9 +677,6 @@ exports.forgotPassword = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to send reset email',
-            // temporary sir — DEBUG_ERRORS=true surfaces the real error in the response itself so it's
-            // visible without digging through Render's dashboard. Remove once the SMTP issue is fixed.
-            ...(process.env.DEBUG_ERRORS === 'true' ? { debug: { message: error.message, code: error.code } } : {}),
         });
     }
 };

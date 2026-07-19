@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating } from '../../Slices/builtResumeSlice.js'
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
@@ -21,7 +22,7 @@ export function CreateBuiltResume(templateId, token, navigate) {
             if (navigate) navigate(`/Dashboard/Build-Resume/${response.data.resume._id}`)
             return response.data.resume
         } catch (error) {
-            console.error("Error creating the resume", error)
+            logApiError("Error creating the resume", error)
             toast.error(error?.response?.data?.message || "Could not create the resume")
             return null
         }
@@ -42,7 +43,7 @@ export function GetBuiltResumes(token) {
 
             dispatch(setBuiltResumes(response.data.resumes))
         } catch (error) {
-            console.error("Error fetching your built resumes", error)
+            logApiError("Error fetching your built resumes", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -63,7 +64,7 @@ export function GetBuiltResume(resumeId, token) {
 
             dispatch(setCurrentResume(response.data.resume))
         } catch (error) {
-            console.error("Error fetching the resume", error)
+            logApiError("Error fetching the resume", error)
             toast.error(error?.response?.data?.message || "Could not load the resume")
         } finally {
             dispatch(setLoading(false))
@@ -87,7 +88,7 @@ export function SaveBuiltResume(resumeId, data, token, { silent = false } = {}) 
             if (!silent) toast.success("Saved")
             return response.data.resume
         } catch (error) {
-            console.error("Error saving the resume", error)
+            logApiError("Error saving the resume", error)
             if (!silent) toast.error(error?.response?.data?.message || "Could not save the resume")
             return null
         } finally {
@@ -110,7 +111,7 @@ export function DeleteBuiltResume(resumeId, token) {
             toast.success("Resume deleted")
             dispatch(GetBuiltResumes(token))
         } catch (error) {
-            console.error("Error deleting the resume", error)
+            logApiError("Error deleting the resume", error)
             toast.error(error?.response?.data?.message || "Could not delete the resume")
         }
     }
@@ -134,7 +135,7 @@ export function GenerateResume(rawInfo, targetRole, templateId, token, navigate)
             if (navigate) navigate(`/Dashboard/Build-Resume/${response.data.resume._id}`)
             return response.data.resume
         } catch (error) {
-            console.error("Error generating the resume", error)
+            logApiError("Error generating the resume", error)
             toast.error(error?.response?.data?.message || "Could not generate the resume")
             return null
         } finally {
@@ -167,7 +168,7 @@ export function TailorResume(pdfFile, jd, templateId, token, navigate) {
             if (navigate) navigate(`/Dashboard/Build-Resume/${response.data.resume._id}`)
             return response.data.resume
         } catch (error) {
-            console.error("Error tailoring the resume", error)
+            logApiError("Error tailoring the resume", error)
             toast.error(error?.response?.data?.message || "Could not tailor the resume")
             return null
         } finally {
@@ -199,7 +200,7 @@ export function ReviewBuiltResume(resumeId, jd, token, navigate) {
             toast.success("Your review is ready")
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
-            console.error("Error reviewing the resume", error)
+            logApiError("Error reviewing the resume", error)
             toast.error(error?.response?.data?.message || "Could not analyze the resume")
         } finally {
             dispatch(setReviewLoading(false))
@@ -231,7 +232,7 @@ export async function DownloadBuiltResumeDocx(resumeId, title, token) {
 
         toast.success("DOCX downloaded")
     } catch (error) {
-        console.error("Error downloading the DOCX", error)
+        logApiError("Error downloading the DOCX", error)
         toast.error(error?.response?.data?.message || "Could not download the DOCX")
     } finally {
         toast.dismiss(toastId)
