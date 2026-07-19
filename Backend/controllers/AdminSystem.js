@@ -5,6 +5,8 @@ const Payment = require('../Models/Payment')
 const Review = require('../Models/Review')
 const AiLog = require('../Models/AiLog')
 const AuditLog = require('../Models/AuditLog')
+const LoginLog = require('../Models/LoginLog')
+const VisitorLog = require('../Models/VisitorLog')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -248,6 +250,65 @@ exports.getInsights = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the insights',
+        })
+    }
+}
+
+// GET /admin/traffic?range=day|week|month — unique visitors + logins sir, the traffic chart on Overview
+// "day" buckets hourly (last 24h), "week"/"month" bucket daily (last 7 / last 30 days)
+exports.getTraffic = async (req, res) => {
+    try {
+        const range = ['day', 'week', 'month'].includes(req.query.range) ? req.query.range : 'week'
+
+        const rangeConfig = {
+            day: { since: new Date(Date.now() - 24 * 60 * 60 * 1000), format: '%Y-%m-%d %H:00', unit: 'hour' },
+            week: { since: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), format: '%Y-%m-%d', unit: 'day' },
+            month: { since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), format: '%Y-%m-%d', unit: 'day' },
+        }
+        const { since, format } = rangeConfig[range]
+
+        const [visitorSeries, loginSeries, uniqueIpAgg, totalVisitors, totalLogins] = await Promise.all([
+            // new unique visitors per bucket sir — one row per first-ever visit, so this IS unique visitors
+            VisitorLog.aggregate([
+                { $match: { createdAt: { $gte: since } } },
+                { $group: { _id: { $dateToString: { format, date: '$createdAt' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } },
+            ]),
+            // logins per bucket sir — same user logging in twice counts twice, this is activity not uniqueness
+            LoginLog.aggregate([
+                { $match: { createdAt: { $gte: since } } },
+                { $group: { _id: { $dateToString: { format, date: '$createdAt' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } },
+            ]),
+            // distinct IPs seen logging in during the window sir — a second, IP-based uniqueness cut
+            LoginLog.aggregate([
+                { $match: { createdAt: { $gte: since }, ip: { $ne: null } } },
+                { $group: { _id: '$ip' } },
+                { $count: 'count' },
+            ]),
+            VisitorLog.countDocuments({ createdAt: { $gte: since } }),
+            LoginLog.countDocuments({ createdAt: { $gte: since } }),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            range,
+            summary: {
+                uniqueVisitors: totalVisitors,
+                logins: totalLogins,
+                uniqueLoginIps: uniqueIpAgg[0]?.count || 0,
+            },
+            series: {
+                visitors: visitorSeries.map((v) => ({ bucket: v._id, count: v.count })),
+                logins: loginSeries.map((l) => ({ bucket: l._id, count: l.count })),
+            },
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the traffic stats',
         })
     }
 }

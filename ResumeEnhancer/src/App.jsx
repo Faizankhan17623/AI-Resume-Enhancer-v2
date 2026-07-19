@@ -80,6 +80,18 @@ function App() {
     }
   }, [])
 
+  // anonymous first-visit tracking for the admin traffic dashboard sir — the backend sets its own
+  // httpOnly visitor_id cookie, but JS can't read httpOnly, so this localStorage flag is what
+  // stops the beacon firing again on every future page load in this browser
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_MAIN_BACKEND_URL
+    if (!backendUrl) return
+    if (localStorage.getItem('visit_tracked')) return
+    fetch(`${backendUrl}/track-visit`, { method: 'POST', credentials: 'include' })
+      .then(() => localStorage.setItem('visit_tracked', '1'))
+      .catch(() => {})
+  }, [])
+
   return (
     <>
       {/* the live admin broadcast sir — shows only when one is published */}

@@ -1,15 +1,16 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetHealth } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetHealth, GetTraffic } from '../../Services/operations/Admin'
+import { setTrafficRange } from '../../Slices/adminSlice'
 
 const tooltipStyle = { backgroundColor: '#FFFFFF', border: '1px solid #E6DDD0', borderRadius: '10px', color: '#1F2937' }
 
@@ -24,10 +25,23 @@ const HealthDot = ({ ok, label, latency }) => (
   </div>
 )
 
+// x-axis tick sir — hourly buckets show just the hour, daily buckets show month/day
+const formatBucket = (bucket, range) => {
+  if (!bucket) return ''
+  if (range === 'day') return bucket.slice(11) // "2026-07-19 14:00" -> "14:00"
+  return bucket.slice(5) // "2026-07-19" -> "07-19"
+}
+
+const RANGE_OPTIONS = [
+  { key: 'day', label: 'Day' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+]
+
 const Overview = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, health, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, health, traffic, trafficRange, loading } = useSelector((state) => state.admin)
 
   useEffect(() => {
     dispatch(GetDashboardStats(token))
@@ -35,6 +49,11 @@ const Overview = () => {
     dispatch(GetHealth(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    dispatch(GetTraffic(token, trafficRange))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trafficRange])
 
   if (loading || !stats) {
     return (
@@ -45,6 +64,18 @@ const Overview = () => {
       </div>
     )
   }
+
+  // merge the two series on bucket sir so one chart can show both lines side by side
+  const trafficChartData = (() => {
+    if (!traffic) return []
+    const byBucket = {}
+    for (const v of traffic.series.visitors) byBucket[v.bucket] = { bucket: v.bucket, visitors: v.count, logins: 0 }
+    for (const l of traffic.series.logins) {
+      if (!byBucket[l.bucket]) byBucket[l.bucket] = { bucket: l.bucket, visitors: 0, logins: 0 }
+      byBucket[l.bucket].logins = l.count
+    }
+    return Object.values(byBucket).sort((a, b) => a.bucket.localeCompare(b.bucket))
+  })()
 
   const statCards = [
     { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified` },
@@ -76,6 +107,80 @@ const Overview = () => {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* Traffic sir — unique visitors (cookie+IP) and logins, filterable by day/week/month */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2"><FaGlobe className="text-caribgreen-100" /> Traffic</h2>
+            <div className="flex items-center gap-1 bg-richblack-900 rounded-lg p-1">
+              {RANGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => dispatch(setTrafficRange(opt.key))}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    trafficRange === opt.key
+                      ? 'bg-yellow-50 text-richblack-900'
+                      : 'text-richblack-300 hover:text-richblack-5'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {traffic ? (
+            <>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-caribgreen-100/15 flex items-center justify-center"><FaUsers className="text-caribgreen-100" /></div>
+                  <div>
+                    <p className="font-display text-xl text-richblack-5">{traffic.summary.uniqueVisitors}</p>
+                    <p className="text-xs text-richblack-400">unique visitors</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100/15 flex items-center justify-center"><FaSignInAlt className="text-blue-100" /></div>
+                  <div>
+                    <p className="font-display text-xl text-richblack-5">{traffic.summary.logins}</p>
+                    <p className="text-xs text-richblack-400">logins</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-pink-100/15 flex items-center justify-center"><FaNetworkWired className="text-pink-100" /></div>
+                  <div>
+                    <p className="font-display text-xl text-richblack-5">{traffic.summary.uniqueLoginIps}</p>
+                    <p className="text-xs text-richblack-400">unique login IPs</p>
+                  </div>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={trafficChartData}>
+                  <defs>
+                    <linearGradient id="visitorsFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2F6F5E" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#2F6F5E" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="loginsFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#118AB2" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#118AB2" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                  <XAxis dataKey="bucket" stroke="#8B93A0" fontSize={10} tickFormatter={(b) => formatBucket(b, trafficRange)} />
+                  <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
+                  <Tooltip contentStyle={tooltipStyle} labelFormatter={(b) => formatBucket(b, trafficRange)} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Area type="monotone" dataKey="visitors" name="Unique visitors" stroke="#2F6F5E" fill="url(#visitorsFill)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="logins" name="Logins" stroke="#118AB2" fill="url(#loginsFill)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </>
+          ) : (
+            <p className="text-sm text-richblack-400">Loading traffic...</p>
+          )}
+        </div>
 
         {/* Health + AI row sir */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

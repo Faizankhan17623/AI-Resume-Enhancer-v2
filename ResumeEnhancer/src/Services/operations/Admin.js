@@ -2,11 +2,11 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setPayments,
-    setAuditLogs, setAnnouncements, setAiStats, setHealth, setLoading
+    setAuditLogs, setAnnouncements, setAiStats, setHealth, setTraffic, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, health, auditlogs } = AdminStats
+const { dashboardstats, aistats, health, auditlogs, traffic } = AdminStats
 const { allusers, updaterole, updateplan, banuser, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -67,6 +67,24 @@ export function GetHealth(token) {
             dispatch(setHealth(response.data.health))
         } catch (error) {
             console.error("Error fetching the health", error)
+        }
+    }
+}
+
+export function GetTraffic(token, range = 'week') {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", traffic, null, {
+                Authorization: `Bearer ${token}`
+            }, { range })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setTraffic(response.data))
+        } catch (error) {
+            console.error("Error fetching the traffic stats", error)
         }
     }
 }

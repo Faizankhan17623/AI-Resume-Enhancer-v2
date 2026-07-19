@@ -5,7 +5,8 @@ export const AdminStats = {
     aistats: BASE_URL + "/admin/ai",
     health: BASE_URL + "/admin/health",
     insights: BASE_URL + "/admin/insights",
-    auditlogs: BASE_URL + "/admin/audit"
+    auditlogs: BASE_URL + "/admin/audit",
+    traffic: BASE_URL + "/admin/traffic"
 }
 
 export const AdminUsers = {
