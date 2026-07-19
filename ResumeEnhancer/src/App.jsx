@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from "react-router-dom"
 import { Helmet } from 'react-helmet-async'
 import Navbar from './Components/Home/Navbar'
@@ -13,6 +13,7 @@ import PrivateRoute from './Hooks/PrivateRoute'
 import AdminRoute from './Hooks/AdminRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
+import CookieConsent from './Components/extra/CookieConsent'
 
 // Lazy-loaded route components — split into separate chunks for faster initial load sir
 const Join = lazy(() => import('./Components/UserCreation/Join'))
@@ -66,10 +67,25 @@ const Homelayout = () => {
 }
 
 function App() {
+  // Render free tier sleeps after inactivity sir — ping the backend root the moment
+  // anyone lands so the 30-60s cold start happens NOW, not on their first real API call
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_MAIN_BACKEND_URL
+    if (!backendUrl) return
+    try {
+      const wakeUrl = new URL(backendUrl).origin
+      fetch(wakeUrl, { method: 'GET' }).catch(() => {})
+    } catch {
+      // malformed env URL sir — nothing to wake
+    }
+  }, [])
+
   return (
     <>
       {/* the live admin broadcast sir — shows only when one is published */}
       <AnnouncementBanner />
+      {/* cookie consent card sir — shows once until accepted */}
+      <CookieConsent />
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>
         <Routes>
