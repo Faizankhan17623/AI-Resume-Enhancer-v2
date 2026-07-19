@@ -9,6 +9,7 @@ const { buildChatSystemPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
+const { AI_MODEL } = require('../utils/AiModel')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -167,14 +168,16 @@ exports.sendMessage = async (req, res) => {
         try {
             const stream = await grok.chat.completions.create({
                 messages: Messages,
-                "model": "qwen/qwen3-32b",
+                "model": AI_MODEL,
                 "temperature": 0.5,
                 stream: true,
             })
 
-            // the model's <think>...</think> reasoning block must never reach the client sir —
-            // buffer everything until the closing tag shows up, THEN start flushing tokens
-            let sawThinkClose = false
+            // a <think>...</think> reasoning block must never reach the client sir — but gpt-oss
+            // never emits one in content, so the moment the reply clearly does NOT open with
+            // <think> we flush and stream normally instead of buffering the whole answer
+            let streaming = false      // true once we know we're past any think block
+            let inThink = false        // true while buffering an actual <think> block
             let pending = ''
 
             for await (const chunk of stream) {
@@ -182,35 +185,48 @@ exports.sendMessage = async (req, res) => {
                 if (chunk?.usage) usage = chunk.usage // groq sends usage on the final chunk sir
                 if (!delta) continue
 
-                if (sawThinkClose) {
+                if (streaming) {
                     raw += delta
                     writeLine({ type: 'chunk', content: delta })
                     continue
                 }
 
                 pending += delta
-                if (pending.includes('</think>')) {
-                    const after = pending.split('</think>').pop()
-                    sawThinkClose = true
-                    if (after) {
-                        raw += after
-                        writeLine({ type: 'chunk', content: after })
+                if (inThink) {
+                    if (pending.includes('</think>')) {
+                        const after = pending.split('</think>').pop()
+                        streaming = true
+                        if (after) {
+                            raw += after
+                            writeLine({ type: 'chunk', content: after })
+                        }
                     }
+                    continue
                 }
-                // still inside/before the think block sir — hold it back, nothing to flush yet
+
+                const lead = pending.trimStart()
+                if (lead.startsWith('<think>')) {
+                    inThink = true
+                } else if (lead.length >= 7 || (lead && !'<think>'.startsWith(lead))) {
+                    // definitely not a think block sir — release the buffer and stream live
+                    streaming = true
+                    raw += pending
+                    writeLine({ type: 'chunk', content: pending })
+                }
+                // else: too few chars to tell yet sir — keep buffering a moment longer
             }
 
-            // the model never opened a <think> block sir — everything we buffered IS the reply
-            if (!sawThinkClose && pending) {
+            // stream ended while we were still holding the buffer sir — whatever is pending IS the reply
+            if (!streaming && !inThink && pending) {
                 raw = pending
                 writeLine({ type: 'chunk', content: pending })
             }
 
             raw = raw.trim()
-            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: 'qwen/qwen3-32b', usage, latencyMs: Date.now() - t0, success: true })
+            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: AI_MODEL, usage, latencyMs: Date.now() - t0, success: true })
         } catch (aiErr) {
             streamErr = aiErr
-            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: 'qwen/qwen3-32b', latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
         }
 
         // not case sir — the stream broke or produced nothing, don't persist a half-written reply
