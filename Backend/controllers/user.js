@@ -6,6 +6,7 @@ const crypto = require('crypto')
 
 const User = require('../Models/User');
 const OTP = require('../Models/OTP.js')
+const LoginLog = require('../Models/LoginLog.js')
 const mailSender = require('../utils/Nodemailer.js')
 
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
@@ -212,6 +213,13 @@ exports.loginUser = async (req, res) => {
         })
 
         res.setHeader('Set-Cookie', SetCookie)
+
+        // fire-and-forget sir — same pattern as logAi/logAction, a logging failure must never block a real login
+        LoginLog.create({
+            user: _id,
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+        }).catch((err) => console.log('login log failed:', err.message))
 
         return res.status(200).json({
             success: true,

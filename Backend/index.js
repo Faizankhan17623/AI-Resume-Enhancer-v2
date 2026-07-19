@@ -25,6 +25,7 @@ const resume = require('./Routes/Resume.js')
 const builtResume = require('./Routes/BuiltResume.js')
 const jobSearch = require('./Routes/JobSearch.js')
 const feedback = require('./Routes/Feedback.js')
+const visitor = require('./Routes/Visitor.js')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
 
@@ -67,6 +68,7 @@ app.use('/api/v1',resume)
 app.use('/api/v1',builtResume)
 app.use('/api/v1',jobSearch)
 app.use('/api/v1',feedback)
+app.use('/api/v1',visitor)
 
 // interactive API docs sir — http://localhost:5000/api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))

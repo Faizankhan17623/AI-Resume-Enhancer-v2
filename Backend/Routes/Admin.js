@@ -20,7 +20,8 @@ const {
     getAiStats,
     getHealth,
     getInsights,
-    getAuditLogs
+    getAuditLogs,
+    getTraffic
 } = require('../controllers/AdminSystem.js')
 const {
     createAnnouncement,
@@ -47,6 +48,7 @@ route.get('/admin/payments', Auth, isSupport, getPayments)
 route.get('/admin/ai', Auth, isSupport, getAiStats)
 route.get('/admin/health', Auth, isSupport, getHealth)
 route.get('/admin/insights', Auth, isSupport, getInsights)
+route.get('/admin/traffic', Auth, isSupport, getTraffic)
 route.get('/admin/announcements', Auth, isSupport, getAnnouncements)
 
 // ---------- admin-only sir ----------
