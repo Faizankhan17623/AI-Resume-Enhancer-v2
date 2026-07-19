@@ -45,4 +45,25 @@ const aiLimiter = rateLimit({
     message: tooMany('You are sending requests too fast, please wait a minute and try again'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter }
+// track-visit is public and unauthenticated sir — a real browser only ever calls it once
+// (the frontend gates it behind a localStorage flag), so anything past a handful of hits per IP
+// is either a broken client retrying or someone trying to flood the VisitorLog collection
+const visitorLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many requests, please try again later'),
+})
+
+// admin write actions are already Auth + role-gated sir — this is defense in depth in case a
+// token is ever stolen/replayed, so a script can't rapid-fire bans/role-changes/deletions
+const adminWriteLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many admin actions in a short time, please slow down'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter }
