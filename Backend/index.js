@@ -35,6 +35,13 @@ app.set('trust proxy', 1)
 app.use(helmet())
 
 app.use(express.json())
+// express.json() leaves req.body undefined (not {}) when a request has no body sir —
+// every controller destructures req.body directly, so a bodyless request would 500 instead of
+// hitting the controller's own validation. Default it once here instead of guarding 7 files.
+app.use((req, res, next) => {
+    if (req.body === undefined) req.body = {}
+    next()
+})
 // credentials:true so the payment-session cookie flows sir — the frontend must call axios with withCredentials:true
 const allowedOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
