@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setPlans, setHistory, setLoading } from '../../Slices/paymentSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
 import { PaymentData } from '../Apis/PaymentApi.js'
@@ -30,7 +31,7 @@ export function GetAllPlans() {
 
             dispatch(setPlans(response.data.plans))
         } catch (error) {
-            console.error("Error fetching the plans", error)
+            logApiError("Error fetching the plans", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -95,7 +96,7 @@ export function BuyPlan(plan, token, user, navigate) {
 
                         if (navigate) navigate("/Dashboard")
                     } catch (error) {
-                        console.error("Error verifying the payment", error)
+                        logApiError("Error verifying the payment", error)
                         toast.error(error?.response?.data?.message || "Payment verification failed")
                     } finally {
                         toast.dismiss(verifyToast)
@@ -109,7 +110,7 @@ export function BuyPlan(plan, token, user, navigate) {
             })
             razorpayWindow.open()
         } catch (error) {
-            console.error("Error starting the payment", error)
+            logApiError("Error starting the payment", error)
             toast.error(error?.response?.data?.message || "Could not start the payment")
         } finally {
             toast.dismiss(toastId)
@@ -130,7 +131,7 @@ export function GetPaymentHistory(token) {
 
             dispatch(setHistory(response.data.payments))
         } catch (error) {
-            console.error("Error fetching the payment history", error)
+            logApiError("Error fetching the payment history", error)
         }
     }
 }

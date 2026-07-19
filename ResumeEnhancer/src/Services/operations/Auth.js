@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData } from '../../Slices/authSlice.js'
 import { CreateUser, SendOtp, Login, Password } from '../Apis/UserApi.js'
 
@@ -23,7 +24,7 @@ export function SendTheOtp(email, navigate) {
             toast.success("OTP sent to your email")
             if (navigate) navigate("/Verify-Otp")
         } catch (error) {
-            console.error("Error sending the OTP", error)
+            logApiError("Error sending the OTP", error)
             toast.error(error?.response?.data?.message || "Could not send the OTP")
         } finally {
             dispatch(setLoading(false))
@@ -51,7 +52,7 @@ export function CreateTheUser(signupData, otp, navigate) {
             dispatch(setSignupData(null))
             if (navigate) navigate("/Login")
         } catch (error) {
-            console.error("Error creating the user", error)
+            logApiError("Error creating the user", error)
             toast.error(error?.response?.data?.message || "Could not create the account")
         } finally {
             dispatch(setLoading(false))
@@ -83,7 +84,7 @@ export function LoginUser(email, password, navigate) {
             toast.success(`Welcome back ${user?.firstName || ''}`)
             if (navigate) navigate("/Dashboard")
         } catch (error) {
-            console.error("Error logging in", error)
+            logApiError("Error logging in", error)
             toast.error(error?.response?.data?.message || "Could not log you in")
         } finally {
             dispatch(setLoading(false))
@@ -107,7 +108,7 @@ export function ForgotPassword(email, setEmailSent) {
             toast.success("Reset link sent, please check your email")
             if (setEmailSent) setEmailSent(true)
         } catch (error) {
-            console.error("Error sending the reset link", error)
+            logApiError("Error sending the reset link", error)
             toast.error(error?.response?.data?.message || "Could not send the reset link")
         } finally {
             dispatch(setLoading(false))
@@ -133,7 +134,7 @@ export function ResetPassword(token, newPassword, confirmNewPassword, navigate) 
             toast.success("Password reset, please log in")
             if (navigate) navigate("/Login")
         } catch (error) {
-            console.error("Error resetting the password", error)
+            logApiError("Error resetting the password", error)
             toast.error(error?.response?.data?.message || "Could not reset the password")
         } finally {
             dispatch(setLoading(false))

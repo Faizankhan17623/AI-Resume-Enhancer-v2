@@ -88,7 +88,9 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
         review = JSON.parse(raw)
     } catch (parseErr) {
         console.log('JSON parse failed:', parseErr.message)
-        console.log('Raw model output:', raw)
+        // truncated sir — raw is derived from the user's resume/JD text (PII), only the first 200
+        // chars go to the server log, enough to spot a malformed-JSON pattern without dumping the resume
+        console.log('Raw model output (truncated):', raw?.slice(0, 200))
         return res.status(502).json({
             success: false,
             message: 'The AI response was not in the expected format, please try again',

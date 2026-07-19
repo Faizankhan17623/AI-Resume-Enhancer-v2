@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
 import {
     setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard
@@ -40,7 +41,7 @@ export function CreateReview(pdfFile, jd, token, navigate) {
             toast.success("Your review is ready")
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
-            console.error("Error creating the review", error)
+            logApiError("Error creating the review", error)
             toast.error(error?.response?.data?.message || "Could not analyze the resume")
         } finally {
             dispatch(setLoading(false))
@@ -70,7 +71,7 @@ export function CreateReviewFromResume(resumeId, jd, token, navigate) {
             toast.success("Your review is ready")
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
-            console.error("Error creating the review", error)
+            logApiError("Error creating the review", error)
             toast.error(error?.response?.data?.message || "Could not analyze the resume")
         } finally {
             dispatch(setLoading(false))
@@ -99,7 +100,7 @@ export function CheckGrammar(pdfFile, token) {
 
             dispatch(setGrammar({ score: response.data.score, issues: response.data.issues }))
         } catch (error) {
-            console.error("Error checking grammar", error)
+            logApiError("Error checking grammar", error)
             // silent sir — this is a nice-to-have pre-check, don't block the user's flow with a toast
         } finally {
             dispatch(setGrammarChecking(false))
@@ -121,7 +122,7 @@ export function GetAllReviews(token) {
 
             dispatch(setAllReviews(response.data.reviews))
         } catch (error) {
-            console.error("Error fetching the reviews", error)
+            logApiError("Error fetching the reviews", error)
         } finally {
             dispatch(setLoading(false))
         }
@@ -141,7 +142,7 @@ export function GetProgress(token) {
 
             dispatch(setProgress(response.data))
         } catch (error) {
-            console.error("Error fetching the progress", error)
+            logApiError("Error fetching the progress", error)
         }
     }
 }
@@ -166,7 +167,7 @@ export function GetSingleReview(reviewId, token) {
                 shareId: response.data.review.shareId
             }))
         } catch (error) {
-            console.error("Error fetching the review", error)
+            logApiError("Error fetching the review", error)
             toast.error(error?.response?.data?.message || "Could not load the review")
         } finally {
             dispatch(setLoading(false))
@@ -193,7 +194,7 @@ export function ToggleShare(reviewId, token) {
 
             toast.success(response.data.isPublic ? "Share link created" : "Share link turned off")
         } catch (error) {
-            console.error("Error toggling the share link", error)
+            logApiError("Error toggling the share link", error)
             toast.error(error?.response?.data?.message || "Could not update the share link")
         }
     }
@@ -212,7 +213,7 @@ export function GetPublicReview(shareId) {
 
             return response.data.report
         } catch (error) {
-            console.error("Error fetching the shared report", error)
+            logApiError("Error fetching the shared report", error)
             toast.error(error?.response?.data?.message || "This shared report was not found")
             return null
         } finally {
@@ -239,7 +240,7 @@ export function GetStreak(token) {
                 lastActivityDate: response.data.lastActivityDate
             }))
         } catch (error) {
-            console.error("Error fetching the streak", error)
+            logApiError("Error fetching the streak", error)
         }
     }
 }
@@ -259,7 +260,7 @@ export function GetLeaderboard(token) {
 
             dispatch(setLeaderboard(response.data.leaderboard))
         } catch (error) {
-            console.error("Error fetching the leaderboard", error)
+            logApiError("Error fetching the leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the leaderboard")
         } finally {
             dispatch(setLoading(false))
@@ -282,7 +283,7 @@ export function GetWeeklyReviewsLeaderboard(token) {
 
             dispatch(setWeeklyReviewsLeaderboard(response.data.leaderboard))
         } catch (error) {
-            console.error("Error fetching the weekly reviews leaderboard", error)
+            logApiError("Error fetching the weekly reviews leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the weekly leaderboard")
         } finally {
             dispatch(setLoading(false))
@@ -305,7 +306,7 @@ export function GetStreaksLeaderboard(token) {
 
             dispatch(setStreaksLeaderboard(response.data.leaderboard))
         } catch (error) {
-            console.error("Error fetching the streaks leaderboard", error)
+            logApiError("Error fetching the streaks leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the streaks leaderboard")
         } finally {
             dispatch(setLoading(false))
@@ -337,7 +338,7 @@ export async function DownloadReviewPdf(reviewId, token) {
 
         toast.success("PDF downloaded")
     } catch (error) {
-        console.error("Error downloading the PDF", error)
+        logApiError("Error downloading the PDF", error)
         // Basic plan gets the upgrade nudge from the backend sir
         toast.error(error?.response?.status === 403
             ? "PDF export is a Pro feature, please upgrade your plan"
