@@ -26,3 +26,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# personal mobile-layout testing tool + screenshots sir — local only, not for the repo
+screenshots-workflow/
+scripts/

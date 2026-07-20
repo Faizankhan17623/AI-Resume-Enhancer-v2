@@ -144,24 +144,24 @@ const Navbar = () => {
         </div>
 
         {/* Right Side - Auth Area */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* light/dark toggle sir — persisted to localStorage, defaults to system preference */}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="p-2 text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            className="p-2 shrink-0 text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
           >
             {theme === 'dark' ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
           </button>
           {token === null ? (
             <>
               <Link to="/Login">
-                <button className="px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
+                <button className="whitespace-nowrap px-3 sm:px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">
                   Log in
                 </button>
               </Link>
               <Link to="/Signup">
-                <IconBtn text="Sign up" customClasses="text-sm" />
+                <IconBtn text="Sign up" customClasses="text-sm whitespace-nowrap px-3 sm:px-4" />
               </Link>
             </>
           ) : (
