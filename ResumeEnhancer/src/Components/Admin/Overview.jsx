@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
@@ -12,7 +12,45 @@ import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetDashboardStats, GetAiStats, GetHealth, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
-const tooltipStyle = { backgroundColor: '#FFFFFF', border: '1px solid #E6DDD0', borderRadius: '10px', color: '#1F2937' }
+// validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
+// #FFFFFF / #1F1C16 — both clear the lightness/chroma/CVD/normal-vision gates, see chat history)
+// sir — these are chart-identity colors only, kept separate from the app's teal/coral UI accents
+const CHART_COLORS = {
+  light: { blue: '#2a78d6', aqua: '#1baf7a' },
+  dark: { blue: '#3987e5', aqua: '#199e70' },
+}
+
+// theme-aware chart chrome sir — reads the "dark" class the same way the rest of the app does,
+// so gridlines/tooltip/axis actually flip instead of staying hardcoded light-mode hex.
+// Watches the class with a MutationObserver so charts re-render live if the user flips
+// the theme toggle (useTheme.js) while this page is open, not just on next page load.
+const useChartTheme = () => {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'))
+
+  useEffect(() => {
+    const root = document.documentElement
+    const observer = new MutationObserver(() => setIsDark(root.classList.contains('dark')))
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
+  const mode = isDark ? 'dark' : 'light'
+  return {
+    mode,
+    seriesBlue: CHART_COLORS[mode].blue,
+    seriesAqua: CHART_COLORS[mode].aqua,
+    surface: isDark ? '#1F1C16' : '#FFFFFF',
+    grid: isDark ? '#3A3428' : '#E6DDD0',
+    axis: isDark ? '#706A5C' : '#8B93A0',
+    tooltipStyle: {
+      backgroundColor: isDark ? '#26221A' : '#FFFFFF',
+      border: `1px solid ${isDark ? '#3A3428' : '#E6DDD0'}`,
+      borderRadius: '10px',
+      color: isDark ? '#F3EFE6' : '#1F1C16',
+      fontSize: 12,
+    },
+  }
+}
 
 // green/red status dot sir
 const HealthDot = ({ ok, label, latency }) => (
@@ -38,10 +76,15 @@ const RANGE_OPTIONS = [
   { key: 'month', label: 'Month' },
 ]
 
+// one legend key per series sir — Recharts default legend already renders swatch + name,
+// this just keys the wrapper font/size to the chart chrome instead of Recharts' own defaults
+const legendStyle = { fontSize: 12 }
+
 const Overview = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { stats, charts, aiStats, health, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
     dispatch(GetDashboardStats(token))
@@ -155,25 +198,25 @@ const Overview = () => {
                 </div>
               </div>
 
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={trafficChartData}>
                   <defs>
                     <linearGradient id="visitorsFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2F6F5E" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#2F6F5E" stopOpacity={0} />
+                      <stop offset="5%" stopColor={seriesBlue} stopOpacity={0.28} />
+                      <stop offset="95%" stopColor={seriesBlue} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="loginsFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#118AB2" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#118AB2" stopOpacity={0} />
+                      <stop offset="5%" stopColor={seriesAqua} stopOpacity={0.28} />
+                      <stop offset="95%" stopColor={seriesAqua} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
-                  <XAxis dataKey="bucket" stroke="#8B93A0" fontSize={10} tickFormatter={(b) => formatBucket(b, trafficRange)} />
-                  <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                  <XAxis dataKey="bucket" stroke={axis} fontSize={11} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(b) => formatBucket(b, trafficRange)} />
+                  <YAxis stroke={axis} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(b) => formatBucket(b, trafficRange)} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Area type="monotone" dataKey="visitors" name="Unique visitors" stroke="#2F6F5E" fill="url(#visitorsFill)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="logins" name="Logins" stroke="#118AB2" fill="url(#loginsFill)" strokeWidth={2} />
+                  <Legend wrapperStyle={legendStyle} />
+                  <Area type="monotone" dataKey="visitors" name="Unique visitors" stroke={seriesBlue} fill="url(#visitorsFill)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="logins" name="Logins" stroke={seriesAqua} fill="url(#loginsFill)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </>
@@ -227,56 +270,58 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* 30-day charts sir */}
+        {/* 30-day charts sir — one categorical slot (validated blue) per single-series chart,
+            so every chart in this row reads as the same "kind of thing" rather than four
+            unrelated ad-hoc colors */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">Signups — 30 days</h3>
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={190}>
               <BarChart data={charts?.signupsPerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
-                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill="#118AB2" radius={[3, 3, 0, 0]} />
+                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
+                <Bar dataKey="count" name="Signups" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">Reviews — 30 days</h3>
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={190}>
               <LineChart data={charts?.reviewsPerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
-                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#8B93A0" fontSize={10} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="count" stroke="#2F6F5E" strokeWidth={2} dot={false} />
+                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: grid }} />
+                <Line type="monotone" dataKey="count" name="Reviews" stroke={seriesBlue} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#FFFFFF' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (paise) — 30 days</h3>
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={190}>
               <BarChart data={charts?.revenuePerDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
-                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#8B93A0" fontSize={10} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="amount" fill="#2F6F5E" radius={[3, 3, 0, 0]} />
+                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
+                <Bar dataKey="amount" name="Revenue" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">AI tokens — 30 days</h3>
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={190}>
               <BarChart data={aiStats?.last30Days?.perDay || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
-                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke="#8B93A0" fontSize={10} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="tokens" fill="#118AB2" radius={[3, 3, 0, 0]} />
+                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
+                <Bar dataKey="tokens" name="Tokens" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
