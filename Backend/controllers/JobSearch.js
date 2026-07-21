@@ -1,5 +1,6 @@
 const { getUserPlan } = require('../utils/Plans')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
+const { isFeatureEnabled } = require('../utils/FeatureFlags')
 
 // POST /job-search — Pro+ feature sir, searches the live web via Tavily for real job postings
 // matching the user's query. No Groq call, no credit spend — same reasoning as cover letter's
@@ -7,6 +8,13 @@ const { recordFeatureUse } = require('../utils/FeatureUsage')
 exports.searchJobs = async (req, res) => {
     try {
         const id = req?.User.id
+
+        if (!(await isFeatureEnabled('feature.jobSearch'))) {
+            return res.status(503).json({
+                success: false,
+                message: 'This feature is temporarily disabled',
+            })
+        }
 
         const plan = await getUserPlan(id)
         if (!plan || plan.key === 'Basic') {

@@ -25,6 +25,7 @@ const auditLogSchema = new mongoose.Schema(
                 'IMPERSONATE',
                 'ANNOUNCEMENT_CREATE',
                 'ANNOUNCEMENT_DELETE',
+                'SETTING_CHANGE',
             ],
             index: true,
         },

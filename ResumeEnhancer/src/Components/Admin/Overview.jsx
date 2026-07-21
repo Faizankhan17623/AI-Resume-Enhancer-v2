@@ -267,6 +267,52 @@ const Overview = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <h3 className="font-display text-base text-richblack-5 mb-4">AI tokens — 30 days</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={aiStats?.last30Days?.perDay || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDD0" />
+                <XAxis dataKey="_id" stroke="#8B93A0" fontSize={10} tickFormatter={(d) => d?.slice(5)} />
+                <YAxis stroke="#8B93A0" fontSize={10} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="tokens" fill="#118AB2" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* recent AI errors sir — surfaces AiLog failures the admin would otherwise only see via getAiStats' recentErrors, previously fetched but never rendered */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaRobot className="text-pink-100" /> Recent AI errors</h2>
+          {aiStats?.recentErrors?.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
+                    <th className="pb-2 pr-4">Type</th>
+                    <th className="pb-2 pr-4">Plan</th>
+                    <th className="pb-2 pr-4">Error</th>
+                    <th className="pb-2 pr-4">Latency</th>
+                    <th className="pb-2">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiStats.recentErrors.map((err, i) => (
+                    <tr key={i} className="border-b border-richblack-700/50 last:border-0">
+                      <td className="py-2 pr-4 text-richblack-100">{err.type}</td>
+                      <td className="py-2 pr-4 text-richblack-300">{err.plan}</td>
+                      <td className="py-2 pr-4 text-pink-200 max-w-xs truncate" title={err.error}>{err.error}</td>
+                      <td className="py-2 pr-4 text-richblack-400 font-mono text-xs">{err.latencyMs}ms</td>
+                      <td className="py-2 text-richblack-400 text-xs">{new Date(err.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-richblack-400">No AI errors in the last 30 days.</p>
+          )}
         </div>
       </PageTransition>
     </div>

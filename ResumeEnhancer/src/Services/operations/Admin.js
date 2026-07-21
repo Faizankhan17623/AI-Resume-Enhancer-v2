@@ -3,14 +3,15 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setPayments,
-    setAuditLogs, setAnnouncements, setAiStats, setHealth, setTraffic, setLoading
+    setAuditLogs, setAnnouncements, setAiStats, setHealth, setTraffic, setSettings, setLoading
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic } = AdminStats
 const { allusers, updaterole, updateplan, banuser, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
+const { getsettings, updatesetting } = AdminSettings
 
 // ---------- overview sir ----------
 
@@ -279,6 +280,49 @@ export function DeleteAnnouncement(announcementId, token) {
         } catch (error) {
             logApiError("Error deleting the announcement", error)
             toast.error(error?.response?.data?.message || "Could not delete")
+        }
+    }
+}
+
+// ---------- feature flags sir ----------
+
+export function GetSettings(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", getsettings, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setSettings(response.data.settings))
+        } catch (error) {
+            logApiError("Error fetching the settings", error)
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function UpdateSetting(key, enabled, note, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", `${updatesetting}/${key}`, { enabled, note }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetSettings(token))
+        } catch (error) {
+            logApiError("Error updating the setting", error)
+            toast.error(error?.response?.data?.message || "Could not update the setting")
         }
     }
 }

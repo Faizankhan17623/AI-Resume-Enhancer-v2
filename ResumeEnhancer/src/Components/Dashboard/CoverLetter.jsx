@@ -4,13 +4,16 @@ import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCopy, FaCrown } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCopy, FaCrown, FaExclamationTriangle } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GenerateCoverLetter } from '../../Services/operations/CoverLetter'
-import { setContent } from '../../Slices/coverLetterSlice'
+import { setContent, setGenericCheck } from '../../Slices/coverLetterSlice'
+
+// below this the letter reads specific enough that a nudge would just be noise sir
+const GENERIC_SCORE_WARNING_THRESHOLD = 40
 
 const copyText = (text) => {
   navigator.clipboard.writeText(text)
@@ -23,7 +26,7 @@ const CoverLetter = () => {
   const [dragging, setDragging] = useState(false)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { content, generating } = useSelector((state) => state.coverLetter)
+  const { content, generating, genericCheck } = useSelector((state) => state.coverLetter)
 
   const isBasic = !user?.SubType || user.SubType === 'Basic'
 
@@ -63,6 +66,7 @@ const CoverLetter = () => {
 
   const startOver = () => {
     dispatch(setContent(null))
+    dispatch(setGenericCheck(null))
     setPdfFile(null)
     setJd('')
   }
@@ -90,6 +94,22 @@ const CoverLetter = () => {
           </motion.div>
         ) : content ? (
           <motion.div key="content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="space-y-5">
+            {genericCheck && genericCheck.score >= GENERIC_SCORE_WARNING_THRESHOLD && (
+              <div className="rounded-xl bg-yellow-900/10 border border-yellow-50/30 p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaExclamationTriangle className="text-yellow-50" />
+                  <p className="text-sm font-semibold text-richblack-5">This letter reads a bit generic</p>
+                </div>
+                <p className="text-xs text-richblack-300 mb-2">Consider adding specific achievements, numbers, or details from the job description before sending it.</p>
+                {genericCheck.flags?.length > 0 && (
+                  <ul className="list-disc list-inside space-y-1">
+                    {genericCheck.flags.map((flag, i) => (
+                      <li key={i} className="text-xs text-richblack-400">{flag}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 md:p-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-lg text-richblack-5">Your cover letter</h2>
