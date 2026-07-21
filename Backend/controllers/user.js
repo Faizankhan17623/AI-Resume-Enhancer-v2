@@ -657,7 +657,11 @@ exports.forgotPassword = async (req, res) => {
         }
 
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173/"
+        // FRONTEND_URL can be a comma-separated list (same var CORS reads in index.js) sir —
+        // an email link needs exactly ONE origin, so take the first and strip trailing slashes
+        const frontendUrl = process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+            : "http://localhost:5173"
         const url = `${frontendUrl}/reset-password/${token}`
 
         await mailSender(
