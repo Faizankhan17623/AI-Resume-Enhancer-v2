@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn } from 'react-icons/fa'
+import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn, FaSlidersH } from 'react-icons/fa'
 
 // the admin section switcher sir — sits under the navbar on every admin page
 const tabs = [
@@ -9,6 +9,7 @@ const tabs = [
   { name: 'Payments', path: '/Admin/Payments', icon: <FaRupeeSign /> },
   { name: 'Audit Log', path: '/Admin/Audit', icon: <FaClipboardList /> },
   { name: 'Announcements', path: '/Admin/Announcements', icon: <FaBullhorn /> },
+  { name: 'Settings', path: '/Admin/Settings', icon: <FaSlidersH /> },
 ]
 
 const AdminNav = () => {

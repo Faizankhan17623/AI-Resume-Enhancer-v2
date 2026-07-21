@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setContent, setLetterId, setAllLetters, setLoading, setGenerating } from '../../Slices/coverLetterSlice.js'
+import { setContent, setLetterId, setGenericCheck, setAllLetters, setLoading, setGenerating } from '../../Slices/coverLetterSlice.js'
 import { CoverLetterData } from '../Apis/CoverLetterApi.js'
 
 const { generate, all, single } = CoverLetterData
@@ -26,6 +26,7 @@ export function GenerateCoverLetter(pdfFile, jd, token) {
 
             dispatch(setContent(response.data.content))
             dispatch(setLetterId(response.data.coverLetterId))
+            dispatch(setGenericCheck(response.data.genericCheck || null))
             toast.success("Your cover letter is ready")
         } catch (error) {
             logApiError("Error generating the cover letter", error)

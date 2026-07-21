@@ -8,6 +8,8 @@ const { buildCoverLetterPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { AI_MODEL } = require('../utils/AiModel')
+const { detectGenericness } = require('../utils/GenericPhraseDetector')
+const { isFeatureEnabled } = require('../utils/FeatureFlags')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -17,6 +19,13 @@ const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 exports.generateCoverLetter = async (req, res) => {
     try {
         const id = req?.User.id
+
+        if (!(await isFeatureEnabled('feature.coverLetter'))) {
+            return res.status(503).json({
+                success: false,
+                message: 'This feature is temporarily disabled',
+            })
+        }
 
         const plan = await getUserPlan(id)
         if (!plan || plan.key === 'Basic') {
@@ -91,12 +100,15 @@ exports.generateCoverLetter = async (req, res) => {
         }
         raw = raw.trim()
 
+        const genericCheck = detectGenericness(raw, jd)
+
         let coverLetterId = null
         try {
             const saved = await CoverLetter.create({
                 user: id,
                 jdTitle: jd.trim().slice(0, 60),
                 content: raw,
+                genericScore: genericCheck.score,
             })
             coverLetterId = saved._id
         } catch (saveErr) {
@@ -110,6 +122,7 @@ exports.generateCoverLetter = async (req, res) => {
             success: true,
             coverLetterId,
             content: raw,
+            genericCheck,
         })
     } catch (error) {
         console.log(error)

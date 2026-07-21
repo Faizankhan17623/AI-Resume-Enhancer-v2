@@ -12,6 +12,7 @@ const { updateStreak } = require('../utils/Streak');
 const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 const { AI_MODEL } = require('../utils/AiModel');
+const { isFeatureEnabled } = require('../utils/FeatureFlags');
 
 const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 
@@ -19,6 +20,13 @@ const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 // the resume text is in hand. Spends one credit, calls Groq, saves the Review, returns the same
 // response shape either way.
 const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
+    if (!(await isFeatureEnabled('feature.review'))) {
+        return res.status(503).json({
+            success: false,
+            message: 'This feature is temporarily disabled',
+        })
+    }
+
     const jd = req.body.jd
 
     // not case sir

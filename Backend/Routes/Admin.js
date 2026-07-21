@@ -31,6 +31,10 @@ const {
     deleteAnnouncement,
     getActiveAnnouncement
 } = require('../controllers/Announcement.js')
+const {
+    getSettings,
+    upsertSetting
+} = require('../controllers/AdminSettings.js')
 
 // the admin dashboard lives here sir — RBAC in two levels:
 //   isSupport → Support AND Admin pass (view, inspect, help users)
@@ -59,6 +63,8 @@ route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, banUse
 route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter, impersonateUser)
 route.delete('/admin/users/:userId', Auth, isAdmin, adminWriteLimiter, deleteUser)
 route.get('/admin/audit', Auth, isAdmin, getAuditLogs)
+route.get('/admin/settings', Auth, isAdmin, getSettings)
+route.patch('/admin/settings/:key', Auth, isAdmin, adminWriteLimiter, upsertSetting)
 route.post('/admin/announcements', Auth, isAdmin, adminWriteLimiter, createAnnouncement)
 route.patch('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, toggleAnnouncement)
 route.delete('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, deleteAnnouncement)

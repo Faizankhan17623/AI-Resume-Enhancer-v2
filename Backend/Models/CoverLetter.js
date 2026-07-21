@@ -18,6 +18,11 @@ const coverLetterSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        // 0-100 heuristic genericness score sir, higher = more generic/template-y, see GenericPhraseDetector.js
+        genericScore: {
+            type: Number,
+            default: 0,
+        },
     }, { timestamps: true }
 )
 

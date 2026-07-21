@@ -4,6 +4,8 @@ const initialState = {
     // the letter currently shown sir
     content: null,
     letterId: null,
+    // heuristic genericness check for the letter currently shown sir, see GenericPhraseDetector.js on the backend
+    genericCheck: null,
     // saved list for the history view sir
     allLetters: [],
     loading: false,
@@ -20,6 +22,9 @@ const coverLetterSlice = createSlice({
         setLetterId(state, value) {
             state.letterId = value.payload
         },
+        setGenericCheck(state, value) {
+            state.genericCheck = value.payload
+        },
         setAllLetters(state, value) {
             state.allLetters = value.payload
         },
@@ -33,6 +38,6 @@ const coverLetterSlice = createSlice({
 })
 
 export const {
-    setContent, setLetterId, setAllLetters, setLoading, setGenerating
+    setContent, setLetterId, setGenericCheck, setAllLetters, setLoading, setGenerating
 } = coverLetterSlice.actions
 export default coverLetterSlice.reducer

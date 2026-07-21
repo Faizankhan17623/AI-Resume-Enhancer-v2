@@ -30,3 +30,8 @@ export const AdminAnnouncements = {
     toggleannouncement: BASE_URL + "/admin/announcements",   // + /:announcementId
     deleteannouncement: BASE_URL + "/admin/announcements"    // + /:announcementId
 }
+
+export const AdminSettings = {
+    getsettings: BASE_URL + "/admin/settings",
+    updatesetting: BASE_URL + "/admin/settings"    // + /:key
+}
