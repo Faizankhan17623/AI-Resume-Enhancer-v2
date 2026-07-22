@@ -3,6 +3,7 @@ const User = require('../Models/User')
 const Review = require('../Models/Review')
 const Resume = require('../Models/Resume')
 const mailSender = require('./Nodemailer')
+const { notify } = require('./NotificationLog')
 
 // day-window helper sir — returns [startOfDay, endOfDay] N days ago, in UTC, so the query
 // catches exactly "N days ago" regardless of what time the cron actually runs
@@ -89,6 +90,13 @@ const sendWeeklyDigest = async () => {
         }
         mailSender(user.email, 'Your weekly resume review digest', digestEmailHtml(user.firstName, stats))
             .catch((err) => console.log('weekly digest email failed:', err.message))
+        notify({
+            user: user._id,
+            type: 'digest',
+            title: 'Your weekly resume review digest',
+            message: `${stats.count} review${stats.count === 1 ? '' : 's'} this week, latest score ${stats.latestScore}/100.`,
+            link: '/Dashboard/History',
+        })
     }
 }
 
@@ -104,6 +112,13 @@ const sendStreakBreakNudges = async () => {
     for (const user of users) {
         mailSender(user.email, 'Your streak is about to end', streakBreakEmailHtml(user.firstName, user.currentStreak))
             .catch((err) => console.log('streak-break email failed:', err.message))
+        notify({
+            user: user._id,
+            type: 'streak-break',
+            title: `Don't lose your ${user.currentStreak}-day streak!`,
+            message: 'You haven\'t used AI Resume Enhancer today. Do one quick review to keep it alive.',
+            link: '/Dashboard/New-Review',
+        })
     }
 }
 
@@ -118,6 +133,13 @@ const sendWinBackNudges = async () => {
     for (const user of users) {
         mailSender(user.email, 'We miss you at AI Resume Enhancer', winBackEmailHtml(user.firstName))
             .catch((err) => console.log('win-back email failed:', err.message))
+        notify({
+            user: user._id,
+            type: 'win-back',
+            title: 'We miss you!',
+            message: 'It\'s been a couple weeks since your last resume review. Come back and see how your score has room to grow.',
+            link: '/Dashboard/New-Review',
+        })
     }
 }
 
@@ -150,6 +172,13 @@ const sendMonthlyHealthCheck = async () => {
                 topIssue,
             })
         ).catch((err) => console.log('health-check email failed:', err.message))
+        notify({
+            user: user._id,
+            type: 'health-check',
+            title: 'Your monthly resume health check',
+            message: `${resume.label || resume.originalFilename || 'Your resume'} scored ${resume.formattingCheck.score}/100 on ATS formatting.`,
+            link: '/Dashboard/Resumes',
+        })
     }
 }
 
