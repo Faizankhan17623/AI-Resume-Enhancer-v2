@@ -66,4 +66,24 @@ const adminWriteLimiter = rateLimit({
     message: tooMany('Too many admin actions in a short time, please slow down'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter }
+// admin read/dashboard routes sir — also Auth + role-gated already, same defense-in-depth
+// reasoning as adminWriteLimiter but looser since a dashboard page fires several GETs on load
+const adminReadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many admin requests in a short time, please slow down'),
+})
+
+// grammar-check parses an uploaded PDF (real CPU/parsing cost) sir even though it's free/no-credit —
+// closer to the AI routes' abuse profile than a plain CRUD call, so it gets its own tighter cap
+const grammarCheckLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('You are sending requests too fast, please wait a minute and try again'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter }
