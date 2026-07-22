@@ -8,7 +8,8 @@ import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
 import { setSignupData } from '../../Slices/authSlice'
 import { SendTheOtp } from '../../Services/operations/Auth'
-import { OAuth } from '../../Services/Apis/UserApi'
+// Google OAuth temporarily disabled sir — see the commented button below
+// import { OAuth } from '../../Services/Apis/UserApi'
 import CountryCode from '../../utils/CountryCode.json'
 
 // the input style used across every form sir
@@ -162,6 +163,8 @@ const Join = () => {
               customClasses="w-full justify-center mt-2"
             />
 
+            {/* Google OAuth temporarily disabled sir — Cloud console credentials not set up yet.
+                Re-enable by uncommenting this block + the OAuth import above.
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-richblack-700" />
               <span className="text-xs text-richblack-400">or</span>
@@ -181,6 +184,7 @@ const Join = () => {
               </svg>
               Continue with Google
             </button>
+            */}
 
             <p className="text-center text-sm text-richblack-300">
               Already have an account?{' '}
