@@ -12,9 +12,11 @@ export const Login = {
     login: BASE_URL + "/Login"
 }
 
-// a full-page redirect, not an XHR call sir — the button below just navigates the browser here
 export const OAuth = {
-    google: BASE_URL + "/auth/google"
+    // a full-page redirect, not an XHR call sir — the button just navigates the browser here
+    google: BASE_URL + "/auth/google",
+    // OAuthComplete.jsx POSTs here to trade the one-time code for the real token, body-only
+    exchange: BASE_URL + "/auth/google/exchange"
 }
 
 export const Password = {

@@ -3,19 +3,21 @@ import { useDispatch } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { setToken, setUser, setLogin } from '../../Slices/authSlice'
+import { apiConnector } from '../../Services/apiConnector'
+import { OAuth } from '../../Services/Apis/UserApi'
 
 // landing page for the Google OAuth redirect sir — the backend's GET /auth/google/callback
-// sends the browser here with ?token&user after a successful sign-in (a real page nav, not
-// XHR, so this is the only way to hand the token back to the SPA). Same redux/localStorage
-// shape LoginUser already writes, then it strips the token off the address bar and leaves.
+// sends the browser here with only a short-lived, single-use ?code (never the real JWT — a
+// token in the URL would sit in browser history and hosting/proxy access logs). This page's
+// only job is to immediately trade that code for the real token via POST, in the response
+// body, then store it exactly like LoginUser already does.
 const OAuthComplete = () => {
   const [searchParams] = useSearchParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    const userRaw = searchParams.get('user')
+    const code = searchParams.get('code')
     const oauthError = searchParams.get('oauthError')
 
     if (oauthError) {
@@ -24,26 +26,34 @@ const OAuthComplete = () => {
       return
     }
 
-    if (!token || !userRaw) {
+    if (!code) {
       navigate('/Login', { replace: true })
       return
     }
 
-    try {
-      const user = JSON.parse(userRaw)
+    let alive = true
+    apiConnector("POST", OAuth.exchange, { code })
+      .then((response) => {
+        if (!alive) return
+        if (!response.data.success) throw new Error(response.data.message)
 
-      dispatch(setToken(token))
-      dispatch(setUser(user))
-      dispatch(setLogin(true))
-      localStorage.setItem('token', JSON.stringify(token))
-      localStorage.setItem('user', JSON.stringify(user))
+        const { token, user } = response.data
 
-      toast.success(`Welcome ${user?.firstName || ''}`)
-      navigate('/Dashboard', { replace: true })
-    } catch {
-      toast.error('Could not complete Google sign-in')
-      navigate('/Login', { replace: true })
-    }
+        dispatch(setToken(token))
+        dispatch(setUser(user))
+        dispatch(setLogin(true))
+        localStorage.setItem('token', JSON.stringify(token))
+        localStorage.setItem('user', JSON.stringify(user))
+
+        toast.success(`Welcome ${user?.firstName || ''}`)
+        navigate('/Dashboard', { replace: true })
+      })
+      .catch((error) => {
+        if (!alive) return
+        toast.error(error?.response?.data?.message || 'Could not complete Google sign-in')
+        navigate('/Login', { replace: true })
+      })
+    return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
