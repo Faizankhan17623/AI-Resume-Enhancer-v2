@@ -21,13 +21,15 @@ const UserCreation = new mongoose.Schema(
             lowercase: true,
             trim: true
         },
+        // required only for a normal email/password signup sir — an OAuth account
+        // (see `provider` below) never sets these, there's nothing to compare against
         password: {
             type: String,
-            required: true
+            required: function () { return this.provider === 'local' }
         },
         confirmpassword:{
             type: String,
-            required: true
+            required: function () { return this.provider === 'local' }
         },
         token: {
             type: String,
@@ -42,14 +44,28 @@ const UserCreation = new mongoose.Schema(
             type:Number,
             default:0
         },
+        // required only for a normal signup sir — Google never gives us a phone number,
+        // and there's no equivalent to ask for mid-OAuth-redirect without extra friction
         number:{
             type: String,
-            required: true,
+            required: function () { return this.provider === 'local' },
             match: [/^[0-9]{10}$/, 'Phone number must be exactly 10 digits']
         },
         CountryCode:{
             type: String,
-            required: true
+            required: function () { return this.provider === 'local' }
+        },
+        // which identity system owns this account sir — 'local' is the existing email+password
+        // flow, everything else is an OAuth provider. Drives which fields are required above.
+        provider: {
+            type: String,
+            enum: ['local', 'google'],
+            default: 'local',
+        },
+        // the provider's own stable user id (Google's `sub` claim) sir — never the email,
+        // since an email can be reused/changed on the provider side but this id can't
+        providerId: {
+            type: String,
         },
         Verified:{
             type:Boolean,

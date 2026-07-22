@@ -235,7 +235,8 @@ const Account = () => {
           </div>
         </div>
 
-        {/* Change password sir */}
+        {/* Change password sir — a Google account has no local password to change */}
+        {user.provider === 'local' && (
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
             <FaLock className="text-yellow-50 text-base" /> Change Password
@@ -291,6 +292,7 @@ const Account = () => {
             />
           </form>
         </div>
+        )}
 
         {/* Payment history sir */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
