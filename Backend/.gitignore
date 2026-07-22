@@ -8,5 +8,6 @@ node_modules/
 # logs
 *.log
 
-# local-only debug/admin scripts sir — e.g. listUsers.js, never meant for the repo/prod
-scripts/listUsers.js
+# local-only debug/admin scripts sir — one-off tools run by hand against prod/local DBs,
+# never meant to be tracked or deployed (e.g. makeAdmin.js, listUsers.js)
+scripts/
