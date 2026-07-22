@@ -15,7 +15,7 @@ const {
     updatePassword,
     deleteAccount
 } = require('../controllers/user.js')
-const { googleLogin, googleCallback } = require('../controllers/GoogleAuth.js')
+const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 // we are going to start the routing from here sir
 
 // aiLimiter because every call here burns a Groq request + a credit sir
@@ -30,6 +30,9 @@ route.post('/Send-otp',otpLimiter,SendOtp)
 // full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered
 route.get('/auth/google',authLimiter,googleLogin)
 route.get('/auth/google/callback',authLimiter,googleCallback)
+// the frontend calls this right after landing on /oauth/complete sir — trades the one-time
+// code (all the redirect URL ever carries) for the real token, in the response body only
+route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
 route.post('/forgot-password',authLimiter,forgotPassword)

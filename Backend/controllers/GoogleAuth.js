@@ -9,6 +9,18 @@ const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
+// short-lived, single-use exchange codes sir — the real JWT never touches the redirect URL
+// (browser history, hosting/proxy access logs, the Referer header), only this random opaque
+// code does, and it's dead the instant /auth/google/exchange consumes it or 60s pass
+const EXCHANGE_TTL_MS = 60 * 1000
+const pendingExchanges = new Map() // code -> { payload, expiresAt }
+
+const createExchangeCode = (payload) => {
+    const code = crypto.randomBytes(24).toString('base64url')
+    pendingExchanges.set(code, { payload, expiresAt: Date.now() + EXCHANGE_TTL_MS })
+    return code
+}
+
 // same first-item-only parsing as the password-reset link sir — FRONTEND_URL can be a
 // comma-separated list (see index.js's CORS parsing), a redirect target needs exactly one
 const frontendOrigin = () => process.env.FRONTEND_URL
@@ -185,21 +197,50 @@ exports.googleCallback = async (req, res) => {
             userAgent: req.headers['user-agent'],
         }).catch((err) => console.log('login log failed:', err.message))
 
-        // the frontend reads token+user off the URL once, same shape LoginUser already
-        // stores in redux/localStorage, then strips them from the address bar sir
-        const userPayload = encodeURIComponent(JSON.stringify({
-            id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role,
-            SubType: user.SubType,
-        }))
+        // never put the live JWT in a URL sir — hand back a short-lived single-use code
+        // instead, the frontend immediately exchanges it (POST, response body only) for the
+        // real token in /auth/google/exchange below
+        const exchangeCode = createExchangeCode({
+            token: jwtToken,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                SubType: user.SubType,
+            },
+        })
 
-        return res.redirect(`${frontendOrigin()}/oauth/complete?token=${jwtToken}&user=${userPayload}`)
+        return res.redirect(`${frontendOrigin()}/oauth/complete?code=${exchangeCode}`)
     } catch (error) {
         console.log(error)
         console.log(error.message)
         return failRedirect('Something went wrong during Google sign-in')
     }
+}
+
+// POST /auth/google/exchange — the frontend calls this immediately after landing on
+// /oauth/complete, trading the one-time code (from the URL) for the real token + user
+// object in the response BODY, never the URL. The code is deleted on first use (or expires
+// in 60s regardless), so replaying an old URL (history, logs) yields nothing.
+exports.exchangeGoogleCode = (req, res) => {
+    const { code } = req.body
+
+    if (!code || typeof code !== 'string') {
+        return res.status(400).json({ success: false, message: 'Missing exchange code' })
+    }
+
+    const pending = pendingExchanges.get(code)
+    pendingExchanges.delete(code) // single-use sir, win or lose
+
+    if (!pending || pending.expiresAt < Date.now()) {
+        return res.status(400).json({ success: false, message: 'This sign-in link has expired, please try again' })
+    }
+
+    return res.status(200).json({
+        success: true,
+        token: pending.payload.token,
+        user: pending.payload.user,
+    })
 }
