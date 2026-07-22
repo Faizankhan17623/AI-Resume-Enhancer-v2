@@ -2,12 +2,13 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData } from '../../Slices/authSlice.js'
-import { CreateUser, SendOtp, Login, Password } from '../Apis/UserApi.js'
+import { CreateUser, SendOtp, Login, Password, Account } from '../Apis/UserApi.js'
 
 const { createuser } = CreateUser
 const { createotp } = SendOtp
 const { login } = Login
 const { forgotpassword, resetpassword } = Password
+const { deleteaccount } = Account
 
 // step 1 of the signup sir — fire the OTP mail and move to the OTP screen
 export function SendTheOtp(email, navigate) {
@@ -152,5 +153,36 @@ export function LogoutUser(navigate) {
         localStorage.removeItem("user")
         toast.success("Logged out")
         if (navigate) navigate("/")
+    }
+}
+
+// suspends the account (2-day recovery window, undone automatically by logging back in) sir,
+// then logs the user out locally since their session is no longer usable — Auth middleware
+// blocks any Buffer:true account on the very next request anyway
+export function DeleteAccount(token, navigate) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Deleting your account...")
+        try {
+            const response = await apiConnector("DELETE", deleteaccount, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Account scheduled for deletion — check your email for details")
+            dispatch(setToken(null))
+            dispatch(setUser(null))
+            dispatch(setLogin(false))
+            localStorage.removeItem("token")
+            localStorage.removeItem("user")
+            if (navigate) navigate("/")
+        } catch (error) {
+            logApiError("Error deleting the account", error)
+            toast.error(error?.response?.data?.message || "Could not delete the account")
+        } finally {
+            toast.dismiss(toastId)
+        }
     }
 }

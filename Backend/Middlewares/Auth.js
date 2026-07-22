@@ -32,7 +32,7 @@ exports.Auth = async (req, res, next) => {
 
         // load the live account state sir — role and ban status must be FRESH from the DB,
         // never trusted from a token that could be days old
-        const user = await User.findById(decoded.id).select('role isBanned banReason')
+        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer')
 
         if (!user) {
             return res.status(401).json({
@@ -48,6 +48,16 @@ exports.Auth = async (req, res, next) => {
                 message: user.banReason
                     ? `Your account has been suspended: ${user.banReason}`
                     : 'Your account has been suspended, please contact support',
+            })
+        }
+
+        // scheduled-for-deletion users are blocked everywhere too sir — logging back in
+        // (loginUser, which never passes through this middleware) is what un-suspends them,
+        // same shape as the ban check above
+        if (user.Buffer) {
+            return res.status(403).json({
+                success: false,
+                message: 'This account is scheduled for deletion. Log back in to recover it.',
             })
         }
 

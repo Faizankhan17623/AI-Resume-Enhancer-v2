@@ -12,7 +12,8 @@ const {
     completeOnboarding,
     forgotPassword,
     resetPassword,
-    updatePassword
+    updatePassword,
+    deleteAccount
 } = require('../controllers/user.js')
 // we are going to start the routing from here sir
 
@@ -29,6 +30,7 @@ route.post('/Send-otp',otpLimiter,SendOtp)
 route.post('/forgot-password',authLimiter,forgotPassword)
 route.post('/reset-password',authLimiter,resetPassword)
 route.put('/change-password',Auth,updatePassword)
+route.delete('/delete-account',Auth,deleteAccount)
 
 // the account page reads everything from here sir
 route.get('/profile',Auth,getProfile)

@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
-import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock } from 'react-icons/fa'
+import Swal from 'sweetalert2'
+import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -12,7 +13,16 @@ import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
-import { LogoutUser } from '../../Services/operations/Auth'
+import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
+
+const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
+// Support/Admin only sir — a normal User has nothing here worth showing, the badge would
+// just be noise ("User" on every single account)
+const roleBadge = {
+  Admin: 'bg-pink-700/30 text-pink-100 border-pink-700',
+  Support: 'bg-blue-700/30 text-blue-25 border-blue-700',
+}
 
 const passwordInputClass = "w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const passwordLabelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
@@ -69,6 +79,20 @@ const Account = () => {
     setChangingPassword(false)
   }
 
+  const handleDeleteAccount = () => {
+    Swal.fire({
+      ...swalDark,
+      title: 'Delete your account?',
+      text: 'Your account will be suspended immediately and permanently deleted in 2 days. Log back in before then to undo this.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete my account',
+      confirmButtonColor: '#C1443C',
+    }).then((result) => {
+      if (result.isConfirmed) dispatch(DeleteAccount(token, navigate))
+    })
+  }
+
   if (loading || !profile) {
     return (
       <DashboardLayout title="My account">
@@ -95,7 +119,15 @@ const Account = () => {
             <FaUser className="text-2xl text-richblack-900" />
           </div>
           <div className="flex-1">
-            <p className="font-display text-xl text-richblack-5">{user.firstName} {user.lastName}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-display text-xl text-richblack-5">{user.firstName} {user.lastName}</p>
+              {/* Support/Admin only sir — a plain User sees nothing here, per Faizan's request */}
+              {roleBadge[user.role] && (
+                <span className={`flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${roleBadge[user.role]}`}>
+                  <FaShieldAlt /> {user.role}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-richblack-300 mt-0.5">{user.email}</p>
             <p className="text-sm text-richblack-400 mt-0.5">{user.CountryCode} {user.number}</p>
           </div>
@@ -289,6 +321,22 @@ const Account = () => {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Danger zone sir — suspends immediately, permanently deletes after a 2-day recovery window */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 border border-pink-700/40">
+          <h2 className="font-display text-lg text-pink-100 mb-1 flex items-center gap-2">
+            <FaTrash className="text-base" /> Delete Account
+          </h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            This suspends your account right away. It's permanently deleted after 2 days — log back in before then to recover it.
+          </p>
+          <button
+            onClick={handleDeleteAccount}
+            className="px-4 py-2.5 text-sm font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 transition-all duration-200 cursor-pointer"
+          >
+            Delete my account
+          </button>
         </div>
       </PageTransition>
     </DashboardLayout>

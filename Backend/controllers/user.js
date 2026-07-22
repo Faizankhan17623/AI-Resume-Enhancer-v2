@@ -199,6 +199,24 @@ exports.loginUser = async (req, res) => {
             await User.findByIdAndUpdate(existingUser._id, { failedLoginAttempts: 0, lockUntil: null })
         }
 
+        // account scheduled for deletion sir — logging back in within the 2-day buffer recovers
+        // it (same window check as recoverAccount below), matching what the deletion email
+        // promises; past the window the account is gone for good so login is refused
+        if (existingUser.Buffer) {
+            const [dd, mm, yy] = existingUser.BufferTiming.split(' ')
+            const deletionDate = new Date(2000 + Number(yy), Number(mm) - 1, Number(dd))
+
+            if (Date.now() > deletionDate.getTime()) {
+                return res.status(410).json({
+                    success: false,
+                    message: 'This account was permanently deleted, please sign up again',
+                })
+            }
+
+            await User.findByIdAndUpdate(existingUser._id, { Buffer: false, BufferTiming: null })
+            existingUser.Buffer = false
+        }
+
         User.id =existingUser._id
 
         const {_id,firstName,lastName} = existingUser
