@@ -307,13 +307,16 @@ exports.SendOtp = async(req,res)=>{
         }
 
         const otpPayload = { email, otp: OtpCreate }
-        const otpBody = await OTP.create(otpPayload)
+        await OTP.create(otpPayload)
 
-    res.status(200).json({
-      success: true,
-      message: `OTP Sent Successfully`,
-      data:otpBody
-    })
+        // never echo the OTP back in the response sir — it must only reach the user via
+        // email (Models/OTP.js's pre-save hook sends it); returning it here would let
+        // anyone who can call this endpoint read the code straight from the Network tab
+        // and skip email verification entirely
+        res.status(200).json({
+            success: true,
+            message: `OTP Sent Successfully`,
+        })
 
     } catch (error) {
         console.log(error.message);
