@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
+import toast from 'react-hot-toast'
 import { FaCheck, FaHeart, FaStar, FaTimes } from 'react-icons/fa'
 import Navbar from './Navbar'
 import Footer from './Footer'
@@ -65,6 +66,12 @@ const Pricing = () => {
       navigate("/Login")
       return
     }
+    // Admin/Support accounts have no plan concept sir — the backend already blocks this
+    // (isUser on /payment/create-order), this just avoids the round-trip
+    if (user?.role !== 'User') {
+      toast.error("Only a normal user account can purchase a plan")
+      return
+    }
     dispatch(BuyPlan(planKey, token, user, navigate))
   }
 
@@ -116,7 +123,9 @@ const Pricing = () => {
             {plans.map((plan) => {
               const isPro = plan.key === 'Pro'
               const isProMax = plan.key === 'ProMax'
-              const isCurrent = token && (user?.SubType || 'Basic') === plan.key
+              // plan tiers are a User-only concept sir — an Admin/Support account has no
+              // real plan, never mark any tier as "current" for them
+              const isCurrent = token && user?.role === 'User' && (user?.SubType || 'Basic') === plan.key
               const meta = PLAN_META[plan.key] || {}
 
               return (

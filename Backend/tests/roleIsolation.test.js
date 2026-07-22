@@ -88,6 +88,17 @@ describe('isUser gate — product features are blocked for Admin/Support', () =>
         expect(notificationsRes.status).toBe(200)
     })
 
+    it('profile plan is null for Admin/Support (Basic/Pro/ProMax is a User-only concept)', async () => {
+        const { token: adminToken } = await createLoggedInUser({ email: 'admin5@example.com', number: '8888888886', role: 'Admin' })
+        const { token: supportToken } = await createLoggedInUser({ email: 'support5@example.com', number: '8888888887', role: 'Support' })
+
+        const adminProfile = await request(app).get('/api/v1/profile').set('Authorization', `Bearer ${adminToken}`)
+        expect(adminProfile.body.plan).toBeNull()
+
+        const supportProfile = await request(app).get('/api/v1/profile').set('Authorization', `Bearer ${supportToken}`)
+        expect(supportProfile.body.plan).toBeNull()
+    })
+
     it('admin dashboard routes remain unaffected by isUser (isAdmin/isSupport still gate those separately)', async () => {
         const { token } = await createLoggedInUser({ email: 'admin4@example.com', number: '8888888885', role: 'Admin' })
 

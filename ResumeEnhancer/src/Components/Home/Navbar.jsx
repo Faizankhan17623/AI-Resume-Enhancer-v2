@@ -182,10 +182,13 @@ const Navbar = () => {
           ) : (
             <>
               <NotificationBell />
-              {/* plan badge sir — shows what tier the user is on */}
-              <span className="hidden sm:inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
-                {user?.SubType || 'Basic'}
-              </span>
+              {/* plan badge sir — Basic/Pro/ProMax is a User-only concept, Admin/Support
+                  accounts have no plan at all, so this never shows for them */}
+              {user?.role === 'User' && (
+                <span className="hidden sm:inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
+                  {user?.SubType || 'Basic'}
+                </span>
+              )}
               <span className="text-sm text-richblack-100 hidden sm:inline">Hi, {user?.firstName}</span>
               <button
                 onClick={() => dispatch(LogoutUser(navigate))}
