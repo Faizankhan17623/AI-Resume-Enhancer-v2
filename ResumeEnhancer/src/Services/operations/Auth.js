@@ -73,7 +73,7 @@ export function LoginUser(email, password, navigate) {
                 throw new Error(response.data.message)
             }
 
-            const { token, user } = response.data
+            const { token, user, accountRecovered } = response.data
 
             dispatch(setToken(token))
             dispatch(setUser(user))
@@ -82,7 +82,13 @@ export function LoginUser(email, password, navigate) {
             localStorage.setItem("token", JSON.stringify(token))
             localStorage.setItem("user", JSON.stringify(user))
 
-            toast.success(`Welcome back ${user?.firstName || ''}`)
+            // longer + distinct toast sir — this is a meaningfully different event from a normal
+            // login and the user should notice their deletion got undone
+            if (accountRecovered) {
+                toast.success("Your account was recovered — the scheduled deletion has been cancelled", { duration: 6000 })
+            } else {
+                toast.success(`Welcome back ${user?.firstName || ''}`)
+            }
             if (navigate) navigate("/Dashboard")
         } catch (error) {
             logApiError("Error logging in", error)

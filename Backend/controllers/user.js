@@ -202,6 +202,7 @@ exports.loginUser = async (req, res) => {
         // account scheduled for deletion sir — logging back in within the 2-day buffer recovers
         // it (same window check as recoverAccount below), matching what the deletion email
         // promises; past the window the account is gone for good so login is refused
+        let accountRecovered = false
         if (existingUser.Buffer) {
             const [dd, mm, yy] = existingUser.BufferTiming.split('/')
             const deletionDate = new Date(2000 + Number(yy), Number(mm) - 1, Number(dd))
@@ -215,6 +216,7 @@ exports.loginUser = async (req, res) => {
 
             await User.findByIdAndUpdate(existingUser._id, { Buffer: false, BufferTiming: null })
             existingUser.Buffer = false
+            accountRecovered = true
         }
 
         User.id =existingUser._id
@@ -251,6 +253,7 @@ exports.loginUser = async (req, res) => {
             message: 'Logged in successfully',
             // token + basic profile in the body too sir — the frontend stores these in redux/localStorage
             token: JwtCreation,
+            accountRecovered,
             user: {
                 id: _id,
                 firstName,
