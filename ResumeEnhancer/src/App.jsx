@@ -132,13 +132,16 @@ function App() {
           <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
           <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
 
-          {/* Admin and Support only sir — the backend re-checks the role on every call anyway */}
+          {/* Admin and Support only sir — the backend re-checks the role on every call anyway.
+              Audit and Settings are adminOnly since their backend routes are isAdmin-gated;
+              without this a Support user could load the page (403s on the API calls) instead
+              of being redirected away like AdminNav already implies by hiding the tab */}
           <Route path="/Admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
           <Route path="/Admin/Users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/Admin/Payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
-          <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
+          <Route path="/Admin/Audit" element={<AdminRoute adminOnly><AdminAudit /></AdminRoute>} />
           <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
-          <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/Admin/Settings" element={<AdminRoute adminOnly><AdminSettings /></AdminRoute>} />
 
           {/* anything unknown goes home sir */}
           <Route path="*" element={<Navigate to="/" />} />
