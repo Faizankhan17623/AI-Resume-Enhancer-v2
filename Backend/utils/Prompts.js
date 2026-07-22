@@ -79,9 +79,17 @@ const REVIEW_SHAPES = {
       "after": "a stronger, ATS-optimized rewrite using JD keywords and a metric where reasonable"
     }
   ],
-  "quickWins": ["a change the candidate can make in under 5 minutes that lifts the ATS score"]
+  "quickWins": ["a change the candidate can make in under 5 minutes that lifts the ATS score"],
+  "learningRoadmap": [
+    {
+      "skill": "a missing/weak JD skill worth learning",
+      "priority": "high | medium | low",
+      "advice": "1-2 sentences on how to close this gap and how to show it on the resume",
+      "resourceQuery": "a short, specific search phrase to find a real course/tutorial for this skill, e.g. 'AWS Certified Solutions Architect course'"
+    }
+  ]
 }
-- Return 5-8 items in "improvements" and 3-5 items in "quickWins".
+- Return 5-8 items in "improvements", 3-5 items in "quickWins", and 3-5 items in "learningRoadmap".
 - Cover every major resume section that exists in the resume inside "sectionFeedback".`,
 
     ProMax: `{
@@ -131,7 +139,8 @@ const REVIEW_SHAPES = {
     {
       "skill": "a missing/weak JD skill worth learning",
       "priority": "high | medium | low",
-      "advice": "1-2 sentences on how to close this gap and how to show it on the resume"
+      "advice": "1-2 sentences on how to close this gap and how to show it on the resume",
+      "resourceQuery": "a short, specific search phrase to find a real course/tutorial for this skill, e.g. 'AWS Certified Solutions Architect course'"
     }
   ]
 }
