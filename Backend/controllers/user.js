@@ -1011,17 +1011,19 @@ exports.getProfile = async (req, res) => {
             CoverLetter.countDocuments({ user: id }),
         ])
 
+        // Basic/Pro/ProMax is a User-only concept sir — an Admin/Support account never has
+        // a real plan, so don't hand back a fake "Basic" here, null makes that explicit
         return res.status(200).json({
             success: true,
             user,
-            plan: {
+            plan: user.role === 'User' ? {
                 key: plan.key,
                 name: plan.name,
                 creditsUsed: user.count,
                 creditsLimit: plan.credits,          // null means unlimited sir
                 maxMessagesPerChat: plan.maxMessagesPerChat,
                 expiresAt: plan.key === 'Basic' ? null : user.SubscriptionExpires,
-            },
+            } : null,
             activity: {
                 reviewCount,
                 chatCount,
