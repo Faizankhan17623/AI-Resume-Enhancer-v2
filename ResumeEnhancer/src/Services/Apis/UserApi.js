@@ -32,5 +32,17 @@ export const Account = {
 export const Profile = {
     getprofile: BASE_URL + "/profile",
     updatenotifications: BASE_URL + "/profile/notifications",
-    completeonboarding: BASE_URL + "/profile/onboarding"
+    completeonboarding: BASE_URL + "/profile/onboarding",
+    updatefirstname: BASE_URL + "/profile/first-name",
+    updatelastname: BASE_URL + "/profile/last-name",
+    updateemail: BASE_URL + "/profile/email",
+    updatenumber: BASE_URL + "/profile/number",
+    exportdata: BASE_URL + "/profile/export"
+}
+
+export const Notifications = {
+    list: BASE_URL + "/notifications",
+    unreadcount: BASE_URL + "/notifications/unread-count",
+    readall: BASE_URL + "/notifications/read-all",
+    markread: BASE_URL + "/notifications"   // + /:notificationId/read
 }

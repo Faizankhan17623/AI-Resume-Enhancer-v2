@@ -792,6 +792,61 @@ exports.resetPassword = async (req, res) => {
 };
 
 // ============================================================
+// EXPORT MY DATA — GDPR-style self-service dump sir, distinct from delete-account
+// ============================================================
+exports.exportMyData = async (req, res) => {
+    try {
+        const userId = req.User.id
+
+        const Review = require('../Models/Review')
+        const Chat = require('../Models/Chat')
+        const CoverLetter = require('../Models/CoverLetter')
+        const Resume = require('../Models/Resume')
+        const BuiltResume = require('../Models/BuiltResume')
+        const Payment = require('../Models/Payment')
+
+        const user = await User.findById(userId)
+            .select('-password -confirmpassword -token -resetPasswordToken -resetPasswordExpires')
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            })
+        }
+
+        // every model here is already scoped by `user` sir — same fields the account page
+        // and history views already show the user, just all in one downloadable file
+        const [reviews, chats, coverLetters, resumes, builtResumes, payments] = await Promise.all([
+            Review.find({ user: userId }),
+            Chat.find({ user: userId }),
+            CoverLetter.find({ user: userId }),
+            Resume.find({ user: userId }).select('-resumeText'),
+            BuiltResume.find({ user: userId }),
+            Payment.find({ user: userId }).select('-signature'),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            exportedAt: new Date().toISOString(),
+            user,
+            reviews,
+            chats,
+            coverLetters,
+            resumes,
+            builtResumes,
+            payments,
+        })
+    } catch (error) {
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to export your data',
+        })
+    }
+}
+
+// ============================================================
 // DELETE ACCOUNT
 // ============================================================
 exports.deleteAccount = async (req, res) => {
