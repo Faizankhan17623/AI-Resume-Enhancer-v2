@@ -76,6 +76,17 @@ const FeedbackModal = () => {
     setReferralScore(null)
   }
 
+  // Escape closes the modal sir, same as clicking the backdrop
+  useEffect(() => {
+    if (!open) return
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   return (
     <AnimatePresence>
       {open && (
@@ -89,6 +100,9 @@ const FeedbackModal = () => {
             onClick={handleClose}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-modal-title"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -104,25 +118,28 @@ const FeedbackModal = () => {
             </button>
 
             <div className="flex items-center gap-2.5 mb-1">
-              <FaCommentDots className="text-warm-200 text-lg" />
-              <h3 className="font-display font-bold text-lg text-richblack-5">How are we doing?</h3>
+              <FaCommentDots className="text-warm-200 text-lg" aria-hidden="true" />
+              <h3 id="feedback-modal-title" className="font-display font-bold text-lg text-richblack-5">How are we doing?</h3>
             </div>
             <p className="text-richblack-300 text-sm mb-5">Your feedback helps us make Resumify better.</p>
 
             <div className="mb-5">
-              <p className="text-sm font-semibold text-richblack-5 mb-2.5">How would you rate your experience?</p>
-              <div className="flex gap-1.5">
+              <p className="text-sm font-semibold text-richblack-5 mb-2.5" id="feedback-rating-label">How would you rate your experience?</p>
+              <div className="flex gap-1.5" role="radiogroup" aria-labelledby="feedback-rating-label">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
+                    role="radio"
+                    aria-checked={rating === star}
                     onClick={() => setRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    aria-label={`${star} star`}
+                    aria-label={`${star} star${star === 1 ? '' : 's'}`}
                     className="cursor-pointer p-0.5"
                   >
                     <FaStar
+                      aria-hidden="true"
                       className={`text-2xl transition-colors duration-150 ${
                         star <= (hoverRating || rating) ? 'text-warm-200' : 'text-richblack-600'
                       }`}
@@ -148,12 +165,15 @@ const FeedbackModal = () => {
             </div>
 
             <div className="mb-6">
-              <p className="text-sm font-semibold text-richblack-5 mb-2.5">How likely are you to refer Resumify to a friend?</p>
-              <div className="grid grid-cols-11 gap-1">
+              <p className="text-sm font-semibold text-richblack-5 mb-2.5" id="feedback-referral-label">How likely are you to refer Resumify to a friend?</p>
+              <div className="grid grid-cols-11 gap-1" role="radiogroup" aria-labelledby="feedback-referral-label">
                 {Array.from({ length: 11 }).map((_, n) => (
                   <button
                     key={n}
                     type="button"
+                    role="radio"
+                    aria-checked={referralScore === n}
+                    aria-label={`${n} out of 10`}
                     onClick={() => setReferralScore(n)}
                     className={`h-8 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
                       referralScore === n
