@@ -27,7 +27,11 @@ exports.getPayments = async (req, res) => {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
         const [payments, total, statusAgg, planAgg, mrrAgg] = await Promise.all([
+            // never ship the Razorpay HMAC signature to the browser sir — same whitelist
+            // pattern as the user-facing payment history query, the dashboard doesn't
+            // display it and it's a payment-integrity secret, not UI data
             Payment.find(filter)
+                .select('plan amount currency status orderId paymentId createdAt user')
                 .populate('user', 'firstName lastName email')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
