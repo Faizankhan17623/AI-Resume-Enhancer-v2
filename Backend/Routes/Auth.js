@@ -15,6 +15,7 @@ const {
     updatePassword,
     deleteAccount
 } = require('../controllers/user.js')
+const { googleLogin, googleCallback } = require('../controllers/GoogleAuth.js')
 // we are going to start the routing from here sir
 
 // aiLimiter because every call here burns a Groq request + a credit sir
@@ -25,6 +26,10 @@ route.post('/response/from-resume/:resumeId',aiLimiter,Auth,CallingFromSavedResu
 route.post('/Createuser',authLimiter,createUser)
 route.post('/Login',authLimiter,loginUser)
 route.post('/Send-otp',otpLimiter,SendOtp)
+
+// full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered
+route.get('/auth/google',authLimiter,googleLogin)
+route.get('/auth/google/callback',authLimiter,googleCallback)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
 route.post('/forgot-password',authLimiter,forgotPassword)

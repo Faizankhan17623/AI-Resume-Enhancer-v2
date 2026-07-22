@@ -12,6 +12,11 @@ export const Login = {
     login: BASE_URL + "/Login"
 }
 
+// a full-page redirect, not an XHR call sir — the button below just navigates the browser here
+export const OAuth = {
+    google: BASE_URL + "/auth/google"
+}
+
 export const Password = {
     forgotpassword: BASE_URL + "/forgot-password",
     resetpassword: BASE_URL + "/reset-password",
