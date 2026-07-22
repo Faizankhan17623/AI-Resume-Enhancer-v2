@@ -203,7 +203,7 @@ exports.loginUser = async (req, res) => {
         // it (same window check as recoverAccount below), matching what the deletion email
         // promises; past the window the account is gone for good so login is refused
         if (existingUser.Buffer) {
-            const [dd, mm, yy] = existingUser.BufferTiming.split(' ')
+            const [dd, mm, yy] = existingUser.BufferTiming.split('/')
             const deletionDate = new Date(2000 + Number(yy), Number(mm) - 1, Number(dd))
 
             if (Date.now() > deletionDate.getTime()) {
@@ -800,11 +800,11 @@ exports.deleteAccount = async (req, res) => {
         const deletionDate = new Date();
         deletionDate.setDate(deletionDate.getDate() + 2);
 
-        // store it as a dd mm yy string sir (padded so it always parses back cleanly)
+        // store it as a dd/mm/yy string sir (padded so it always parses back cleanly)
         const dd = String(deletionDate.getDate()).padStart(2, '0');
         const mm = String(deletionDate.getMonth() + 1).padStart(2, '0');
         const yy = String(deletionDate.getFullYear()).slice(-2);
-        const bufferTiming = `${dd} ${mm} ${yy}`;
+        const bufferTiming = `${dd}/${mm}/${yy}`;
 
         // suspend the account into the buffer instead of deleting it now sir
         await User.findByIdAndUpdate(userId, {
@@ -870,8 +870,8 @@ exports.recoverAccount = async (req, res) => {
             });
         }
 
-        // parse the stored dd mm yy string back into a real date sir
-        const [dd, mm, yy] = existingUser.BufferTiming.split(' ');
+        // parse the stored dd/mm/yy string back into a real date sir
+        const [dd, mm, yy] = existingUser.BufferTiming.split('/');
         const deletionDate = new Date(2000 + Number(yy), Number(mm) - 1, Number(dd));
 
         // not case sir — the 2 day buffer window has already passed
