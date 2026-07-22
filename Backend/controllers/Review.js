@@ -109,6 +109,7 @@ exports.toggleShare = async (req, res) => {
     try {
         const id = req?.User.id
         const { reviewId } = req.params
+        const { audience } = req.body
 
         if (!mongoose.isValidObjectId(reviewId)) {
             return res.status(400).json({
@@ -131,12 +132,18 @@ exports.toggleShare = async (req, res) => {
         if (review.isPublic && !review.shareId) {
             review.shareId = crypto.randomBytes(9).toString('base64url')
         }
+        // audience only matters while turning share ON sir — re-toggling off leaves it as-is
+        // so re-enabling later remembers the last choice
+        if (review.isPublic && ['friend', 'recruiter'].includes(audience)) {
+            review.shareAudience = audience
+        }
         await review.save()
 
         return res.status(200).json({
             success: true,
             isPublic: review.isPublic,
             shareId: review.isPublic ? review.shareId : undefined,
+            shareAudience: review.shareAudience,
         })
     } catch (error) {
         console.log(error)
@@ -144,6 +151,55 @@ exports.toggleShare = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the share link',
+        })
+    }
+}
+
+// PATCH /reviews/:reviewId/share-audience — change who an ALREADY-shared link is framed for
+// sir, without touching isPublic (that's toggleShare's job) or minting a new shareId
+exports.updateShareAudience = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { reviewId } = req.params
+        const { audience } = req.body
+
+        if (!mongoose.isValidObjectId(reviewId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid review id',
+            })
+        }
+
+        if (!['friend', 'recruiter'].includes(audience)) {
+            return res.status(400).json({
+                success: false,
+                message: "audience must be 'friend' or 'recruiter'",
+            })
+        }
+
+        const review = await Review.findOneAndUpdate(
+            { _id: reviewId, user: id, isPublic: true },
+            { shareAudience: audience },
+            { new: true }
+        )
+
+        if (!review) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review not found or not currently shared',
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            shareAudience: review.shareAudience,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the share audience',
         })
     }
 }
@@ -173,6 +229,7 @@ exports.getPublicReview = async (req, res) => {
                 strengths: review.review?.strengths || [],
                 summary: review.review?.summary,
                 createdAt: review.createdAt,
+                shareAudience: review.shareAudience,
             },
         })
     } catch (error) {

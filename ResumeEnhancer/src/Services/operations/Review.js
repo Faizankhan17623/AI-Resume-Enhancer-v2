@@ -176,10 +176,10 @@ export function GetSingleReview(reviewId, token) {
 }
 
 // flips the review's public share link on/off sir
-export function ToggleShare(reviewId, token) {
+export function ToggleShare(reviewId, token, audience) {
     return async (dispatch) => {
         try {
-            const response = await apiConnector("POST", `${sharereview}/${reviewId}/share`, null, {
+            const response = await apiConnector("POST", `${sharereview}/${reviewId}/share`, audience ? { audience } : null, {
                 Authorization: `Bearer ${token}`
             })
 
@@ -189,12 +189,34 @@ export function ToggleShare(reviewId, token) {
 
             dispatch(setShareState({
                 isPublic: response.data.isPublic,
-                shareId: response.data.shareId
+                shareId: response.data.shareId,
+                shareAudience: response.data.shareAudience,
             }))
 
             toast.success(response.data.isPublic ? "Share link created" : "Share link turned off")
         } catch (error) {
             logApiError("Error toggling the share link", error)
+            toast.error(error?.response?.data?.message || "Could not update the share link")
+        }
+    }
+}
+
+// re-frames an ALREADY-shared link for a different audience sir, without unsharing it
+export function UpdateShareAudience(reviewId, token, audience) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", `${sharereview}/${reviewId}/share-audience`, { audience }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setShareState({ isPublic: true, shareAudience: response.data.shareAudience }))
+            toast.success("Share link updated")
+        } catch (error) {
+            logApiError("Error updating the share audience", error)
             toast.error(error?.response?.data?.message || "Could not update the share link")
         }
     }
