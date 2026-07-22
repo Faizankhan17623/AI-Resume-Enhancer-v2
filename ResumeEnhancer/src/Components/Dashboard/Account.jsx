@@ -226,6 +226,12 @@ const Account = () => {
               checked={user.notifyDigest !== false}
               onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyDigest: value }, token))}
             />
+            <Toggle
+              label="Monthly resume health check"
+              hint="A monthly ATS formatting score for your default resume"
+              checked={user.notifyHealthCheck !== false}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyHealthCheck: value }, token))}
+            />
           </div>
         </div>
 

@@ -912,7 +912,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest onboardingCompleted')
+            .select('firstName lastName email number CountryCode role Verified Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck onboardingCompleted')
 
         if (!user) {
             return res.status(404).json({
@@ -970,13 +970,14 @@ exports.getProfile = async (req, res) => {
 exports.updateNotificationPrefs = async (req, res) => {
     try {
         const userId = req.User.id;
-        const { notifyStreak, notifyWinBack, notifyDigest } = req.body;
+        const { notifyStreak, notifyWinBack, notifyDigest, notifyHealthCheck } = req.body;
 
         // only touch the fields the caller actually sent sir, so a partial update never resets the others
         const updates = {};
         if (typeof notifyStreak === 'boolean') updates.notifyStreak = notifyStreak;
         if (typeof notifyWinBack === 'boolean') updates.notifyWinBack = notifyWinBack;
         if (typeof notifyDigest === 'boolean') updates.notifyDigest = notifyDigest;
+        if (typeof notifyHealthCheck === 'boolean') updates.notifyHealthCheck = notifyHealthCheck;
 
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({
@@ -986,7 +987,7 @@ exports.updateNotificationPrefs = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
-            .select('notifyStreak notifyWinBack notifyDigest');
+            .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -1001,6 +1002,7 @@ exports.updateNotificationPrefs = async (req, res) => {
             notifyStreak: updatedUser.notifyStreak,
             notifyWinBack: updatedUser.notifyWinBack,
             notifyDigest: updatedUser.notifyDigest,
+            notifyHealthCheck: updatedUser.notifyHealthCheck,
         });
     } catch (error) {
         console.log(error.message);

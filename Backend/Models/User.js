@@ -125,6 +125,12 @@ const UserCreation = new mongoose.Schema(
             type: Boolean,
             default: true
         },
+        // monthly re-surface of the default resume's stored ATS formatting score sir —
+        // same opt-out pattern as the three above
+        notifyHealthCheck: {
+            type: Boolean,
+            default: true
+        },
         // brute-force lockout sir — on top of the IP rate limiter, this is PER-ACCOUNT so a
         // distributed attack (many IPs, one target account) still gets stopped
         failedLoginAttempts: {
