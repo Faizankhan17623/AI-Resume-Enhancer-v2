@@ -1,7 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const {Calling, CallingFromSavedResume} = require('../controllers/AI')
-const {Auth} = require('../Middlewares/Auth.js')
+const {Auth, isUser} = require('../Middlewares/Auth.js')
 const { authLimiter, otpLimiter, aiLimiter } = require('../Middlewares/RateLimit.js')
 const {
     createUser,
@@ -25,9 +25,10 @@ const {
 // const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 // we are going to start the routing from here sir
 
-// aiLimiter because every call here burns a Groq request + a credit sir
-route.post('/response',aiLimiter,Auth,Calling)
-route.post('/response/from-resume/:resumeId',aiLimiter,Auth,CallingFromSavedResume)
+// aiLimiter because every call here burns a Groq request + a credit sir.
+// isUser blocks Admin/Support too, this is a product feature, strictly User-only
+route.post('/response',aiLimiter,Auth,isUser,Calling)
+route.post('/response/from-resume/:resumeId',aiLimiter,Auth,isUser,CallingFromSavedResume)
 
 // authLimiter stops brute-force sir, otpLimiter stops email spam
 route.post('/Createuser',authLimiter,createUser)

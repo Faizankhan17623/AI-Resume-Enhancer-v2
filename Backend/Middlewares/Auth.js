@@ -99,3 +99,19 @@ exports.isSupport = (req, res, next) => {
     }
     next()
 }
+
+// product-feature gate sir — the mirror of isAdmin/isSupport, for the OTHER direction.
+// Every role is strictly isolated to its own dashboard (frontend: PrivateRoute/AdminRoute/
+// SupportRoute); this is the server-side enforcement so an Admin/Support token can't just
+// call the User-facing product APIs (AI review, chat, resume builder, etc) directly,
+// bypassing the frontend guard entirely. Account-management routes (profile, password,
+// delete-account, notifications) are NOT behind this — every role still manages its own account.
+exports.isUser = (req, res, next) => {
+    if (req?.User?.role !== 'User') {
+        return res.status(403).json({
+            success: false,
+            message: 'Admin and Support accounts cannot use this feature — sign in with a normal user account instead',
+        })
+    }
+    next()
+}

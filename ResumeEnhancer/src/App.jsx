@@ -11,6 +11,7 @@ import Footer from './Components/Home/Footer'
 import OpenRoute from './Hooks/OpenRoute'
 import PrivateRoute from './Hooks/PrivateRoute'
 import AdminRoute from './Hooks/AdminRoute'
+import SupportRoute from './Hooks/SupportRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 import CookieConsent from './Components/extra/CookieConsent'
@@ -135,16 +136,23 @@ function App() {
           <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
           <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
 
-          {/* Admin and Support only sir — the backend re-checks the role on every call anyway.
-              Audit and Settings are adminOnly since their backend routes are isAdmin-gated;
-              without this a Support user could load the page (403s on the API calls) instead
-              of being redirected away like AdminNav already implies by hiding the tab */}
+          {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
+              these gets redirected to their OWN dashboard at /Support, never let through. */}
           <Route path="/Admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
           <Route path="/Admin/Users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/Admin/Payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
-          <Route path="/Admin/Audit" element={<AdminRoute adminOnly><AdminAudit /></AdminRoute>} />
+          <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
           <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
-          <Route path="/Admin/Settings" element={<AdminRoute adminOnly><AdminSettings /></AdminRoute>} />
+          <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+
+          {/* Support-only sir — strictly, see SupportRoute.jsx. An Admin hitting any of these
+              gets redirected to /Admin instead. Reuses the same Overview/Users/Payments/
+              Announcements components (they already self-gate write actions by role
+              internally), just under their own URL space with no Audit/Settings routes at all. */}
+          <Route path="/Support" element={<SupportRoute><AdminOverview /></SupportRoute>} />
+          <Route path="/Support/Users" element={<SupportRoute><AdminUsers /></SupportRoute>} />
+          <Route path="/Support/Payments" element={<SupportRoute><AdminPayments /></SupportRoute>} />
+          <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
 
           {/* anything unknown goes home sir */}
           <Route path="*" element={<Navigate to="/" />} />

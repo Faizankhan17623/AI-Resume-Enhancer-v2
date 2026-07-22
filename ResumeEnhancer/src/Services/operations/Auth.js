@@ -89,7 +89,9 @@ export function LoginUser(email, password, navigate) {
             } else {
                 toast.success(`Welcome back ${user?.firstName || ''}`)
             }
-            if (navigate) navigate("/Dashboard")
+            // each role lands on its OWN dashboard sir — never a shared landing page
+            const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
+            if (navigate) navigate(landingPath)
         } catch (error) {
             logApiError("Error logging in", error)
             toast.error(error?.response?.data?.message || "Could not log you in")
