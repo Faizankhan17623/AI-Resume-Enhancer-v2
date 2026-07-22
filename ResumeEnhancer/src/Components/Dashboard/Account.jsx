@@ -5,13 +5,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import Swal from 'sweetalert2'
-import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash } from 'react-icons/fa'
+import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
-import { GetProfile, UpdateNotificationPrefs, ChangePassword } from '../../Services/operations/User'
+import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 
@@ -56,6 +56,78 @@ const statusChip = {
   paid: 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700',
   created: 'bg-yellow-700/30 text-yellow-25 border-yellow-700',
   failed: 'bg-pink-700/30 text-pink-100 border-pink-700',
+}
+
+// one inline-editable profile field sir (name/email/phone) — click the pencil, edit, save or
+// cancel; onSave returns true/false so the field only exits edit mode on a real success
+const EditableField = ({ label, value, onSave, type = 'text' }) => {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [saving, setSaving] = useState(false)
+
+  const startEdit = () => {
+    setDraft(value)
+    setEditing(true)
+  }
+
+  const save = async () => {
+    if (draft.trim() === value) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    const ok = await onSave(draft.trim())
+    setSaving(false)
+    if (ok) setEditing(false)
+  }
+
+  return (
+    <div className="flex items-center justify-between py-3 gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-richblack-400">{label}</p>
+        {editing ? (
+          <input
+            type={type}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            aria-label={`Edit ${label}`}
+            autoFocus
+            className="mt-1 w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-1.5 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+          />
+        ) : (
+          <p className="text-sm text-richblack-5 mt-0.5 truncate">{value}</p>
+        )}
+      </div>
+      {editing ? (
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={save}
+            disabled={saving}
+            aria-label={`Save ${label}`}
+            className="p-2 text-caribgreen-100 hover:bg-richblack-700 rounded-full transition-colors duration-200 cursor-pointer disabled:opacity-50"
+          >
+            <FaCheck className="text-xs" />
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            disabled={saving}
+            aria-label={`Cancel editing ${label}`}
+            className="p-2 text-pink-200 hover:bg-richblack-700 rounded-full transition-colors duration-200 cursor-pointer disabled:opacity-50"
+          >
+            <FaTimes className="text-xs" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={startEdit}
+          aria-label={`Edit ${label}`}
+          className="p-2 shrink-0 text-richblack-300 hover:text-yellow-50 hover:bg-richblack-700 rounded-full transition-colors duration-200 cursor-pointer"
+        >
+          <FaEdit className="text-xs" />
+        </button>
+      )}
+    </div>
+  )
 }
 
 const Account = () => {
@@ -235,6 +307,38 @@ const Account = () => {
           </div>
         </div>
 
+        {/* Edit profile sir — inline-editable name/email/phone */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaEdit className="text-yellow-50 text-base" /> Edit Profile
+          </h2>
+          <p className="text-xs text-richblack-400 mb-2">Click the pencil next to a field to update it.</p>
+          <div className="divide-y divide-richblack-700 max-w-md">
+            <EditableField
+              label="First name"
+              value={user.firstName}
+              onSave={(v) => dispatch(UpdateFirstName(v, token))}
+            />
+            <EditableField
+              label="Last name"
+              value={user.lastName}
+              onSave={(v) => dispatch(UpdateLastName(v, token))}
+            />
+            <EditableField
+              label="Email"
+              value={user.email}
+              type="email"
+              onSave={(v) => dispatch(UpdateEmail(v, token))}
+            />
+            <EditableField
+              label="Phone number"
+              value={user.number}
+              type="tel"
+              onSave={(v) => dispatch(UpdateNumber(v, token))}
+            />
+          </div>
+        </div>
+
         {/* Change password sir — a Google account has no local password to change */}
         {user.provider === 'local' && (
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
@@ -329,6 +433,22 @@ const Account = () => {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Export my data sir — GDPR-style self-service dump, distinct from account deletion */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaDownload className="text-yellow-50 text-base" /> Export My Data
+          </h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            Download a copy of your reviews, chats, cover letters, resumes, and payment history as a JSON file.
+          </p>
+          <button
+            onClick={() => dispatch(ExportMyData(token))}
+            className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+          >
+            Download my data
+          </button>
         </div>
 
         {/* Danger zone sir — suspends immediately, permanently deletes after a 2-day recovery window */}

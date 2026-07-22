@@ -13,6 +13,11 @@ const {
     forgotPassword,
     resetPassword,
     updatePassword,
+    updateFirstName,
+    updateLastName,
+    updateEmail,
+    updateNumber,
+    exportMyData,
     deleteAccount
 } = require('../controllers/user.js')
 // Google OAuth temporarily disabled sir — Google Cloud console credentials not set up yet,
@@ -49,5 +54,12 @@ route.delete('/delete-account',Auth,deleteAccount)
 route.get('/profile',Auth,getProfile)
 route.patch('/profile/notifications',Auth,updateNotificationPrefs)
 route.patch('/profile/onboarding',Auth,completeOnboarding)
+route.patch('/profile/first-name',Auth,updateFirstName)
+route.patch('/profile/last-name',Auth,updateLastName)
+route.patch('/profile/email',Auth,updateEmail)
+route.patch('/profile/number',Auth,updateNumber)
+
+// GDPR-style self-service data dump sir, separate from delete-account
+route.get('/profile/export',Auth,exportMyData)
 
 module.exports = route
