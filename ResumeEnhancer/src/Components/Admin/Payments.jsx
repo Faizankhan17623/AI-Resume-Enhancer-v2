@@ -83,42 +83,71 @@ const Payments = () => {
         {loading ? (
           <Loading text="Loading the payments..." />
         ) : (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
-              <thead>
-                <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
-                  <th className="p-4">User</th>
-                  <th className="p-4">Plan</th>
-                  <th className="p-4">Amount</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Order ID</th>
-                  <th className="p-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-richblack-700">
-                {(payments?.payments || []).map((payment) => (
-                  <tr key={payment._id}>
-                    <td className="p-4">
-                      <p className="font-medium text-richblack-5">{payment.user?.firstName} {payment.user?.lastName}</p>
-                      <p className="text-xs text-richblack-400">{payment.user?.email}</p>
-                    </td>
-                    <td className="p-4 text-richblack-100">{payment.plan}</td>
-                    <td className="p-4 font-mono text-richblack-5">₹{payment.amount / 100}</td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusChip[payment.status] || statusChip.created}`}>
-                        {payment.status}
-                      </span>
-                    </td>
-                    <td className="p-4 font-mono text-xs text-richblack-300">{payment.orderId}</td>
-                    <td className="p-4 text-xs text-richblack-300">{new Date(payment.createdAt).toLocaleString()}</td>
+          <>
+            {/* Mobile card list sir — same data as the table below, one card per payment,
+                shown below lg so nobody has to horizontally scroll a table on a phone */}
+            <div className="lg:hidden space-y-3">
+              {(payments?.payments || []).map((payment) => (
+                <div key={payment._id} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-richblack-5 truncate">{payment.user?.firstName} {payment.user?.lastName}</p>
+                      <p className="text-xs text-richblack-400 truncate">{payment.user?.email}</p>
+                    </div>
+                    <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusChip[payment.status] || statusChip.created}`}>
+                      {payment.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-richblack-100">{payment.plan}</span>
+                    <span className="font-mono text-richblack-5">₹{payment.amount / 100}</span>
+                  </div>
+                  <p className="font-mono text-xs text-richblack-300 mt-2 truncate">{payment.orderId}</p>
+                  <p className="text-xs text-richblack-300 mt-1">{new Date(payment.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+              {(payments?.payments || []).length === 0 && (
+                <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
+              )}
+            </div>
+
+            <div className="hidden lg:block rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 overflow-x-auto">
+              <table className="w-full text-sm min-w-[800px]">
+                <thead>
+                  <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
+                    <th className="p-4">User</th>
+                    <th className="p-4">Plan</th>
+                    <th className="p-4">Amount</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Order ID</th>
+                    <th className="p-4">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {(payments?.payments || []).length === 0 && (
-              <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
-            )}
-          </div>
+                </thead>
+                <tbody className="divide-y divide-richblack-700">
+                  {(payments?.payments || []).map((payment) => (
+                    <tr key={payment._id}>
+                      <td className="p-4">
+                        <p className="font-medium text-richblack-5">{payment.user?.firstName} {payment.user?.lastName}</p>
+                        <p className="text-xs text-richblack-400">{payment.user?.email}</p>
+                      </td>
+                      <td className="p-4 text-richblack-100">{payment.plan}</td>
+                      <td className="p-4 font-mono text-richblack-5">₹{payment.amount / 100}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusChip[payment.status] || statusChip.created}`}>
+                          {payment.status}
+                        </span>
+                      </td>
+                      <td className="p-4 font-mono text-xs text-richblack-300">{payment.orderId}</td>
+                      <td className="p-4 text-xs text-richblack-300">{new Date(payment.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(payments?.payments || []).length === 0 && (
+                <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
+              )}
+            </div>
+          </>
         )}
 
         {/* Pagination sir */}
