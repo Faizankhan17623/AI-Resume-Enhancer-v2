@@ -7,3 +7,6 @@ node_modules/
 
 # logs
 *.log
+
+# local-only debug/admin scripts sir — e.g. listUsers.js, never meant for the repo/prod
+scripts/listUsers.js
