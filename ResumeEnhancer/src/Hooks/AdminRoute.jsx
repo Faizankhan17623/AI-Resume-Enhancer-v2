@@ -1,21 +1,21 @@
 import { useSelector } from 'react-redux'
 import { Navigate } from 'react-router-dom'
 
-// only Admin and Support get in sir — the backend double-checks with isAdmin/isSupport anyway,
-// this just keeps normal users from ever seeing the admin pages.
-// adminOnly further restricts to Admin alone, for the two pages (Audit, Settings) whose
-// backend routes are isAdmin-gated — without this a Support user could still type/bookmark
-// the URL directly even though AdminNav already hides the tab for them
-function AdminRoute({ children, adminOnly = false }) {
+// Admin only sir — strictly. Every role is locked to its own dashboard: a Support user
+// hitting an /Admin/* URL gets sent to their real dashboard at /Support, not let through
+// with some buttons hidden. The backend re-checks with isAdmin on every call regardless.
+function AdminRoute({ children }) {
     const { token, user } = useSelector((state) => state.auth)
 
-    const allowedRoles = adminOnly ? ['Admin'] : ['Admin', 'Support']
-
-    if (token !== null && allowedRoles.includes(user?.role)) {
-        return children
-    } else {
+    if (token === null) {
+        return <Navigate to="/Login" />
+    }
+    if (user?.role === 'Support') {
+        return <Navigate to="/Support" />
+    }
+    if (user?.role !== 'Admin') {
         return <Navigate to="/Dashboard" />
     }
-
+    return children
 }
 export default AdminRoute

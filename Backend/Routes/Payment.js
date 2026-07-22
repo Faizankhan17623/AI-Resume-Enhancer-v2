@@ -1,6 +1,6 @@
 const express = require('express')
 const route = express.Router()
-const {Auth} = require('../Middlewares/Auth.js')
+const {Auth, isUser} = require('../Middlewares/Auth.js')
 const {
     getPlans,
     createOrder,
@@ -8,11 +8,12 @@ const {
     getPaymentHistory
 } = require('../controllers/Payment.js')
 
-// everything about money lives here sir
+// everything about money lives here sir. isUser blocks Admin/Support too — buying/holding
+// a subscription plan is a User-only concept, an Admin/Support account has none
 
 route.get('/payment/plans',getPlans)
-route.post('/payment/create-order',Auth,createOrder)
-route.post('/payment/verify',Auth,verifyPayment)
-route.get('/payment/history',Auth,getPaymentHistory)
+route.post('/payment/create-order',Auth,isUser,createOrder)
+route.post('/payment/verify',Auth,isUser,verifyPayment)
+route.get('/payment/history',Auth,isUser,getPaymentHistory)
 
 module.exports = route
