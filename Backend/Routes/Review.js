@@ -7,6 +7,7 @@ const {
     getReview,
     downloadReviewPdf,
     toggleShare,
+    updateShareAudience,
     getPublicReview
 } = require('../controllers/Review.js')
 const { getStreak } = require('../controllers/Streak.js')
@@ -21,6 +22,7 @@ route.get('/reviews/progress', Auth, getProgress)
 route.get('/reviews/:reviewId', Auth, getReview)
 route.get('/reviews/:reviewId/pdf', Auth, downloadReviewPdf)
 route.post('/reviews/:reviewId/share', Auth, toggleShare)
+route.patch('/reviews/:reviewId/share-audience', Auth, updateShareAudience)
 
 // public share card sir — NO Auth, this is the whole point, must stay behind shareId + isPublic only
 route.get('/public/reviews/:shareId', getPublicReview)

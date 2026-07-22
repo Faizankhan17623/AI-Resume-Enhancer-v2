@@ -7,6 +7,7 @@ const initialState = {
     // share state for the review currently open sir
     isPublic: false,
     shareId: null,
+    shareAudience: 'friend',
     // structural ATS parse-safety scan for the review currently open sir — separate from the
     // AI's subjective review JSON above
     formattingCheck: null,
@@ -39,7 +40,12 @@ const reviewSlice = createSlice({
         },
         setShareState(state, value) {
             state.isPublic = value.payload.isPublic
-            state.shareId = value.payload.shareId ?? null
+            // shareId is omitted (not null) when only the audience changed sir — don't wipe
+            // the existing link in that case, only ToggleShare's own response carries a fresh one
+            if ('shareId' in value.payload) {
+                state.shareId = value.payload.shareId ?? null
+            }
+            state.shareAudience = value.payload.shareAudience ?? 'friend'
         },
         setAllReviews(state, value) {
             state.allReviews = value.payload

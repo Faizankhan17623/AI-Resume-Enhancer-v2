@@ -62,6 +62,13 @@ const ReviewCreation = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // who the public link is framed for sir — same underlying safe-subset data either way,
+        // only the closing CTA on the shared page differs (see SharedReport.jsx)
+        shareAudience: {
+            type: String,
+            enum: ['friend', 'recruiter'],
+            default: 'friend',
+        },
     }, { timestamps: true }
 )
 
