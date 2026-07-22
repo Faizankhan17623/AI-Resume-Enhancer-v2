@@ -15,7 +15,9 @@ const {
     updatePassword,
     deleteAccount
 } = require('../controllers/user.js')
-const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
+// Google OAuth temporarily disabled sir — Google Cloud console credentials not set up yet,
+// see GoogleAuth.js and the routes below (commented, not removed)
+// const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 // we are going to start the routing from here sir
 
 // aiLimiter because every call here burns a Groq request + a credit sir
@@ -27,12 +29,15 @@ route.post('/Createuser',authLimiter,createUser)
 route.post('/Login',authLimiter,loginUser)
 route.post('/Send-otp',otpLimiter,SendOtp)
 
+// Google OAuth temporarily disabled sir — re-enable by uncommenting these three routes
+// plus the require above, once GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_CALLBACK_URL
+// are set in .env
 // full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered
-route.get('/auth/google',authLimiter,googleLogin)
-route.get('/auth/google/callback',authLimiter,googleCallback)
+// route.get('/auth/google',authLimiter,googleLogin)
+// route.get('/auth/google/callback',authLimiter,googleCallback)
 // the frontend calls this right after landing on /oauth/complete sir — trades the one-time
 // code (all the redirect URL ever carries) for the real token, in the response body only
-route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
+// route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
 route.post('/forgot-password',authLimiter,forgotPassword)

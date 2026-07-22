@@ -7,7 +7,8 @@ import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
 import { LoginUser } from '../../Services/operations/Auth'
-import { OAuth } from '../../Services/Apis/UserApi'
+// Google OAuth temporarily disabled sir — see the commented button below
+// import { OAuth } from '../../Services/Apis/UserApi'
 
 const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const labelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
@@ -83,6 +84,8 @@ const User = () => {
             customClasses="w-full justify-center"
           />
 
+          {/* Google OAuth temporarily disabled sir — Cloud console credentials not set up yet.
+              Re-enable by uncommenting this block + the OAuth import above.
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-richblack-700" />
             <span className="text-xs text-richblack-400">or</span>
@@ -102,6 +105,7 @@ const User = () => {
             </svg>
             Continue with Google
           </button>
+          */}
 
           <p className="text-center text-sm text-richblack-300">
             New here?{' '}

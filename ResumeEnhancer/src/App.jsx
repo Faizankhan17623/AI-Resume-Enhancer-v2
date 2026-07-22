@@ -21,7 +21,8 @@ const OTP = lazy(() => import('./Components/UserCreation/OTP'))
 const Login = lazy(() => import('./Components/Login/User'))
 const ForgotPassword = lazy(() => import('./Components/Login/ForgotPassword'))
 const ResetPassword = lazy(() => import('./Components/Login/ResetPassword'))
-const OAuthComplete = lazy(() => import('./Components/Login/OAuthComplete'))
+// Google OAuth temporarily disabled sir — see the commented route below
+// const OAuthComplete = lazy(() => import('./Components/Login/OAuthComplete'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
@@ -107,8 +108,10 @@ function App() {
           <Route path="/" element={<Homelayout />} />
           <Route path="/Pricing" element={<Pricing />} />
           <Route path="/Shared/:shareId" element={<SharedReport />} />
-          {/* not wrapped in OpenRoute sir — it needs to run before a token exists in redux at all */}
+          {/* Google OAuth temporarily disabled sir — Cloud console credentials not set up yet.
+              Re-enable by uncommenting this route + the lazy import above.
           <Route path="/oauth/complete" element={<OAuthComplete />} />
+          */}
 
           {/* Only for the logged-OUT sir */}
           <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />
