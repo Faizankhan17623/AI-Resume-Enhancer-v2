@@ -18,6 +18,10 @@ export const Password = {
     changepassword: BASE_URL + "/change-password"
 }
 
+export const Account = {
+    deleteaccount: BASE_URL + "/delete-account"
+}
+
 export const Profile = {
     getprofile: BASE_URL + "/profile",
     updatenotifications: BASE_URL + "/profile/notifications",
