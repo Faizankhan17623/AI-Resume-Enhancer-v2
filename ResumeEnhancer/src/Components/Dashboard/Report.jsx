@@ -3,13 +3,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle } from 'react-icons/fa'
+import Swal from 'sweetalert2'
+import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle, FaSearch } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import ScoreRing from '../extra/ScoreRing'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
-import { GetSingleReview, DownloadReviewPdf, ToggleShare } from '../../Services/operations/Review'
+import { GetSingleReview, DownloadReviewPdf, ToggleShare, UpdateShareAudience } from '../../Services/operations/Review'
 
 // score → color, same rule everywhere sir
 const scoreColor = (score) =>
@@ -36,12 +37,44 @@ const copyText = (text) => {
   toast.success("Copied to clipboard")
 }
 
+const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
 const Report = () => {
   const { reviewId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { review, loading, isPublic, shareId, formattingCheck } = useSelector((state) => state.review)
+  const { review, loading, isPublic, shareId, shareAudience, formattingCheck } = useSelector((state) => state.review)
   const shareUrl = shareId ? `${window.location.origin}/Shared/${shareId}` : null
+
+  const handleShareClick = async () => {
+    if (isPublic) {
+      dispatch(ToggleShare(reviewId, token))
+      return
+    }
+    const { value: audience } = await Swal.fire({
+      ...swalDark,
+      title: 'Who is this link for?',
+      input: 'radio',
+      inputOptions: { friend: 'A friend or on social media', recruiter: 'A recruiter or hiring manager' },
+      inputValue: 'friend',
+      showCancelButton: true,
+      confirmButtonText: 'Create link',
+    })
+    if (audience) dispatch(ToggleShare(reviewId, token, audience))
+  }
+
+  const handleChangeAudience = async () => {
+    const { value: audience } = await Swal.fire({
+      ...swalDark,
+      title: 'Who is this link for?',
+      input: 'radio',
+      inputOptions: { friend: 'A friend or on social media', recruiter: 'A recruiter or hiring manager' },
+      inputValue: shareAudience,
+      showCancelButton: true,
+      confirmButtonText: 'Update',
+    })
+    if (audience && audience !== shareAudience) dispatch(UpdateShareAudience(reviewId, token, audience))
+  }
 
   useEffect(() => {
     dispatch(GetSingleReview(reviewId, token))
@@ -89,7 +122,7 @@ const Report = () => {
               </IconBtn>
               <IconBtn
                 text={isPublic ? "Unshare" : "Share"}
-                onclick={() => dispatch(ToggleShare(reviewId, token))}
+                onclick={handleShareClick}
                 customClasses="text-sm"
                 outline
               >
@@ -102,15 +135,21 @@ const Report = () => {
               </Link>
             </div>
             {isPublic && shareUrl && (
-              <div className="mt-4 flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5 max-w-md mx-auto md:mx-0">
-                <p className="text-xs text-richblack-200 truncate flex-1">{shareUrl}</p>
-                <button
-                  onClick={() => copyText(shareUrl)}
-                  className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
-                  title="Copy link"
-                >
-                  <FaCopy className="text-sm" />
-                </button>
+              <div className="mt-4 max-w-md mx-auto md:mx-0">
+                <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
+                  <p className="text-xs text-richblack-200 truncate flex-1">{shareUrl}</p>
+                  <button
+                    onClick={() => copyText(shareUrl)}
+                    className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+                    title="Copy link"
+                  >
+                    <FaCopy className="text-sm" />
+                  </button>
+                </div>
+                <p className="text-xs text-richblack-400 mt-1.5">
+                  Framed for {shareAudience === 'recruiter' ? 'a recruiter' : 'a friend'} —{' '}
+                  <button onClick={handleChangeAudience} className="text-yellow-50 hover:underline cursor-pointer">change</button>
+                </p>
               </div>
             )}
           </div>
@@ -338,7 +377,7 @@ const Report = () => {
           </Section>
         )}
 
-        {/* ProMax: learning roadmap */}
+        {/* Pro+: learning roadmap */}
         {review.learningRoadmap?.length > 0 && (
           <Section title="Learning Roadmap">
             <div className="space-y-4">
@@ -353,6 +392,16 @@ const Report = () => {
                       </span>
                     </p>
                     <p className="text-sm text-richblack-200 mt-1">{item.advice}</p>
+                    {item.resourceQuery && (
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(item.resourceQuery)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-blue-100 hover:text-blue-50 transition-colors duration-200"
+                      >
+                        <FaSearch className="text-[10px]" /> Find a course: {item.resourceQuery}
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
