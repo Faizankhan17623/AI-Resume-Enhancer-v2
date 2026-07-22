@@ -1,6 +1,7 @@
 const cron = require('node-cron')
 const User = require('../Models/User')
 const Review = require('../Models/Review')
+const Resume = require('../Models/Resume')
 const mailSender = require('./Nodemailer')
 
 // day-window helper sir — returns [startOfDay, endOfDay] N days ago, in UTC, so the query
@@ -39,6 +40,19 @@ const digestEmailHtml = (name, { count, bestScore, latestScore, improvement }) =
             <li>Change since your first review this week: <strong>${improvement >= 0 ? '+' : ''}${improvement}</strong></li>
         </ul>
         <p>Keep iterating — every review gets you closer to an interview.</p>
+    </div>
+`
+
+const healthCheckEmailHtml = (name, { label, score, topIssue }) => `
+    <div style="font-family: sans-serif;">
+        <h2>Monthly resume health check, ${name}</h2>
+        <p>Here's how <strong>${label}</strong> is doing on ATS formatting:</p>
+        <p style="font-size:28px;font-weight:bold;margin:12px 0;">${score}/100</p>
+        ${topIssue
+            ? `<p><strong>Top thing to fix:</strong> ${topIssue}</p>`
+            : `<p>No formatting issues detected — nice work.</p>`
+        }
+        <p>Log in any time to re-scan or run a fresh ATS review against a new job description.</p>
     </div>
 `
 
@@ -107,6 +121,38 @@ const sendWinBackNudges = async () => {
     }
 }
 
+// monthly resume health check sir — re-surfaces the STORED formattingCheck (from Resume.js,
+// computed once at upload time) for each user's default resume. Deliberately no fresh AI call
+// and no JD needed here: it's a free, deterministic nudge, not a full re-review.
+const sendMonthlyHealthCheck = async () => {
+    const defaults = await Resume.find({ isDefault: true, 'formattingCheck.score': { $ne: null } })
+        .select('user label originalFilename formattingCheck')
+
+    if (!defaults.length) return
+
+    const users = await User.find({
+        _id: { $in: defaults.map((r) => r.user) },
+        notifyHealthCheck: true,
+    }).select('email firstName')
+    const usersById = new Map(users.map((u) => [String(u._id), u]))
+
+    for (const resume of defaults) {
+        const user = usersById.get(String(resume.user))
+        if (!user) continue
+
+        const topIssue = resume.formattingCheck.issues?.[0]?.message || null
+        mailSender(
+            user.email,
+            'Your monthly resume health check',
+            healthCheckEmailHtml(user.firstName, {
+                label: resume.label || resume.originalFilename || 'your resume',
+                score: resume.formattingCheck.score,
+                topIssue,
+            })
+        ).catch((err) => console.log('health-check email failed:', err.message))
+    }
+}
+
 // registered once from index.js sir, guarded by NODE_ENV !== 'test' same as connectDB()/app.listen
 // runs once a day at 09:00 UTC
 const startStreakCron = () => {
@@ -125,6 +171,15 @@ const startStreakCron = () => {
             await sendWeeklyDigest()
         } catch (err) {
             console.log('weekly digest cron failed:', err.message)
+        }
+    })
+
+    // monthly health check sir — 1st of the month, 08:00 UTC
+    cron.schedule('0 8 1 * *', async () => {
+        try {
+            await sendMonthlyHealthCheck()
+        } catch (err) {
+            console.log('health-check cron failed:', err.message)
         }
     })
 }
