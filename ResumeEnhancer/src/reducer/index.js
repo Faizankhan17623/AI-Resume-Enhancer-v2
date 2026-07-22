@@ -9,6 +9,7 @@ import coverLetterReducer from '../Slices/coverLetterSlice'
 import resumeReducer from '../Slices/resumeSlice'
 import builtResumeReducer from '../Slices/builtResumeSlice'
 import jobSearchReducer from '../Slices/jobSearchSlice'
+import notificationReducer from '../Slices/notificationSlice'
 
 const rootReduers = combineReducers({
     auth: authReducer,
@@ -21,6 +22,7 @@ const rootReduers = combineReducers({
     resume: resumeReducer,
     builtResume: builtResumeReducer,
     jobSearch: jobSearchReducer,
+    notification: notificationReducer,
 })
 
 

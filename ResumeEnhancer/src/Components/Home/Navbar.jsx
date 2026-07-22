@@ -6,6 +6,7 @@ import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiLogOut, FiSun, FiMoon, FiChevronDown } from 'react-icons/fi'
 import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
+import NotificationBell from './NotificationBell'
 import { LogoutUser } from '../../Services/operations/Auth'
 import useTheme from '../../Hooks/useTheme'
 
@@ -166,6 +167,7 @@ const Navbar = () => {
             </>
           ) : (
             <>
+              <NotificationBell />
               {/* plan badge sir — shows what tier the user is on */}
               <span className="hidden sm:inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
                 {user?.SubType || 'Basic'}
