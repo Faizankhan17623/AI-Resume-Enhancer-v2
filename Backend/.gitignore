@@ -11,3 +11,6 @@ node_modules/
 # local-only debug/admin scripts sir — one-off tools run by hand against prod/local DBs,
 # never meant to be tracked or deployed (e.g. makeAdmin.js, listUsers.js)
 scripts/
+
+# throwaway local verification test files sir — never for the repo
+tests/__*-check.test.js

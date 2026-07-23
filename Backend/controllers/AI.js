@@ -8,6 +8,7 @@ const Resume = require('../Models/Resume');
 const { consumeCredit } = require('../utils/Plans');
 const { buildReviewSystemPrompt } = require('../utils/Prompts');
 const { logAi } = require('../utils/AdminLog');
+const { syncKeywordBankFromReview } = require('../utils/KeywordBank');
 const { updateStreak } = require('../utils/Streak');
 const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
@@ -135,6 +136,7 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     // fire-and-forget sir — a streak failure must never break the review response
     updateStreak(userId)
     recordFeatureUse(userId)
+    if (reviewId) syncKeywordBankFromReview(userId, reviewId, review)
 
     return res.status(200).json({
         success: true,

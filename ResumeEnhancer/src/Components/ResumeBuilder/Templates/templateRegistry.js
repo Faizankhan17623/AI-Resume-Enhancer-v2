@@ -8,6 +8,8 @@ import CompactTemplate from './CompactTemplate'
 import ElegantTemplate from './ElegantTemplate'
 import BoldTemplate from './BoldTemplate'
 import FreshGradTemplate from './FreshGradTemplate'
+import TimelineTemplate from './TimelineTemplate'
+import SplitTemplate from './SplitTemplate'
 
 export const TEMPLATE_REGISTRY = [
   {
@@ -69,6 +71,18 @@ export const TEMPLATE_REGISTRY = [
     name: 'Fresh Graduate',
     description: 'Friendly education-forward layout for new graduates',
     Component: FreshGradTemplate,
+  },
+  {
+    id: 'timeline',
+    name: 'Timeline',
+    description: 'Centered header with a dotted vertical timeline for experience',
+    Component: TimelineTemplate,
+  },
+  {
+    id: 'split',
+    name: 'Split',
+    description: 'Two-tone header band with a dense three-column body',
+    Component: SplitTemplate,
   },
 ]
 
