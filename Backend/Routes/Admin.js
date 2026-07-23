@@ -22,7 +22,8 @@ const {
     getHealth,
     getInsights,
     getAuditLogs,
-    getTraffic
+    getTraffic,
+    getDeletions
 } = require('../controllers/AdminSystem.js')
 const {
     createAnnouncement,
@@ -54,6 +55,7 @@ route.get('/admin/ai', Auth, isSupport, adminReadLimiter, getAiStats)
 route.get('/admin/health', Auth, isSupport, adminReadLimiter, getHealth)
 route.get('/admin/insights', Auth, isSupport, adminReadLimiter, getInsights)
 route.get('/admin/traffic', Auth, isSupport, adminReadLimiter, getTraffic)
+route.get('/admin/deletions', Auth, isSupport, adminReadLimiter, getDeletions)
 route.get('/admin/announcements', Auth, isSupport, adminReadLimiter, getAnnouncements)
 
 // ---------- admin-only sir ----------

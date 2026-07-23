@@ -1,6 +1,7 @@
 const cron = require('node-cron')
 const AiLog = require('../Models/AiLog')
 const mailSender = require('./Nodemailer')
+const { logSystemAction } = require('./AdminLog')
 
 // tune these as real usage patterns become clear sir — start conservative, loosen once
 // there's a baseline to compare against
@@ -56,12 +57,16 @@ const checkAiUsageAndAlert = async () => {
 
     if (Date.now() - lastAlertSentAt < COOLDOWN_MS) return
 
+    lastAlertSentAt = Date.now()
+    // logged in-app regardless of email delivery sir, so the alert is visible on the dashboard
+    // even if ADMIN_ALERT_EMAIL is unset or the send fails
+    logSystemAction('AI_COST_ALERT', {}, stats)
+
     if (!process.env.ADMIN_ALERT_EMAIL) {
         console.log('AI usage threshold breached but ADMIN_ALERT_EMAIL is not set:', stats)
         return
     }
 
-    lastAlertSentAt = Date.now()
     await mailSender(process.env.ADMIN_ALERT_EMAIL, 'AI usage alert — threshold exceeded', alertEmailHtml(stats))
         .catch((err) => console.log('AI cost alert email failed:', err.message))
 }

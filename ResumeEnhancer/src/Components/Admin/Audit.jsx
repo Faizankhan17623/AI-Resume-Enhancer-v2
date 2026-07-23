@@ -9,9 +9,10 @@ import { GetAuditLogs } from '../../Services/operations/Admin'
 
 // color per action type sir — bans red, money yellow, the rest neutral
 const actionChip = (action) => {
-  if (['USER_BAN', 'USER_DELETE'].includes(action)) return 'bg-pink-700/30 text-pink-100 border-pink-700'
+  if (['USER_BAN', 'USER_DELETE', 'AI_COST_ALERT'].includes(action)) return 'bg-pink-700/30 text-pink-100 border-pink-700'
   if (['PLAN_CHANGE', 'CREDIT_ADJUST'].includes(action)) return 'bg-yellow-700/30 text-yellow-25 border-yellow-700'
   if (['USER_UNBAN', 'ROLE_CHANGE'].includes(action)) return 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700'
+  if (action === 'ACCOUNT_PURGED') return 'bg-blue-700/30 text-blue-100 border-blue-700'
   return 'bg-richblack-700 text-richblack-100 border-richblack-600'
 }
 
@@ -54,7 +55,7 @@ const Audit = () => {
                   {log.action.replace(/_/g, ' ')}
                 </span>
                 <p className="text-sm text-richblack-100 flex-1 min-w-0">
-                  <span className="text-richblack-5 font-medium">{log.actor?.email || 'deleted admin'}</span>
+                  <span className="text-richblack-5 font-medium">{log.isSystem ? 'System (cron)' : (log.actor?.email || 'deleted admin')}</span>
                   {log.targetEmail && (
                     <>
                       <span className="text-richblack-400 mx-1.5">→</span>

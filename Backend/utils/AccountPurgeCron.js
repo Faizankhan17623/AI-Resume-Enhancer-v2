@@ -2,6 +2,7 @@ const cron = require('node-cron')
 const User = require('../Models/User')
 const Chat = require('../Models/Chat')
 const Review = require('../Models/Review')
+const { logSystemAction } = require('./AdminLog')
 
 // permanently deletes accounts whose 2-day recovery window (see deleteAccount/loginUser in
 // controllers/user.js) has passed sir — same cascade scope as the admin dashboard's manual
@@ -26,6 +27,7 @@ const purgeExpiredAccounts = async () => {
             Review.deleteMany({ user: user._id }),
         ])
         console.log(`Purged expired account: ${user.email}`)
+        logSystemAction('ACCOUNT_PURGED', { email: user.email }, { scheduledFor: user.BufferTiming })
     }
 }
 

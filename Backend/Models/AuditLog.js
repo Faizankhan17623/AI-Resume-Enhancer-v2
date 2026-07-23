@@ -4,11 +4,17 @@ const mongoose = require('mongoose')
 // written automatically by utils/AdminLog.js, never edited, never deleted from the app
 const auditLogSchema = new mongoose.Schema(
     {
-        // the admin/support person who performed the action sir
+        // the admin/support person who performed the action sir — absent for system-fired
+        // entries (isSystem: true), e.g. cron jobs with no human actor
         actor: {
             type: mongoose.Schema.ObjectId,
             ref: 'User',
-            required: true,
+            index: true,
+        },
+        // true for entries written by a cron/system process rather than a logged-in admin sir
+        isSystem: {
+            type: Boolean,
+            default: false,
             index: true,
         },
         // what happened sir — a short SCREAMING_SNAKE action code so the frontend can filter
@@ -26,6 +32,8 @@ const auditLogSchema = new mongoose.Schema(
                 'ANNOUNCEMENT_CREATE',
                 'ANNOUNCEMENT_DELETE',
                 'SETTING_CHANGE',
+                'ACCOUNT_PURGED',
+                'AI_COST_ALERT',
             ],
             index: true,
         },

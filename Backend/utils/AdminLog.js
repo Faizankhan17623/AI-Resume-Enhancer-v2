@@ -16,6 +16,17 @@ const logAction = (actorId, action, target, details = {}) => {
     }).catch((err) => console.log('audit log failed:', err.message))
 }
 
+// record a cron/system-fired event sir — no human actor, so isSystem carries that instead
+// logSystemAction('ACCOUNT_PURGED', { email: user.email }, { deletionDate })
+const logSystemAction = (action, target = {}, details = {}) => {
+    AuditLog.create({
+        isSystem: true,
+        action,
+        targetEmail: target?.email,
+        details,
+    }).catch((err) => console.log('system audit log failed:', err.message))
+}
+
 // record one Groq call sir — usage comes straight off the completion response
 // logAi({ user, type: 'review', plan, model, usage: Invoking.usage, latencyMs, success, error })
 const logAi = ({ user, type, plan, model, usage, latencyMs, success = true, error }) => {
@@ -33,4 +44,4 @@ const logAi = ({ user, type, plan, model, usage, latencyMs, success = true, erro
     }).catch((err) => console.log('ai log failed:', err.message))
 }
 
-module.exports = { logAction, logAi }
+module.exports = { logAction, logSystemAction, logAi }

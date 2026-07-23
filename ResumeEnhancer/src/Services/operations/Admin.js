@@ -3,11 +3,11 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setPayments,
-    setAuditLogs, setAnnouncements, setAiStats, setHealth, setTraffic, setSettings, setLoading
+    setAuditLogs, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setSettings, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, health, auditlogs, traffic } = AdminStats
+const { dashboardstats, aistats, health, auditlogs, traffic, deletions } = AdminStats
 const { allusers, updaterole, updateplan, banuser, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -69,6 +69,24 @@ export function GetHealth(token) {
             dispatch(setHealth(response.data.health))
         } catch (error) {
             logApiError("Error fetching the health", error)
+        }
+    }
+}
+
+export function GetDeletions(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", deletions, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setDeletions(response.data.deletions))
+        } catch (error) {
+            logApiError("Error fetching the deletion stats", error)
         }
     }
 }

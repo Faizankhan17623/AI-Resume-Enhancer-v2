@@ -53,7 +53,8 @@ Admin Dashboard (role-gated: Admin/Support)
 - User management: search, role/plan change, credit adjust, ban/unban, delete, impersonate
 - Payments dashboard, audit log, feature flags (kill-switches for Review/Cover Letter/Job Search, no redeploy needed)
 - Site-wide announcement banners
-- Hourly AI cost/error-rate alert email to a configured admin address
+- Hourly AI cost/error-rate alert email to a configured admin address, now also logged as an in-app audit entry with a dashboard banner (previously email-only, invisible in the app)
+- Account Deletions widget: live count of accounts pending the 2-day purge window plus a rolling log of recently purged accounts (previously the purge cron only wrote to the server console)
 - Mobile-responsive card layouts for the Users/Payments tables (desktop keeps the full table)
 - Audit Log and Settings tabs correctly hidden/blocked for Support (Admin-only, matching the backend gate)
 
@@ -92,7 +93,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - **Reviews** — users can leave reviews after using the platform, and can frame a shared report for a friend or a recruiter
 - **Notifications** — an in-app bell (unread badge, mark read) alongside per-type email opt-in/opt-out (streak, win-back, digest, monthly health check)
 - **Account Self-Service** — edit profile fields inline, export your own data as JSON, and delete your account with a 2-day recovery window
-- **Admin Dashboard** — manage users, payments, announcements, feature flags, and audit logs, with mobile-responsive tables
+- **Admin Dashboard** — manage users, payments, announcements, feature flags, and audit logs, with mobile-responsive tables; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
 - **Cloud File Storage** — resume uploads stored via Cloudinary
 
 ## Tech Stack
