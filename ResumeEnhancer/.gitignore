@@ -30,3 +30,7 @@ dist-ssr
 # personal mobile-layout testing tool + screenshots sir — local only, not for the repo
 screenshots-workflow/
 scripts/
+
+# throwaway local Playwright/testing driver scripts sir — never for the repo
+__*-check.cjs
+__*-check.js

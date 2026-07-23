@@ -3,7 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { FiBell } from 'react-icons/fi'
+import { FaBell } from 'react-icons/fa'
 import { GetNotifications, GetUnreadCount, MarkNotificationRead, MarkAllNotificationsRead } from '../../Services/operations/Notification'
+
+// Glassdoor-style ring sir — a quick shake + fill-red the moment unreadCount goes from
+// 0 (or first mount) to >0, settling back to a plain outline once read/opened
+const ringKeyframes = { rotate: [0, -14, 12, -10, 8, -4, 0] }
+const ringTransition = { duration: 0.6, ease: 'easeInOut' }
 
 const POLL_MS = 60 * 1000
 
@@ -11,6 +17,8 @@ const POLL_MS = 60 * 1000
 // loads the full list when the dropdown actually opens
 const NotificationBell = () => {
   const [open, setOpen] = useState(false)
+  const [ringing, setRinging] = useState(false)
+  const prevUnreadRef = useRef(0)
   const dropdownRef = useRef(null)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -23,6 +31,13 @@ const NotificationBell = () => {
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // shake + fill red only when unread count RISES sir (a fresh notification arriving),
+  // not on every poll tick and not when it drops from being marked read
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) setRinging(true)
+    prevUnreadRef.current = unreadCount
+  }, [unreadCount])
 
   useEffect(() => {
     if (!open) return
@@ -52,13 +67,27 @@ const NotificationBell = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v)
+          setRinging(false)
+        }}
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-haspopup="true"
         aria-expanded={open}
-        className="relative p-2 shrink-0 text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+        className={`relative p-2 shrink-0 border rounded-full transition-all duration-200 cursor-pointer ${
+          unreadCount > 0
+            ? 'text-pink-200 border-pink-700/60 hover:bg-pink-700/10'
+            : 'text-richblack-100 border-richblack-600 hover:bg-richblack-800 hover:text-richblack-5'
+        }`}
       >
-        <FiBell className="text-lg" />
+        <motion.span
+          className="block"
+          animate={ringing ? ringKeyframes : undefined}
+          transition={ringTransition}
+          onAnimationComplete={() => setRinging(false)}
+        >
+          {unreadCount > 0 ? <FaBell className="text-lg" /> : <FiBell className="text-lg" />}
+        </motion.span>
         {unreadCount > 0 && (
           <span
             aria-hidden="true"
