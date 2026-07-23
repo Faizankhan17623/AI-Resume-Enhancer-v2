@@ -18,8 +18,11 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
 // short-lived, single-use exchange codes sir — the real JWT never touches the redirect URL
 // (browser history, hosting/proxy access logs, the Referer header), only this random opaque
-// code does, and it's dead the instant /auth/google/exchange consumes it or 60s pass
-const EXCHANGE_TTL_MS = 60 * 1000
+// code does, and it's dead the instant /auth/google/exchange consumes it or the TTL passes.
+// 5 minutes (not 60s) sir — Render's free tier cold-starts in 30-60s, and that on top of the
+// user actually looking at and clicking through Google's consent screen blew past 60s and
+// expired the code before the frontend could redeem it
+const EXCHANGE_TTL_MS = 5 * 60 * 1000
 const pendingExchanges = new Map() // code -> { payload, expiresAt }
 
 const createExchangeCode = (payload) => {

@@ -17,8 +17,10 @@ const LINKEDIN_USERINFO_URL = 'https://api.linkedin.com/v2/userinfo'
 const OAUTH_DEFAULT_PASSWORD = 'Oauth123'
 
 // short-lived, single-use exchange codes sir — same pattern as GoogleAuth.js, the real JWT
-// never touches the redirect URL, only this random opaque code does
-const EXCHANGE_TTL_MS = 60 * 1000
+// never touches the redirect URL, only this random opaque code does. 5 minutes (not 60s) sir
+// — see GoogleAuth.js for why: Render's free-tier cold start plus the user clicking through
+// the provider's consent screen easily exceeds 60 seconds
+const EXCHANGE_TTL_MS = 5 * 60 * 1000
 const pendingExchanges = new Map() // code -> { payload, expiresAt }
 
 const createExchangeCode = (payload) => {
