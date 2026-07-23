@@ -3,13 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetHealth, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -83,13 +83,14 @@ const legendStyle = { fontSize: 12 }
 const Overview = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, health, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, health, deletions, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
     dispatch(GetDashboardStats(token))
     dispatch(GetAiStats(token))
     dispatch(GetHealth(token))
+    dispatch(GetDeletions(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -120,6 +121,10 @@ const Overview = () => {
     return Object.values(byBucket).sort((a, b) => a.bucket.localeCompare(b.bucket))
   })()
 
+  // surfaces the most recent AI_COST_ALERT audit entry (see AiCostAlert.js) as an in-app
+  // banner sir — that cron previously only emailed ADMIN_ALERT_EMAIL, invisible in-app
+  const latestCostAlert = deletions?.recentCostAlert
+
   const statCards = [
     { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified` },
     { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders` },
@@ -136,6 +141,19 @@ const Overview = () => {
       <AdminNav />
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+
+        {/* AI cost-alert banner sir — the cron that checks this only ever emailed
+            ADMIN_ALERT_EMAIL before, so it fired silently as far as this dashboard knew */}
+        {latestCostAlert && (
+          <div className="rounded-xl bg-pink-700/15 border border-pink-700/40 px-5 py-3.5 flex items-center gap-3">
+            <FaExclamationTriangle className="text-pink-100 shrink-0" />
+            <p className="text-sm text-richblack-100">
+              <span className="text-pink-100 font-medium">AI usage threshold breached</span>
+              {' — '}{latestCostAlert.details?.tokens?.toLocaleString()} tokens, {latestCostAlert.details?.errorRate}% error rate in the last 24h
+              <span className="text-richblack-400 ml-2 text-xs">{new Date(latestCostAlert.createdAt).toLocaleString()}</span>
+            </p>
+          </div>
+        )}
 
         {/* Stat cards sir */}
         <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -225,8 +243,8 @@ const Overview = () => {
           )}
         </div>
 
-        {/* Health + AI row sir */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Health + AI + Deletions row sir */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaHeartbeat className="text-pink-100" /> System Health</h2>
             {health ? (
@@ -263,6 +281,41 @@ const Overview = () => {
                   <p className={`font-display text-2xl ${aiStats.today.errorRate > 5 ? 'text-pink-200' : 'text-caribgreen-100'}`}>{aiStats.today.errorRate}%</p>
                   <p className="text-xs text-richblack-400">error rate</p>
                 </div>
+              </div>
+            ) : (
+              <p className="text-sm text-richblack-400">Loading...</p>
+            )}
+          </div>
+
+          {/* Account deletions sir — visibility into the silent 2-day purge cron
+              (AccountPurgeCron.js) that previously only logged to console */}
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaUserClock className="text-yellow-50" /> Account Deletions</h2>
+            {deletions ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-display text-2xl text-richblack-5">{deletions.pendingCount}</p>
+                    <p className="text-xs text-richblack-400">pending (2-day window)</p>
+                  </div>
+                  <div>
+                    <p className="font-display text-2xl text-richblack-5">{deletions.purgedLast30Days}</p>
+                    <p className="text-xs text-richblack-400">purged — 30 days</p>
+                  </div>
+                </div>
+                {deletions.recentPurges?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-richblack-400 mb-2">Recently purged</p>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {deletions.recentPurges.slice(0, 5).map((log) => (
+                        <div key={log._id} className="flex items-center justify-between text-xs">
+                          <span className="text-richblack-100 truncate">{log.targetEmail}</span>
+                          <span className="text-richblack-400 shrink-0 ml-2">{new Date(log.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-richblack-400">Loading...</p>

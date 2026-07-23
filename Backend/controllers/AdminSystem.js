@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const Grok = require('groq-sdk')
 
+const User = require('../Models/User')
 const Payment = require('../Models/Payment')
 const Review = require('../Models/Review')
 const AiLog = require('../Models/AiLog')
@@ -347,6 +348,53 @@ exports.getAuditLogs = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the audit logs',
+        })
+    }
+}
+
+// GET /admin/deletions — visibility into the silent 2-day account-purge cron sir
+// (AccountPurgeCron.js): who's currently pending, and who it's purged recently.
+// Purge history only goes back to when AccountPurgeCron started writing ACCOUNT_PURGED
+// audit entries — purges from before that were never recorded (no tombstone existed).
+exports.getDeletions = async (req, res) => {
+    try {
+        const [pending, recentPurges, purgedLast30Days, recentCostAlert] = await Promise.all([
+            // still inside the 2-day recovery window sir — Buffer: true, not yet purged
+            User.find({ Buffer: true })
+                .select('email BufferTiming')
+                .sort({ BufferTiming: 1 }),
+            // last 20 purge events sir, newest first
+            AuditLog.find({ action: 'ACCOUNT_PURGED' })
+                .sort({ createdAt: -1 })
+                .limit(20),
+            AuditLog.countDocuments({
+                action: 'ACCOUNT_PURGED',
+                createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+            }),
+            // most recent AI cost-alert firing sir (AiCostAlert.js), so the dashboard shows
+            // it even though that cron previously only ever sent an email
+            AuditLog.findOne({
+                action: 'AI_COST_ALERT',
+                createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            }).sort({ createdAt: -1 }),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            deletions: {
+                pendingCount: pending.length,
+                pending,
+                purgedLast30Days,
+                recentPurges,
+                recentCostAlert,
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the deletion stats',
         })
     }
 }
