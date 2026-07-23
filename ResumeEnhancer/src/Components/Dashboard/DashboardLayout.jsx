@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
@@ -28,6 +28,7 @@ const navSections = [
       { name: 'Build Resume', path: '/Dashboard/Build-Resume', icon: FaMagic },
       { name: 'My Resumes', path: '/Dashboard/Resumes', icon: FaFolderOpen },
       { name: 'History', path: '/Dashboard/History', icon: FaHistory },
+      { name: 'Keyword Bank', path: '/Dashboard/Keyword-Bank', icon: FaKey },
     ],
   },
   {
@@ -36,6 +37,7 @@ const navSections = [
       { name: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments, matchPrefix: '/Dashboard/Chat' },
       { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
       { name: 'Job Search', path: '/Dashboard/Job-Search', icon: FaSearch },
+      { name: 'Applications', path: '/Dashboard/Applications', icon: FaBriefcase },
     ],
   },
   {

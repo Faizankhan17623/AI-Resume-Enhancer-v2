@@ -10,6 +10,8 @@ import resumeReducer from '../Slices/resumeSlice'
 import builtResumeReducer from '../Slices/builtResumeSlice'
 import jobSearchReducer from '../Slices/jobSearchSlice'
 import notificationReducer from '../Slices/notificationSlice'
+import applicationReducer from '../Slices/applicationSlice'
+import keywordBankReducer from '../Slices/keywordBankSlice'
 
 const rootReduers = combineReducers({
     auth: authReducer,
@@ -23,6 +25,8 @@ const rootReduers = combineReducers({
     builtResume: builtResumeReducer,
     jobSearch: jobSearchReducer,
     notification: notificationReducer,
+    application: applicationReducer,
+    keywordBank: keywordBankReducer,
 })
 
 
