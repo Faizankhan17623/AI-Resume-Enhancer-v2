@@ -252,54 +252,33 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Center Links */}
-        <div className="hidden md:flex items-center gap-8">
-          <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
-          <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
-          <Link
-            to="/Pricing"
-            className={`text-sm font-medium transition-colors duration-200 ${
-              location.pathname === '/Pricing' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
-            }`}
-          >
-            Pricing
-          </Link>
-          {/* only a plain User sees this sir — Admin/Support are fully isolated to their
-              own dashboards and can't use the product's Dashboard pages at all */}
-          {token && user?.role !== 'Admin' && user?.role !== 'Support' && (
+        {/* Center Links sir — Admin/Support are fully isolated to their own dashboards
+            (AdminNav handles their navigation there), so the public product menu and the
+            redundant Admin/Support door link never show for them here */}
+        {user?.role !== 'Admin' && user?.role !== 'Support' && (
+          <div className="hidden md:flex items-center gap-8">
+            <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
+            <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
             <Link
-              to="/Dashboard"
+              to="/Pricing"
               className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+                location.pathname === '/Pricing' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
               }`}
             >
-              Dashboard
+              Pricing
             </Link>
-          )}
-          {/* the admin/support door sir — each role gets sent to its OWN dashboard, never
-              a shared one. An Admin sees "Admin" -> /Admin, a Support user sees
-              "Support" -> /Support. */}
-          {token && user?.role === 'Admin' && (
-            <Link
-              to="/Admin"
-              className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname.startsWith('/Admin') ? 'text-yellow-50' : 'text-pink-100 hover:text-richblack-5'
-              }`}
-            >
-              Admin
-            </Link>
-          )}
-          {token && user?.role === 'Support' && (
-            <Link
-              to="/Support"
-              className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname.startsWith('/Support') ? 'text-yellow-50' : 'text-pink-100 hover:text-richblack-5'
-              }`}
-            >
-              Support
-            </Link>
-          )}
-        </div>
+            {token && (
+              <Link
+                to="/Dashboard"
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+                }`}
+              >
+                Dashboard
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Right Side - Auth Area */}
         <div className="flex items-center gap-1.5 sm:gap-3">
