@@ -173,13 +173,14 @@ exports.loginUser = async (req, res) => {
             });
         }
 
-        // a Google account that has never set a local password sir — bcrypt.compare would
-        // throw against an undefined hash, point them at the right sign-in method instead
-        if (!existingUser.password) {
+        // an OAuth account (Google/Facebook/GitHub/LinkedIn) sir — it carries a placeholder
+        // password hash it can never actually be logged into with, point them at the right
+        // sign-in method instead. Also covers older OAuth accounts with no password at all.
+        if (existingUser.provider !== 'local' || !existingUser.password) {
             return res.status(400).json({
                 success: false,
                 field: 'password',
-                message: 'This account signs in with Google — use "Continue with Google" instead',
+                message: `This account signs in with ${existingUser.provider === 'local' ? 'a provider' : existingUser.provider.charAt(0).toUpperCase() + existingUser.provider.slice(1)} — use the matching "Continue with..." button instead`,
             });
         }
 
@@ -488,16 +489,9 @@ exports.updatePassword = async (req, res) => {
             });
         }
 
-        // OAuth accounts (Google etc) have no password to change sir — bcrypt.compare would
-        // throw against an undefined hash, so refuse cleanly before it gets there
-        if (existingUser.provider !== 'local') {
-            return res.status(400).json({
-                success: false,
-                message: 'This account signs in with Google and has no password to change',
-            });
-        }
-
-        // compare the old password with the stored hash sir
+        // compare the old password with the stored hash sir — OAuth accounts go through this
+        // exact same check too, their stored hash is just the shared "Oauth123" placeholder
+        // (see GoogleAuth.js etc) until they set a real one here for the first time
         const Comparing = await bcrypt.compare(oldPassword, existingUser.password);
 
         // not case sir — the old password does not match the stored one

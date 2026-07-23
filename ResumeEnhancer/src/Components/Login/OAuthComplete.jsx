@@ -6,9 +6,10 @@ import { setToken, setUser, setLogin } from '../../Slices/authSlice'
 import { apiConnector } from '../../Services/apiConnector'
 import { OAuth } from '../../Services/Apis/UserApi'
 
-// landing page for the Google OAuth redirect sir — the backend's GET /auth/google/callback
+// landing page for every OAuth provider's redirect sir — the backend's GET /auth/<provider>/callback
 // sends the browser here with only a short-lived, single-use ?code (never the real JWT — a
-// token in the URL would sit in browser history and hosting/proxy access logs). This page's
+// token in the URL would sit in browser history and hosting/proxy access logs) plus a
+// &provider= tag saying which one so we know which exchange endpoint to hit. This page's
 // only job is to immediately trade that code for the real token via POST, in the response
 // body, then store it exactly like LoginUser already does.
 const OAuthComplete = () => {
@@ -18,6 +19,7 @@ const OAuthComplete = () => {
 
   useEffect(() => {
     const code = searchParams.get('code')
+    const provider = searchParams.get('provider') || 'google'
     const oauthError = searchParams.get('oauthError')
 
     if (oauthError) {
@@ -26,13 +28,15 @@ const OAuthComplete = () => {
       return
     }
 
-    if (!code) {
+    const exchangeUrl = OAuth.exchange[provider]
+
+    if (!code || !exchangeUrl) {
       navigate('/Login', { replace: true })
       return
     }
 
     let alive = true
-    apiConnector("POST", OAuth.exchange, { code })
+    apiConnector("POST", exchangeUrl, { code })
       .then((response) => {
         if (!alive) return
         if (!response.data.success) throw new Error(response.data.message)
@@ -50,7 +54,7 @@ const OAuthComplete = () => {
       })
       .catch((error) => {
         if (!alive) return
-        toast.error(error?.response?.data?.message || 'Could not complete Google sign-in')
+        toast.error(error?.response?.data?.message || 'Could not complete sign-in')
         navigate('/Login', { replace: true })
       })
     return () => { alive = false }
