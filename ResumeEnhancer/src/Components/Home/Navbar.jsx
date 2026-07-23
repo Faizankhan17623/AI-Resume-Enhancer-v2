@@ -252,33 +252,32 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Center Links sir — Admin/Support are fully isolated to their own dashboards
-            (AdminNav handles their navigation there), so the public product menu and the
-            redundant Admin/Support door link never show for them here */}
-        {user?.role !== 'Admin' && user?.role !== 'Support' && (
-          <div className="hidden md:flex items-center gap-8">
-            <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
-            <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
+        {/* Center Links sir — Resume/Tools/Pricing always show for everyone, Admin included.
+            Only the role-specific door link (Dashboard for Users, Admin/Support for those
+            roles) is gated, and AdminNav already covers Admin/Support's own navigation so
+            that redundant door link is skipped for them here. */}
+        <div className="hidden md:flex items-center gap-8">
+          <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
+          <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
+          <Link
+            to="/Pricing"
+            className={`text-sm font-medium transition-colors duration-200 ${
+              location.pathname === '/Pricing' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+            }`}
+          >
+            Pricing
+          </Link>
+          {token && user?.role !== 'Admin' && user?.role !== 'Support' && (
             <Link
-              to="/Pricing"
+              to="/Dashboard"
               className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname === '/Pricing' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+                location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
               }`}
             >
-              Pricing
+              Dashboard
             </Link>
-            {token && (
-              <Link
-                to="/Dashboard"
-                className={`text-sm font-medium transition-colors duration-200 ${
-                  location.pathname === '/Dashboard' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
-                }`}
-              >
-                Dashboard
-              </Link>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Right Side - Auth Area */}
         <div className="flex items-center gap-1.5 sm:gap-3">
