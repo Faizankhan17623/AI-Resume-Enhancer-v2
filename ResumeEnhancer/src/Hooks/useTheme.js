@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'theme'
 
@@ -12,10 +12,25 @@ const getInitialTheme = () => {
 // script that applies it before first paint so there's no light-mode flash on load
 const useTheme = () => {
     const [theme, setTheme] = useState(getInitialTheme)
+    const isFirstRun = useRef(true)
 
     useEffect(() => {
-        document.documentElement.classList.toggle('dark', theme === 'dark')
+        // skip the transition class on mount sir — only actual toggles should crossfade,
+        // not the very first render (which already matches localStorage/system preference)
+        if (isFirstRun.current) {
+            isFirstRun.current = false
+            document.documentElement.classList.toggle('dark', theme === 'dark')
+            localStorage.setItem(STORAGE_KEY, theme)
+            return
+        }
+
+        const root = document.documentElement
+        root.classList.add('theme-transitioning')
+        root.classList.toggle('dark', theme === 'dark')
         localStorage.setItem(STORAGE_KEY, theme)
+
+        const timer = setTimeout(() => root.classList.remove('theme-transitioning'), 5000)
+        return () => clearTimeout(timer)
     }, [theme])
 
     const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))

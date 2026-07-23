@@ -139,7 +139,14 @@ body {
     margin: 0;
     font-family: var(--font-inter);
     background-color: var(--color-richblack-900);
-    transition: background-color 0.2s ease;
+}
+
+/* slow light/dark crossfade sir (~5s) — only active while useTheme.js has just toggled
+   (the "theme-transitioning" class it adds to <html> for 5s), so every surface using the
+   theme's bg/text/border tokens eases together. Scoped to a temporary class rather than
+   a permanent global rule so normal hover/dropdown color transitions stay instant. */
+.theme-transitioning, .theme-transitioning *, .theme-transitioning *::before, .theme-transitioning *::after {
+    transition: background-color 5s ease, color 5s ease, border-color 5s ease, fill 5s ease, stroke 5s ease !important;
 }
 
 /* the fade-in used on page containers sir */
