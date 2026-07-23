@@ -339,13 +339,20 @@ const Account = () => {
           </div>
         </div>
 
-        {/* Change password sir — a Google account has no local password to change */}
-        {user.provider === 'local' && (
+        {/* Change password sir — shown for every account now, OAuth accounts included. An
+            OAuth signup gets a shared "Oauth123" placeholder hashed in as its starting
+            password (see GoogleAuth.js etc), which is what they type as their Current
+            Password the first time they set a real one here. */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
             <FaLock className="text-yellow-50 text-base" /> Change Password
           </h2>
           <p className="text-xs text-richblack-400 mb-4">Use a strong password you don't use anywhere else.</p>
+          {user.provider !== 'local' && (
+            <p className="text-xs text-yellow-50 mb-4">
+              You signed up with {user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} — your current password is <span className="font-mono">Oauth123</span>. Set a new one below to also enable email/password sign-in.
+            </p>
+          )}
 
           <form onSubmit={handlePasswordSubmit(onChangePassword)} className="max-w-md space-y-4">
             <div>
@@ -396,7 +403,6 @@ const Account = () => {
             />
           </form>
         </div>
-        )}
 
         {/* Payment history sir */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">

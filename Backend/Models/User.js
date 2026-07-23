@@ -59,7 +59,7 @@ const UserCreation = new mongoose.Schema(
         // flow, everything else is an OAuth provider. Drives which fields are required above.
         provider: {
             type: String,
-            enum: ['local', 'google'],
+            enum: ['local', 'google', 'facebook', 'github', 'linkedin'],
             default: 'local',
         },
         // the provider's own stable user id (Google's `sub` claim) sir — never the email,

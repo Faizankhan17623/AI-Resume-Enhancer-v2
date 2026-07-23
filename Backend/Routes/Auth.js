@@ -20,9 +20,10 @@ const {
     exportMyData,
     deleteAccount
 } = require('../controllers/user.js')
-// Google OAuth temporarily disabled sir — Google Cloud console credentials not set up yet,
-// see GoogleAuth.js and the routes below (commented, not removed)
-// const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
+const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
+const { facebookLogin, facebookCallback, exchangeFacebookCode } = require('../controllers/FacebookAuth.js')
+const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
+const { linkedinLogin, linkedinCallback, exchangeLinkedInCode } = require('../controllers/LinkedInAuth.js')
 // we are going to start the routing from here sir
 
 // aiLimiter because every call here burns a Groq request + a credit sir.
@@ -35,15 +36,24 @@ route.post('/Createuser',authLimiter,createUser)
 route.post('/Login',authLimiter,loginUser)
 route.post('/Send-otp',otpLimiter,SendOtp)
 
-// Google OAuth temporarily disabled sir — re-enable by uncommenting these three routes
-// plus the require above, once GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_CALLBACK_URL
-// are set in .env
 // full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered
-// route.get('/auth/google',authLimiter,googleLogin)
-// route.get('/auth/google/callback',authLimiter,googleCallback)
+route.get('/auth/google',authLimiter,googleLogin)
+route.get('/auth/google/callback',authLimiter,googleCallback)
 // the frontend calls this right after landing on /oauth/complete sir — trades the one-time
 // code (all the redirect URL ever carries) for the real token, in the response body only
-// route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
+route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
+
+route.get('/auth/facebook',authLimiter,facebookLogin)
+route.get('/auth/facebook/callback',authLimiter,facebookCallback)
+route.post('/auth/facebook/exchange',authLimiter,exchangeFacebookCode)
+
+route.get('/auth/github',authLimiter,githubLogin)
+route.get('/auth/github/callback',authLimiter,githubCallback)
+route.post('/auth/github/exchange',authLimiter,exchangeGitHubCode)
+
+route.get('/auth/linkedin',authLimiter,linkedinLogin)
+route.get('/auth/linkedin/callback',authLimiter,linkedinCallback)
+route.post('/auth/linkedin/exchange',authLimiter,exchangeLinkedInCode)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
 route.post('/forgot-password',authLimiter,forgotPassword)
