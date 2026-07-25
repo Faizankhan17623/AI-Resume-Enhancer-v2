@@ -159,7 +159,6 @@ const Users = () => {
                       >
                         <option value="User">User</option>
                         <option value="Support">Support</option>
-                        <option value="Admin">Admin</option>
                       </select>
                     </div>
                     <div>
@@ -230,7 +229,6 @@ const Users = () => {
                         >
                           <option value="User">User</option>
                           <option value="Support">Support</option>
-                          <option value="Admin">Admin</option>
                         </select>
                       </td>
                       <td className="p-4">

@@ -206,7 +206,9 @@ exports.getUserDetail = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/:userId/role — promote/demote sir, body: { role: 'Admin' | 'User' }
+// PATCH /admin/users/:userId/role — promote/demote sir, body: { role: 'User' | 'Support' }
+// Admin is deliberately NOT settable here — granting/removing Admin access is a manual,
+// out-of-band operation, never something reachable from this UI.
 exports.updateUserRole = async (req, res) => {
     try {
         const adminId = req?.User.id
@@ -220,18 +222,18 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
-        if (!['User', 'Support', 'Admin'].includes(role)) {
+        if (!['User', 'Support'].includes(role)) {
             return res.status(400).json({
                 success: false,
-                message: "Role must be 'User', 'Support' or 'Admin'",
+                message: "Role must be 'User' or 'Support'",
             })
         }
 
         // an admin cannot demote themselves sir — otherwise the last admin can lock everyone out
-        if (userId === adminId && role !== 'Admin') {
+        if (userId === adminId) {
             return res.status(400).json({
                 success: false,
-                message: 'You cannot remove your own admin access',
+                message: 'You cannot change your own admin access',
             })
         }
 
@@ -242,6 +244,15 @@ exports.updateUserRole = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'User not found',
+            })
+        }
+
+        // this endpoint can only move someone between User and Support sir — an existing
+        // Admin's role is off-limits here entirely, same reasoning as the self-demote guard above
+        if (user.role === 'Admin') {
+            return res.status(400).json({
+                success: false,
+                message: 'Admin roles cannot be changed from this page',
             })
         }
 
@@ -266,7 +277,7 @@ exports.updateUserRole = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${user.email} is now ${role === 'Admin' ? 'an Administrator' : role === 'Support' ? 'a Support member' : 'a normal User'}`,
+            message: `${user.email} is now ${role === 'Support' ? 'a Support member' : 'a normal User'}`,
             user
         })
     } catch (error) {

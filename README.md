@@ -142,7 +142,7 @@ Interactive Swagger UI documentation for the API (auth, AI review, chat, resume 
 
 **Production:**
 ```
-https://ai-resume-enhancer-88nm.onrender.com/api-docs
+https://ai-resume-enhancer-v2.onrender.com/api-docs
 ```
 
 **Local development** (once the backend is running via `npm run dev`):
