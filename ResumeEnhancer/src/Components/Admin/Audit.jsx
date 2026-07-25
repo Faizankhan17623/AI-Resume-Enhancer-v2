@@ -20,7 +20,7 @@ const Audit = () => {
   const [page, setPage] = useState(1)
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { auditLogs, loading } = useSelector((state) => state.admin)
+  const { auditLogs, auditLogsPagination, loading } = useSelector((state) => state.admin)
 
   useEffect(() => {
     dispatch(GetAuditLogs(token, page))
@@ -71,6 +71,27 @@ const Audit = () => {
                 <span className="shrink-0 text-xs text-richblack-400">{new Date(log.createdAt).toLocaleString()}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination sir */}
+        {auditLogsPagination && auditLogsPagination.pages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+              className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-richblack-300 font-mono">{page} / {auditLogsPagination.pages}</span>
+            <button
+              disabled={page >= auditLogsPagination.pages}
+              onClick={() => setPage(page + 1)}
+              className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
         )}
       </PageTransition>
