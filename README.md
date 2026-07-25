@@ -53,13 +53,16 @@ Admin Dashboard (role-gated: Admin/Support)
 - Overview stat cards (Total Users, Revenue, Paid Conversion) link straight through to the relevant Users/Payments page
 - User management: search, role filter (Admin accounts always excluded from the list), role change restricted to User ↔ Support only (granting/removing Admin access is a deliberate out-of-band operation, not reachable from this UI), credit adjust, ban/unban with the ban reason visible on hover without opening detail, delete, impersonate
 - Plan shown read-only to avoid accidental Pro/ProMax revenue mismatches from a casual dropdown; a separate Admin-only "Fix plan" action (confirm-dialog gated) exists for refunds, failed webhooks, and giveaways
-- Bulk actions on the Users page: multi-select with a "select all" checkbox and a bulk suspend/restore bar
+- Bulk actions on the Users page: multi-select with a "select all" checkbox, a bulk suspend/restore bar, and bulk role change between User and Support (same Admin-exclusion rules as the single-user actions)
 - A read-only user detail drawer (profile, role/plan/status, recent reviews and payments) opens from clicking a name in the Users list
-- A congratulations email is sent automatically when a user is promoted from User to Support
+- A congratulations email is sent automatically when a user is promoted from User to Support (single or bulk)
+- A global admin search bar (users + payments, by name/email/order id/payment id) in the dashboard nav
 - Payments dashboard, audit log (filterable by action type and searchable by target/actor email, paginated), feature flags (kill-switches for Review/Cover Letter/Job Search, no redeploy needed)
 - Feature flags require a reason and a scheduled future re-enable time when disabled, with a cron that automatically re-enables the flag once that time passes; the disabled-feature error a user sees includes the admin's note and re-enable time
 - Site-wide announcement banners: editable after publishing, capped at 2 concurrently active, with optional scheduled start/end windows (IST, 12-hour time, start must be tomorrow or later, start-to-end gap capped at 15 days)
-- CSV export on the Users, Payments, and Audit Log pages (exports the currently loaded/filtered page)
+- CSV export on the Users and Payments pages (currently loaded/filtered page); the Audit Log's export pulls every entry matching the current filter, not just the visible page (capped at 5,000 rows)
+- Security panel: live count of currently-locked accounts (5 failed logins = 15-minute lockout) plus a rolling log of recent lockout events — the one abuse signal that previously had zero dashboard visibility
+- A weekly digest email to every Admin summarizing the past 7 days of audit-log activity by action type, so nobody has to remember to check the Audit Log manually
 - Hourly AI cost/error-rate alert email to a configured admin address, now also logged as an in-app audit entry with a dashboard banner
 - Account Deletions widget: live count of accounts pending the 2-day purge window plus a rolling log of recently purged accounts (previously the purge cron only wrote to the server console)
 - Mobile-responsive card layouts for the Users/Payments tables (desktop keeps the full table)
@@ -101,7 +104,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - **Reviews** — users can leave reviews after using the platform, and can frame a shared report for a friend or a recruiter
 - **Notifications** — an in-app bell (unread badge, mark read) alongside per-type email opt-in/opt-out (streak, win-back, digest, monthly health check)
 - **Account Self-Service** — edit profile fields inline, export your own data as JSON, and delete your account with a 2-day recovery window
-- **Admin Dashboard** — manage users (with bulk actions, CSV export, and a read-only detail drawer), payments, announcements (editable, schedulable), and feature flags (schedulable disable/re-enable) with a filterable/searchable audit log, mobile-responsive tables, and no full-page loading flash on pagination; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
+- **Admin Dashboard** — manage users (with bulk actions including role change, CSV export, and a read-only detail drawer), payments, announcements (editable, schedulable), and feature flags (schedulable disable/re-enable) with a filterable/searchable/exportable audit log, a global search bar, a security panel for account lockouts, a weekly activity digest email to Admins, mobile-responsive tables, and no full-page loading flash on pagination; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
 - **Cloud File Storage** — resume uploads stored via Cloudinary
 
 ## Tech Stack

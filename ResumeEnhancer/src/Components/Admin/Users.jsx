@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
 import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload } from 'react-icons/fa'
@@ -7,7 +8,7 @@ import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import UserDetailModal from './UserDetailModal'
 
@@ -35,7 +36,12 @@ const Users = () => {
   const [page, setPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState('')
   const [selected, setSelected] = useState([])
-  const [detailUserId, setDetailUserId] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  // opens straight to a user's detail drawer sir when arriving from the global admin
+  // search (?highlight=<userId>) — the modal fetches by id, so it doesn't matter whether
+  // that user is even on the currently loaded page. Lazy init, not an effect, since the
+  // param is already known synchronously at mount
+  const [detailUserId, setDetailUserId] = useState(() => searchParams.get('highlight'))
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
@@ -48,6 +54,16 @@ const Users = () => {
     dispatch(GetUsers(token, page, search, roleFilter))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, roleFilter])
+
+  useEffect(() => {
+    if (searchParams.get('highlight')) {
+      setSearchParams((prev) => {
+        prev.delete('highlight')
+        return prev
+      }, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -98,6 +114,18 @@ const Users = () => {
       if (!isConfirmed) return
       dispatch(BulkBanUsers(selected, false, '', token, page, search, roleFilter))
     }
+    setSelected([])
+  }
+
+  const handleBulkRoleChange = async (role) => {
+    const { isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: `Move ${selected.length} account${selected.length === 1 ? '' : 's'} to ${role}?`,
+      showCancelButton: true,
+      confirmButtonText: `Move to ${role}`,
+    })
+    if (!isConfirmed) return
+    dispatch(BulkUpdateUserRole(selected, role, token, page, search, roleFilter))
     setSelected([])
   }
 
@@ -239,6 +267,18 @@ const Users = () => {
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-caribgreen-700/20 text-caribgreen-25 border border-caribgreen-700 hover:bg-caribgreen-700/30 transition-colors duration-200 cursor-pointer"
             >
               Restore selected
+            </button>
+            <button
+              onClick={() => handleBulkRoleChange('Support')}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
+            >
+              Move to Support
+            </button>
+            <button
+              onClick={() => handleBulkRoleChange('User')}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer"
+            >
+              Move to User
             </button>
             <button
               onClick={() => setSelected([])}

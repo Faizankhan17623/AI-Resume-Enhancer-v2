@@ -7,6 +7,7 @@ const {
     getUsers,
     getUserDetail,
     updateUserRole,
+    bulkUpdateUserRole,
     updateUserPlan,
     deleteUser,
     banUser,
@@ -24,7 +25,9 @@ const {
     getInsights,
     getAuditLogs,
     getTraffic,
-    getDeletions
+    getDeletions,
+    getSecurity,
+    getGlobalSearch
 } = require('../controllers/AdminSystem.js')
 const {
     createAnnouncement,
@@ -57,9 +60,12 @@ route.get('/admin/health', Auth, isSupport, adminReadLimiter, getHealth)
 route.get('/admin/insights', Auth, isSupport, adminReadLimiter, getInsights)
 route.get('/admin/traffic', Auth, isSupport, adminReadLimiter, getTraffic)
 route.get('/admin/deletions', Auth, isSupport, adminReadLimiter, getDeletions)
+route.get('/admin/security', Auth, isSupport, adminReadLimiter, getSecurity)
+route.get('/admin/search', Auth, isSupport, adminReadLimiter, getGlobalSearch)
 route.get('/admin/announcements', Auth, isSupport, adminReadLimiter, getAnnouncements)
 
 // ---------- admin-only sir ----------
+route.patch('/admin/users/bulk-role', Auth, isAdmin, adminWriteLimiter, bulkUpdateUserRole)
 route.patch('/admin/users/:userId/role', Auth, isAdmin, adminWriteLimiter, updateUserRole)
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, updateUserPlan)
 route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, bulkBanUsers)

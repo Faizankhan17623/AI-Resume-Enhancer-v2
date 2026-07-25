@@ -3,12 +3,12 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setSettings, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, health, auditlogs, traffic, deletions } = AdminStats
-const { allusers, userdetail, updaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
+const { dashboardstats, aistats, health, auditlogs, traffic, deletions, security, search: searchUrl } = AdminStats
+const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
@@ -87,6 +87,24 @@ export function GetDeletions(token) {
             dispatch(setDeletions(response.data.deletions))
         } catch (error) {
             logApiError("Error fetching the deletion stats", error)
+        }
+    }
+}
+
+export function GetSecurity(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", security, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setSecurity(response.data.security))
+        } catch (error) {
+            logApiError("Error fetching the security stats", error)
         }
     }
 }
@@ -197,8 +215,25 @@ export const BanUser = (userId, banned, reason, token, page, search, roleFilter)
 export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, banned ? "Suspending accounts..." : "Restoring accounts...", roleFilter)
 
+export const BulkUpdateUserRole = (userIds, role, token, page, search, roleFilter) =>
+    userAction("PATCH", bulkupdaterole, { userIds, role }, token, page, search, `Moving accounts to ${role}...`, roleFilter)
+
 export const DeleteUser = (userId, token, page, search, roleFilter) =>
     userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, "Deleting the user...", roleFilter)
+
+// plain async call sir, not a thunk — the search bar owns its own result/loading state
+// locally rather than parking transient dropdown results in the shared admin slice
+export async function GlobalSearch(q, token) {
+    const response = await apiConnector("GET", searchUrl, null, {
+        Authorization: `Bearer ${token}`
+    }, { q })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+
+    return { users: response.data.users, payments: response.data.payments }
+}
 
 // ---------- money sir ----------
 
@@ -245,6 +280,20 @@ export function GetAuditLogs(token, page = 1, action = "", search = "") {
             dispatch(setLoading(false))
         }
     }
+}
+
+// fetches every log matching the current filter sir (capped server-side), not just the
+// visible page — used only by the CSV export button, doesn't touch the paginated Redux state
+export async function FetchAllAuditLogsForExport(token, action = "", search = "") {
+    const response = await apiConnector("GET", auditlogs, null, {
+        Authorization: `Bearer ${token}`
+    }, { export: true, action, search })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+
+    return response.data
 }
 
 // ---------- announcements sir ----------
