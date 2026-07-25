@@ -19,6 +19,7 @@ exports.getSettings = async (req, res) => {
                 key,
                 enabled: doc ? doc.enabled : true,
                 note: doc?.note || '',
+                disabledUntil: doc?.disabledUntil || null,
                 updatedAt: doc?.updatedAt || null,
             }
         })
@@ -37,12 +38,12 @@ exports.getSettings = async (req, res) => {
     }
 }
 
-// PATCH /admin/settings/:key sir — body { enabled, note }
+// PATCH /admin/settings/:key sir — body { enabled, note, disabledUntil }
 exports.upsertSetting = async (req, res) => {
     try {
         const adminId = req?.User.id
         const { key } = req.params
-        const { enabled, note } = req.body
+        const { enabled, note, disabledUntil } = req.body
 
         if (!KNOWN_KEYS.includes(key)) {
             return res.status(400).json({
@@ -58,14 +59,54 @@ exports.upsertSetting = async (req, res) => {
             })
         }
 
+        const existing = await Settings.findOne({ key }).select('enabled')
+        const wasEnabled = existing ? existing.enabled : true
+        const update = { key, enabled }
+
+        if (enabled === false) {
+            // only require a reason + future re-enable time on the actual ON->OFF transition sir —
+            // while already off, an admin can keep adjusting note/disabledUntil freely below
+            if (wasEnabled) {
+                if (!note || !note.trim()) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'A reason is required when disabling a feature',
+                    })
+                }
+                if (!disabledUntil || Number.isNaN(new Date(disabledUntil).getTime()) || new Date(disabledUntil) <= new Date()) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Re-enable date/time must be in the future',
+                    })
+                }
+            }
+            update.note = note || ''
+            if (disabledUntil !== undefined) {
+                if (disabledUntil === null) {
+                    update.disabledUntil = null
+                } else if (!Number.isNaN(new Date(disabledUntil).getTime()) && new Date(disabledUntil) > new Date()) {
+                    update.disabledUntil = disabledUntil
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Re-enable date/time must be in the future',
+                    })
+                }
+            }
+        } else {
+            // manually re-enabling supersedes any schedule sir
+            update.note = note || ''
+            update.disabledUntil = null
+        }
+
         const setting = await Settings.findOneAndUpdate(
             { key },
-            { key, enabled, note: note || '' },
+            update,
             { new: true, upsert: true }
         )
 
         invalidateFeatureFlagCache(key)
-        logAction(adminId, 'SETTING_CHANGE', null, { key, enabled, note })
+        logAction(adminId, 'SETTING_CHANGE', null, { key, enabled, note: update.note, disabledUntil: update.disabledUntil })
 
         return res.status(200).json({
             success: true,

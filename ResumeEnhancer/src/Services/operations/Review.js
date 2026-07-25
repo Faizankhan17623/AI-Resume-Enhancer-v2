@@ -7,6 +7,7 @@ import {
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
 import { ResumeData } from '../Apis/ResumeApi.js'
+import { featureDisabledMessage } from '../../utils/istTime.js'
 
 const { createreview } = AtsReview
 const { reviewFromResume } = ResumeData
@@ -42,7 +43,10 @@ export function CreateReview(pdfFile, jd, token, navigate) {
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
             logApiError("Error creating the review", error)
-            toast.error(error?.response?.data?.message || "Could not analyze the resume")
+            const message = error?.response?.status === 503
+                ? featureDisabledMessage(error.response.data, "Could not analyze the resume")
+                : (error?.response?.data?.message || "Could not analyze the resume")
+            toast.error(message)
         } finally {
             dispatch(setLoading(false))
             toast.dismiss(toastId)
@@ -72,7 +76,10 @@ export function CreateReviewFromResume(resumeId, jd, token, navigate) {
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
             logApiError("Error creating the review", error)
-            toast.error(error?.response?.data?.message || "Could not analyze the resume")
+            const message = error?.response?.status === 503
+                ? featureDisabledMessage(error.response.data, "Could not analyze the resume")
+                : (error?.response?.data?.message || "Could not analyze the resume")
+            toast.error(message)
         } finally {
             dispatch(setLoading(false))
             toast.dismiss(toastId)

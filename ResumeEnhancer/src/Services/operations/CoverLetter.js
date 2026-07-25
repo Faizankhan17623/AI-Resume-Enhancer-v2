@@ -3,6 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setContent, setLetterId, setGenericCheck, setAllLetters, setLoading, setGenerating } from '../../Slices/coverLetterSlice.js'
 import { CoverLetterData } from '../Apis/CoverLetterApi.js'
+import { featureDisabledMessage } from '../../utils/istTime.js'
 
 const { generate, all, single } = CoverLetterData
 
@@ -30,7 +31,10 @@ export function GenerateCoverLetter(pdfFile, jd, token) {
             toast.success("Your cover letter is ready")
         } catch (error) {
             logApiError("Error generating the cover letter", error)
-            toast.error(error?.response?.data?.message || "Could not generate the cover letter")
+            const message = error?.response?.status === 503
+                ? featureDisabledMessage(error.response.data, "Could not generate the cover letter")
+                : (error?.response?.data?.message || "Could not generate the cover letter")
+            toast.error(message)
         } finally {
             dispatch(setGenerating(false))
             toast.dismiss(toastId)

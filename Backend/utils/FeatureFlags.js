@@ -26,4 +26,12 @@ const invalidateFeatureFlagCache = (key) => {
     cache.delete(key)
 }
 
-module.exports = { isFeatureEnabled, invalidateFeatureFlagCache }
+// full detail lookup sir — used only on the disabled path (503 response) to tell the user
+// why and when it'll be back, so we don't burden the hot enabled-path cache with extra fields
+const getFeatureFlagDetails = async (key) => {
+    const setting = await Settings.findOne({ key }).select('enabled note disabledUntil')
+    if (!setting) return { enabled: true, note: null, disabledUntil: null }
+    return { enabled: setting.enabled, note: setting.note || null, disabledUntil: setting.disabledUntil || null }
+}
+
+module.exports = { isFeatureEnabled, invalidateFeatureFlagCache, getFeatureFlagDetails }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion } from 'motion/react'
@@ -82,6 +83,7 @@ const legendStyle = { fontSize: 12 }
 
 const Overview = () => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { stats, charts, aiStats, health, deletions, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
@@ -126,10 +128,10 @@ const Overview = () => {
   const latestCostAlert = deletions?.recentCostAlert
 
   const statCards = [
-    { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified` },
-    { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders` },
+    { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified`, to: '/Admin/Users' },
+    { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
     { icon: <FaFileAlt className="text-yellow-50" />, label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
-    { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}` },
+    { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
   ]
 
   return (
@@ -158,7 +160,15 @@ const Overview = () => {
         {/* Stat cards sir */}
         <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, index) => (
-            <motion.div key={index} variants={fadeUp} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+            <motion.div
+              key={index}
+              variants={fadeUp}
+              className={`rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5 ${card.to ? 'cursor-pointer transition-colors hover:bg-richblack-700' : ''}`}
+              onClick={card.to ? () => navigate(card.to) : undefined}
+              role={card.to ? 'button' : undefined}
+              tabIndex={card.to ? 0 : undefined}
+              onKeyDown={card.to ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.to) } } : undefined}
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center">{card.icon}</div>
                 <span className="text-xs font-medium text-richblack-300">{card.label}</span>

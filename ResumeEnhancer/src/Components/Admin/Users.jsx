@@ -7,27 +7,39 @@ import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
+const ROLE_FILTER_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'User', label: 'Users' },
+  { value: 'Support', label: 'Support' },
+]
 
 const Users = () => {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [roleFilter, setRoleFilter] = useState('')
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
 
   useEffect(() => {
-    dispatch(GetUsers(token, page, search))
+    dispatch(GetUsers(token, page, search, roleFilter))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
+  }, [page, roleFilter])
 
   const handleSearch = (e) => {
     e.preventDefault()
     setPage(1)
-    dispatch(GetUsers(token, 1, search))
+    dispatch(GetUsers(token, 1, search, roleFilter))
+  }
+
+  const handleRoleFilterChange = (e) => {
+    setRoleFilter(e.target.value)
+    setPage(1)
   }
 
   // ask for the credit delta sir — negative refunds, positive charges
@@ -41,12 +53,12 @@ const Users = () => {
       showCancelButton: true,
     })
     const delta = parseInt(value)
-    if (delta) dispatch(AdjustCredits(target._id, delta, token, page, search))
+    if (delta) dispatch(AdjustCredits(target._id, delta, token, page, search, roleFilter))
   }
 
   const handleBan = async (target) => {
     if (target.isBanned) {
-      dispatch(BanUser(target._id, false, '', token, page, search))
+      dispatch(BanUser(target._id, false, '', token, page, search, roleFilter))
       return
     }
     const { value, isConfirmed } = await Swal.fire({
@@ -58,7 +70,7 @@ const Users = () => {
       confirmButtonText: 'Suspend',
       confirmButtonColor: '#C1443C',
     })
-    if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search))
+    if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter))
   }
 
   const handleDelete = (target) => {
@@ -71,7 +83,7 @@ const Users = () => {
       confirmButtonText: 'Delete forever',
       confirmButtonColor: '#C1443C',
     }).then((result) => {
-      if (result.isConfirmed) dispatch(DeleteUser(target._id, token, page, search))
+      if (result.isConfirmed) dispatch(DeleteUser(target._id, token, page, search, roleFilter))
     })
   }
 
@@ -85,22 +97,33 @@ const Users = () => {
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* Search sir */}
-        <form onSubmit={handleSearch} className="flex gap-3 mb-6 max-w-md">
-          <div className="relative flex-1">
-            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-richblack-400 text-sm" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
-              className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-10 pr-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-            />
-          </div>
-          <button type="submit" className="px-4 py-2.5 text-sm font-semibold bg-yellow-50 text-richblack-900 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
-            Search
-          </button>
-        </form>
+        {/* Search + role filter sir — Admin accounts never appear in this list regardless of filter */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          <form onSubmit={handleSearch} className="flex gap-3 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-richblack-400 text-sm" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or email..."
+                className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-10 pr-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+              />
+            </div>
+            <button type="submit" className="px-4 py-2.5 text-sm font-semibold bg-yellow-50 text-richblack-900 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
+              Search
+            </button>
+          </form>
+          <select
+            value={roleFilter}
+            onChange={handleRoleFilterChange}
+            className="rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-2.5 text-sm text-richblack-5 cursor-pointer focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+          >
+            {ROLE_FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
 
         {loading ? (
           <Loading text="Loading the users..." />
@@ -131,7 +154,7 @@ const Users = () => {
                       <select
                         value={row.role}
                         disabled={!isAdmin || row._id === me?.id}
-                        onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search))}
+                        onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
                         className="w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="User">User</option>
@@ -141,16 +164,9 @@ const Users = () => {
                     </div>
                     <div>
                       <label className="text-[10px] text-richblack-400 block mb-1">Plan</label>
-                      <select
-                        value={row.SubType || 'Basic'}
-                        disabled={!isAdmin}
-                        onChange={(e) => dispatch(UpdateUserPlan(row._id, e.target.value, token, page, search))}
-                        className="w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="Basic">Basic</option>
-                        <option value="Pro">Pro</option>
-                        <option value="ProMax">Pro Max</option>
-                      </select>
+                      <span className="inline-block w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">
+                        {row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic')}
+                      </span>
                     </div>
                   </div>
 
@@ -209,7 +225,7 @@ const Users = () => {
                         <select
                           value={row.role}
                           disabled={!isAdmin || row._id === me?.id}
-                          onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search))}
+                          onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
                           className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="User">User</option>
@@ -218,16 +234,9 @@ const Users = () => {
                         </select>
                       </td>
                       <td className="p-4">
-                        <select
-                          value={row.SubType || 'Basic'}
-                          disabled={!isAdmin}
-                          onChange={(e) => dispatch(UpdateUserPlan(row._id, e.target.value, token, page, search))}
-                          className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="Basic">Basic</option>
-                          <option value="Pro">Pro</option>
-                          <option value="ProMax">Pro Max</option>
-                        </select>
+                        <span className="inline-block rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">
+                          {row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic')}
+                        </span>
                       </td>
                       <td className="p-4 font-mono text-richblack-100">{row.count}</td>
                       <td className="p-4">
