@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { FaCookieBite } from 'react-icons/fa'
 
 // the cookie consent card sir — shows once at the bottom until the visitor accepts,
@@ -6,13 +6,7 @@ import { FaCookieBite } from 'react-icons/fa'
 const CONSENT_KEY = 'cookieConsent'
 
 const CookieConsent = () => {
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    if (!localStorage.getItem(CONSENT_KEY)) {
-      setVisible(true)
-    }
-  }, [])
+  const [visible, setVisible] = useState(() => !localStorage.getItem(CONSENT_KEY))
 
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, 'accepted')

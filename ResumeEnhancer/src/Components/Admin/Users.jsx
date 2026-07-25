@@ -9,6 +9,7 @@ import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
+import UserDetailModal from './UserDetailModal'
 
 const USER_CSV_COLUMNS = [
   { key: 'firstName', label: 'First name' },
@@ -34,6 +35,7 @@ const Users = () => {
   const [page, setPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState('')
   const [selected, setSelected] = useState([])
+  const [detailUserId, setDetailUserId] = useState(null)
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
@@ -267,10 +269,10 @@ const Users = () => {
                           aria-label="Select user"
                         />
                       )}
-                      <div className="min-w-0">
-                        <p className="font-medium text-richblack-5 truncate">{row.firstName} {row.lastName}</p>
+                      <button onClick={() => setDetailUserId(row._id)} className="min-w-0 text-left cursor-pointer group">
+                        <p className="font-medium text-richblack-5 truncate group-hover:underline">{row.firstName} {row.lastName}</p>
                         <p className="text-xs text-richblack-400 truncate">{row.email}</p>
-                      </div>
+                      </button>
                     </div>
                     {row.isBanned ? (
                       <span
@@ -376,8 +378,10 @@ const Users = () => {
                         </td>
                       )}
                       <td className="p-4">
-                        <p className="font-medium text-richblack-5">{row.firstName} {row.lastName}</p>
-                        <p className="text-xs text-richblack-400">{row.email}</p>
+                        <button onClick={() => setDetailUserId(row._id)} className="text-left cursor-pointer group">
+                          <p className="font-medium text-richblack-5 group-hover:underline">{row.firstName} {row.lastName}</p>
+                          <p className="text-xs text-richblack-400">{row.email}</p>
+                        </button>
                       </td>
                       <td className="p-4">
                         {/* role select sir — Admin only, and never on yourself */}
@@ -465,6 +469,7 @@ const Users = () => {
           </div>
         )}
       </PageTransition>
+      <UserDetailModal userId={detailUserId} onClose={() => setDetailUserId(null)} />
     </div>
   )
 }

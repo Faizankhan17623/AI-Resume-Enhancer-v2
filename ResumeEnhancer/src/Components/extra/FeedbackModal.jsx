@@ -23,13 +23,13 @@ const FeedbackModal = () => {
   const [referralScore, setReferralScore] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const checkStatus = useCallback(async () => {
+  const checkStatus = useCallback(async (isStale) => {
     if (!isLoggedIn || !token) return
     try {
       const response = await apiConnector('GET', FeedbackApi.status, null, {
         Authorization: `Bearer ${token}`,
       })
-      if (response.data.success && response.data.shouldShow) {
+      if (!isStale() && response.data.success && response.data.shouldShow) {
         setOpen(true)
       }
     } catch (error) {
@@ -39,9 +39,16 @@ const FeedbackModal = () => {
   }, [isLoggedIn, token])
 
   // dashboard is a shared shell that never remounts sir, so re-check on every
-  // route change — that's what fires right after a feature completes and navigates
+  // route change — that's what fires right after a feature completes and navigates.
+  // the stale flag stops a slow response from an old route popping the modal open
+  // after the user has already moved on
   useEffect(() => {
-    checkStatus()
+    let stale = false
+    // setOpen only fires after the awaited network response inside checkStatus, never
+    // synchronously during this render, so this is safe despite the lint rule's static check
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkStatus(() => stale)
+    return () => { stale = true }
   }, [location.pathname, checkStatus])
 
   const canSubmit = rating > 0 && referralScore !== null
@@ -84,7 +91,6 @@ const FeedbackModal = () => {
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   return (
