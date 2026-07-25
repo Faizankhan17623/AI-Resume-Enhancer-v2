@@ -59,7 +59,10 @@ exports.getDashboardStats = async (req, res) => {
             ]),
             Payment.aggregate([
                 { $match: { status: 'paid', createdAt: { $gte: thirtyDaysAgo } } },
-                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, amountPaise: { $sum: '$amount' }, count: { $sum: 1 } } },
+                // rupees, not paise sir — matches the headline "Revenue" stat card above
+                { $addFields: { amount: { $round: [{ $divide: ['$amountPaise', 100] }, 0] } } },
+                { $project: { amountPaise: 0 } },
                 { $sort: { _id: 1 } }
             ]),
         ])

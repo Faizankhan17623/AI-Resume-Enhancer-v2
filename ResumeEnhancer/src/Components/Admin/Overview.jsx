@@ -364,13 +364,13 @@ const Overview = () => {
           </div>
 
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (paise) — 30 days</h3>
+            <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (₹) — 30 days</h3>
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={charts?.revenuePerDay || []}>
                 <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
                 <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
+                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} formatter={(value) => [`₹${value}`, 'Revenue']} />
                 <Bar dataKey="amount" name="Revenue" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
