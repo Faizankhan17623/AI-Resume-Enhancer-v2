@@ -13,7 +13,7 @@ const { updateStreak } = require('../utils/Streak');
 const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 const { AI_MODEL } = require('../utils/AiModel');
-const { isFeatureEnabled } = require('../utils/FeatureFlags');
+const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
 
 const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 
@@ -22,9 +22,12 @@ const grok = new Grok({apiKey:process.env.GROK_API_KEY})
 // response shape either way.
 const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     if (!(await isFeatureEnabled('feature.review'))) {
+        const details = await getFeatureFlagDetails('feature.review')
         return res.status(503).json({
             success: false,
             message: 'This feature is temporarily disabled',
+            note: details.note,
+            disabledUntil: details.disabledUntil,
         })
     }
 

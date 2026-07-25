@@ -33,6 +33,7 @@ const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
 const { startAiCostAlertCron } = require('./utils/AiCostAlert.js')
 const { startAccountPurgeCron } = require('./utils/AccountPurgeCron.js')
+const { startFeatureFlagCron } = require('./utils/FeatureFlagCron.js')
 
 // deployed behind a proxy (Render/Railway/nginx) sir — needed so the rate limiter sees the REAL client IP
 app.set('trust proxy', 1)
@@ -114,6 +115,7 @@ if (process.env.NODE_ENV !== 'test') {
 	startStreakCron()
 	startAiCostAlertCron()
 	startAccountPurgeCron()
+	startFeatureFlagCron()
 	app.listen(Port,()=>{
 		console.log(`Running on the port NUmber ${Port}`)
 	})

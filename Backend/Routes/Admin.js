@@ -28,7 +28,7 @@ const {
 const {
     createAnnouncement,
     getAnnouncements,
-    toggleAnnouncement,
+    updateAnnouncement,
     deleteAnnouncement,
     getActiveAnnouncement
 } = require('../controllers/Announcement.js')
@@ -68,7 +68,7 @@ route.get('/admin/audit', Auth, isAdmin, adminReadLimiter, getAuditLogs)
 route.get('/admin/settings', Auth, isAdmin, adminReadLimiter, getSettings)
 route.patch('/admin/settings/:key', Auth, isAdmin, adminWriteLimiter, upsertSetting)
 route.post('/admin/announcements', Auth, isAdmin, adminWriteLimiter, createAnnouncement)
-route.patch('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, toggleAnnouncement)
+route.patch('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, updateAnnouncement)
 route.delete('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, deleteAnnouncement)
 
 // ---------- public sir — the frontend banner for every visitor, no login needed ----------

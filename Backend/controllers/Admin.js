@@ -7,6 +7,8 @@ const Review = require('../Models/Review')
 const Payment = require('../Models/Payment')
 const { PLANS } = require('../utils/Plans')
 const { logAction } = require('../utils/AdminLog')
+const mailSender = require('../utils/Nodemailer.js')
+const { supportPromotionTemplate } = require('../Templates/supportPromotionTemplate.js')
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
@@ -105,15 +107,17 @@ exports.getDashboardStats = async (req, res) => {
     }
 }
 
-// GET /admin/users?page=1&limit=20&search=foo — paginated user list with search sir
+// GET /admin/users?page=1&limit=20&search=foo&role=User — paginated user list with search sir
+// Admins are always excluded from this list — it's a user/support management view, not an admin directory.
 exports.getUsers = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1)
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20))
         const search = (req.query.search || '').trim()
+        const role = (req.query.role || '').trim()
 
-        // search matches name or email sir — escaped so regex chars in the input can't break the query
-        const filter = {}
+        // Admins never show up here regardless of filter; role param can narrow to 'User' or 'Support' only.
+        const filter = ['User', 'Support'].includes(role) ? { role } : { role: { $ne: 'Admin' } }
         if (search) {
             const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             filter.$or = [
@@ -247,6 +251,19 @@ exports.updateUserRole = async (req, res) => {
 
         logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role })
 
+        // congratulate the user on becoming Support sir — best-effort, doesn't fail the role change if mail hiccups
+        if (oldRole === 'User' && role === 'Support') {
+            try {
+                await mailSender(
+                    user.email,
+                    "You've Been Promoted to Support",
+                    supportPromotionTemplate(`${user.firstName} ${user.lastName}`)
+                )
+            } catch (mailError) {
+                console.log('Failed to send support-promotion email:', mailError.message)
+            }
+        }
+
         return res.status(200).json({
             success: true,
             message: `${user.email} is now ${role === 'Admin' ? 'an Administrator' : role === 'Support' ? 'a Support member' : 'a normal User'}`,
@@ -264,6 +281,7 @@ exports.updateUserRole = async (req, res) => {
 
 // PATCH /admin/users/:userId/plan — gift/fix a plan by hand sir, body: { plan: 'Basic' | 'Pro' | 'ProMax' }
 // useful for support cases: refunds, failed webhooks, giveaways
+// no longer called from the Users admin UI (plan is shown read-only there to avoid Pro/ProMax revenue mismatches) — kept for API/script use
 exports.updateUserPlan = async (req, res) => {
     try {
         const adminId = req?.User.id

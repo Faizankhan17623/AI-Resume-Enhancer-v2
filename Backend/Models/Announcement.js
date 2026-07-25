@@ -20,6 +20,10 @@ const announcementSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // optional scheduled start sir — before this date the public endpoint stops serving it
+        startsAt: {
+            type: Date,
+        },
         // optional auto-expiry sir — past this date the public endpoint stops serving it
         expiresAt: {
             type: Date,

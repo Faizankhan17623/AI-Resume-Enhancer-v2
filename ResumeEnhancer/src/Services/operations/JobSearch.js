@@ -3,6 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setJobs, setLastQuery, setSearching } from '../../Slices/jobSearchSlice.js'
 import { JobSearchData } from '../Apis/JobSearchApi.js'
+import { featureDisabledMessage } from '../../utils/istTime.js'
 
 const { search } = JobSearchData
 
@@ -30,7 +31,10 @@ export function SearchJobs(query, token) {
             }
         } catch (error) {
             logApiError("Error searching for jobs", error)
-            toast.error(error?.response?.data?.message || "Could not search for jobs right now")
+            const message = error?.response?.status === 503
+                ? featureDisabledMessage(error.response.data, "Could not search for jobs right now")
+                : (error?.response?.data?.message || "Could not search for jobs right now")
+            toast.error(message)
         } finally {
             dispatch(setSearching(false))
             toast.dismiss(toastId)

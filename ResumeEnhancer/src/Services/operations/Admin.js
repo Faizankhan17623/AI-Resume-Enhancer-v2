@@ -111,13 +111,13 @@ export function GetTraffic(token, range = 'week') {
 
 // ---------- user management sir ----------
 
-export function GetUsers(token, page = 1, search = "") {
+export function GetUsers(token, page = 1, search = "", role = "") {
     return async (dispatch) => {
         dispatch(setLoading(true))
         try {
             const response = await apiConnector("GET", allusers, null, {
                 Authorization: `Bearer ${token}`
-            }, { page, limit: 20, search })
+            }, { page, limit: 20, search, role })
 
             if (!response.data.success) {
                 throw new Error(response.data.message)
@@ -135,7 +135,7 @@ export function GetUsers(token, page = 1, search = "") {
 }
 
 // one shared helper sir — every user action follows the same toast → call → refresh pattern
-const userAction = (method, url, body, token, page, search, loadingText) => {
+const userAction = (method, url, body, token, page, search, loadingText, roleFilter = "") => {
     return async (dispatch) => {
         const toastId = toast.loading(loadingText)
         try {
@@ -148,7 +148,7 @@ const userAction = (method, url, body, token, page, search, loadingText) => {
             }
 
             toast.success(response.data.message)
-            dispatch(GetUsers(token, page, search))
+            dispatch(GetUsers(token, page, search, roleFilter))
         } catch (error) {
             logApiError("Admin user action failed", error)
             toast.error(error?.response?.data?.message || "The action failed")
@@ -158,20 +158,20 @@ const userAction = (method, url, body, token, page, search, loadingText) => {
     }
 }
 
-export const UpdateUserRole = (userId, role, token, page, search) =>
-    userAction("PATCH", `${updaterole}/${userId}/role`, { role }, token, page, search, "Updating the role...")
+export const UpdateUserRole = (userId, role, token, page, search, roleFilter) =>
+    userAction("PATCH", `${updaterole}/${userId}/role`, { role }, token, page, search, "Updating the role...", roleFilter)
 
-export const UpdateUserPlan = (userId, plan, token, page, search) =>
-    userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, "Updating the plan...")
+export const UpdateUserPlan = (userId, plan, token, page, search, roleFilter) =>
+    userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, "Updating the plan...", roleFilter)
 
-export const AdjustCredits = (userId, delta, token, page, search) =>
-    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { delta }, token, page, search, "Adjusting the credits...")
+export const AdjustCredits = (userId, delta, token, page, search, roleFilter) =>
+    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { delta }, token, page, search, "Adjusting the credits...", roleFilter)
 
-export const BanUser = (userId, banned, reason, token, page, search) =>
-    userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...")
+export const BanUser = (userId, banned, reason, token, page, search, roleFilter) =>
+    userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...", roleFilter)
 
-export const DeleteUser = (userId, token, page, search) =>
-    userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, "Deleting the user...")
+export const DeleteUser = (userId, token, page, search, roleFilter) =>
+    userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, "Deleting the user...", roleFilter)
 
 // ---------- money sir ----------
 
@@ -239,11 +239,12 @@ export function GetAnnouncements(token) {
     }
 }
 
-export function CreateAnnouncement(title, message, token) {
+export function CreateAnnouncement(title, message, token, options = {}) {
+    const { active, startsAt, expiresAt } = options
     return async (dispatch) => {
         const toastId = toast.loading("Publishing...")
         try {
-            const response = await apiConnector("POST", createannouncement, { title, message }, {
+            const response = await apiConnector("POST", createannouncement, { title, message, active, startsAt, expiresAt }, {
                 Authorization: `Bearer ${token}`
             })
 
@@ -251,11 +252,34 @@ export function CreateAnnouncement(title, message, token) {
                 throw new Error(response.data.message)
             }
 
-            toast.success("Announcement is live")
+            toast.success(response.data.message || "Announcement published")
             dispatch(GetAnnouncements(token))
         } catch (error) {
             logApiError("Error creating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not publish")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function UpdateAnnouncement(announcementId, payload, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Saving...")
+        try {
+            const response = await apiConnector("PATCH", `${toggleannouncement}/${announcementId}`, payload, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message || "Announcement updated")
+            dispatch(GetAnnouncements(token))
+        } catch (error) {
+            logApiError("Error updating the announcement", error)
+            toast.error(error?.response?.data?.message || "Could not update")
         } finally {
             toast.dismiss(toastId)
         }
@@ -325,10 +349,10 @@ export function GetSettings(token) {
     }
 }
 
-export function UpdateSetting(key, enabled, note, token) {
+export function UpdateSetting(key, enabled, note, token, disabledUntil) {
     return async (dispatch) => {
         try {
-            const response = await apiConnector("PATCH", `${updatesetting}/${key}`, { enabled, note }, {
+            const response = await apiConnector("PATCH", `${updatesetting}/${key}`, { enabled, note, disabledUntil }, {
                 Authorization: `Bearer ${token}`
             })
 

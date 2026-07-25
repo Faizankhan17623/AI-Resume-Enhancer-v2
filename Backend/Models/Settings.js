@@ -19,6 +19,10 @@ const settingsSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // scheduled auto re-enable sir — set when an admin turns a flag off, cleared on re-enable (manual or cron)
+        disabledUntil: {
+            type: Date,
+        },
     },
     { timestamps: true }
 )
