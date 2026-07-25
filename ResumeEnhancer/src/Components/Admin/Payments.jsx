@@ -1,17 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
+import { FaFileDownload } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetPayments } from '../../Services/operations/Admin'
+import { downloadCsv } from '../../utils/csvExport'
 
 const statusChip = {
   paid: 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700',
   created: 'bg-yellow-700/30 text-yellow-25 border-yellow-700',
   failed: 'bg-pink-700/30 text-pink-100 border-pink-700',
 }
+
+const PAYMENT_CSV_COLUMNS = [
+  { key: 'name', label: 'Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'plan', label: 'Plan' },
+  { key: 'amount', label: 'Amount (₹)' },
+  { key: 'status', label: 'Status' },
+  { key: 'orderId', label: 'Order ID' },
+  { key: 'date', label: 'Date' },
+]
 
 const Payments = () => {
   const [status, setStatus] = useState('')
@@ -26,6 +38,20 @@ const Payments = () => {
   }, [page, status])
 
   const stats = payments?.stats
+
+  // exports the currently-loaded page/filter sir — client-side from data already fetched
+  const handleExportCsv = () => {
+    const rows = (payments?.payments || []).map((payment) => ({
+      name: `${payment.user?.firstName || ''} ${payment.user?.lastName || ''}`.trim(),
+      email: payment.user?.email || '',
+      plan: payment.plan,
+      amount: payment.amount / 100,
+      status: payment.status,
+      orderId: payment.orderId,
+      date: new Date(payment.createdAt).toLocaleString(),
+    }))
+    downloadCsv(`payments-page-${page}.csv`, rows, PAYMENT_CSV_COLUMNS)
+  }
 
   return (
     <div className="min-h-screen w-full bg-richblack-900">
@@ -64,7 +90,7 @@ const Payments = () => {
         )}
 
         {/* Status filter sir */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap items-center gap-2 mb-6">
           {['', 'paid', 'created', 'failed'].map((s) => (
             <button
               key={s}
@@ -78,6 +104,14 @@ const Payments = () => {
               {s === '' ? 'All' : s.toUpperCase()}
             </button>
           ))}
+          <button
+            onClick={handleExportCsv}
+            disabled={(payments?.payments || []).length === 0}
+            title="Export this page as CSV"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer ml-auto"
+          >
+            <FaFileDownload /> Export CSV
+          </button>
         </div>
 
         {loading ? (

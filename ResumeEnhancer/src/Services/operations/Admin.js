@@ -8,7 +8,7 @@ import {
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions } = AdminStats
-const { allusers, updaterole, updateplan, banuser, adjustcredits, deleteuser } = AdminUsers
+const { allusers, updaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
@@ -170,6 +170,9 @@ export const AdjustCredits = (userId, delta, token, page, search, roleFilter) =>
 export const BanUser = (userId, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...", roleFilter)
 
+export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter) =>
+    userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, banned ? "Suspending accounts..." : "Restoring accounts...", roleFilter)
+
 export const DeleteUser = (userId, token, page, search, roleFilter) =>
     userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, "Deleting the user...", roleFilter)
 
@@ -198,13 +201,13 @@ export function GetPayments(token, page = 1, status = "") {
 
 // ---------- audit trail sir ----------
 
-export function GetAuditLogs(token, page = 1) {
+export function GetAuditLogs(token, page = 1, action = "", search = "") {
     return async (dispatch) => {
         dispatch(setLoading(true))
         try {
             const response = await apiConnector("GET", auditlogs, null, {
                 Authorization: `Bearer ${token}`
-            }, { page, limit: 20 })
+            }, { page, limit: 20, action, search })
 
             if (!response.data.success) {
                 throw new Error(response.data.message)

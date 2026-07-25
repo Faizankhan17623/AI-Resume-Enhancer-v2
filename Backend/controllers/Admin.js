@@ -405,6 +405,71 @@ exports.deleteUser = async (req, res) => {
     }
 }
 
+// PATCH /admin/users/bulk-ban — suspend or restore several accounts at once sir,
+// body: { userIds: [...], banned: true/false, reason }. Same rules as the single-user ban:
+// can't touch yourself, can't ban an Admin — those ids are just skipped, not a hard failure,
+// so one bad row doesn't block the rest of a legitimate batch.
+exports.bulkBanUsers = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userIds, banned, reason } = req.body
+
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'userIds must be a non-empty array',
+            })
+        }
+
+        if (userIds.length > 200) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot act on more than 200 users at once',
+            })
+        }
+
+        if (typeof banned !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: "'banned' must be true or false",
+            })
+        }
+
+        const validIds = userIds.filter((id) => mongoose.isValidObjectId(id) && id !== adminId)
+        const users = await User.find({ _id: { $in: validIds } }).select('firstName lastName email role isBanned banReason')
+
+        const updated = []
+        const skipped = []
+        const trimmedReason = banned ? (reason || '').trim() : undefined
+
+        for (const user of users) {
+            if (banned && user.role === 'Admin') {
+                skipped.push(user.email)
+                continue
+            }
+            user.isBanned = banned
+            user.banReason = trimmedReason
+            await user.save()
+            logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: trimmedReason, bulk: true })
+            updated.push(user.email)
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${updated.length} account${updated.length === 1 ? '' : 's'} ${banned ? 'suspended' : 'restored'}${skipped.length ? `, ${skipped.length} skipped (admins can't be banned)` : ''}`,
+            updated,
+            skipped,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the accounts',
+        })
+    }
+}
+
 // PATCH /admin/users/:userId/ban — suspend or restore an account sir, body: { banned: true/false, reason }
 exports.banUser = async (req, res) => {
     try {

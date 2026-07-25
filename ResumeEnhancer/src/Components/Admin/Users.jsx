@@ -2,12 +2,24 @@ import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
-import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench } from 'react-icons/fa'
+import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
+import { downloadCsv } from '../../utils/csvExport'
+
+const USER_CSV_COLUMNS = [
+  { key: 'firstName', label: 'First name' },
+  { key: 'lastName', label: 'Last name' },
+  { key: 'email', label: 'Email' },
+  { key: 'role', label: 'Role' },
+  { key: 'plan', label: 'Plan' },
+  { key: 'credits', label: 'Credits used' },
+  { key: 'status', label: 'Status' },
+  { key: 'joined', label: 'Joined' },
+]
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
@@ -21,10 +33,14 @@ const Users = () => {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState('')
+  const [selected, setSelected] = useState([])
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
+  // only rows an admin can actually act on sir — same rule as the single-row ban button
+  const selectableIds = users.filter((row) => row._id !== me?.id).map((row) => row._id)
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))
 
   useEffect(() => {
     dispatch(GetUsers(token, page, search, roleFilter))
@@ -34,12 +50,53 @@ const Users = () => {
   const handleSearch = (e) => {
     e.preventDefault()
     setPage(1)
+    setSelected([])
     dispatch(GetUsers(token, 1, search, roleFilter))
   }
 
   const handleRoleFilterChange = (e) => {
     setRoleFilter(e.target.value)
     setPage(1)
+    setSelected([])
+  }
+
+  const handlePageChange = (nextPage) => {
+    setPage(nextPage)
+    setSelected([])
+  }
+
+  const toggleSelectAll = () => {
+    setSelected(allSelected ? [] : selectableIds)
+  }
+
+  const toggleSelectOne = (userId) => {
+    setSelected((prev) => prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId])
+  }
+
+  const handleBulkBan = async (banned) => {
+    if (banned) {
+      const { value, isConfirmed } = await Swal.fire({
+        ...swalDark,
+        title: `Suspend ${selected.length} account${selected.length === 1 ? '' : 's'}?`,
+        input: 'text',
+        inputPlaceholder: 'Reason for the ban',
+        showCancelButton: true,
+        confirmButtonText: 'Suspend all',
+        confirmButtonColor: '#C1443C',
+      })
+      if (!isConfirmed) return
+      dispatch(BulkBanUsers(selected, true, value || '', token, page, search, roleFilter))
+    } else {
+      const { isConfirmed } = await Swal.fire({
+        ...swalDark,
+        title: `Restore ${selected.length} account${selected.length === 1 ? '' : 's'}?`,
+        showCancelButton: true,
+        confirmButtonText: 'Restore all',
+      })
+      if (!isConfirmed) return
+      dispatch(BulkBanUsers(selected, false, '', token, page, search, roleFilter))
+    }
+    setSelected([])
   }
 
   // ask for the credit delta sir — negative refunds, positive charges
@@ -87,6 +144,22 @@ const Users = () => {
       confirmButtonText: 'Set plan',
     })
     if (isConfirmed && plan) dispatch(UpdateUserPlan(target._id, plan, token, page, search, roleFilter))
+  }
+
+  // exports just the currently-loaded page sir — matches the current search/role filter,
+  // not the whole database, since this is client-side from data already on screen
+  const handleExportCsv = () => {
+    const rows = users.map((row) => ({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      role: row.role,
+      plan: row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic'),
+      credits: row.count,
+      status: row.isBanned ? 'Banned' : (row.Verified ? 'Active' : 'Unverified'),
+      joined: new Date(row.createdAt).toLocaleDateString(),
+    }))
+    downloadCsv(`users-page-${page}.csv`, rows, USER_CSV_COLUMNS)
   }
 
   const handleDelete = (target) => {
@@ -139,7 +212,40 @@ const Users = () => {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <button
+            onClick={handleExportCsv}
+            disabled={users.length === 0}
+            title="Export this page as CSV"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+          >
+            <FaFileDownload /> Export CSV
+          </button>
         </div>
+
+        {/* Bulk action bar sir — Admin only, only shows once something's selected */}
+        {isAdmin && selected.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-4 rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-3">
+            <span className="text-sm text-richblack-100 font-medium">{selected.length} selected</span>
+            <button
+              onClick={() => handleBulkBan(true)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer"
+            >
+              Suspend selected
+            </button>
+            <button
+              onClick={() => handleBulkBan(false)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-caribgreen-700/20 text-caribgreen-25 border border-caribgreen-700 hover:bg-caribgreen-700/30 transition-colors duration-200 cursor-pointer"
+            >
+              Restore selected
+            </button>
+            <button
+              onClick={() => setSelected([])}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <Loading text="Loading the users..." />
@@ -151,9 +257,20 @@ const Users = () => {
               {users.map((row) => (
                 <div key={row._id} className={`rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4 ${row.isBanned ? 'opacity-60' : ''}`}>
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-richblack-5 truncate">{row.firstName} {row.lastName}</p>
-                      <p className="text-xs text-richblack-400 truncate">{row.email}</p>
+                    <div className="flex items-start gap-2 min-w-0">
+                      {isAdmin && row._id !== me?.id && (
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(row._id)}
+                          onChange={() => toggleSelectOne(row._id)}
+                          className="mt-1 cursor-pointer"
+                          aria-label="Select user"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-richblack-5 truncate">{row.firstName} {row.lastName}</p>
+                        <p className="text-xs text-richblack-400 truncate">{row.email}</p>
+                      </div>
                     </div>
                     {row.isBanned ? (
                       <span
@@ -228,6 +345,11 @@ const Users = () => {
               <table className="w-full text-sm min-w-[900px]">
                 <thead>
                   <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
+                    {isAdmin && (
+                      <th className="p-4 w-10">
+                        <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="cursor-pointer" aria-label="Select all" />
+                      </th>
+                    )}
                     <th className="p-4">User</th>
                     <th className="p-4">Role</th>
                     <th className="p-4">Plan</th>
@@ -240,6 +362,19 @@ const Users = () => {
                 <tbody className="divide-y divide-richblack-700">
                   {users.map((row) => (
                     <tr key={row._id} className={`${row.isBanned ? 'opacity-60' : ''}`}>
+                      {isAdmin && (
+                        <td className="p-4">
+                          {row._id !== me?.id && (
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(row._id)}
+                              onChange={() => toggleSelectOne(row._id)}
+                              className="cursor-pointer"
+                              aria-label="Select user"
+                            />
+                          )}
+                        </td>
+                      )}
                       <td className="p-4">
                         <p className="font-medium text-richblack-5">{row.firstName} {row.lastName}</p>
                         <p className="text-xs text-richblack-400">{row.email}</p>
@@ -312,7 +447,7 @@ const Users = () => {
               <div className="flex items-center justify-center gap-4 mt-6">
                 <button
                   disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
+                  onClick={() => handlePageChange(page - 1)}
                   className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Previous
@@ -320,7 +455,7 @@ const Users = () => {
                 <span className="text-sm text-richblack-300 font-mono">{page} / {usersPagination.pages}</span>
                 <button
                   disabled={page >= usersPagination.pages}
-                  onClick={() => setPage(page + 1)}
+                  onClick={() => handlePageChange(page + 1)}
                   className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Next

@@ -16,6 +16,7 @@ export const AdminUsers = {
     updaterole: BASE_URL + "/admin/users",        // + /:userId/role
     updateplan: BASE_URL + "/admin/users",        // + /:userId/plan
     banuser: BASE_URL + "/admin/users",           // + /:userId/ban
+    bulkbanusers: BASE_URL + "/admin/users/bulk-ban",
     adjustcredits: BASE_URL + "/admin/users",     // + /:userId/credits
     impersonate: BASE_URL + "/admin/users",       // + /:userId/impersonate
     deleteuser: BASE_URL + "/admin/users"         // + /:userId

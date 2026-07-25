@@ -10,6 +10,7 @@ const {
     updateUserPlan,
     deleteUser,
     banUser,
+    bulkBanUsers,
     adjustCredits,
     impersonateUser,
     getUserReviews,
@@ -61,6 +62,7 @@ route.get('/admin/announcements', Auth, isSupport, adminReadLimiter, getAnnounce
 // ---------- admin-only sir ----------
 route.patch('/admin/users/:userId/role', Auth, isAdmin, adminWriteLimiter, updateUserRole)
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, updateUserPlan)
+route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, bulkBanUsers)
 route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, banUser)
 route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter, impersonateUser)
 route.delete('/admin/users/:userId', Auth, isAdmin, adminWriteLimiter, deleteUser)
