@@ -204,7 +204,7 @@ export function GetAuditLogs(token, page = 1) {
         try {
             const response = await apiConnector("GET", auditlogs, null, {
                 Authorization: `Bearer ${token}`
-            }, { page, limit: 50 })
+            }, { page, limit: 20 })
 
             if (!response.data.success) {
                 throw new Error(response.data.message)
