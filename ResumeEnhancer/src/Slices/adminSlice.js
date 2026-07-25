@@ -7,6 +7,8 @@ const initialState = {
     // user management
     users: [],
     usersPagination: null,
+    userDetail: null,
+    userDetailLoading: false,
     // money, audit trail, announcements, ai monitor, health
     payments: null,
     auditLogs: [],
@@ -36,6 +38,12 @@ const adminSlice = createSlice({
         },
         setUsersPagination(state, value) {
             state.usersPagination = value.payload
+        },
+        setUserDetail(state, value) {
+            state.userDetail = value.payload
+        },
+        setUserDetailLoading(state, value) {
+            state.userDetailLoading = value.payload
         },
         setPayments(state, value) {
             state.payments = value.payload
@@ -74,7 +82,7 @@ const adminSlice = createSlice({
 })
 
 export const {
-    setStats, setCharts, setUsers, setUsersPagination, setPayments,
+    setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
     setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setTrafficRange, setSettings, setLoading
 } = adminSlice.actions
 export default adminSlice.reducer

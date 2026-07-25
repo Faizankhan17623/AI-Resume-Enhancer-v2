@@ -2,13 +2,13 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
-    setStats, setCharts, setUsers, setUsersPagination, setPayments,
+    setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
     setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setSettings, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions } = AdminStats
-const { allusers, updaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
+const { allusers, userdetail, updaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
@@ -130,6 +130,30 @@ export function GetUsers(token, page = 1, search = "", role = "") {
             toast.error(error?.response?.data?.message || "Could not load the users")
         } finally {
             dispatch(setLoading(false))
+        }
+    }
+}
+
+// one user's full profile + activity summary sir — powers the detail drawer on the Users page
+export function GetUserDetail(userId, token) {
+    return async (dispatch) => {
+        dispatch(setUserDetailLoading(true))
+        dispatch(setUserDetail(null))
+        try {
+            const response = await apiConnector("GET", `${userdetail}/${userId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setUserDetail({ user: response.data.user, activity: response.data.activity }))
+        } catch (error) {
+            logApiError("Error fetching the user detail", error)
+            toast.error(error?.response?.data?.message || "Could not load this user's detail")
+        } finally {
+            dispatch(setUserDetailLoading(false))
         }
     }
 }

@@ -1,5 +1,3 @@
-import React from 'react'
-
 const Loading = ({ text = "Loading..." }) => {
   return (
     <div className="w-full min-h-[300px] flex flex-col justify-center items-center gap-4">

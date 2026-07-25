@@ -33,14 +33,8 @@ const NewReview = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // pre-select the default resume once the library loads sir
-  useEffect(() => {
-    if (!savedResumeId && resumes.length > 0) {
-      const def = resumes.find((r) => r.isDefault) || resumes[0]
-      setSavedResumeId(def._id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumes])
+  // falls back to the default (or first) saved resume until the user picks one explicitly sir
+  const effectiveResumeId = savedResumeId || (resumes.find((r) => r.isDefault) || resumes[0])?._id || ''
 
   // only PDFs get through sir
   const handleFile = (file) => {
@@ -77,11 +71,11 @@ const NewReview = () => {
     }
 
     if (source === 'saved') {
-      if (!savedResumeId) {
+      if (!effectiveResumeId) {
         toast.error("Please choose a saved resume")
         return
       }
-      dispatch(CreateReviewFromResume(savedResumeId, jd.trim(), token, navigate))
+      dispatch(CreateReviewFromResume(effectiveResumeId, jd.trim(), token, navigate))
       return
     }
 
@@ -134,7 +128,7 @@ const NewReview = () => {
                   <div className="flex items-center gap-3 mb-3">
                     <FaFolderOpen className="text-xl text-yellow-50 shrink-0" />
                     <select
-                      value={savedResumeId}
+                      value={effectiveResumeId}
                       onChange={(e) => setSavedResumeId(e.target.value)}
                       className="flex-1 rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50"
                     >
