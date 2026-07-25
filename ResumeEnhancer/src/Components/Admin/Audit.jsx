@@ -121,7 +121,7 @@ const Audit = () => {
           </button>
         </div>
 
-        {loading ? (
+        {loading && auditLogs.length === 0 ? (
           <Loading text="Loading the audit trail..." />
         ) : auditLogs.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
@@ -130,7 +130,7 @@ const Audit = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className={`space-y-2 transition-opacity duration-200 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
             {auditLogs.map((log) => (
               <div key={log._id} className="rounded-lg bg-richblack-800 shadow-sm shadow-richblack-900/10 px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full border w-fit ${actionChip(log.action)}`}>

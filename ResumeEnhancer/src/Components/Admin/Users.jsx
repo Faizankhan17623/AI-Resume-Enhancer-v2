@@ -247,10 +247,10 @@ const Users = () => {
           </div>
         )}
 
-        {loading ? (
+        {loading && users.length === 0 ? (
           <Loading text="Loading the users..." />
         ) : (
-          <>
+          <div className={loading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}>
             {/* Mobile card list sir — the table below is desktop/tablet only (lg+), this is
                 the same data/actions as one card per user, no horizontal scroll needed */}
             <div className="lg:hidden space-y-3">
@@ -462,7 +462,7 @@ const Users = () => {
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </PageTransition>
     </div>
