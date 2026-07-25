@@ -3,7 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setPayments,
-    setAuditLogs, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setSettings, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setTraffic, setSettings, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
 
@@ -211,6 +211,7 @@ export function GetAuditLogs(token, page = 1) {
             }
 
             dispatch(setAuditLogs(response.data.logs))
+            dispatch(setAuditLogsPagination(response.data.pagination))
         } catch (error) {
             logApiError("Error fetching the audit logs", error)
         } finally {
