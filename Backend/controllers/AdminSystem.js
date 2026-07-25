@@ -318,15 +318,26 @@ exports.getTraffic = async (req, res) => {
     }
 }
 
-// GET /admin/audit?page=1&limit=50&action=USER_BAN — the audit trail sir, admin only
+// GET /admin/audit?page=1&limit=50&action=USER_BAN&search=foo — the audit trail sir, admin only
+// search matches the target's email — the actor's email can't be filtered server-side since
+// it only becomes available after the actor populate, so we match on actor email post-populate too
 exports.getAuditLogs = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1)
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50))
         const action = req.query.action
+        const search = (req.query.search || '').trim()
 
         const filter = {}
         if (action) filter.action = action
+        if (search) {
+            const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const matchingActors = await User.find({ email: { $regex: safe, $options: 'i' } }).select('_id')
+            filter.$or = [
+                { targetEmail: { $regex: safe, $options: 'i' } },
+                { actor: { $in: matchingActors.map((u) => u._id) } },
+            ]
+        }
 
         const [logs, total] = await Promise.all([
             AuditLog.find(filter)

@@ -34,3 +34,6 @@ scripts/
 # throwaway local Playwright/testing driver scripts sir — never for the repo
 __*-check.cjs
 __*-check.js
+
+.vercel
+.env*
