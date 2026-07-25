@@ -4,7 +4,7 @@ Full feature list (internal reference — not rendered as part of the public REA
 Auth & Account
 - Signup/login with OTP email verification, JWT session cookie
 - Per-account brute-force lockout: 5 failed attempts locks the account for 15 minutes
-- Google OAuth login (currently disabled pending Cloud console credentials — see Backend/controllers/GoogleAuth.js, routes commented not removed in Backend/Routes/Auth.js)
+- Google and GitHub OAuth login/signup (one-time exchange-code redirect flow, callback URLs point at the live Render backend; Facebook/LinkedIn buttons removed since those providers were never actually configured)
 - Profile page: plan, activity counts, editable first/last name, email, and phone number
 - Per-type email notification preferences (streak, win-back, digest, monthly health check)
 - In-app notification bell (unread badge, dropdown, mark read/mark all read) mirroring the email nudges
@@ -49,14 +49,22 @@ Payments
 - Razorpay checkout + signature verification, payment history
 
 Admin Dashboard (role-gated: Admin/Support)
-- Stats overview, system health, AI usage/cost stats, 30-day charts, unique visitors + logins traffic chart
-- User management: search, role/plan change, credit adjust, ban/unban, delete, impersonate
-- Payments dashboard, audit log, feature flags (kill-switches for Review/Cover Letter/Job Search, no redeploy needed)
-- Site-wide announcement banners
-- Hourly AI cost/error-rate alert email to a configured admin address, now also logged as an in-app audit entry with a dashboard banner (previously email-only, invisible in the app)
+- Stats overview, system health, AI usage/cost stats, 30-day charts (revenue chart shown in rupees, not paise), unique visitors + logins traffic chart
+- Overview stat cards (Total Users, Revenue, Paid Conversion) link straight through to the relevant Users/Payments page
+- User management: search, role filter (Admin accounts always excluded from the list), role change restricted to User ↔ Support only (granting/removing Admin access is a deliberate out-of-band operation, not reachable from this UI), credit adjust, ban/unban with the ban reason visible on hover without opening detail, delete, impersonate
+- Plan shown read-only to avoid accidental Pro/ProMax revenue mismatches from a casual dropdown; a separate Admin-only "Fix plan" action (confirm-dialog gated) exists for refunds, failed webhooks, and giveaways
+- Bulk actions on the Users page: multi-select with a "select all" checkbox and a bulk suspend/restore bar
+- A read-only user detail drawer (profile, role/plan/status, recent reviews and payments) opens from clicking a name in the Users list
+- A congratulations email is sent automatically when a user is promoted from User to Support
+- Payments dashboard, audit log (filterable by action type and searchable by target/actor email, paginated), feature flags (kill-switches for Review/Cover Letter/Job Search, no redeploy needed)
+- Feature flags require a reason and a scheduled future re-enable time when disabled, with a cron that automatically re-enables the flag once that time passes; the disabled-feature error a user sees includes the admin's note and re-enable time
+- Site-wide announcement banners: editable after publishing, capped at 2 concurrently active, with optional scheduled start/end windows (IST, 12-hour time, start must be tomorrow or later, start-to-end gap capped at 15 days)
+- CSV export on the Users, Payments, and Audit Log pages (exports the currently loaded/filtered page)
+- Hourly AI cost/error-rate alert email to a configured admin address, now also logged as an in-app audit entry with a dashboard banner
 - Account Deletions widget: live count of accounts pending the 2-day purge window plus a rolling log of recently purged accounts (previously the purge cron only wrote to the server console)
 - Mobile-responsive card layouts for the Users/Payments tables (desktop keeps the full table)
 - Audit Log and Settings tabs correctly hidden/blocked for Support (Admin-only, matching the backend gate)
+- Pagination/filter changes on Users, Payments, and Audit Log no longer replace the list with a full-page spinner — the existing rows stay visible (dimmed) during a background refetch instead of flashing to a blank loading state
 
 Onboarding
 - Dashboard "Get started" checklist for new users, derived from real activity (first review, first saved resume, first chat, first cover letter), dismissible and never reappears once done
@@ -70,7 +78,7 @@ Platform
 - Cookie consent card (localStorage-remembered, shown once)
 - AI model centralized in Backend/utils/AiModel.js (openai/gpt-oss-120b, overridable via GROQ_MODEL env)
 - Baseline accessibility pass on the feedback modal and notification bell (ARIA roles/labels, Escape-to-close, radiogroup semantics)
-- Backend integration test suite: 78 tests across 10 files (auth, AI review, chat streaming, cover letters, resume library, admin RBAC, notifications, profile edit/export, payments, misc features)
+- Backend integration test suite: 85 tests across 11 files (auth, AI review, chat streaming, cover letters, resume library, admin RBAC, notifications, profile edit/export, payments, misc features)
 -->
 
 # AI Resume Enhancer
@@ -81,7 +89,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 
 ## Features
 
-- **Authentication** — signup/login with OTP email verification, JWT-based sessions, per-account brute-force lockout (5 failed attempts locks the account for 15 minutes), and Google OAuth (currently disabled pending Cloud console setup)
+- **Authentication** — signup/login with OTP email verification, JWT-based sessions, per-account brute-force lockout (5 failed attempts locks the account for 15 minutes), and Google/GitHub OAuth
 - **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq (`openai/gpt-oss-120b`)
 - **Resume Builder** — build a resume from structured form data with a live template preview; export it as a print-ready PDF or a real, ATS-safe **DOCX** file
 - **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded images, missing text layer, non-standard fonts) that catches parsing issues real ATS software chokes on, independent of the AI's subjective review
@@ -93,7 +101,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - **Reviews** — users can leave reviews after using the platform, and can frame a shared report for a friend or a recruiter
 - **Notifications** — an in-app bell (unread badge, mark read) alongside per-type email opt-in/opt-out (streak, win-back, digest, monthly health check)
 - **Account Self-Service** — edit profile fields inline, export your own data as JSON, and delete your account with a 2-day recovery window
-- **Admin Dashboard** — manage users, payments, announcements, feature flags, and audit logs, with mobile-responsive tables; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
+- **Admin Dashboard** — manage users (with bulk actions, CSV export, and a read-only detail drawer), payments, announcements (editable, schedulable), and feature flags (schedulable disable/re-enable) with a filterable/searchable audit log, mobile-responsive tables, and no full-page loading flash on pagination; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
 - **Cloud File Storage** — resume uploads stored via Cloudinary
 
 ## Tech Stack
@@ -156,7 +164,7 @@ The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Bac
 
 ## Testing
 
-The backend has an integration test suite (Jest + Supertest + an in-memory MongoDB instance — no mocked DB): 78 tests across 10 files covering authentication, the AI resume review pipeline, cover letter generation, the resume library, chat streaming, payment verification, admin RBAC (role changes, bans, credit adjustments, self-demotion/self-ban/self-delete protection), notifications, and profile editing/data export. AI-dependent controllers mock the Groq SDK rather than making real API calls.
+The backend has an integration test suite (Jest + Supertest + an in-memory MongoDB instance — no mocked DB): 85 tests across 11 files covering authentication, the AI resume review pipeline, cover letter generation, the resume library, chat streaming, payment verification, admin RBAC (role changes, bans, credit adjustments, self-demotion/self-ban/self-delete protection), notifications, and profile editing/data export. AI-dependent controllers mock the Groq SDK rather than making real API calls.
 
 ```bash
 cd Backend
