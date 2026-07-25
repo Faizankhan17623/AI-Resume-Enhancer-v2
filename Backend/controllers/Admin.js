@@ -12,6 +12,21 @@ const { supportPromotionTemplate } = require('../Templates/supportPromotionTempl
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
+// shared by the single and bulk role-change endpoints sir — best-effort, never fails the
+// actual role change if mail hiccups
+const sendSupportPromotionEmailIfNeeded = async (user, oldRole, newRole) => {
+    if (oldRole !== 'User' || newRole !== 'Support') return
+    try {
+        await mailSender(
+            user.email,
+            "You've Been Promoted to Support",
+            supportPromotionTemplate(`${user.firstName} ${user.lastName}`)
+        )
+    } catch (mailError) {
+        console.log('Failed to send support-promotion email:', mailError.message)
+    }
+}
+
 // GET /admin/stats — the headline numbers + the last-30-days graphs in ONE call sir
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -264,19 +279,7 @@ exports.updateUserRole = async (req, res) => {
         await user.save()
 
         logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role })
-
-        // congratulate the user on becoming Support sir — best-effort, doesn't fail the role change if mail hiccups
-        if (oldRole === 'User' && role === 'Support') {
-            try {
-                await mailSender(
-                    user.email,
-                    "You've Been Promoted to Support",
-                    supportPromotionTemplate(`${user.firstName} ${user.lastName}`)
-                )
-            } catch (mailError) {
-                console.log('Failed to send support-promotion email:', mailError.message)
-            }
-        }
+        await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
 
         return res.status(200).json({
             success: true,
@@ -289,6 +292,70 @@ exports.updateUserRole = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the role',
+        })
+    }
+}
+
+// PATCH /admin/users/bulk-role — move several accounts between User and Support at once sir,
+// body: { userIds: [...], role: 'User' | 'Support' }. Same rules as the single-user version:
+// can't touch yourself, can't touch an existing Admin — those ids are skipped, not a hard failure.
+exports.bulkUpdateUserRole = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userIds, role } = req.body
+
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'userIds must be a non-empty array',
+            })
+        }
+
+        if (userIds.length > 200) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot act on more than 200 users at once',
+            })
+        }
+
+        if (!['User', 'Support'].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Role must be 'User' or 'Support'",
+            })
+        }
+
+        const validIds = userIds.filter((id) => mongoose.isValidObjectId(id) && id !== adminId)
+        const users = await User.find({ _id: { $in: validIds } }).select('firstName lastName email role')
+
+        const updated = []
+        const skipped = []
+
+        for (const user of users) {
+            if (user.role === 'Admin') {
+                skipped.push(user.email)
+                continue
+            }
+            const oldRole = user.role
+            user.role = role
+            await user.save()
+            logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role, bulk: true })
+            await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
+            updated.push(user.email)
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${updated.length} account${updated.length === 1 ? '' : 's'} moved to ${role}${skipped.length ? `, ${skipped.length} skipped (admins can't be changed here)` : ''}`,
+            updated,
+            skipped,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the roles',
         })
     }
 }

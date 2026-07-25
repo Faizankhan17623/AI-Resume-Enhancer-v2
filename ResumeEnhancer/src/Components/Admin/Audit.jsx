@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
+import toast from 'react-hot-toast'
 import { FaSearch, FaFileDownload } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetAuditLogs } from '../../Services/operations/Admin'
+import { GetAuditLogs, FetchAllAuditLogsForExport } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 
 const AUDIT_CSV_COLUMNS = [
@@ -38,6 +39,7 @@ const Audit = () => {
   const [page, setPage] = useState(1)
   const [actionFilter, setActionFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [exporting, setExporting] = useState(false)
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { auditLogs, auditLogsPagination, loading } = useSelector((state) => state.admin)
@@ -58,16 +60,31 @@ const Audit = () => {
     setPage(1)
   }
 
-  // exports the currently-loaded page/filter sir — client-side from data already fetched
-  const handleExportCsv = () => {
-    const rows = auditLogs.map((log) => ({
-      action: log.action,
-      actor: log.isSystem ? 'System (cron)' : (log.actor?.email || 'deleted admin'),
-      targetEmail: log.targetEmail || '',
-      details: log.details && Object.keys(log.details).length > 0 ? JSON.stringify(log.details) : '',
-      when: new Date(log.createdAt).toLocaleString(),
-    }))
-    downloadCsv(`audit-log-page-${page}.csv`, rows, AUDIT_CSV_COLUMNS)
+  // exports EVERYTHING matching the current action/search filter sir, not just the visible
+  // page — fetches fresh from the server (capped at 5000 rows) since the paginated Redux
+  // state only ever holds one page's worth
+  const handleExportCsv = async () => {
+    setExporting(true)
+    try {
+      const data = await FetchAllAuditLogsForExport(token, actionFilter, search)
+      const rows = data.logs.map((log) => ({
+        action: log.action,
+        actor: log.isSystem ? 'System (cron)' : (log.actor?.email || 'deleted admin'),
+        targetEmail: log.targetEmail || '',
+        details: log.details && Object.keys(log.details).length > 0 ? JSON.stringify(log.details) : '',
+        when: new Date(log.createdAt).toLocaleString(),
+      }))
+      downloadCsv(`audit-log-export.csv`, rows, AUDIT_CSV_COLUMNS)
+      if (data.truncated) {
+        toast.error(`Exported the first 5000 of ${data.total} matching entries`)
+      } else {
+        toast.success(`Exported ${rows.length} entries`)
+      }
+    } catch {
+      toast.error('Could not export the audit log')
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -113,11 +130,11 @@ const Audit = () => {
           </select>
           <button
             onClick={handleExportCsv}
-            disabled={auditLogs.length === 0}
-            title="Export this page as CSV"
+            disabled={exporting || auditLogs.length === 0}
+            title="Export everything matching this filter as CSV"
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
           >
-            <FaFileDownload /> Export CSV
+            <FaFileDownload /> {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
         </div>
 

@@ -318,15 +318,20 @@ exports.getTraffic = async (req, res) => {
     }
 }
 
-// GET /admin/audit?page=1&limit=50&action=USER_BAN&search=foo — the audit trail sir, admin only
+// GET /admin/audit?page=1&limit=50&action=USER_BAN&search=foo&export=true — the audit trail sir, admin only
 // search matches the target's email — the actor's email can't be filtered server-side since
-// it only becomes available after the actor populate, so we match on actor email post-populate too
+// it only becomes available after the actor populate, so we match on actor email post-populate too.
+// export=true ignores paging and returns every matching row (capped at EXPORT_CAP) so the CSV
+// export button can grab everything matching the current filter, not just the visible page.
+const EXPORT_CAP = 5000
+
 exports.getAuditLogs = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1)
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50))
         const action = req.query.action
         const search = (req.query.search || '').trim()
+        const isExport = req.query.export === 'true'
 
         const filter = {}
         if (action) filter.action = action
@@ -337,6 +342,23 @@ exports.getAuditLogs = async (req, res) => {
                 { targetEmail: { $regex: safe, $options: 'i' } },
                 { actor: { $in: matchingActors.map((u) => u._id) } },
             ]
+        }
+
+        if (isExport) {
+            const [logs, total] = await Promise.all([
+                AuditLog.find(filter)
+                    .populate('actor', 'firstName lastName email role')
+                    .sort({ createdAt: -1 })
+                    .limit(EXPORT_CAP),
+                AuditLog.countDocuments(filter),
+            ])
+
+            return res.status(200).json({
+                success: true,
+                logs,
+                truncated: total > EXPORT_CAP,
+                total,
+            })
         }
 
         const [logs, total] = await Promise.all([
@@ -406,6 +428,98 @@ exports.getDeletions = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the deletion stats',
+        })
+    }
+}
+
+// GET /admin/security — visibility into account lockouts sir, the one abuse signal that
+// previously had zero dashboard presence despite the underlying protection already existing
+// (per-account lockout in controllers/user.js, IP rate limiters in Middlewares/RateLimit.js —
+// the IP limiters are in-memory and reset on restart, so there's nothing durable to show for
+// those; ACCOUNT_LOCKOUT audit entries are the one persisted abuse signal we have)
+exports.getSecurity = async (req, res) => {
+    try {
+        const [currentlyLocked, recentLockouts, lockoutsLast7Days] = await Promise.all([
+            // still locked right now sir — lockUntil in the future
+            User.find({ lockUntil: { $gt: new Date() } })
+                .select('email lockUntil')
+                .sort({ lockUntil: -1 }),
+            // last 20 lockout events sir, newest first
+            AuditLog.find({ action: 'ACCOUNT_LOCKOUT' })
+                .sort({ createdAt: -1 })
+                .limit(20),
+            AuditLog.countDocuments({
+                action: 'ACCOUNT_LOCKOUT',
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+            }),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            security: {
+                currentlyLockedCount: currentlyLocked.length,
+                currentlyLocked,
+                lockoutsLast7Days,
+                recentLockouts,
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the security stats',
+        })
+    }
+}
+
+// GET /admin/search?q=... — one bar to find a user or a payment sir, instead of hunting
+// through each page's own filter. Scoped to Users + Payments only since those are the only
+// two admin pages a result can actually be deep-linked into today (chats/reviews have no
+// standalone admin page yet, just the read-only summary inside the user detail drawer).
+exports.getGlobalSearch = async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim()
+        if (q.length < 2) {
+            return res.status(200).json({ success: true, users: [], payments: [] })
+        }
+
+        const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = { $regex: safe, $options: 'i' }
+
+        const userFilter = {
+            role: { $ne: 'Admin' },
+            $or: [{ email: regex }, { firstName: regex }, { lastName: regex }],
+        }
+
+        const [users, matchingUserIds] = await Promise.all([
+            User.find(userFilter)
+                .select('firstName lastName email role isBanned SubType')
+                .sort({ createdAt: -1 })
+                .limit(8),
+            // a payment doesn't store the buyer's email itself sir, so a search like
+            // "faizan@" only turns up payments via this separate user lookup
+            User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }] }).select('_id'),
+        ])
+
+        const payments = await Payment.find({
+            $or: [
+                { orderId: regex },
+                { paymentId: regex },
+                { user: { $in: matchingUserIds.map((u) => u._id) } },
+            ],
+        })
+            .populate('user', 'firstName lastName email')
+            .sort({ createdAt: -1 })
+            .limit(8)
+
+        return res.status(200).json({ success: true, users, payments })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while searching',
         })
     }
 }

@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -85,7 +85,7 @@ const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, health, deletions, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, health, deletions, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
@@ -93,6 +93,7 @@ const Overview = () => {
     dispatch(GetAiStats(token))
     dispatch(GetHealth(token))
     dispatch(GetDeletions(token))
+    dispatch(GetSecurity(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -263,8 +264,8 @@ const Overview = () => {
           )}
         </div>
 
-        {/* Health + AI + Deletions row sir */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Health + AI + Deletions + Security row sir */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaHeartbeat className="text-pink-100" /> System Health</h2>
             {health ? (
@@ -328,6 +329,41 @@ const Overview = () => {
                     <p className="text-xs text-richblack-400 mb-2">Recently purged</p>
                     <div className="space-y-1.5 max-h-32 overflow-y-auto">
                       {deletions.recentPurges.slice(0, 5).map((log) => (
+                        <div key={log._id} className="flex items-center justify-between text-xs">
+                          <span className="text-richblack-100 truncate">{log.targetEmail}</span>
+                          <span className="text-richblack-400 shrink-0 ml-2">{new Date(log.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-richblack-400">Loading...</p>
+            )}
+          </div>
+
+          {/* Security sir — the one abuse signal (per-account lockouts) that previously had
+              zero dashboard visibility despite the protection already existing */}
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaShieldAlt className="text-pink-100" /> Security</h2>
+            {security ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={`font-display text-2xl ${security.currentlyLockedCount > 0 ? 'text-pink-200' : 'text-richblack-5'}`}>{security.currentlyLockedCount}</p>
+                    <p className="text-xs text-richblack-400">locked right now</p>
+                  </div>
+                  <div>
+                    <p className="font-display text-2xl text-richblack-5">{security.lockoutsLast7Days}</p>
+                    <p className="text-xs text-richblack-400">lockouts — 7 days</p>
+                  </div>
+                </div>
+                {security.recentLockouts?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-richblack-400 mb-2">Recent lockouts</p>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {security.recentLockouts.slice(0, 5).map((log) => (
                         <div key={log._id} className="flex items-center justify-between text-xs">
                           <span className="text-richblack-100 truncate">{log.targetEmail}</span>
                           <span className="text-richblack-400 shrink-0 ml-2">{new Date(log.createdAt).toLocaleDateString()}</span>

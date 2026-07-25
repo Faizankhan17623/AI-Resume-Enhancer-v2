@@ -8,6 +8,7 @@ const User = require('../Models/User');
 const OTP = require('../Models/OTP.js')
 const LoginLog = require('../Models/LoginLog.js')
 const mailSender = require('../utils/Nodemailer.js')
+const { logSystemAction } = require('../utils/AdminLog.js')
 
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
@@ -195,6 +196,9 @@ exports.loginUser = async (req, res) => {
             if (attempts >= MAX_FAILED_ATTEMPTS) {
                 update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS)
                 update.failedLoginAttempts = 0
+                // one entry per lockout, not per failed attempt, sir — keeps the audit log
+                // signal-heavy instead of drowning it in every bad password guess
+                logSystemAction('ACCOUNT_LOCKOUT', { email: existingUser.email }, { lockedUntil: update.lockUntil })
             }
             await User.findByIdAndUpdate(existingUser._id, update)
 

@@ -7,13 +7,16 @@ export const AdminStats = {
     insights: BASE_URL + "/admin/insights",
     auditlogs: BASE_URL + "/admin/audit",
     traffic: BASE_URL + "/admin/traffic",
-    deletions: BASE_URL + "/admin/deletions"
+    deletions: BASE_URL + "/admin/deletions",
+    security: BASE_URL + "/admin/security",
+    search: BASE_URL + "/admin/search"
 }
 
 export const AdminUsers = {
     allusers: BASE_URL + "/admin/users",
     userdetail: BASE_URL + "/admin/users",        // + /:userId
     updaterole: BASE_URL + "/admin/users",        // + /:userId/role
+    bulkupdaterole: BASE_URL + "/admin/users/bulk-role",
     updateplan: BASE_URL + "/admin/users",        // + /:userId/plan
     banuser: BASE_URL + "/admin/users",           // + /:userId/ban
     bulkbanusers: BASE_URL + "/admin/users/bulk-ban",
