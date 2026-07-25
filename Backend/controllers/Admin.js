@@ -132,7 +132,7 @@ exports.getUsers = async (req, res) => {
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('firstName lastName email role isBanned Verified Subscription SubType SubscriptionExpires count createdAt')
+                .select('firstName lastName email role isBanned banReason Verified Subscription SubType SubscriptionExpires count createdAt')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),
@@ -294,8 +294,8 @@ exports.updateUserRole = async (req, res) => {
 }
 
 // PATCH /admin/users/:userId/plan — gift/fix a plan by hand sir, body: { plan: 'Basic' | 'Pro' | 'ProMax' }
-// useful for support cases: refunds, failed webhooks, giveaways
-// no longer called from the Users admin UI (plan is shown read-only there to avoid Pro/ProMax revenue mismatches) — kept for API/script use
+// useful for support cases: refunds, failed webhooks, giveaways. Admin-only, and deliberately
+// a confirm-dialog action in the UI rather than a casual dropdown, since it's revenue-adjacent.
 exports.updateUserPlan = async (req, res) => {
     try {
         const adminId = req?.User.id

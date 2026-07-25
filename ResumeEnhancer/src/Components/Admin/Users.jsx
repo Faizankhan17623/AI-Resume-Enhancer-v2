@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
-import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins } from 'react-icons/fa'
+import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetUsers, UpdateUserRole, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, DeleteUser } from '../../Services/operations/Admin'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
@@ -71,6 +71,22 @@ const Users = () => {
       confirmButtonColor: '#C1443C',
     })
     if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter))
+  }
+
+  // deliberate, explicit action sir — not a casual dropdown, since this is revenue-adjacent
+  // (fixing a failed webhook, honoring a refund, a manual giveaway)
+  const handleFixPlan = async (target) => {
+    const { value: plan, isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: `Set ${target.email}'s plan`,
+      text: `Current plan: ${target.SubType === 'ProMax' ? 'Pro Max' : (target.SubType || 'Basic')}. Only do this for refunds, failed webhooks, or giveaways.`,
+      input: 'select',
+      inputOptions: { Basic: 'Basic', Pro: 'Pro', ProMax: 'Pro Max' },
+      inputValue: target.SubType || 'Basic',
+      showCancelButton: true,
+      confirmButtonText: 'Set plan',
+    })
+    if (isConfirmed && plan) dispatch(UpdateUserPlan(target._id, plan, token, page, search, roleFilter))
   }
 
   const handleDelete = (target) => {
@@ -140,7 +156,12 @@ const Users = () => {
                       <p className="text-xs text-richblack-400 truncate">{row.email}</p>
                     </div>
                     {row.isBanned ? (
-                      <span className="shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700">BANNED</span>
+                      <span
+                        title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
+                        className="shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
+                      >
+                        BANNED
+                      </span>
                     ) : row.Verified ? (
                       <span className="shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700">ACTIVE</span>
                     ) : (
@@ -180,6 +201,10 @@ const Users = () => {
                       </button>
                       {isAdmin && (
                         <>
+                          <button onClick={() => handleFixPlan(row)} aria-label="Fix plan" title="Fix plan (refund/webhook/giveaway)"
+                            className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                            <FaWrench className="text-sm" />
+                          </button>
                           <button onClick={() => handleBan(row)} aria-label={row.isBanned ? "Restore user" : "Suspend user"} title={row.isBanned ? "Restore" : "Suspend"}
                             className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                             {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
@@ -239,7 +264,12 @@ const Users = () => {
                       <td className="p-4 font-mono text-richblack-100">{row.count}</td>
                       <td className="p-4">
                         {row.isBanned ? (
-                          <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700">BANNED</span>
+                          <span
+                            title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
+                            className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
+                          >
+                            BANNED
+                          </span>
                         ) : row.Verified ? (
                           <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700">ACTIVE</span>
                         ) : (
@@ -255,6 +285,10 @@ const Users = () => {
                           </button>
                           {isAdmin && (
                             <>
+                              <button onClick={() => handleFixPlan(row)} title="Fix plan (refund/webhook/giveaway)"
+                                className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                                <FaWrench className="text-sm" />
+                              </button>
                               <button onClick={() => handleBan(row)} title={row.isBanned ? "Restore" : "Suspend"}
                                 className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                                 {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
