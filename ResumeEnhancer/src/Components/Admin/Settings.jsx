@@ -84,10 +84,13 @@ const Settings = () => {
           Turn a feature off instantly without a redeploy — useful during a cost spike or an incident.
         </p>
 
+        {/* initial={false} sir — animate only the very first mount; without it, every
+            toggle/note-save re-renders this list from Redux and restages the fade-in
+            across every card, not just the one that changed */}
         {loading && !settings.length ? (
           <p className="text-sm text-richblack-400 py-6 text-center">Loading settings...</p>
         ) : (
-          <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="show" className="space-y-3">
+          <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">
             {settings.map((setting) => {
               const meta = LABELS[setting.key] || { label: setting.key, description: '' }
               return (

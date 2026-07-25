@@ -114,10 +114,10 @@ const Payments = () => {
           </button>
         </div>
 
-        {loading ? (
+        {loading && (payments?.payments || []).length === 0 ? (
           <Loading text="Loading the payments..." />
         ) : (
-          <>
+          <div className={loading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}>
             {/* Mobile card list sir — same data as the table below, one card per payment,
                 shown below lg so nobody has to horizontally scroll a table on a phone */}
             <div className="lg:hidden space-y-3">
@@ -181,7 +181,7 @@ const Payments = () => {
                 <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Pagination sir */}

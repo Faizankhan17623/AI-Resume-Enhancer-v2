@@ -210,10 +210,13 @@ const Announcements = () => {
         {/* The list sir */}
         <div className="space-y-3">
           <h2 className="font-display text-lg text-richblack-5">All announcements</h2>
+          {/* initial={false} sir — animate only the very first mount; without it, toggling
+              or editing one announcement re-renders the list from Redux and restages the
+              fade-in across every card, not just the one that changed */}
           {announcements.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing broadcast yet sir.</p>
           ) : (
-            <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="show" className="space-y-3">
+            <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">
             <AnimatePresence>
             {announcements.map((item) => (
               <motion.div key={item._id} layout variants={fadeUp} exit={{ opacity: 0, x: -20 }} className={`rounded-xl border p-5 flex items-start justify-between gap-4 ${item.active ? 'bg-richblack-800 border-richblack-600' : 'bg-richblack-800/40 border-richblack-700 opacity-70'}`}>

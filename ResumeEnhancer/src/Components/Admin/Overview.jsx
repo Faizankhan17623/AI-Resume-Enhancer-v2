@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
@@ -146,16 +146,26 @@ const Overview = () => {
 
         {/* AI cost-alert banner sir — the cron that checks this only ever emailed
             ADMIN_ALERT_EMAIL before, so it fired silently as far as this dashboard knew */}
-        {latestCostAlert && (
-          <div className="rounded-xl bg-pink-700/15 border border-pink-700/40 px-5 py-3.5 flex items-center gap-3">
-            <FaExclamationTriangle className="text-pink-100 shrink-0" />
-            <p className="text-sm text-richblack-100">
-              <span className="text-pink-100 font-medium">AI usage threshold breached</span>
-              {' — '}{latestCostAlert.details?.tokens?.toLocaleString()} tokens, {latestCostAlert.details?.errorRate}% error rate in the last 24h
-              <span className="text-richblack-400 ml-2 text-xs">{new Date(latestCostAlert.createdAt).toLocaleString()}</span>
-            </p>
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {latestCostAlert && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: 0 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="rounded-xl bg-pink-700/15 border border-pink-700/40 px-5 py-3.5 flex items-center gap-3">
+                <FaExclamationTriangle className="text-pink-100 shrink-0" />
+                <p className="text-sm text-richblack-100">
+                  <span className="text-pink-100 font-medium">AI usage threshold breached</span>
+                  {' — '}{latestCostAlert.details?.tokens?.toLocaleString()} tokens, {latestCostAlert.details?.errorRate}% error rate in the last 24h
+                  <span className="text-richblack-400 ml-2 text-xs">{new Date(latestCostAlert.createdAt).toLocaleString()}</span>
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Stat cards sir */}
         <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
