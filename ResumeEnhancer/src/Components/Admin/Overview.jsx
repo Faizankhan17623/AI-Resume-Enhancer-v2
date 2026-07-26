@@ -267,15 +267,42 @@ const Overview = () => {
         {/* Health + AI + Deletions + Security row sir */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
-            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaHeartbeat className="text-pink-100" /> System Health</h2>
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2">
+              <FaHeartbeat className="text-pink-100" /> System Health
+              {health?.overall && (
+                <span className={`ml-auto px-2 py-0.5 text-[10px] font-bold rounded-full border uppercase ${
+                  health.overall === 'healthy' ? 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700'
+                    : health.overall === 'degraded' ? 'bg-yellow-700/30 text-yellow-25 border-yellow-700'
+                    : 'bg-pink-700/30 text-pink-100 border-pink-700'
+                }`}>
+                  {health.overall}
+                </span>
+              )}
+            </h2>
             {health ? (
               <div className="space-y-3">
                 <HealthDot ok={health.db?.ok} label="MongoDB" latency={health.db?.latencyMs} />
+                {health.db?.pool && (
+                  <p className="text-xs text-richblack-400 pl-4.5">
+                    Pool {health.db.pool.availableConnections}/{health.db.pool.totalConnections} available
+                  </p>
+                )}
                 <HealthDot ok={health.ai?.ok} label="Groq AI" latency={health.ai?.latencyMs} />
+                {health.mail?.configured && (
+                  <HealthDot ok={health.mail?.ok} label="Mail relay" latency={health.mail?.latencyMs} />
+                )}
+                {!health.env?.ok && (
+                  <p className="text-xs text-pink-200">Missing env: {health.env?.missing?.join(', ')}</p>
+                )}
                 <p className="text-xs text-richblack-400 pt-2">
                   Uptime {Math.floor((health.server?.uptimeSeconds || 0) / 3600)}h {Math.floor(((health.server?.uptimeSeconds || 0) % 3600) / 60)}m
                   · Heap {health.server?.memoryMB?.heapUsed}MB · Node {health.server?.node}
                 </p>
+                {health.eventLoop && (
+                  <p className="text-xs text-richblack-400">
+                    Event loop lag: mean {health.eventLoop.meanMs}ms · max {health.eventLoop.maxMs}ms
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-sm text-richblack-400">Checking...</p>
