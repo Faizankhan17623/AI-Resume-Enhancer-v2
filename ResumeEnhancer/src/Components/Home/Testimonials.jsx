@@ -1,13 +1,20 @@
+import { useEffect, useState } from 'react'
 import { FaQuoteLeft, FaStar } from 'react-icons/fa'
 import useGsapReveal from '../../Hooks/useGsapReveal'
+import { apiConnector } from '../../Services/apiConnector'
+import { Testimonials as TestimonialsApi } from '../../Services/Apis/AdminApi'
 
-const testimonials = [
+const AVATAR_COLORS = ['bg-warm-25', 'bg-yellow-25', 'bg-blue-25']
+
+// shown until real approved submissions exist sir — never let the section look empty/broken
+const fallbackTestimonials = [
   {
     name: 'Ananya Sharma',
     role: 'Frontend Developer',
     avatarBg: 'bg-warm-25',
     initials: 'AS',
     quote: 'Resumify pointed out three missing keywords from the job description that I would have never caught myself. Got an interview call within a week.',
+    rating: 5,
   },
   {
     name: 'Rohit Verma',
@@ -15,6 +22,7 @@ const testimonials = [
     avatarBg: 'bg-yellow-25',
     initials: 'RV',
     quote: 'The ATS formatting scan flagged a multi-column layout issue on my resume. Fixed it in ten minutes and my score jumped right after.',
+    rating: 5,
   },
   {
     name: 'Priya Nair',
@@ -22,11 +30,40 @@ const testimonials = [
     avatarBg: 'bg-blue-25',
     initials: 'PN',
     quote: 'The rewritten bullet points felt like they were written by an actual recruiter. Way better than the generic tips I got from other tools.',
+    rating: 5,
   },
 ]
 
+const initialsOf = (firstName, lastName) =>
+  `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?'
+
 const Testimonials = () => {
   const scope = useGsapReveal()
+  const [testimonials, setTestimonials] = useState(fallbackTestimonials)
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const response = await apiConnector('GET', TestimonialsApi.approved)
+        if (response.data.success && response.data.testimonials?.length > 0) {
+          setTestimonials(
+            response.data.testimonials.slice(0, 3).map((t, i) => ({
+              name: `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() || 'Resumify user',
+              role: t.role,
+              avatarBg: AVATAR_COLORS[i % AVATAR_COLORS.length],
+              initials: initialsOf(t.user?.firstName, t.user?.lastName),
+              quote: t.quote,
+              rating: t.rating,
+            }))
+          )
+        }
+      } catch (error) {
+        // static fallback is fine sir — never block the homepage for this
+        console.error('Error fetching testimonials', error)
+      }
+    }
+    fetchTestimonials()
+  }, [])
 
   return (
     <div ref={scope} className="max-w-7xl mx-auto px-6 py-20">
@@ -52,7 +89,7 @@ const Testimonials = () => {
             <FaQuoteLeft className="text-2xl text-richblack-700 mb-4" />
 
             <div className="flex gap-1 mb-4 text-warm-200 text-sm">
-              {Array.from({ length: 5 }).map((_, s) => (
+              {Array.from({ length: t.rating || 5 }).map((_, s) => (
                 <FaStar key={s} />
               ))}
             </div>

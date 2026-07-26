@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn, FaSlidersH, FaSearch, FaSpinner } from 'react-icons/fa'
+import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn, FaSlidersH, FaSearch, FaSpinner, FaCommentDots } from 'react-icons/fa'
 import { GlobalSearch } from '../../Services/operations/Admin'
 
 // two entirely separate tab sets sir — Admin gets /Admin/*, Support gets its OWN /Support/*
@@ -14,6 +14,7 @@ const adminTabs = [
   { name: 'Payments', path: '/Admin/Payments', icon: <FaRupeeSign /> },
   { name: 'Audit Log', path: '/Admin/Audit', icon: <FaClipboardList /> },
   { name: 'Announcements', path: '/Admin/Announcements', icon: <FaBullhorn /> },
+  { name: 'Testimonials', path: '/Admin/Testimonials', icon: <FaCommentDots /> },
   { name: 'Settings', path: '/Admin/Settings', icon: <FaSlidersH /> },
 ]
 
@@ -22,6 +23,7 @@ const supportTabs = [
   { name: 'Users', path: '/Support/Users', icon: <FaUsers /> },
   { name: 'Payments', path: '/Support/Payments', icon: <FaRupeeSign /> },
   { name: 'Announcements', path: '/Support/Announcements', icon: <FaBullhorn /> },
+  { name: 'Testimonials', path: '/Support/Testimonials', icon: <FaCommentDots /> },
 ]
 
 // one bar to find a user or a payment sir, instead of hunting through each page's own

@@ -40,3 +40,15 @@ export const AdminSettings = {
     getsettings: BASE_URL + "/admin/settings",
     updatesetting: BASE_URL + "/admin/settings"    // + /:key
 }
+
+export const AdminTestimonials = {
+    alltestimonials: BASE_URL + "/admin/testimonials",
+    moderatetestimonial: BASE_URL + "/admin/testimonials",   // + /:testimonialId
+    deletetestimonial: BASE_URL + "/admin/testimonials"      // + /:testimonialId
+}
+
+export const Testimonials = {
+    submit: BASE_URL + "/testimonials",
+    mine: BASE_URL + "/testimonials/mine",
+    approved: BASE_URL + "/testimonials/approved"
+}
