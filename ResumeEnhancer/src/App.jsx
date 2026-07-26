@@ -44,6 +44,7 @@ const AdminPayments = lazy(() => import('./Components/Admin/Payments'))
 const AdminAudit = lazy(() => import('./Components/Admin/Audit'))
 const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements'))
 const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
+const AdminReports = lazy(() => import('./Components/Admin/Reports'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
 
@@ -145,6 +146,7 @@ function App() {
           <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
           <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
           <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
+          <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
           <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
           {/* Support-only sir — strictly, see SupportRoute.jsx. An Admin hitting any of these
@@ -156,6 +158,7 @@ function App() {
           <Route path="/Support/Payments" element={<SupportRoute><AdminPayments /></SupportRoute>} />
           <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
           <Route path="/Support/Testimonials" element={<SupportRoute><AdminTestimonials /></SupportRoute>} />
+          <Route path="/Support/Reports" element={<SupportRoute><AdminReports /></SupportRoute>} />
 
           {/* anything unknown goes home sir */}
           <Route path="*" element={<Navigate to="/" />} />

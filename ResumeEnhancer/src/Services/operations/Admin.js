@@ -3,9 +3,9 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setTestimonials, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setLoading
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions, security, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
@@ -13,6 +13,7 @@ const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
 const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
+const { allreports, updatereport, deletereport } = AdminReports
 
 // ---------- overview sir ----------
 
@@ -508,6 +509,76 @@ export function DeleteTestimonial(testimonialId, token) {
             dispatch(GetTestimonials(token))
         } catch (error) {
             logApiError("Error deleting the testimonial", error)
+            toast.error(error?.response?.data?.message || "Could not delete")
+        }
+    }
+}
+
+// ---------- bug reports & feature suggestions sir ----------
+
+export function GetReports(token, type = "", status = "") {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const params = {}
+            if (type) params.type = type
+            if (status) params.status = status
+
+            const response = await apiConnector("GET", allreports, null, {
+                Authorization: `Bearer ${token}`
+            }, params)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setReports(response.data.reports))
+        } catch (error) {
+            logApiError("Error fetching the reports", error)
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function UpdateReportStatus(reportId, status, token, type = "", statusFilter = "") {
+    return async (dispatch) => {
+        const toastId = toast.loading('Updating...')
+        try {
+            const response = await apiConnector("PATCH", `${updatereport}/${reportId}`, { status }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetReports(token, type, statusFilter))
+        } catch (error) {
+            logApiError("Error updating the report", error)
+            toast.error(error?.response?.data?.message || "Could not update")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function DeleteReport(reportId, token, type = "", statusFilter = "") {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("DELETE", `${deletereport}/${reportId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Report deleted")
+            dispatch(GetReports(token, type, statusFilter))
+        } catch (error) {
+            logApiError("Error deleting the report", error)
             toast.error(error?.response?.data?.message || "Could not delete")
         }
     }

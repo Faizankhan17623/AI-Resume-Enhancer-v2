@@ -52,3 +52,9 @@ export const Testimonials = {
     mine: BASE_URL + "/testimonials/mine",
     approved: BASE_URL + "/testimonials/approved"
 }
+
+export const AdminReports = {
+    allreports: BASE_URL + "/admin/reports",
+    updatereport: BASE_URL + "/admin/reports",   // + /:reportId
+    deletereport: BASE_URL + "/admin/reports"    // + /:reportId
+}
