@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaPlus, FaFilePdf, FaMagic, FaComments, FaEnvelopeOpenText } from 'react-icons/fa'
+import { FaPlus, FaFilePdf, FaMagic, FaComments, FaEnvelopeOpenText, FaBug } from 'react-icons/fa'
 import { buttonHover, buttonTap } from '../../utils/motion'
+import ReportModal from './ReportModal'
 
 // quick-actions FAB sir — same shortcuts the sidebar already links to, just one thumb-tap away.
 // pattern: motion.dev/examples/react-floating-action-button — staggered vertical menu, spring pop, tooltip labels.
@@ -13,6 +14,10 @@ const actions = [
   { name: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText, color: 'bg-yellow-50 text-richblack-900' },
 ]
 
+// this one opens the report modal instead of navigating sir, so it's kept separate
+// from the `actions` list above (that one always renders a <Link>)
+const reportAction = { name: 'Report a bug / Suggest a feature', icon: FaBug, color: 'bg-pink-200 text-richblack-900' }
+
 const itemVariants = {
   hidden: { opacity: 0, y: 12, scale: 0.6 },
   show: { opacity: 1, y: 0, scale: 1 },
@@ -20,6 +25,8 @@ const itemVariants = {
 
 export default function QuickActionsFab() {
   const [open, setOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const ReportIcon = reportAction.icon
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3 print:hidden">
@@ -32,6 +39,22 @@ export default function QuickActionsFab() {
             variants={{ show: { transition: { staggerChildren: 0.05 } }, hidden: { transition: { staggerChildren: 0.03, staggerDirection: -1 } } }}
             className="flex flex-col items-end gap-3"
           >
+            <motion.div variants={itemVariants} transition={{ type: 'spring', stiffness: 500, damping: 30 }} className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-lg bg-richblack-800 border border-richblack-700 text-xs font-semibold text-richblack-5 shadow-lg whitespace-nowrap">
+                {reportAction.name}
+              </span>
+              <motion.button
+                type="button"
+                onClick={() => { setReportOpen(true); setOpen(false) }}
+                whileHover={buttonHover}
+                whileTap={buttonTap}
+                aria-label={reportAction.name}
+                className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center text-base cursor-pointer ${reportAction.color}`}
+              >
+                <ReportIcon />
+              </motion.button>
+            </motion.div>
+
             {actions.map((action) => {
               const Icon = action.icon
               return (
@@ -66,6 +89,8 @@ export default function QuickActionsFab() {
           <FaPlus />
         </motion.span>
       </motion.button>
+
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
     </div>
   )
 }

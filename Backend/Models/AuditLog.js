@@ -40,6 +40,8 @@ const auditLogSchema = new mongoose.Schema(
                 'TESTIMONIAL_APPROVE',
                 'TESTIMONIAL_REJECT',
                 'TESTIMONIAL_DELETE',
+                'REPORT_STATUS_CHANGE',
+                'REPORT_DELETE',
             ],
             index: true,
         },
