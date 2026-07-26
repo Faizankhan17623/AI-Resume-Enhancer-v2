@@ -3,15 +3,16 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setTestimonials, setLoading
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions, security, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
+const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
 
 // ---------- overview sir ----------
 
@@ -442,6 +443,72 @@ export function UpdateSetting(key, enabled, note, token, disabledUntil) {
         } catch (error) {
             logApiError("Error updating the setting", error)
             toast.error(error?.response?.data?.message || "Could not update the setting")
+        }
+    }
+}
+
+// ---------- testimonials sir ----------
+
+export function GetTestimonials(token, status = "") {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", alltestimonials, null, {
+                Authorization: `Bearer ${token}`
+            }, status ? { status } : {})
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setTestimonials(response.data.testimonials))
+        } catch (error) {
+            logApiError("Error fetching the testimonials", error)
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function ModerateTestimonial(testimonialId, status, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading(status === 'approved' ? 'Approving...' : 'Rejecting...')
+        try {
+            const response = await apiConnector("PATCH", `${moderatetestimonial}/${testimonialId}`, { status }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetTestimonials(token))
+        } catch (error) {
+            logApiError("Error moderating the testimonial", error)
+            toast.error(error?.response?.data?.message || "Could not update")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function DeleteTestimonial(testimonialId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("DELETE", `${deletetestimonial}/${testimonialId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Testimonial deleted")
+            dispatch(GetTestimonials(token))
+        } catch (error) {
+            logApiError("Error deleting the testimonial", error)
+            toast.error(error?.response?.data?.message || "Could not delete")
         }
     }
 }

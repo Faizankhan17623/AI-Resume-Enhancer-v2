@@ -7,6 +7,7 @@ import { motion } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
+import ShareTestimonialCard from './ShareTestimonialCard'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
@@ -306,6 +307,9 @@ const Account = () => {
             />
           </div>
         </div>
+
+        {/* Share a homepage testimonial sir — User-only, mirrors isUser on the backend */}
+        {user.role === 'User' && <ShareTestimonialCard />}
 
         {/* Edit profile sir — inline-editable name/email/phone */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
