@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const Grok = require('groq-sdk')
+const { monitorEventLoopDelay } = require('node:perf_hooks')
 
 const User = require('../Models/User')
 const Payment = require('../Models/Payment')
@@ -10,6 +11,16 @@ const LoginLog = require('../Models/LoginLog')
 const VisitorLog = require('../Models/VisitorLog')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
+
+// event-loop lag sir — one histogram, kept running for the whole process lifetime, so
+// getHealth just reads its current snapshot instead of sampling on the spot
+const eventLoopMonitor = monitorEventLoopDelay({ resolution: 20 })
+eventLoopMonitor.enable()
+
+// cache the health payload for a few seconds sir — the admin dashboard polls this, and
+// every poll otherwise re-hits Groq/the mail relay for real, burning quota for nothing
+let healthCache = { data: null, expiresAt: 0 }
+const HEALTH_CACHE_MS = 30 * 1000
 
 // the system-level admin endpoints live here sir — money, AI health, server health, insights, audit trail
 
@@ -165,9 +176,18 @@ exports.getAiStats = async (req, res) => {
     }
 }
 
+// required-at-runtime env vars sir — if any of these are missing, something else is
+// already broken (auth, DB, or AI), this just makes that visible instead of a mystery 500
+const REQUIRED_ENV_VARS = ['MONGO_DB_URL', 'GROK_API_KEY', 'JWT_PRIVATE_KEY']
+
 // GET /admin/health — green/red dots for the dashboard sir
 exports.getHealth = async (req, res) => {
     try {
+        // served straight from cache if still fresh sir — see HEALTH_CACHE_MS above
+        if (healthCache.data && healthCache.expiresAt > Date.now()) {
+            return res.status(200).json({ success: true, health: healthCache.data, cached: true })
+        }
+
         // DB ping sir — timed
         let db = { ok: false, latencyMs: null }
         try {
@@ -177,6 +197,21 @@ exports.getHealth = async (req, res) => {
         } catch (dbErr) {
             db.error = dbErr.message
         }
+
+        // DB connection pool sir — current pool size + how many are checked out right now,
+        // straight off the driver's topology, no extra call needed
+        const poolStats = (() => {
+            try {
+                const topology = mongoose.connection.client.topology
+                const server = [...topology.s.servers.values()][0]
+                const pool = server?.pool
+                return pool
+                    ? { totalConnections: pool.totalConnectionCount, availableConnections: pool.availableConnectionCount }
+                    : null
+            } catch {
+                return null
+            }
+        })()
 
         // Groq reachability sir — a cheap models.list, timed
         let ai = { ok: false, latencyMs: null }
@@ -188,22 +223,74 @@ exports.getHealth = async (req, res) => {
             ai.error = aiErr.message
         }
 
+        // mail relay reachability sir — Render blocks outbound SMTP so production mail hops
+        // through the Vercel relay (see utils/Nodemailer.js); a plain reachability probe on
+        // the relay's base URL is enough, we don't want to actually send an email per health check
+        let mail = { ok: false, configured: false }
+        if (process.env.MAIL_RELAY_URL) {
+            mail.configured = true
+            try {
+                const t0 = Date.now()
+                const response = await fetch(process.env.MAIL_RELAY_URL, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(8000),
+                })
+                // any response at all (even a 404/405 on a GET the relay doesn't support) means
+                // the relay is reachable sir — we're only checking network path, not the route
+                mail = { ok: response.status < 500, configured: true, latencyMs: Date.now() - t0, statusCode: response.status }
+            } catch (mailErr) {
+                mail.error = mailErr.message
+            }
+        } else {
+            mail.note = 'MAIL_RELAY_URL not set — relay not configured for this environment'
+        }
+
         const mem = process.memoryUsage()
+
+        // event-loop lag sir — mean/max lag in ms since the process started, the earlier the
+        // server started struggling to keep up, the higher this drifts even if memory looks fine
+        const eventLoop = {
+            meanMs: Math.round((eventLoopMonitor.mean / 1e6) * 100) / 100,
+            maxMs: Math.round((eventLoopMonitor.max / 1e6) * 100) / 100,
+        }
+
+        // env sanity sir — flags missing config before it surfaces as a confusing failure elsewhere
+        const missingEnvVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key])
+
+        // overall rollup sir — down if the DB is unreachable (nothing works without it),
+        // degraded if AI/mail is unreachable or env vars are missing (partial functionality),
+        // healthy otherwise
+        const overall = !db.ok
+            ? 'down'
+            : (!ai.ok || (mail.configured && !mail.ok) || missingEnvVars.length > 0)
+                ? 'degraded'
+                : 'healthy'
+
+        const health = {
+            overall,
+            db: poolStats ? { ...db, pool: poolStats } : db,
+            ai,
+            mail,
+            eventLoop,
+            env: {
+                ok: missingEnvVars.length === 0,
+                missing: missingEnvVars,
+            },
+            server: {
+                uptimeSeconds: Math.round(process.uptime()),
+                memoryMB: {
+                    rss: Math.round(mem.rss / 1024 / 1024),
+                    heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+                },
+                node: process.version,
+            }
+        }
+
+        healthCache = { data: health, expiresAt: Date.now() + HEALTH_CACHE_MS }
 
         return res.status(200).json({
             success: true,
-            health: {
-                db,
-                ai,
-                server: {
-                    uptimeSeconds: Math.round(process.uptime()),
-                    memoryMB: {
-                        rss: Math.round(mem.rss / 1024 / 1024),
-                        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
-                    },
-                    node: process.version,
-                }
-            }
+            health,
         })
     } catch (error) {
         console.log(error)
