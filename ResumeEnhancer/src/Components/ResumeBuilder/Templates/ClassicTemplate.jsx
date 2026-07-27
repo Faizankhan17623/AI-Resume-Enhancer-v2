@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#0f172a'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const ClassicTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const ClassicTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -17,15 +30,30 @@ const ClassicTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto font-serif">
       {/* Top banner */}
-      <div className="bg-slate-900 text-white px-12 py-8 text-center">
-        <h1 className="text-3xl tracking-wide font-serif">
-          {personalInfo.fullName || 'Your Name'}
-        </h1>
-        {contactParts.length > 0 && (
-          <p className="mt-2 text-xs text-slate-300 tracking-wide">
-            {contactParts.join('  |  ')}
-          </p>
-        )}
+      <div style={{ backgroundColor: accent }} className="text-white px-12 py-8 text-center">
+        <div className="flex items-center justify-center gap-5">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-20 h-20 rounded-full object-cover border-4 border-white/20 shrink-0"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-white/10 border-4 border-white/20 flex items-center justify-center text-xl font-bold shrink-0">
+              {getInitials(personalInfo.fullName)}
+            </div>
+          )}
+          <div>
+            <h1 className="text-3xl tracking-wide font-serif">
+              {personalInfo.fullName || 'Your Name'}
+            </h1>
+            {contactParts.length > 0 && (
+              <p className="mt-2 text-xs text-slate-300 tracking-wide">
+                {contactParts.join('  |  ')}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="px-12 py-8">

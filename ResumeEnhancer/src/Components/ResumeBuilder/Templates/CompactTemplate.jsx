@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#7a1f2b'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const CompactTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const CompactTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -17,10 +30,26 @@ const CompactTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans px-8 py-6 text-xs leading-snug">
       {/* Header */}
-      <header className="mb-3 flex items-baseline justify-between border-b border-slate-800 pb-1.5">
-        <h1 className="text-lg font-bold text-slate-900">
-          {personalInfo.fullName || 'Your Name'}
-        </h1>
+      <header className="mb-3 flex items-center justify-between border-b border-slate-800 pb-1.5">
+        <div className="flex items-center gap-2.5">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-10 h-10 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div
+              style={{ backgroundColor: accent }}
+              className="w-10 h-10 rounded-full text-white flex items-center justify-center text-[11px] font-bold shrink-0"
+            >
+              {getInitials(personalInfo.fullName)}
+            </div>
+          )}
+          <h1 className="text-lg font-bold text-slate-900">
+            {personalInfo.fullName || 'Your Name'}
+          </h1>
+        </div>
         {contactParts.length > 0 && (
           <p className="text-[10px] text-slate-600">
             {contactParts.join(' | ')}
@@ -36,7 +65,7 @@ const CompactTemplate = ({ data }) => {
 
       {experience.length > 0 && (
         <section className="mb-2.5">
-          <h2 className="text-[10px] uppercase tracking-wider text-[#7a1f2b] font-bold mb-1">
+          <h2 style={{ color: accent }} className="text-[10px] uppercase tracking-wider font-bold mb-1">
             Experience
           </h2>
           <div className="space-y-1.5">
@@ -66,7 +95,7 @@ const CompactTemplate = ({ data }) => {
 
       {projects.length > 0 && (
         <section className="mb-2.5">
-          <h2 className="text-[10px] uppercase tracking-wider text-[#7a1f2b] font-bold mb-1">
+          <h2 style={{ color: accent }} className="text-[10px] uppercase tracking-wider font-bold mb-1">
             Projects
           </h2>
           <div className="space-y-1.5">
@@ -93,7 +122,7 @@ const CompactTemplate = ({ data }) => {
       <div className="grid grid-cols-2 gap-4">
         {education.length > 0 && (
           <section className="mb-2.5">
-            <h2 className="text-[10px] uppercase tracking-wider text-[#7a1f2b] font-bold mb-1">
+            <h2 style={{ color: accent }} className="text-[10px] uppercase tracking-wider font-bold mb-1">
               Education
             </h2>
             <div className="space-y-1">
@@ -116,7 +145,7 @@ const CompactTemplate = ({ data }) => {
 
         {certifications.length > 0 && (
           <section className="mb-2.5">
-            <h2 className="text-[10px] uppercase tracking-wider text-[#7a1f2b] font-bold mb-1">
+            <h2 style={{ color: accent }} className="text-[10px] uppercase tracking-wider font-bold mb-1">
               Certifications
             </h2>
             <div className="space-y-1">
@@ -134,7 +163,7 @@ const CompactTemplate = ({ data }) => {
 
       {skills.length > 0 && (
         <section>
-          <h2 className="text-[10px] uppercase tracking-wider text-[#7a1f2b] font-bold mb-1">
+          <h2 style={{ color: accent }} className="text-[10px] uppercase tracking-wider font-bold mb-1">
             Skills
           </h2>
           <div className="flex flex-wrap gap-1">

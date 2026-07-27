@@ -26,6 +26,7 @@ const OAuthComplete = lazy(() => import('./Components/Login/OAuthComplete'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
+const TemplatePicker = lazy(() => import('./Components/ResumeBuilder/TemplatePicker'))
 const BuildResumePicker = lazy(() => import('./Components/ResumeBuilder/BuildResumePicker'))
 const BuilderEditor = lazy(() => import('./Components/ResumeBuilder/BuilderEditor'))
 const Resumes = lazy(() => import('./Components/Dashboard/Resumes'))
@@ -124,6 +125,7 @@ function App() {
           {/* Only for the logged-IN sir */}
           <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
           <Route path="/Dashboard/New-Review" element={<PrivateRoute><NewReview /></PrivateRoute>} />
+          <Route path="/Dashboard/Templates" element={<PrivateRoute><TemplatePicker /></PrivateRoute>} />
           <Route path="/Dashboard/Build-Resume" element={<PrivateRoute><BuildResumePicker /></PrivateRoute>} />
           <Route path="/Dashboard/Build-Resume/:resumeId" element={<PrivateRoute><BuilderEditor /></PrivateRoute>} />
           <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />

@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#0b2545'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const SidebarTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const SidebarTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactLines = [
     personalInfo.email,
@@ -17,8 +30,19 @@ const SidebarTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto flex font-sans">
       {/* Sidebar */}
-      <aside className="w-[3in] bg-[#0b2545] text-white px-6 py-10 flex flex-col gap-6">
-        <div>
+      <aside style={{ backgroundColor: accent }} className="w-[3in] text-white px-6 py-10 flex flex-col gap-6">
+        <div className="flex flex-col items-center text-center gap-3">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-24 h-24 rounded-full object-cover border-4 border-white/20"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-white/10 border-4 border-white/20 flex items-center justify-center text-2xl font-bold">
+              {getInitials(personalInfo.fullName)}
+            </div>
+          )}
           <h1 className="text-xl font-bold leading-tight break-words">
             {personalInfo.fullName || 'Your Name'}
           </h1>
@@ -26,12 +50,12 @@ const SidebarTemplate = ({ data }) => {
 
         {contactLines.length > 0 && (
           <div>
-            <h2 className="text-xs uppercase tracking-widest text-[#d4af37] mb-2 font-semibold">
+            <h2 className="text-xs uppercase tracking-widest text-white/70 mb-2 font-semibold">
               Contact
             </h2>
             <ul className="space-y-1">
               {contactLines.map((line, idx) => (
-                <li key={idx} className="text-xs text-slate-200 break-words">{line}</li>
+                <li key={idx} className="text-xs text-slate-100 break-words">{line}</li>
               ))}
             </ul>
           </div>
@@ -39,7 +63,7 @@ const SidebarTemplate = ({ data }) => {
 
         {skills.length > 0 && (
           <div>
-            <h2 className="text-xs uppercase tracking-widest text-[#d4af37] mb-2 font-semibold">
+            <h2 className="text-xs uppercase tracking-widest text-white/70 mb-2 font-semibold">
               Skills
             </h2>
             <div className="flex flex-wrap gap-1.5">
@@ -57,15 +81,15 @@ const SidebarTemplate = ({ data }) => {
 
         {certifications.length > 0 && (
           <div>
-            <h2 className="text-xs uppercase tracking-widest text-[#d4af37] mb-2 font-semibold">
+            <h2 className="text-xs uppercase tracking-widest text-white/70 mb-2 font-semibold">
               Certifications
             </h2>
             <ul className="space-y-2">
               {certifications.map((cert, idx) => (
-                <li key={idx} className="text-xs text-slate-200">
+                <li key={idx} className="text-xs text-slate-100">
                   <p className="font-semibold text-white">{cert.name || 'Certification'}</p>
                   {cert.issuer && <p>{cert.issuer}</p>}
-                  {cert.date && <p className="text-slate-400">{cert.date}</p>}
+                  {cert.date && <p className="text-white/60">{cert.date}</p>}
                 </li>
               ))}
             </ul>
@@ -77,8 +101,8 @@ const SidebarTemplate = ({ data }) => {
       <main className="flex-1 px-8 py-10">
         {data?.summary && (
           <section className="mb-6">
-            <h2 className="text-sm uppercase tracking-widest text-[#0b2545] font-bold border-b-2 border-[#d4af37] pb-1 mb-2 inline-block">
-              Profile
+            <h2 style={{ color: accent }} className="text-sm uppercase tracking-widest font-bold border-b-2 pb-1 mb-2 inline-block" >
+              <span style={{ borderColor: accent }}>Profile</span>
             </h2>
             <p className="text-sm leading-relaxed text-slate-800">{data.summary}</p>
           </section>
@@ -86,7 +110,7 @@ const SidebarTemplate = ({ data }) => {
 
         {experience.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-sm uppercase tracking-widest text-[#0b2545] font-bold border-b-2 border-[#d4af37] pb-1 mb-3 inline-block">
+            <h2 style={{ color: accent, borderColor: accent }} className="text-sm uppercase tracking-widest font-bold border-b-2 pb-1 mb-3 inline-block">
               Experience
             </h2>
             <div className="space-y-4">
@@ -116,7 +140,7 @@ const SidebarTemplate = ({ data }) => {
 
         {education.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-sm uppercase tracking-widest text-[#0b2545] font-bold border-b-2 border-[#d4af37] pb-1 mb-3 inline-block">
+            <h2 style={{ color: accent, borderColor: accent }} className="text-sm uppercase tracking-widest font-bold border-b-2 pb-1 mb-3 inline-block">
               Education
             </h2>
             <div className="space-y-2">
@@ -139,7 +163,7 @@ const SidebarTemplate = ({ data }) => {
 
         {projects.length > 0 && (
           <section>
-            <h2 className="text-sm uppercase tracking-widest text-[#0b2545] font-bold border-b-2 border-[#d4af37] pb-1 mb-3 inline-block">
+            <h2 style={{ color: accent, borderColor: accent }} className="text-sm uppercase tracking-widest font-bold border-b-2 pb-1 mb-3 inline-block">
               Projects
             </h2>
             <div className="space-y-3">

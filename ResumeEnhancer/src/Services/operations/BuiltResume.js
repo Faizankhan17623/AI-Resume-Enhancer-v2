@@ -1,17 +1,18 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating } from '../../Slices/builtResumeSlice.js'
+import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating, patchCurrentResume } from '../../Slices/builtResumeSlice.js'
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review, downloadDocx } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo } = BuiltResumeData
 
-// create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor
-export function CreateBuiltResume(templateId, token, navigate) {
+// create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
+// color is optional — carried over when the user picked an accent on the dedicated Templates page.
+export function CreateBuiltResume(templateId, token, navigate, color) {
     return async () => {
         try {
-            const response = await apiConnector("POST", create, { templateId }, {
+            const response = await apiConnector("POST", create, { templateId, ...(color ? { color } : {}) }, {
                 Authorization: `Bearer ${token}`
             })
 
@@ -118,12 +119,12 @@ export function DeleteBuiltResume(resumeId, token) {
 }
 
 // feature 1 sir — raw career info in, a full drafted resume out (consumes a credit)
-export function GenerateResume(rawInfo, targetRole, templateId, token, navigate) {
+export function GenerateResume(rawInfo, targetRole, templateId, token, navigate, color) {
     return async (dispatch) => {
         dispatch(setGenerating(true))
         const toastId = toast.loading("Drafting your resume...")
         try {
-            const response = await apiConnector("POST", generate, { rawInfo, targetRole, templateId }, {
+            const response = await apiConnector("POST", generate, { rawInfo, targetRole, templateId, ...(color ? { color } : {}) }, {
                 Authorization: `Bearer ${token}`
             })
 
@@ -146,7 +147,7 @@ export function GenerateResume(rawInfo, targetRole, templateId, token, navigate)
 }
 
 // feature 2 sir — old resume PDF + a JD in, a tailored rewrite out (consumes a credit)
-export function TailorResume(pdfFile, jd, templateId, token, navigate) {
+export function TailorResume(pdfFile, jd, templateId, token, navigate, color) {
     return async (dispatch) => {
         dispatch(setGenerating(true))
         const toastId = toast.loading("Tailoring your resume to this job...")
@@ -155,6 +156,7 @@ export function TailorResume(pdfFile, jd, templateId, token, navigate) {
             formData.append("PDf", pdfFile)
             formData.append("jd", jd)
             formData.append("templateId", templateId)
+            if (color) formData.append("color", color)
 
             const response = await apiConnector("POST", tailor, formData, {
                 Authorization: `Bearer ${token}`
@@ -205,6 +207,53 @@ export function ReviewBuiltResume(resumeId, jd, token, navigate) {
         } finally {
             dispatch(setReviewLoading(false))
             toast.dismiss(toastId)
+        }
+    }
+}
+
+// uploads/replaces the headshot sir — multipart form, same req.files?.X pattern the PDF uploads use
+export function UploadBuiltResumePhoto(resumeId, file, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Uploading photo...")
+        try {
+            const formData = new FormData()
+            formData.append("photo", file)
+
+            const response = await apiConnector("POST", `${photo}/${resumeId}/photo`, formData, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(patchCurrentResume({ photoUrl: response.data.photoUrl }))
+            toast.success("Photo uploaded")
+        } catch (error) {
+            logApiError("Error uploading the photo", error)
+            toast.error(error?.response?.data?.message || "Could not upload the photo")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function RemoveBuiltResumePhoto(resumeId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("DELETE", `${photo}/${resumeId}/photo`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(patchCurrentResume({ photoUrl: '' }))
+            toast.success("Photo removed")
+        } catch (error) {
+            logApiError("Error removing the photo", error)
+            toast.error(error?.response?.data?.message || "Could not remove the photo")
         }
     }
 }

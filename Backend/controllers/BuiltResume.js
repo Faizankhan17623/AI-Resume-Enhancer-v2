@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
 const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx')
+const cloudinary = require('cloudinary').v2
 
 const BuiltResume = require('../Models/BuiltResume')
 const { consumeCredit } = require('../utils/Plans')
@@ -14,7 +15,7 @@ const { runReview } = require('./AI')
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
 // fields a client is allowed to write sir — keeps user/_id/timestamps out of req.body reaching the DB
-const WRITABLE_FIELDS = ['templateId', 'title', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications']
+const WRITABLE_FIELDS = ['templateId', 'title', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'photoUrl', 'color']
 
 const pickWritable = (body) => {
     const out = {}
@@ -187,6 +188,118 @@ exports.deleteBuiltResume = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the resume',
+        })
+    }
+}
+
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024 // 4MB sir — plenty for a headshot, keeps Cloudinary uploads fast
+const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp']
+
+// POST /built-resumes/:resumeId/photo — upload/replace the headshot for templates that render one sir.
+// Stored on Cloudinary (already connected app-wide, unused until now), only the secure_url is saved.
+exports.uploadBuiltResumePhoto = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const photo = req.files?.photo
+        if (!photo) {
+            return res.status(400).json({
+                success: false,
+                message: 'A photo file is required',
+            })
+        }
+        if (!ALLOWED_PHOTO_MIMES.includes(photo.mimetype)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Photo must be a JPG, PNG, or WEBP image',
+            })
+        }
+        if (photo.size > MAX_PHOTO_BYTES) {
+            return res.status(400).json({
+                success: false,
+                message: 'Photo must be under 4MB',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const upload = await cloudinary.uploader.upload(
+            `data:${photo.mimetype};base64,${photo.data.toString('base64')}`,
+            {
+                folder: 'resume-photos',
+                public_id: String(resumeId),
+                overwrite: true,
+                transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }],
+            }
+        )
+
+        resume.photoUrl = upload.secure_url
+        await resume.save()
+
+        return res.status(200).json({
+            success: true,
+            message: 'Photo uploaded',
+            photoUrl: resume.photoUrl,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while uploading the photo',
+        })
+    }
+}
+
+// DELETE /built-resumes/:resumeId/photo — remove the headshot sir, template falls back to no-photo layout
+exports.removeBuiltResumePhoto = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const resume = await BuiltResume.findOneAndUpdate(
+            { _id: resumeId, user: id },
+            { $set: { photoUrl: '' } },
+            { returnDocument: 'after' }
+        )
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Photo removed',
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while removing the photo',
         })
     }
 }
@@ -396,7 +509,7 @@ const runBuilderAi = async ({ userId, plan, type, systemPrompt, userContent }) =
 exports.generateResume = async (req, res) => {
     try {
         const id = req?.User.id
-        const { rawInfo, targetRole, templateId } = req.body
+        const { rawInfo, targetRole, templateId, color } = req.body
 
         if (!rawInfo || !rawInfo.trim()) {
             return res.status(400).json({
@@ -438,6 +551,7 @@ exports.generateResume = async (req, res) => {
         const resume = await BuiltResume.create({
             user: id,
             templateId,
+            color: color || '',
             title: data.title || 'AI-generated resume',
             personalInfo: data.personalInfo || {},
             summary: data.summary || '',
@@ -468,7 +582,7 @@ exports.generateResume = async (req, res) => {
 exports.tailorResume = async (req, res) => {
     try {
         const id = req?.User.id
-        const { jd, templateId } = req.body
+        const { jd, templateId, color } = req.body
 
         if (!jd || !jd.trim()) {
             return res.status(400).json({
@@ -525,6 +639,7 @@ exports.tailorResume = async (req, res) => {
         const resume = await BuiltResume.create({
             user: id,
             templateId,
+            color: color || '',
             title: data.title || `Tailored resume — ${jd.trim().slice(0, 40)}`,
             personalInfo: data.personalInfo || {},
             summary: data.summary || '',

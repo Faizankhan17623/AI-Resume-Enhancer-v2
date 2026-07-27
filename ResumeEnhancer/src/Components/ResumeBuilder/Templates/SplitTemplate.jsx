@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#e94560'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const SplitTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const SplitTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactLines = [
     personalInfo.email,
@@ -23,18 +36,31 @@ const SplitTemplate = ({ data }) => {
             <p key={idx} className="text-[11px] text-slate-300 break-words">{line}</p>
           ))}
         </div>
-        <div className="w-2/3 bg-[#e94560] text-white px-8 py-8 flex flex-col justify-center">
-          <h1 className="text-3xl font-bold tracking-tight">{personalInfo.fullName || 'Your Name'}</h1>
-          {data?.summary && (
-            <p className="mt-2 text-xs leading-relaxed text-white/85 max-w-md">{data.summary}</p>
+        <div style={{ backgroundColor: accent }} className="w-2/3 text-white px-8 py-8 flex items-center gap-5">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-20 h-20 rounded-full object-cover border-4 border-white/25 shrink-0"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-white/15 border-4 border-white/25 flex items-center justify-center text-xl font-bold shrink-0">
+              {getInitials(personalInfo.fullName)}
+            </div>
           )}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{personalInfo.fullName || 'Your Name'}</h1>
+            {data?.summary && (
+              <p className="mt-2 text-xs leading-relaxed text-white/85 max-w-md">{data.summary}</p>
+            )}
+          </div>
         </div>
       </header>
 
       <div className="px-10 py-9">
         {experience.length > 0 && (
           <section className="mb-7">
-            <h2 className="text-xs uppercase tracking-[0.2em] text-[#e94560] font-bold mb-4 pb-1.5 border-b border-slate-200">
+            <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.2em] font-bold mb-4 pb-1.5 border-b border-slate-200">
               Experience
             </h2>
             <div className="space-y-4">
@@ -66,7 +92,7 @@ const SplitTemplate = ({ data }) => {
           <div className="col-span-2 space-y-7">
             {education.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-[0.2em] text-[#e94560] font-bold mb-4 pb-1.5 border-b border-slate-200">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.2em] font-bold mb-4 pb-1.5 border-b border-slate-200">
                   Education
                 </h2>
                 <div className="space-y-2.5">
@@ -89,7 +115,7 @@ const SplitTemplate = ({ data }) => {
 
             {projects.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-[0.2em] text-[#e94560] font-bold mb-4 pb-1.5 border-b border-slate-200">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.2em] font-bold mb-4 pb-1.5 border-b border-slate-200">
                   Projects
                 </h2>
                 <div className="space-y-3">
@@ -119,7 +145,7 @@ const SplitTemplate = ({ data }) => {
           <div className="space-y-7">
             {skills.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-[0.2em] text-[#e94560] font-bold mb-3 pb-1.5 border-b border-slate-200">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.2em] font-bold mb-3 pb-1.5 border-b border-slate-200">
                   Skills
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
@@ -134,7 +160,7 @@ const SplitTemplate = ({ data }) => {
 
             {certifications.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-[0.2em] text-[#e94560] font-bold mb-3 pb-1.5 border-b border-slate-200">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.2em] font-bold mb-3 pb-1.5 border-b border-slate-200">
                   Certifications
                 </h2>
                 <ul className="space-y-2">

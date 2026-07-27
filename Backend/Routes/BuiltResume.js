@@ -12,6 +12,8 @@ const {
     tailorResume,
     reviewBuiltResume,
     downloadBuiltResumeDocx,
+    uploadBuiltResumePhoto,
+    removeBuiltResumePhoto,
 } = require('../controllers/BuiltResume.js')
 
 // the template-based resume builder sir — structured data a template component renders,
@@ -30,5 +32,7 @@ route.put('/built-resumes/:resumeId', Auth, isUser, updateBuiltResume)
 route.delete('/built-resumes/:resumeId', Auth, isUser, deleteBuiltResume)
 route.post('/built-resumes/:resumeId/review', Auth, isUser, aiLimiter, reviewBuiltResume)
 route.get('/built-resumes/:resumeId/docx', Auth, isUser, downloadBuiltResumeDocx)
+route.post('/built-resumes/:resumeId/photo', Auth, isUser, uploadBuiltResumePhoto)
+route.delete('/built-resumes/:resumeId/photo', Auth, isUser, removeBuiltResumePhoto)
 
 module.exports = route
