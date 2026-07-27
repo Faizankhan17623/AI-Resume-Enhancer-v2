@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import Swal from 'sweetalert2'
-import { FaUser, FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes } from 'react-icons/fa'
+import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import ShareTestimonialCard from './ShareTestimonialCard'
 import Loading from '../extra/Loading'
@@ -15,6 +15,7 @@ import PageTransition from '../extra/PageTransition'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
+import { getInitial, getAvatarColor } from '../../utils/avatar'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
@@ -188,8 +189,11 @@ const Account = () => {
 
         {/* Profile card sir */}
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 flex flex-col md:flex-row md:items-center gap-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-50 flex items-center justify-center shrink-0">
-            <FaUser className="text-2xl text-richblack-900" />
+          <div
+            style={{ backgroundColor: getAvatarColor(user) }}
+            className="w-16 h-16 rounded-full flex items-center justify-center shrink-0 text-2xl font-semibold text-white"
+          >
+            {getInitial(user)}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
