@@ -16,6 +16,7 @@ const {
     removeBuiltResumePhoto,
     getBuiltResumeVersions,
     restoreBuiltResumeVersion,
+    duplicateBuiltResume,
 } = require('../controllers/BuiltResume.js')
 
 // the template-based resume builder sir — structured data a template component renders,
@@ -38,5 +39,6 @@ route.post('/built-resumes/:resumeId/photo', Auth, isUser, uploadBuiltResumePhot
 route.delete('/built-resumes/:resumeId/photo', Auth, isUser, removeBuiltResumePhoto)
 route.get('/built-resumes/:resumeId/versions', Auth, isUser, getBuiltResumeVersions)
 route.post('/built-resumes/:resumeId/versions/:versionId/restore', Auth, isUser, restoreBuiltResumeVersion)
+route.post('/built-resumes/:resumeId/duplicate', Auth, isUser, duplicateBuiltResume)
 
 module.exports = route

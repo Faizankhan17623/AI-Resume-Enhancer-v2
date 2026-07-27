@@ -183,6 +183,60 @@ exports.updateBuiltResume = async (req, res) => {
     }
 }
 
+// POST /built-resumes/:resumeId/duplicate — clone a resume sir, e.g. to branch a variant for a
+// different job while keeping the original untouched. Copies content + presentation
+// (templateId/color/photoUrl) but NOT version history — a clone starts its own history fresh,
+// same as any brand-new resume.
+exports.duplicateBuiltResume = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const source = await BuiltResume.findOne({ _id: resumeId, user: id })
+        if (!source) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const copy = await BuiltResume.create({
+            user: id,
+            templateId: source.templateId,
+            title: `${source.title || 'Untitled resume'} (copy)`.slice(0, 100),
+            personalInfo: source.personalInfo,
+            summary: source.summary,
+            experience: source.experience,
+            education: source.education,
+            skills: source.skills,
+            projects: source.projects,
+            certifications: source.certifications,
+            photoUrl: source.photoUrl,
+            color: source.color,
+        })
+
+        return res.status(201).json({
+            success: true,
+            message: 'Resume duplicated',
+            resume: copy,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while duplicating the resume',
+        })
+    }
+}
+
 // DELETE /built-resumes/:resumeId sir
 exports.deleteBuiltResume = async (req, res) => {
     try {

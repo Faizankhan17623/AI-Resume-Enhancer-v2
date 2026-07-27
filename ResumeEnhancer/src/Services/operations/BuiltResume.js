@@ -5,7 +5,7 @@ import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, restoreVersion } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, restoreVersion, duplicate } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
 // color is optional — carried over when the user picked an accent on the dedicated Templates page.
@@ -114,6 +114,28 @@ export function DeleteBuiltResume(resumeId, token) {
         } catch (error) {
             logApiError("Error deleting the resume", error)
             toast.error(error?.response?.data?.message || "Could not delete the resume")
+        }
+    }
+}
+
+// clones a resume sir — e.g. to branch a variant for a different job while keeping the
+// original untouched. Refreshes the list so the new copy shows up right away.
+export function DuplicateBuiltResume(resumeId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("POST", `${duplicate}/${resumeId}/duplicate`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Resume duplicated")
+            dispatch(GetBuiltResumes(token))
+        } catch (error) {
+            logApiError("Error duplicating the resume", error)
+            toast.error(error?.response?.data?.message || "Could not duplicate the resume")
         }
     }
 }

@@ -13,4 +13,5 @@ export const BuiltResumeData = {
     photo: BASE_URL + "/built-resumes",           // + /:resumeId/photo
     versions: BASE_URL + "/built-resumes",        // + /:resumeId/versions
     restoreVersion: BASE_URL + "/built-resumes",  // + /:resumeId/versions/:versionId/restore
+    duplicate: BASE_URL + "/built-resumes",       // + /:resumeId/duplicate
 }
