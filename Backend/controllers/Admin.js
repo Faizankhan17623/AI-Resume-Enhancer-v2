@@ -147,7 +147,7 @@ exports.getUsers = async (req, res) => {
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('firstName lastName email role isBanned banReason Verified Subscription SubType SubscriptionExpires count createdAt')
+                .select('firstName lastName email role isBanned banReason Verified Subscription SubType SubscriptionExpires count createdAt provider')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),

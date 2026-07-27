@@ -10,6 +10,7 @@ import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
+import { getProviderMeta } from '../../utils/authProvider'
 import UserDetailModal from './UserDetailModal'
 
 const USER_CSV_COLUMNS = [
@@ -18,6 +19,7 @@ const USER_CSV_COLUMNS = [
   { key: 'email', label: 'Email' },
   { key: 'role', label: 'Role' },
   { key: 'plan', label: 'Plan' },
+  { key: 'signUpMethod', label: 'Sign-up method' },
   { key: 'credits', label: 'Credits used' },
   { key: 'status', label: 'Status' },
   { key: 'joined', label: 'Joined' },
@@ -185,6 +187,7 @@ const Users = () => {
       email: row.email,
       role: row.role,
       plan: row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic'),
+      signUpMethod: getProviderMeta(row.provider).label,
       credits: row.count,
       status: row.isBanned ? 'Banned' : (row.Verified ? 'Active' : 'Unverified'),
       joined: new Date(row.createdAt).toLocaleDateString(),
@@ -347,6 +350,17 @@ const Users = () => {
                         {row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic')}
                       </span>
                     </div>
+                    <div>
+                      <label className="text-[10px] text-richblack-400 block mb-1">Sign-up</label>
+                      {(() => {
+                        const { label, icon: Icon } = getProviderMeta(row.provider)
+                        return (
+                          <span className="inline-flex items-center gap-1.5 w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">
+                            <Icon className="text-sm text-richblack-400" /> {label}
+                          </span>
+                        )
+                      })()}
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -395,6 +409,7 @@ const Users = () => {
                     <th className="p-4">User</th>
                     <th className="p-4">Role</th>
                     <th className="p-4">Plan</th>
+                    <th className="p-4">Sign-up</th>
                     <th className="p-4">Credits</th>
                     <th className="p-4">Status</th>
                     <th className="p-4">Joined</th>
@@ -439,6 +454,16 @@ const Users = () => {
                         <span className="inline-block rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">
                           {row.SubType === 'ProMax' ? 'Pro Max' : (row.SubType || 'Basic')}
                         </span>
+                      </td>
+                      <td className="p-4">
+                        {(() => {
+                          const { label, icon: Icon } = getProviderMeta(row.provider)
+                          return (
+                            <span title={label} className="inline-flex items-center gap-1.5 text-xs text-richblack-200">
+                              <Icon className="text-sm text-richblack-400" /> {label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="p-4 font-mono text-richblack-100">{row.count}</td>
                       <td className="p-4">
