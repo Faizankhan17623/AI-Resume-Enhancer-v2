@@ -10,6 +10,7 @@ import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
 import { LogoutUser } from '../../Services/operations/Auth'
 import { modalBackdrop } from '../../utils/motion'
+import { getInitial, getAvatarColor } from '../../utils/avatar'
 
 // one shared shell for every logged-in page sir — sidebar + topbar, matching the approved mockup.
 // Admin keeps its own Navbar + AdminNav, this is only for the regular user dashboard area.
@@ -129,7 +130,9 @@ const DashboardLayout = ({ title, children }) => {
   const { theme, toggleTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()
+  // same initial + name-based color as the home page header sir (utils/avatar.js) — was
+  // previously its own separate two-letter/flat-yellow implementation, which is why the two
+  // headers used to look different
 
   return (
     <div className="fixed inset-0 flex bg-richblack-900 overflow-hidden">
@@ -196,8 +199,11 @@ const DashboardLayout = ({ title, children }) => {
             >
               <FaSignOutAlt className="text-sm" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-yellow-900/30 flex items-center justify-center text-xs font-bold text-yellow-100 shrink-0">
-              {initials || <FaUser className="text-[10px]" />}
+            <div
+              style={{ backgroundColor: getAvatarColor(user) }}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+            >
+              {getInitial(user)}
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import IconBtn from '../extra/IconBtn'
 import NotificationBell from './NotificationBell'
 import { LogoutUser } from '../../Services/operations/Auth'
 import useTheme from '../../Hooks/useTheme'
+import { getInitial, getAvatarColor } from '../../utils/avatar'
 
 // Resume dropdown sir — every review/library feature we actually ship, so every link goes somewhere real
 const resumeMenu = [
@@ -154,23 +155,9 @@ const NavSearch = () => {
   )
 }
 
-// Google-style initial avatar palette sir — picked deterministically from the name so the
-// same user always lands on the same color across sessions/devices
-const AVATAR_COLORS = ['#F4511E', '#1E88E5', '#43A047', '#8E24AA', '#00897B', '#FB8C00', '#3949AB', '#D81B60']
-
-const getInitial = (user) => {
-  const source = user?.firstName || user?.email || ''
-  return source.trim().charAt(0).toUpperCase() || '?'
-}
-
-const getAvatarColor = (user) => {
-  const source = (user?.firstName || '') + (user?.lastName || '') || user?.email || ''
-  let hash = 0
-  for (let i = 0; i < source.length; i++) hash = source.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
 // Google-style profile sir — a circular initial avatar (first letter of the name, colored by name)
+// getInitial/getAvatarColor live in utils/avatar.js sir — shared with DashboardLayout's header
+// avatar so both look identical everywhere in the app
 // that opens Account/Logout, replacing the old generic person icon
 const ProfileMenu = () => {
   const [open, setOpen] = useState(false)
