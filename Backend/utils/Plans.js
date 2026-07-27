@@ -16,6 +16,7 @@ const PLANS = {
             '5 free AI uses (ATS reviews + new chats)',
             'Up to 60 messages per chat',
             'Core ATS review with top 3 fixes',
+            'Standard response speed',
         ]
     },
     Pro: {
@@ -31,6 +32,7 @@ const PLANS = {
             'Up to 200 messages per chat',
             'Deep ATS review: keyword analysis, section feedback, quick wins',
             'Full bullet/section rewrites and cover letters in chat',
+            'Faster response speed',
             'Valid for 30 days',
         ]
     },
@@ -47,6 +49,7 @@ const PLANS = {
             'Up to 500 messages per chat',
             'Everything in Pro + interview prep, red flags, learning roadmap',
             'Full career coach in chat: mock interviews, salary negotiation, LinkedIn',
+            'Fastest response speed, no wait',
             'Valid for 30 days',
         ]
     },

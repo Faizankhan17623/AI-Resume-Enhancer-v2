@@ -12,7 +12,7 @@ const { syncKeywordBankFromReview } = require('../utils/KeywordBank');
 const { updateStreak } = require('../utils/Streak');
 const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
-const { AI_MODEL } = require('../utils/AiModel');
+const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel');
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
 
 // timeout + maxRetries pinned explicitly sir — the SDK default retries 429/5xx with backoff
@@ -66,19 +66,40 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     ]
 
     // timed + logged sir — every call lands in AiLog for the admin cost monitor
-    const t0 = Date.now()
+    // model is chosen per the user's plan sir — see utils/AiModel.js for the Basic/Pro/ProMax map
+    const model = getModelForPlan(spend.plan)
+
+    // occasionally the model itself emits malformed JSON (a stray brace, mismatched nesting) on
+    // the larger prompts (seen on ProMax's shape during testing) — Groq's own response_format
+    // validator catches this and rejects the call outright with a 400 json_validate_failed,
+    // BEFORE we ever see a choices[].message.content to parse ourselves. One silent retry here
+    // (same input, same temperature 0) resolves it most of the time since it's model
+    // non-determinism, not a real error — cheaper than making the user click "try again" by hand.
+    const isJsonValidationFailure = (err) => err?.error?.error?.code === 'json_validate_failed'
+
+    const callGroq = async () => {
+        const t0 = Date.now()
+        try {
+            const result = await grok.chat.completions.create({
+                messages: Messages,
+                "model": model,
+                "temperature": 0,
+                "response_format": { type: "json_object" },
+            })
+            logAi({ user: userId, type: 'review', plan: spend.plan, model, usage: result.usage, latencyMs: Date.now() - t0, success: true })
+            return result
+        } catch (aiErr) {
+            logAi({ user: userId, type: 'review', plan: spend.plan, model, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+            throw aiErr
+        }
+    }
+
     let Invoking
     try {
-        Invoking = await grok.chat.completions.create({
-            messages: Messages,
-            "model": AI_MODEL,
-            "temperature": 0,
-            "response_format": { type: "json_object" },
-        })
-        logAi({ user: userId, type: 'review', plan: spend.plan, model: AI_MODEL, usage: Invoking.usage, latencyMs: Date.now() - t0, success: true })
+        Invoking = await callGroq()
     } catch (aiErr) {
-        logAi({ user: userId, type: 'review', plan: spend.plan, model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
-        throw aiErr
+        if (!isJsonValidationFailure(aiErr)) throw aiErr
+        Invoking = await callGroq() // one retry only sir — if it fails again, let it throw for real
     }
 
     // pull the model's text, guard against an empty/odd response sir
@@ -143,6 +164,11 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     updateStreak(userId)
     recordFeatureUse(userId)
     if (reviewId) syncKeywordBankFromReview(userId, reviewId, review)
+
+    // deliberate per-plan wait sir — added here, AFTER the real AI call + DB save already
+    // finished, so "faster reviews on a paid plan" is a genuine, felt difference without adding
+    // any risk to the Groq call itself (see utils/AiModel.js for the Basic/Pro/ProMax delay map)
+    await applyPlanDelay(spend.plan)
 
     return res.status(200).json({
         success: true,
