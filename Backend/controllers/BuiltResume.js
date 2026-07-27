@@ -25,6 +25,30 @@ const pickWritable = (body) => {
     return out
 }
 
+// content fields only sir — the subset of WRITABLE_FIELDS a version snapshot captures.
+// templateId/color/photoUrl are presentation, not content: restoring an old draft's wording
+// shouldn't also revert whatever template/color/photo the user picked since then.
+const VERSION_FIELDS = ['title', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications']
+const MAX_VERSIONS = 5
+const MIN_SNAPSHOT_GAP_MS = 15 * 60 * 1000 // 15 min sir — keeps autosave-while-typing from spamming versions
+
+const snapshotOf = (doc) => {
+    const snap = { savedAt: new Date() }
+    for (const key of VERSION_FIELDS) snap[key] = doc[key]
+    return snap
+}
+
+// called with the resume as it was BEFORE this save's changes are applied sir — so the
+// snapshot captures the content the user is about to overwrite, not the new content
+const maybeSnapshotVersion = (resume) => {
+    const versions = resume.versions || []
+    const last = versions[versions.length - 1]
+    if (last && Date.now() - new Date(last.savedAt).getTime() < MIN_SNAPSHOT_GAP_MS) return
+    versions.push(snapshotOf(resume))
+    if (versions.length > MAX_VERSIONS) versions.splice(0, versions.length - MAX_VERSIONS)
+    resume.versions = versions
+}
+
 // POST /built-resumes — create a new one sir, usually right after picking a template (mostly-empty data)
 exports.createBuiltResume = async (req, res) => {
     try {
@@ -116,7 +140,10 @@ exports.getBuiltResume = async (req, res) => {
     }
 }
 
-// PUT /built-resumes/:resumeId — full-document save sir, used by the builder's autosave
+// PUT /built-resumes/:resumeId — full-document save sir, used by the builder's autosave.
+// Fetch-then-save (not an atomic findOneAndUpdate) sir because a version snapshot needs to see
+// the document's CONTENT BEFORE this save's changes land — the snapshot is what the user is
+// about to overwrite, not what they just typed.
 exports.updateBuiltResume = async (req, res) => {
     try {
         const id = req?.User.id
@@ -129,18 +156,17 @@ exports.updateBuiltResume = async (req, res) => {
             })
         }
 
-        const resume = await BuiltResume.findOneAndUpdate(
-            { _id: resumeId, user: id },
-            { $set: pickWritable(req.body) },
-            { returnDocument: 'after', runValidators: true }
-        )
-
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
         if (!resume) {
             return res.status(404).json({
                 success: false,
                 message: 'Resume not found',
             })
         }
+
+        maybeSnapshotVersion(resume)
+        Object.assign(resume, pickWritable(req.body))
+        await resume.save()
 
         return res.status(200).json({
             success: true,
@@ -188,6 +214,99 @@ exports.deleteBuiltResume = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the resume',
+        })
+    }
+}
+
+// GET /built-resumes/:resumeId/versions — list saved snapshots sir, newest first, no bodies
+// needed for the list view (title + savedAt is enough to pick which one to restore/preview)
+exports.getBuiltResumeVersions = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id }).select('versions')
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const versions = [...resume.versions].reverse().map((v) => ({
+            _id: v._id,
+            title: v.title,
+            savedAt: v.savedAt,
+        }))
+
+        return res.status(200).json({
+            success: true,
+            versions,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the resume versions',
+        })
+    }
+}
+
+// POST /built-resumes/:resumeId/versions/:versionId/restore — roll the CONTENT fields back to a
+// saved snapshot sir. Snapshots the CURRENT state first (same 15-min-gated rule as a normal save)
+// so restoring is itself undoable, then overwrites content fields only — template/color/photo
+// stay whatever they currently are, since those are presentation choices made after this snapshot.
+exports.restoreBuiltResumeVersion = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId, versionId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId) || !mongoose.isValidObjectId(versionId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume or version id',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const version = resume.versions.id(versionId)
+        if (!version) {
+            return res.status(404).json({
+                success: false,
+                message: 'Version not found',
+            })
+        }
+
+        maybeSnapshotVersion(resume)
+        for (const key of VERSION_FIELDS) resume[key] = version[key]
+        await resume.save()
+
+        return res.status(200).json({
+            success: true,
+            message: 'Resume restored to the selected version',
+            resume,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while restoring the resume version',
         })
     }
 }

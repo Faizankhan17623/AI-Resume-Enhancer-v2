@@ -3,14 +3,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
-import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto } from '../../Services/operations/BuiltResume'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto, GetBuiltResumeVersions, RestoreBuiltResumeVersion } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
@@ -40,6 +40,10 @@ const BuilderEditor = () => {
   const [scoreJd, setScoreJd] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const photoInputRef = useRef(null)
+  const [versionsOpen, setVersionsOpen] = useState(false)
+  const [versions, setVersions] = useState([])
+  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [restoringId, setRestoringId] = useState(null)
 
   useEffect(() => {
     dispatch(GetBuiltResume(resumeId, token))
@@ -86,6 +90,27 @@ const BuilderEditor = () => {
 
   const handleRemovePhoto = () => {
     dispatch(RemoveBuiltResumePhoto(resumeId, token))
+  }
+
+  // opens the version-history dropdown sir — saves whatever's pending first, so the list the
+  // user sees (and any restore they do next) reflects the resume as it actually is right now
+  const handleOpenVersions = async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
+    setVersionsOpen((o) => !o)
+    if (!versionsOpen) {
+      setVersionsLoading(true)
+      const list = await dispatch(GetBuiltResumeVersions(resumeId, token))
+      setVersions(list)
+      setVersionsLoading(false)
+    }
+  }
+
+  const handleRestoreVersion = async (versionId) => {
+    setRestoringId(versionId)
+    const ok = await dispatch(RestoreBuiltResumeVersion(resumeId, versionId, token))
+    setRestoringId(null)
+    if (ok) setVersionsOpen(false)
   }
 
   // template swap sir — same data, different renderer. Saves immediately (not debounced like
@@ -238,6 +263,54 @@ const BuilderEditor = () => {
                         </button>
                       )
                     })}
+                  </motion.div>
+                </>
+              )}
+              </AnimatePresence>
+            </div>
+            <div className="relative">
+              <button
+                onClick={handleOpenVersions}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+              >
+                <FaHistory /> Version history
+              </button>
+              <AnimatePresence>
+              {versionsOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setVersionsOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-2 z-50 w-80 max-h-96 overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-3"
+                  >
+                    {versionsLoading ? (
+                      <p className="text-xs text-richblack-400 text-center py-6">Loading versions...</p>
+                    ) : versions.length === 0 ? (
+                      <p className="text-xs text-richblack-400 text-center py-6">
+                        No earlier versions yet — a snapshot is kept automatically as you edit (at most one every 15 minutes).
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {versions.map((v) => (
+                          <div key={v._id} className="flex items-center justify-between gap-2 rounded-xl bg-richblack-900 border border-richblack-700 px-3 py-2.5">
+                            <div className="min-w-0">
+                              <p className="text-sm text-richblack-5 truncate">{v.title || 'Untitled resume'}</p>
+                              <p className="text-xs text-richblack-400">{new Date(v.savedAt).toLocaleString()}</p>
+                            </div>
+                            <button
+                              onClick={() => handleRestoreVersion(v._id)}
+                              disabled={restoringId === v._id}
+                              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-yellow-50 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer disabled:opacity-50"
+                            >
+                              <FaUndo className="text-[10px]" /> {restoringId === v._id ? 'Restoring...' : 'Restore'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 </>
               )}

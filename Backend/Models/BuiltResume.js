@@ -34,6 +34,28 @@ const certificationSchema = new mongoose.Schema({
     date: { type: String, trim: true, maxlength: 30 },
 }, { _id: false })
 
+// one saved snapshot of the resume's content sir — everything a template needs to re-render
+// that point in time, minus templateId/color/photoUrl (those are presentation, not content,
+// and restoring an old draft shouldn't also revert someone's later template/color choice)
+const versionSchema = new mongoose.Schema({
+    title: { type: String, trim: true, maxlength: 100 },
+    personalInfo: {
+        fullName: { type: String, trim: true, maxlength: 100, default: '' },
+        email: { type: String, trim: true, maxlength: 100, default: '' },
+        phone: { type: String, trim: true, maxlength: 30, default: '' },
+        location: { type: String, trim: true, maxlength: 150, default: '' },
+        linkedin: { type: String, trim: true, maxlength: 300, default: '' },
+        website: { type: String, trim: true, maxlength: 300, default: '' },
+    },
+    summary: { type: String, trim: true, maxlength: 800, default: '' },
+    experience: [experienceSchema],
+    education: [educationSchema],
+    skills: [{ type: String, trim: true, maxlength: 60 }],
+    projects: [projectSchema],
+    certifications: [certificationSchema],
+    savedAt: { type: Date, default: Date.now },
+}, { _id: true })
+
 // a resume BUILT from structured form data sir — distinct from Models/Resume.js, which stores
 // an uploaded PDF's raw parsed text for AI review. This one is fully structured/editable JSON
 // so any template component can render it, and the builder form can re-hydrate an edit session from it.
@@ -76,6 +98,10 @@ const builtResumeSchema = new mongoose.Schema(
         // per-resume accent color sir — hex string, each template maps this onto its own
         // header/sidebar/accent elements instead of a hardcoded palette
         color: { type: String, trim: true, maxlength: 20, default: '' },
+        // last 5 content snapshots sir, oldest first — capped and time-gated (15 min minimum
+        // between snapshots) in the controller so continuous autosave-while-typing doesn't
+        // spam near-duplicate versions. See controllers/BuiltResume.js maybeSnapshotVersion.
+        versions: [versionSchema],
     }, { timestamps: true }
 )
 
