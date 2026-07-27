@@ -312,13 +312,6 @@ const Navbar = () => {
             <>
               <NavSearch />
               <NotificationBell />
-              {/* plan badge sir — Basic/Pro/ProMax is a User-only concept, Admin/Support
-                  accounts have no plan at all, so this never shows for them */}
-              {user?.role === 'User' && (
-                <span className="hidden sm:inline-block px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-yellow-50 border border-richblack-600">
-                  {user?.SubType || 'Basic'}
-                </span>
-              )}
               <ProfileMenu />
             </>
           )}
