@@ -11,4 +11,6 @@ export const BuiltResumeData = {
     review: BASE_URL + "/built-resumes",          // + /:resumeId/review
     downloadDocx: BASE_URL + "/built-resumes",    // + /:resumeId/docx
     photo: BASE_URL + "/built-resumes",           // + /:resumeId/photo
+    versions: BASE_URL + "/built-resumes",        // + /:resumeId/versions
+    restoreVersion: BASE_URL + "/built-resumes",  // + /:resumeId/versions/:versionId/restore
 }

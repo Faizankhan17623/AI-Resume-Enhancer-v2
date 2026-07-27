@@ -5,7 +5,7 @@ import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, restoreVersion } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
 // color is optional — carried over when the user picked an accent on the dedicated Templates page.
@@ -114,6 +114,50 @@ export function DeleteBuiltResume(resumeId, token) {
         } catch (error) {
             logApiError("Error deleting the resume", error)
             toast.error(error?.response?.data?.message || "Could not delete the resume")
+        }
+    }
+}
+
+// lists saved snapshots for the version-history panel sir — lightweight (title + savedAt only)
+export function GetBuiltResumeVersions(resumeId, token) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", `${versions}/${resumeId}/versions`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data.versions
+        } catch (error) {
+            logApiError("Error fetching resume versions", error)
+            return []
+        }
+    }
+}
+
+// rolls the resume's content fields back to a saved snapshot sir — template/color/photo are
+// left as they currently are, only wording/experience/education/etc. change
+export function RestoreBuiltResumeVersion(resumeId, versionId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("POST", `${restoreVersion}/${resumeId}/versions/${versionId}/restore`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setCurrentResume(response.data.resume))
+            toast.success("Resume restored to the selected version")
+            return true
+        } catch (error) {
+            logApiError("Error restoring the resume version", error)
+            toast.error(error?.response?.data?.message || "Could not restore this version")
+            return false
         }
     }
 }
