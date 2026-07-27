@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
@@ -25,6 +25,7 @@ const navSections = [
     label: 'Resumes',
     links: [
       { name: 'New Review', path: '/Dashboard/New-Review', icon: FaFilePdf },
+      { name: 'Templates', path: '/Dashboard/Templates', icon: FaSwatchbook },
       { name: 'Build Resume', path: '/Dashboard/Build-Resume', icon: FaMagic },
       { name: 'My Resumes', path: '/Dashboard/Resumes', icon: FaFolderOpen },
       { name: 'History', path: '/Dashboard/History', icon: FaHistory },

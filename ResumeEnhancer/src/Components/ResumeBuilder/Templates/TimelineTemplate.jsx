@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#7c3aed'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const TimelineTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const TimelineTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -17,6 +30,20 @@ const TimelineTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-800 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans px-12 py-11">
       <header className="mb-8 text-center">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={personalInfo.fullName || 'Profile photo'}
+            className="w-20 h-20 rounded-full object-cover mx-auto mb-3"
+          />
+        ) : (
+          <div
+            style={{ backgroundColor: accent }}
+            className="w-20 h-20 rounded-full text-white flex items-center justify-center text-lg font-bold mx-auto mb-3"
+          >
+            {getInitials(personalInfo.fullName)}
+          </div>
+        )}
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
           {personalInfo.fullName || 'Your Name'}
         </h1>
@@ -33,13 +60,14 @@ const TimelineTemplate = ({ data }) => {
 
       {experience.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-xs uppercase tracking-[0.25em] text-violet-600 font-bold mb-5">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.25em] font-bold mb-5">
             Experience
           </h2>
-          <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-[5px] before:top-1.5 before:bottom-1.5 before:w-px before:bg-violet-200">
+          <div className="relative pl-6 space-y-6">
+            <div style={{ backgroundColor: `${accent}33` }} className="absolute left-[5px] top-1.5 bottom-1.5 w-px" />
             {experience.map((exp, idx) => (
               <div key={idx} className="relative">
-                <span className="absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full bg-violet-500 ring-4 ring-violet-100" />
+                <span style={{ backgroundColor: accent, boxShadow: `0 0 0 4px ${accent}1a` }} className="absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full" />
                 <div className="flex justify-between items-baseline">
                   <p className="text-sm font-semibold text-slate-900">
                     {exp.role || 'Role'}{exp.company ? ` · ${exp.company}` : ''}
@@ -52,7 +80,8 @@ const TimelineTemplate = ({ data }) => {
                 {exp.bullets?.filter(Boolean).length > 0 && (
                   <ul className="mt-1.5 space-y-1">
                     {exp.bullets.filter(Boolean).map((b, i) => (
-                      <li key={i} className="text-sm text-slate-700 leading-relaxed pl-4 relative before:content-['–'] before:absolute before:left-0 before:text-violet-300">
+                      <li key={i} className="text-sm text-slate-700 leading-relaxed pl-4 relative">
+                        <span style={{ position: 'absolute', left: 0, color: `${accent}80` }} aria-hidden="true">–</span>
                         {b}
                       </li>
                     ))}
@@ -66,7 +95,7 @@ const TimelineTemplate = ({ data }) => {
 
       {education.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-xs uppercase tracking-[0.25em] text-violet-600 font-bold mb-4">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.25em] font-bold mb-4">
             Education
           </h2>
           <div className="space-y-2.5">
@@ -90,12 +119,16 @@ const TimelineTemplate = ({ data }) => {
       <div className="grid grid-cols-2 gap-8">
         {skills.length > 0 && (
           <section>
-            <h2 className="text-xs uppercase tracking-[0.25em] text-violet-600 font-bold mb-3">
+            <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.25em] font-bold mb-3">
               Skills
             </h2>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((skill, idx) => (
-                <span key={idx} className="text-[11px] px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                <span
+                  key={idx}
+                  style={{ backgroundColor: `${accent}0d`, color: accent, borderColor: `${accent}33` }}
+                  className="text-[11px] px-2.5 py-1 rounded-full border"
+                >
                   {skill}
                 </span>
               ))}
@@ -105,7 +138,7 @@ const TimelineTemplate = ({ data }) => {
 
         {certifications.length > 0 && (
           <section>
-            <h2 className="text-xs uppercase tracking-[0.25em] text-violet-600 font-bold mb-3">
+            <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.25em] font-bold mb-3">
               Certifications
             </h2>
             <div className="space-y-1.5">
@@ -123,7 +156,7 @@ const TimelineTemplate = ({ data }) => {
 
       {projects.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-xs uppercase tracking-[0.25em] text-violet-600 font-bold mb-4">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-[0.25em] font-bold mb-4">
             Projects
           </h2>
           <div className="space-y-3">
@@ -139,7 +172,8 @@ const TimelineTemplate = ({ data }) => {
                 {proj.bullets?.filter(Boolean).length > 0 && (
                   <ul className="mt-1 space-y-1">
                     {proj.bullets.filter(Boolean).map((b, i) => (
-                      <li key={i} className="text-sm text-slate-700 leading-relaxed pl-4 relative before:content-['–'] before:absolute before:left-0 before:text-violet-300">
+                      <li key={i} className="text-sm text-slate-700 leading-relaxed pl-4 relative">
+                        <span style={{ position: 'absolute', left: 0, color: `${accent}80` }} aria-hidden="true">–</span>
                         {b}
                       </li>
                     ))}

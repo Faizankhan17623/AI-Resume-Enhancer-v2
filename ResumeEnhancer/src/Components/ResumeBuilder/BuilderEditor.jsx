@@ -10,13 +10,17 @@ import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
-import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx } from '../../Services/operations/BuiltResume'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
 const emptyEducation = () => ({ school: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' })
 const emptyProject = () => ({ name: '', description: '', link: '', bullets: [''] })
 const emptyCertification = () => ({ name: '', issuer: '', date: '' })
+
+// accent swatches offered per resume sir — each template falls back to its own default hex
+// when data.color is empty, these are just the picker's options once the user wants to override it
+const ACCENT_SWATCHES = ['#0b2545', '#1d4ed8', '#0f766e', '#b91c1c', '#c2410c', '#7e22ce', '#171717']
 
 const fieldClass = "w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const labelClass = "text-xs font-semibold text-richblack-300 mb-1 block"
@@ -34,6 +38,8 @@ const BuilderEditor = () => {
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [scoreModalOpen, setScoreModalOpen] = useState(false)
   const [scoreJd, setScoreJd] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const photoInputRef = useRef(null)
 
   useEffect(() => {
     dispatch(GetBuiltResume(resumeId, token))
@@ -60,6 +66,26 @@ const BuilderEditor = () => {
 
   const patchPersonalInfo = (field, value) => {
     patch({ personalInfo: { ...current.personalInfo, [field]: value } })
+  }
+
+  // color is saved immediately sir — a swatch click is one discrete choice, not typing to debounce
+  const handlePickColor = (color) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    dispatch(patchCurrentResume({ color }))
+    dispatch(SaveBuiltResume(resumeId, { ...current, color }, token, { silent: true }))
+  }
+
+  const handlePhotoFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // sir — lets picking the same file twice re-trigger onChange
+    if (!file) return
+    setUploadingPhoto(true)
+    await dispatch(UploadBuiltResumePhoto(resumeId, file, token))
+    setUploadingPhoto(false)
+  }
+
+  const handleRemovePhoto = () => {
+    dispatch(RemoveBuiltResumePhoto(resumeId, token))
   }
 
   // template swap sir — same data, different renderer. Saves immediately (not debounced like
@@ -310,6 +336,48 @@ const BuilderEditor = () => {
                 <div>
                   <label className={labelClass}>Website</label>
                   <input className={fieldClass} value={current.personalInfo?.website || ''} onChange={(e) => patchPersonalInfo('website', e.target.value)} placeholder="janedoe.dev" />
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-richblack-700 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  {current.photoUrl ? (
+                    <img src={current.photoUrl} alt="Headshot" className="w-12 h-12 rounded-full object-cover border border-richblack-600" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-richblack-700 border border-richblack-600" />
+                  )}
+                  <div>
+                    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoFile} />
+                    <button
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="text-xs font-semibold text-yellow-50 cursor-pointer hover:opacity-80 disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? 'Uploading...' : current.photoUrl ? 'Change photo' : 'Add photo (optional)'}
+                    </button>
+                    {current.photoUrl && (
+                      <button onClick={handleRemovePhoto} className="block text-xs text-richblack-400 hover:text-pink-200 cursor-pointer mt-0.5">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Accent color</label>
+                  <div className="flex items-center gap-1.5">
+                    {ACCENT_SWATCHES.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => handlePickColor(c)}
+                        aria-label={`Use accent color ${c}`}
+                        style={{ backgroundColor: c }}
+                        className={`w-5 h-5 rounded-full cursor-pointer transition-transform duration-150 hover:scale-110 ${
+                          current.color === c ? 'ring-2 ring-offset-2 ring-offset-richblack-800 ring-warm-200' : ''
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

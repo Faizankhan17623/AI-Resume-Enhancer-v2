@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#059669'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const TechnicalTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const TechnicalTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -17,15 +30,31 @@ const TechnicalTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans px-12 py-10">
       {/* Header */}
-      <header className="mb-6 pb-4 border-b-2 border-emerald-600">
-        <h1 className="text-2xl font-bold text-slate-900">
-          <span className="text-emerald-600 font-mono">&gt;_</span> {personalInfo.fullName || 'Your Name'}
-        </h1>
-        {contactParts.length > 0 && (
-          <p className="mt-1 text-xs text-slate-500 font-mono">
-            {contactParts.join('  |  ')}
-          </p>
+      <header style={{ borderColor: accent }} className="mb-6 pb-4 border-b-2 flex items-center gap-4">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={personalInfo.fullName || 'Profile photo'}
+            className="w-16 h-16 rounded-full object-cover shrink-0"
+          />
+        ) : (
+          <div
+            style={{ backgroundColor: accent }}
+            className="w-16 h-16 rounded-full text-white flex items-center justify-center text-lg font-bold shrink-0"
+          >
+            {getInitials(personalInfo.fullName)}
+          </div>
         )}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            <span style={{ color: accent }} className="font-mono">&gt;_</span> {personalInfo.fullName || 'Your Name'}
+          </h1>
+          {contactParts.length > 0 && (
+            <p className="mt-1 text-xs text-slate-500 font-mono">
+              {contactParts.join('  |  ')}
+            </p>
+          )}
+        </div>
       </header>
 
       {data?.summary && (
@@ -37,7 +66,7 @@ const TechnicalTemplate = ({ data }) => {
       {/* Skills forward — near the top */}
       {skills.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-xs uppercase tracking-widest text-emerald-700 font-bold mb-2 font-mono">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-2 font-mono">
             // Skills
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -55,7 +84,7 @@ const TechnicalTemplate = ({ data }) => {
 
       {experience.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-xs uppercase tracking-widest text-emerald-700 font-bold mb-3 font-mono">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3 font-mono">
             // Experience
           </h2>
           <div className="space-y-4">
@@ -73,7 +102,8 @@ const TechnicalTemplate = ({ data }) => {
                 {exp.bullets?.filter(Boolean).length > 0 && (
                   <ul className="mt-1 space-y-0.5">
                     {exp.bullets.filter(Boolean).map((b, i) => (
-                      <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative before:content-['$'] before:absolute before:left-0 before:text-emerald-600 before:font-mono">
+                      <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative">
+                        <span style={{ position: 'absolute', left: 0, color: accent }} className="font-mono" aria-hidden="true">$</span>
                         {b}
                       </li>
                     ))}
@@ -87,7 +117,7 @@ const TechnicalTemplate = ({ data }) => {
 
       {projects.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-xs uppercase tracking-widest text-emerald-700 font-bold mb-3 font-mono">
+          <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3 font-mono">
             // Projects
           </h2>
           <div className="space-y-3">
@@ -105,7 +135,8 @@ const TechnicalTemplate = ({ data }) => {
                 {proj.bullets?.filter(Boolean).length > 0 && (
                   <ul className="mt-1 space-y-0.5">
                     {proj.bullets.filter(Boolean).map((b, i) => (
-                      <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative before:content-['$'] before:absolute before:left-0 before:text-emerald-600 before:font-mono">
+                      <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative">
+                        <span style={{ position: 'absolute', left: 0, color: accent }} className="font-mono" aria-hidden="true">$</span>
                         {b}
                       </li>
                     ))}
@@ -120,7 +151,7 @@ const TechnicalTemplate = ({ data }) => {
       <div className="grid grid-cols-2 gap-8">
         {education.length > 0 && (
           <section>
-            <h2 className="text-xs uppercase tracking-widest text-emerald-700 font-bold mb-3 font-mono">
+            <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3 font-mono">
               // Education
             </h2>
             <div className="space-y-2">
@@ -144,7 +175,7 @@ const TechnicalTemplate = ({ data }) => {
 
         {certifications.length > 0 && (
           <section>
-            <h2 className="text-xs uppercase tracking-widest text-emerald-700 font-bold mb-3 font-mono">
+            <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3 font-mono">
               // Certifications
             </h2>
             <div className="space-y-2">

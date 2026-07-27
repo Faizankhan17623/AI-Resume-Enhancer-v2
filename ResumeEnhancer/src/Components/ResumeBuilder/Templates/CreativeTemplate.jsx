@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#ff6b4a'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const CreativeTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const CreativeTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -14,25 +27,31 @@ const CreativeTemplate = ({ data }) => {
     personalInfo.website,
   ].filter(Boolean)
 
-  const initials = (personalInfo.fullName || 'Your Name')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('')
+  const initials = getInitials(personalInfo.fullName) || '?'
 
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans relative overflow-hidden">
       {/* Accent color blocks */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-[#ff6b4a]/10 rounded-bl-full" />
-      <div className="absolute top-0 left-0 w-3 h-full bg-[#ff6b4a]" />
+      <div style={{ backgroundColor: `${accent}1a` }} className="absolute top-0 right-0 w-40 h-40 rounded-bl-full" />
+      <div style={{ backgroundColor: accent }} className="absolute top-0 left-0 w-3 h-full" />
 
       <div className="relative px-12 pt-10 pb-8">
-        {/* Asymmetric header: photo-placeholder + name off to the side */}
+        {/* Asymmetric header: photo/initials + name off to the side */}
         <div className="flex items-center gap-6 mb-8">
-          <div className="w-24 h-24 rounded-full bg-[#ff6b4a] text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-md">
-            {initials || '?'}
-          </div>
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-24 h-24 rounded-full object-cover shrink-0 shadow-md"
+            />
+          ) : (
+            <div
+              style={{ backgroundColor: accent }}
+              className="w-24 h-24 rounded-full text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-md"
+            >
+              {initials}
+            </div>
+          )}
           <div>
             <h1 className="text-3xl font-bold text-slate-900 leading-tight">
               {personalInfo.fullName || 'Your Name'}
@@ -42,7 +61,7 @@ const CreativeTemplate = ({ data }) => {
                 {contactParts.map((part, idx) => (
                   <span key={idx}>
                     {part}
-                    {idx < contactParts.length - 1 && <span className="text-[#ff6b4a] ml-2">•</span>}
+                    {idx < contactParts.length - 1 && <span style={{ color: accent }} className="ml-2">•</span>}
                   </span>
                 ))}
               </p>
@@ -51,7 +70,7 @@ const CreativeTemplate = ({ data }) => {
         </div>
 
         {data?.summary && (
-          <section className="mb-8 bg-[#ff6b4a]/5 rounded-lg p-4 border-l-4 border-[#ff6b4a]">
+          <section style={{ backgroundColor: `${accent}0d`, borderColor: accent }} className="mb-8 rounded-lg p-4 border-l-4">
             <p className="text-sm leading-relaxed text-slate-700">{data.summary}</p>
           </section>
         )}
@@ -60,7 +79,7 @@ const CreativeTemplate = ({ data }) => {
           <div className="col-span-2 space-y-8">
             {experience.length > 0 && (
               <section>
-                <h2 className="text-sm uppercase tracking-widest text-white bg-[#ff6b4a] inline-block px-3 py-1 rounded-full font-bold mb-4">
+                <h2 style={{ backgroundColor: accent }} className="text-sm uppercase tracking-widest text-white inline-block px-3 py-1 rounded-full font-bold mb-4">
                   Experience
                 </h2>
                 <div className="space-y-4">
@@ -70,7 +89,7 @@ const CreativeTemplate = ({ data }) => {
                         <p className="text-sm font-bold text-slate-900">
                           {exp.role || 'Role'}
                         </p>
-                        <p className="text-xs text-[#ff6b4a] font-semibold whitespace-nowrap ml-4">
+                        <p style={{ color: accent }} className="text-xs font-semibold whitespace-nowrap ml-4">
                           {exp.startDate}{exp.startDate && ' - '}{exp.current ? 'Present' : exp.endDate}
                         </p>
                       </div>
@@ -80,7 +99,8 @@ const CreativeTemplate = ({ data }) => {
                       {exp.bullets?.filter(Boolean).length > 0 && (
                         <ul className="mt-1 space-y-0.5">
                           {exp.bullets.filter(Boolean).map((b, i) => (
-                            <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative before:content-['*'] before:absolute before:left-0 before:text-[#ff6b4a] before:font-bold">
+                            <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative">
+                              <span style={{ position: 'absolute', left: 0, color: accent, fontWeight: 'bold' }} aria-hidden="true">*</span>
                               {b}
                             </li>
                           ))}
@@ -94,7 +114,7 @@ const CreativeTemplate = ({ data }) => {
 
             {projects.length > 0 && (
               <section>
-                <h2 className="text-sm uppercase tracking-widest text-white bg-[#ff6b4a] inline-block px-3 py-1 rounded-full font-bold mb-4">
+                <h2 style={{ backgroundColor: accent }} className="text-sm uppercase tracking-widest text-white inline-block px-3 py-1 rounded-full font-bold mb-4">
                   Projects
                 </h2>
                 <div className="space-y-3">
@@ -110,7 +130,8 @@ const CreativeTemplate = ({ data }) => {
                       {proj.bullets?.filter(Boolean).length > 0 && (
                         <ul className="mt-1 space-y-0.5">
                           {proj.bullets.filter(Boolean).map((b, i) => (
-                            <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative before:content-['*'] before:absolute before:left-0 before:text-[#ff6b4a] before:font-bold">
+                            <li key={i} className="text-sm text-slate-700 leading-snug pl-4 relative">
+                              <span style={{ position: 'absolute', left: 0, color: accent, fontWeight: 'bold' }} aria-hidden="true">*</span>
                               {b}
                             </li>
                           ))}
@@ -126,14 +147,15 @@ const CreativeTemplate = ({ data }) => {
           <div className="col-span-1 space-y-8">
             {skills.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-widest text-[#ff6b4a] font-bold mb-3">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3">
                   Skills
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
                   {skills.map((skill, idx) => (
                     <span
                       key={idx}
-                      className="text-[10px] px-2 py-1 border border-[#ff6b4a] text-[#ff6b4a] rounded-full font-medium"
+                      style={{ borderColor: accent, color: accent }}
+                      className="text-[10px] px-2 py-1 border rounded-full font-medium"
                     >
                       {skill}
                     </span>
@@ -144,7 +166,7 @@ const CreativeTemplate = ({ data }) => {
 
             {education.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-widest text-[#ff6b4a] font-bold mb-3">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3">
                   Education
                 </h2>
                 <div className="space-y-2">
@@ -168,7 +190,7 @@ const CreativeTemplate = ({ data }) => {
 
             {certifications.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-widest text-[#ff6b4a] font-bold mb-3">
+                <h2 style={{ color: accent }} className="text-xs uppercase tracking-widest font-bold mb-3">
                   Certifications
                 </h2>
                 <div className="space-y-2">

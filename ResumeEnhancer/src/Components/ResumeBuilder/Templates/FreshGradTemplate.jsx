@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#ff8577'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const FreshGradTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const FreshGradTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -17,15 +30,28 @@ const FreshGradTemplate = ({ data }) => {
   return (
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-800 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans">
       {/* Friendly rounded header */}
-      <header className="bg-sky-500 text-white px-12 py-8 rounded-b-3xl">
-        <h1 className="text-3xl font-bold">
-          {personalInfo.fullName || 'Your Name'}
-        </h1>
-        {contactParts.length > 0 && (
-          <p className="mt-2 text-xs text-sky-50 tracking-wide">
-            {contactParts.join('  ·  ')}
-          </p>
+      <header className="bg-sky-500 text-white px-12 py-8 rounded-b-3xl flex items-center gap-5">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={personalInfo.fullName || 'Profile photo'}
+            className="w-20 h-20 rounded-full object-cover border-4 border-white/30 shrink-0"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-full bg-white/15 border-4 border-white/30 flex items-center justify-center text-xl font-bold shrink-0">
+            {getInitials(personalInfo.fullName)}
+          </div>
         )}
+        <div>
+          <h1 className="text-3xl font-bold">
+            {personalInfo.fullName || 'Your Name'}
+          </h1>
+          {contactParts.length > 0 && (
+            <p className="mt-2 text-xs text-sky-50 tracking-wide">
+              {contactParts.join('  ·  ')}
+            </p>
+          )}
+        </div>
       </header>
 
       <div className="px-12 py-8">
@@ -39,7 +65,7 @@ const FreshGradTemplate = ({ data }) => {
         {education.length > 0 && (
           <section className="mb-6">
             <h2 className="text-sm uppercase tracking-wide text-sky-600 font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#ff8577] inline-block" />
+              <span style={{ backgroundColor: accent }} className="w-2 h-2 rounded-full inline-block" />
               Education
             </h2>
             <div className="space-y-3">
@@ -63,14 +89,15 @@ const FreshGradTemplate = ({ data }) => {
         {skills.length > 0 && (
           <section className="mb-6">
             <h2 className="text-sm uppercase tracking-wide text-sky-600 font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#ff8577] inline-block" />
+              <span style={{ backgroundColor: accent }} className="w-2 h-2 rounded-full inline-block" />
               Skills
             </h2>
             <div className="flex flex-wrap gap-2">
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="text-xs px-3 py-1 bg-[#ff8577]/10 text-[#c94f3f] rounded-full font-medium"
+                  style={{ backgroundColor: `${accent}1a`, color: accent }}
+                  className="text-xs px-3 py-1 rounded-full font-medium"
                 >
                   {skill}
                 </span>
@@ -82,7 +109,7 @@ const FreshGradTemplate = ({ data }) => {
         {projects.length > 0 && (
           <section className="mb-6">
             <h2 className="text-sm uppercase tracking-wide text-sky-600 font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#ff8577] inline-block" />
+              <span style={{ backgroundColor: accent }} className="w-2 h-2 rounded-full inline-block" />
               Projects
             </h2>
             <div className="space-y-3">
@@ -112,7 +139,7 @@ const FreshGradTemplate = ({ data }) => {
         {experience.length > 0 && (
           <section className="mb-6">
             <h2 className="text-sm uppercase tracking-wide text-sky-600 font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#ff8577] inline-block" />
+              <span style={{ backgroundColor: accent }} className="w-2 h-2 rounded-full inline-block" />
               Experience
             </h2>
             <div className="space-y-4">
@@ -143,7 +170,7 @@ const FreshGradTemplate = ({ data }) => {
         {certifications.length > 0 && (
           <section>
             <h2 className="text-sm uppercase tracking-wide text-sky-600 font-bold mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#ff8577] inline-block" />
+              <span style={{ backgroundColor: accent }} className="w-2 h-2 rounded-full inline-block" />
               Certifications
             </h2>
             <div className="space-y-1.5">

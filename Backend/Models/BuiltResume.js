@@ -71,6 +71,11 @@ const builtResumeSchema = new mongoose.Schema(
         skills: [{ type: String, trim: true, maxlength: 60 }],
         projects: [projectSchema],
         certifications: [certificationSchema],
+        // optional headshot for templates that render a photo sir — a Cloudinary secure_url
+        photoUrl: { type: String, trim: true, maxlength: 500, default: '' },
+        // per-resume accent color sir — hex string, each template maps this onto its own
+        // header/sidebar/accent elements instead of a hardcoded palette
+        color: { type: String, trim: true, maxlength: 20, default: '' },
     }, { timestamps: true }
 )
 

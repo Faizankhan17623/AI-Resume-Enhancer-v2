@@ -1,3 +1,14 @@
+// accent color convention sir — data.color is a hex string (e.g. "#0b2545"), defaulted per
+// template so existing resumes with no color set still render exactly as designed.
+// data.photoUrl is an optional Cloudinary secure_url; templates render it in a circular frame
+// when present and fall back to initials (or nothing) when it isn't.
+const DEFAULT_COLOR = '#ffd23f'
+
+const getInitials = (name) => {
+  if (!name) return ''
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('')
+}
+
 const BoldTemplate = ({ data }) => {
   const personalInfo = data?.personalInfo || {}
   const experience = data?.experience || []
@@ -5,6 +16,8 @@ const BoldTemplate = ({ data }) => {
   const skills = data?.skills || []
   const projects = data?.projects || []
   const certifications = data?.certifications || []
+  const accent = data?.color || DEFAULT_COLOR
+  const photoUrl = data?.photoUrl
 
   const contactParts = [
     personalInfo.email,
@@ -18,20 +31,33 @@ const BoldTemplate = ({ data }) => {
     <div className="w-[8.5in] min-h-[11in] box-border bg-white text-slate-900 shadow-2xl print:shadow-none print:m-0 mx-auto font-sans relative">
       {/* High-contrast dark header band with geometric accent */}
       <div className="bg-[#0f0f0f] text-white px-12 py-9 relative overflow-hidden">
-        <div className="absolute -right-6 -top-10 w-32 h-32 bg-[#ffd23f] rotate-45" />
-        <div className="absolute right-16 -bottom-14 w-20 h-20 bg-[#ffd23f]/40 rotate-12" />
-        <div className="relative">
-          <h1 className="text-4xl font-black tracking-tight uppercase">
-            {personalInfo.fullName || 'Your Name'}
-          </h1>
-          {contactParts.length > 0 && (
-            <p className="mt-3 text-xs text-slate-300 font-medium tracking-wide">
-              {contactParts.join('   /   ')}
-            </p>
+        <div style={{ backgroundColor: accent }} className="absolute -right-6 -top-10 w-32 h-32 rotate-45" />
+        <div style={{ backgroundColor: `${accent}66` }} className="absolute right-16 -bottom-14 w-20 h-20 rotate-12" />
+        <div className="relative flex items-center gap-6">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={personalInfo.fullName || 'Profile photo'}
+              className="w-20 h-20 rounded-full object-cover border-4 border-white/20 shrink-0"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-white/10 border-4 border-white/20 flex items-center justify-center text-xl font-bold shrink-0">
+              {getInitials(personalInfo.fullName)}
+            </div>
           )}
+          <div>
+            <h1 className="text-4xl font-black tracking-tight uppercase">
+              {personalInfo.fullName || 'Your Name'}
+            </h1>
+            {contactParts.length > 0 && (
+              <p className="mt-3 text-xs text-slate-300 font-medium tracking-wide">
+                {contactParts.join('   /   ')}
+              </p>
+            )}
+          </div>
         </div>
       </div>
-      <div className="h-2 w-full bg-[#ffd23f]" />
+      <div style={{ backgroundColor: accent }} className="h-2 w-full" />
 
       <div className="px-12 py-8">
         {data?.summary && (
@@ -47,7 +73,7 @@ const BoldTemplate = ({ data }) => {
             </h2>
             <div className="space-y-4">
               {experience.map((exp, idx) => (
-                <div key={idx} className="border-l-4 border-[#ffd23f] pl-4">
+                <div key={idx} style={{ borderColor: accent }} className="border-l-4 pl-4">
                   <div className="flex justify-between items-baseline">
                     <p className="text-sm font-bold text-slate-900">
                       {exp.role || 'Role'}
@@ -62,7 +88,8 @@ const BoldTemplate = ({ data }) => {
                   {exp.bullets?.filter(Boolean).length > 0 && (
                     <ul className="mt-1.5 space-y-0.5">
                       {exp.bullets.filter(Boolean).map((b, i) => (
-                        <li key={i} className="text-sm text-slate-800 leading-snug pl-4 relative before:content-[''] before:absolute before:left-0 before:top-[0.5em] before:w-2 before:h-2 before:bg-[#ffd23f]">
+                        <li key={i} className="text-sm text-slate-800 leading-snug pl-4 relative">
+                          <span style={{ position: 'absolute', left: 0, top: '0.5em', width: '0.5em', height: '0.5em', backgroundColor: accent }} aria-hidden="true" />
                           {b}
                         </li>
                       ))}
@@ -125,7 +152,7 @@ const BoldTemplate = ({ data }) => {
             </h2>
             <div className="space-y-3">
               {projects.map((proj, idx) => (
-                <div key={idx} className="border-l-4 border-[#ffd23f] pl-4">
+                <div key={idx} style={{ borderColor: accent }} className="border-l-4 pl-4">
                   <p className="text-sm font-bold text-slate-900">
                     {proj.name || 'Project'}
                     {proj.link && <span className="font-normal text-slate-500"> — {proj.link}</span>}
@@ -136,7 +163,8 @@ const BoldTemplate = ({ data }) => {
                   {proj.bullets?.filter(Boolean).length > 0 && (
                     <ul className="mt-1.5 space-y-0.5">
                       {proj.bullets.filter(Boolean).map((b, i) => (
-                        <li key={i} className="text-sm text-slate-800 leading-snug pl-4 relative before:content-[''] before:absolute before:left-0 before:top-[0.5em] before:w-2 before:h-2 before:bg-[#ffd23f]">
+                        <li key={i} className="text-sm text-slate-800 leading-snug pl-4 relative">
+                          <span style={{ position: 'absolute', left: 0, top: '0.5em', width: '0.5em', height: '0.5em', backgroundColor: accent }} aria-hidden="true" />
                           {b}
                         </li>
                       ))}
@@ -157,7 +185,8 @@ const BoldTemplate = ({ data }) => {
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="text-xs px-2.5 py-1 bg-[#ffd23f] text-slate-900 font-bold"
+                  style={{ backgroundColor: accent }}
+                  className="text-xs px-2.5 py-1 text-slate-900 font-bold"
                 >
                   {skill}
                 </span>

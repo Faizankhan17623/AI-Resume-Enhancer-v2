@@ -10,4 +10,5 @@ export const BuiltResumeData = {
     tailor: BASE_URL + "/built-resumes/tailor",
     review: BASE_URL + "/built-resumes",          // + /:resumeId/review
     downloadDocx: BASE_URL + "/built-resumes",    // + /:resumeId/docx
+    photo: BASE_URL + "/built-resumes",           // + /:resumeId/photo
 }

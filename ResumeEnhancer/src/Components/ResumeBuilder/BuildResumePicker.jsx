@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes } from 'react-icons/fa'
+import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes, FaSwatchbook } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
@@ -22,8 +22,14 @@ const MODES = [
 ]
 
 const BuildResumePicker = () => {
+  const [searchParams] = useSearchParams()
+  // arriving from the dedicated Templates page sir — both are optional query params
+  const incomingTemplate = searchParams.get('template')
+  const incomingColor = searchParams.get('color')
+
   const [mode, setMode] = useState('blank')
-  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [selectedTemplate, setSelectedTemplate] = useState(incomingTemplate)
+  const [selectedColor, setSelectedColor] = useState(incomingColor || null)
   const [rawInfo, setRawInfo] = useState('')
   const [targetRole, setTargetRole] = useState('')
   const [jd, setJd] = useState('')
@@ -51,7 +57,7 @@ const BuildResumePicker = () => {
   const handlePickTemplate = (templateId) => {
     setSelectedTemplate(templateId)
     if (mode === 'blank') {
-      dispatch(CreateBuiltResume(templateId, token, navigate))
+      dispatch(CreateBuiltResume(templateId, token, navigate, selectedColor))
     }
   }
 
@@ -64,7 +70,7 @@ const BuildResumePicker = () => {
       toast.error("Please pick a template first")
       return
     }
-    dispatch(GenerateResume(rawInfo.trim(), targetRole.trim(), selectedTemplate, token, navigate))
+    dispatch(GenerateResume(rawInfo.trim(), targetRole.trim(), selectedTemplate, token, navigate, selectedColor))
   }
 
   const handleTailor = () => {
@@ -80,7 +86,7 @@ const BuildResumePicker = () => {
       toast.error("Please pick a template first")
       return
     }
-    dispatch(TailorResume(pdfFile, jd.trim(), selectedTemplate, token, navigate))
+    dispatch(TailorResume(pdfFile, jd.trim(), selectedTemplate, token, navigate, selectedColor))
   }
 
   return (
@@ -189,10 +195,22 @@ const BuildResumePicker = () => {
         )}
         </AnimatePresence>
 
-        {/* Template grid sir — always shown, since every mode ends in "which template renders this data" */}
-        <p className="text-sm font-semibold text-richblack-100 mb-4">
-          {mode === 'blank' ? 'Pick a template to start' : 'Pick a template for the result'}
-        </p>
+        {/* Template grid sir — always shown, since every mode ends in "which template renders this data".
+            The dedicated /Dashboard/Templates gallery is the fuller browsing experience with color swatches;
+            arriving from there pre-selects a template (+ color) here via query params. */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold text-richblack-100">
+            {mode === 'blank' ? 'Pick a template to start' : 'Pick a template for the result'}
+            {selectedColor && (
+              <span className="ml-2 inline-flex items-center gap-1.5 text-xs font-normal text-richblack-400">
+                accent <span style={{ backgroundColor: selectedColor }} className="w-3 h-3 rounded-full inline-block border border-richblack-600" />
+              </span>
+            )}
+          </p>
+          <Link to="/Dashboard/Templates" className="flex items-center gap-1.5 text-xs font-semibold text-yellow-50 hover:opacity-80">
+            <FaSwatchbook className="text-[10px]" /> Browse all templates
+          </Link>
+        </div>
         <motion.div layout variants={staggerContainer(0.04)} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
           {TEMPLATE_REGISTRY.map((t) => (
             <motion.button
@@ -208,7 +226,7 @@ const BuildResumePicker = () => {
             >
               <div className="relative aspect-[3/4] bg-richblack-5 overflow-hidden">
                 <div className="w-full h-full origin-top-left scale-[0.27] pointer-events-none">
-                  <t.Component data={SAMPLE_RESUME_DATA} />
+                  <t.Component data={selectedColor ? { ...SAMPLE_RESUME_DATA, color: selectedColor } : SAMPLE_RESUME_DATA} />
                 </div>
                 {/* hover overlay sir — "Use this template" on hover, mirrors the home page slider's cards */}
                 <div className="absolute inset-0 bg-richblack-900/0 group-hover:bg-richblack-900/55 transition-colors duration-300 flex items-center justify-center">
