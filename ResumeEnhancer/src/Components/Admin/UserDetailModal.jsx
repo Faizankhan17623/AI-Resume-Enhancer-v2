@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { FaTimes } from 'react-icons/fa'
 import { modalBackdrop } from '../../utils/motion'
 import { GetUserDetail } from '../../Services/operations/Admin'
+import { getProviderMeta } from '../../utils/authProvider'
 
 // lightweight read-only drawer sir — surfaces the /admin/users/:userId endpoint that already
 // existed on the backend (profile + review/chat counts + recent reviews/payments) but had
@@ -77,10 +78,21 @@ const UserDetailModal = ({ userId, onClose }) => {
                     <p className="text-sm text-richblack-5 font-medium">{user.SubType === 'ProMax' ? 'Pro Max' : (user.SubType || 'Basic')}</p>
                   </div>
                   <div className="rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2">
+                    <p className="text-[10px] text-richblack-400 mb-1">Sign-up method</p>
+                    {(() => {
+                      const { label, icon: Icon } = getProviderMeta(user.provider)
+                      return (
+                        <p className="text-sm text-richblack-5 font-medium flex items-center gap-1.5">
+                          <Icon className="text-xs text-richblack-400" /> {label}
+                        </p>
+                      )
+                    })()}
+                  </div>
+                  <div className="rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2">
                     <p className="text-[10px] text-richblack-400 mb-1">Credits used</p>
                     <p className="text-sm text-richblack-5 font-medium font-mono">{user.count}</p>
                   </div>
-                  <div className="rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2">
+                  <div className="rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2 col-span-2">
                     <p className="text-[10px] text-richblack-400 mb-1">Status</p>
                     <p className="text-sm text-richblack-5 font-medium">
                       {user.isBanned ? `Banned${user.banReason ? ` — ${user.banReason}` : ''}` : (user.Verified ? 'Active' : 'Unverified')}
