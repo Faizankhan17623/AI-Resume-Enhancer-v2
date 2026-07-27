@@ -9,7 +9,7 @@ const { consumeCredit } = require('../utils/Plans')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
-const { AI_MODEL } = require('../utils/AiModel')
+const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel')
 const { runReview } = require('./AI')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
@@ -464,7 +464,9 @@ exports.downloadBuiltResumeDocx = async (req, res) => {
 
 // shared Groq call + JSON parsing sir — both AI builder features land here once they have
 // their system prompt + user content ready. Mirrors the parsing/guard pattern in controllers/AI.js
+// model is chosen per the user's plan sir — see utils/AiModel.js for the Basic/Pro/ProMax map
 const runBuilderAi = async ({ userId, plan, type, systemPrompt, userContent }) => {
+    const model = getModelForPlan(plan)
     const t0 = Date.now()
     let completion
     try {
@@ -473,13 +475,13 @@ const runBuilderAi = async ({ userId, plan, type, systemPrompt, userContent }) =
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userContent },
             ],
-            model: AI_MODEL,
+            model,
             temperature: 0,
             response_format: { type: 'json_object' },
         })
-        logAi({ user: userId, type, plan, model: AI_MODEL, usage: completion.usage, latencyMs: Date.now() - t0, success: true })
+        logAi({ user: userId, type, plan, model, usage: completion.usage, latencyMs: Date.now() - t0, success: true })
     } catch (aiErr) {
-        logAi({ user: userId, type, plan, model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+        logAi({ user: userId, type, plan, model, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
         throw aiErr
     }
 
@@ -561,6 +563,9 @@ exports.generateResume = async (req, res) => {
             projects: data.projects || [],
             certifications: data.certifications || [],
         })
+
+        // deliberate per-plan wait sir — see utils/AiModel.js, applied after the real work is done
+        await applyPlanDelay(spend.plan)
 
         return res.status(201).json({
             success: true,
@@ -649,6 +654,9 @@ exports.tailorResume = async (req, res) => {
             projects: data.projects || [],
             certifications: data.certifications || [],
         })
+
+        // deliberate per-plan wait sir — see utils/AiModel.js, applied after the real work is done
+        await applyPlanDelay(spend.plan)
 
         return res.status(201).json({
             success: true,
