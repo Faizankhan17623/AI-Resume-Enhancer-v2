@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaPlus, FaPaperPlane, FaTrash, FaRobot, FaFilePdf, FaTimes, FaComments } from 'react-icons/fa'
+import { FaPlus, FaPaperPlane, FaTrash, FaRobot, FaFilePdf, FaTimes, FaComments, FaSearch } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -112,11 +112,18 @@ const Chat = () => {
   const { chatId } = useParams()
   const [message, setMessage] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [chatSearch, setChatSearch] = useState('')
   const bottomRef = useRef(null)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { allChats, currentChat, loading, replying, streamingReply } = useSelector((state) => state.chat)
+
+  // client-side filter by title sir — the chat list is a user's own small set, no backend
+  // search endpoint needed for this
+  const visibleChats = chatSearch.trim()
+    ? allChats.filter((c) => c.title?.toLowerCase().includes(chatSearch.trim().toLowerCase()))
+    : allChats
 
   useEffect(() => {
     dispatch(GetAllChats(token))
@@ -169,16 +176,29 @@ const Chat = () => {
 
         {/* Left - chat list sidebar sir */}
         <div className="w-72 shrink-0 border-r border-richblack-700 flex flex-col">
-          <div className="p-4">
+          <div className="p-4 space-y-3">
             <IconBtn text="New Chat" onclick={() => setShowModal(true)} customClasses="w-full justify-center text-sm">
               <FaPlus />
             </IconBtn>
+            {allChats.length > 0 && (
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-richblack-400" />
+                <input
+                  value={chatSearch}
+                  onChange={(e) => setChatSearch(e.target.value)}
+                  placeholder="Search chats..."
+                  className="w-full rounded-lg bg-richblack-900 border border-richblack-600 pl-8 pr-3 py-2 text-xs text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                />
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto thin-scrollbar px-3 pb-4 space-y-1">
             {allChats.length === 0 ? (
               <p className="text-xs text-richblack-400 text-center mt-8 px-4">No chats yet sir — start one and coach your resume.</p>
+            ) : visibleChats.length === 0 ? (
+              <p className="text-xs text-richblack-400 text-center mt-8 px-4">No chats match "{chatSearch}"</p>
             ) : (
-              allChats.map((chat) => (
+              visibleChats.map((chat) => (
                 <div
                   key={chat._id}
                   className={`group flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors duration-200 ${
