@@ -217,3 +217,67 @@ describe('BuiltResume version history', () => {
         expect(restoreRes.status).toBe(401)
     })
 })
+
+describe('POST /api/v1/built-resumes/:resumeId/duplicate', () => {
+    it('clones content and presentation but starts fresh version history', async () => {
+        const { token } = await createLoggedInUser({ email: 'dup1@example.com', number: '5555555561' })
+
+        const createRes = await request(app)
+            .post('/api/v1/built-resumes')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ templateId: 'sidebar' })
+        const resumeId = createRes.body.resume._id
+
+        await request(app)
+            .put(`/api/v1/built-resumes/${resumeId}`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                title: 'Frontend Dev — Google',
+                summary: 'Experienced frontend engineer',
+                color: '#0b2545',
+                templateId: 'sidebar',
+                skills: ['React', 'TypeScript'],
+            })
+
+        const dupRes = await request(app)
+            .post(`/api/v1/built-resumes/${resumeId}/duplicate`)
+            .set('Authorization', `Bearer ${token}`)
+
+        expect(dupRes.status).toBe(201)
+        expect(dupRes.body.resume._id).not.toBe(resumeId)
+        expect(dupRes.body.resume.title).toBe('Frontend Dev — Google (copy)')
+        expect(dupRes.body.resume.summary).toBe('Experienced frontend engineer')
+        expect(dupRes.body.resume.templateId).toBe('sidebar')
+        expect(dupRes.body.resume.color).toBe('#0b2545')
+        expect(dupRes.body.resume.skills).toEqual(['React', 'TypeScript'])
+        expect(dupRes.body.resume.versions).toEqual([]) // fresh history sir, not inherited
+
+        // original is untouched sir
+        const originalRes = await request(app)
+            .get(`/api/v1/built-resumes/${resumeId}`)
+            .set('Authorization', `Bearer ${token}`)
+        expect(originalRes.body.resume.title).toBe('Frontend Dev — Google')
+    })
+
+    it('does not let a user duplicate another user\'s resume', async () => {
+        const { token: ownerToken } = await createLoggedInUser({ email: 'dupowner@example.com', number: '5555555562' })
+        const { token: otherToken } = await createLoggedInUser({ email: 'dupother@example.com', number: '5555555563' })
+
+        const createRes = await request(app)
+            .post('/api/v1/built-resumes')
+            .set('Authorization', `Bearer ${ownerToken}`)
+            .send({ templateId: 'classic' })
+        const resumeId = createRes.body.resume._id
+
+        const res = await request(app)
+            .post(`/api/v1/built-resumes/${resumeId}/duplicate`)
+            .set('Authorization', `Bearer ${otherToken}`)
+
+        expect(res.status).toBe(404)
+    })
+
+    it('requires auth', async () => {
+        const res = await request(app).post('/api/v1/built-resumes/507f1f77bcf86cd799439011/duplicate')
+        expect(res.status).toBe(401)
+    })
+})

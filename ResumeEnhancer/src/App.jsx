@@ -30,6 +30,7 @@ const TemplatePicker = lazy(() => import('./Components/ResumeBuilder/TemplatePic
 const BuildResumePicker = lazy(() => import('./Components/ResumeBuilder/BuildResumePicker'))
 const BuilderEditor = lazy(() => import('./Components/ResumeBuilder/BuilderEditor'))
 const Resumes = lazy(() => import('./Components/Dashboard/Resumes'))
+const BuiltResumes = lazy(() => import('./Components/Dashboard/BuiltResumes'))
 const Applications = lazy(() => import('./Components/Dashboard/Applications'))
 const KeywordBank = lazy(() => import('./Components/Dashboard/KeywordBank'))
 const Report = lazy(() => import('./Components/Dashboard/Report'))
@@ -129,6 +130,7 @@ function App() {
           <Route path="/Dashboard/Build-Resume" element={<PrivateRoute><BuildResumePicker /></PrivateRoute>} />
           <Route path="/Dashboard/Build-Resume/:resumeId" element={<PrivateRoute><BuilderEditor /></PrivateRoute>} />
           <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />
+          <Route path="/Dashboard/Built-Resumes" element={<PrivateRoute><BuiltResumes /></PrivateRoute>} />
           <Route path="/Dashboard/Applications" element={<PrivateRoute><Applications /></PrivateRoute>} />
           <Route path="/Dashboard/Keyword-Bank" element={<PrivateRoute><KeywordBank /></PrivateRoute>} />
           <Route path="/Dashboard/Review/:reviewId" element={<PrivateRoute><Report /></PrivateRoute>} />
