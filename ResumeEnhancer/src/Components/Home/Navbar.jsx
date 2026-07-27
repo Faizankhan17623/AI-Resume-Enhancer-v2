@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiLogOut, FiSun, FiMoon, FiChevronDown } from 'react-icons/fi'
-import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy, FaRegUserCircle, FaUserCog } from 'react-icons/fa'
+import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy, FaUserCog } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 import NotificationBell from './NotificationBell'
 import { LogoutUser } from '../../Services/operations/Auth'
@@ -154,7 +154,24 @@ const NavSearch = () => {
   )
 }
 
-// Glassdoor-style profile sir — a plain circular avatar icon that opens Account/Logout
+// Google-style initial avatar palette sir — picked deterministically from the name so the
+// same user always lands on the same color across sessions/devices
+const AVATAR_COLORS = ['#F4511E', '#1E88E5', '#43A047', '#8E24AA', '#00897B', '#FB8C00', '#3949AB', '#D81B60']
+
+const getInitial = (user) => {
+  const source = user?.firstName || user?.email || ''
+  return source.trim().charAt(0).toUpperCase() || '?'
+}
+
+const getAvatarColor = (user) => {
+  const source = (user?.firstName || '') + (user?.lastName || '') || user?.email || ''
+  let hash = 0
+  for (let i = 0; i < source.length; i++) hash = source.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+// Google-style profile sir — a circular initial avatar (first letter of the name, colored by name)
+// that opens Account/Logout, replacing the old generic person icon
 const ProfileMenu = () => {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -187,9 +204,10 @@ const ProfileMenu = () => {
         aria-label="Account"
         aria-haspopup="true"
         aria-expanded={open}
-        className="p-2 shrink-0 text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+        style={{ backgroundColor: getAvatarColor(user) }}
+        className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-sm font-semibold text-white hover:opacity-90 transition-all duration-200 cursor-pointer"
       >
-        <FaRegUserCircle className="text-lg" />
+        {getInitial(user)}
       </button>
 
       <AnimatePresence>
