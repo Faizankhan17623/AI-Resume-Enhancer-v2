@@ -15,7 +15,10 @@ const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 const { AI_MODEL } = require('../utils/AiModel');
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
 
-const grok = new Grok({apiKey:process.env.GROK_API_KEY})
+// timeout + maxRetries pinned explicitly sir — the SDK default retries 429/5xx with backoff
+// and a long default timeout, so a rate-limited or stalled call could silently eat minutes
+// before ever reaching our own error handling below. Fail fast instead: one retry, 30s cap.
+const grok = new Grok({apiKey:process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1})
 
 // shared core sir — both a fresh PDF upload and a re-score from a saved resume land here once
 // the resume text is in hand. Spends one credit, calls Groq, saves the Review, returns the same

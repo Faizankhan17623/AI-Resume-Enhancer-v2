@@ -10,10 +10,16 @@ const { PLANS } = require('../utils/Plans')
 const PAYMENT_SESSION_COOKIE = 'paymentSession'
 const PAYMENT_SESSION_MINUTES = 30
 
+// sir — frontend (Vercel) and backend (Render) are different domains, so this cookie travels
+// cross-site on every create-order/verify axios call. sameSite:'lax' silently drops cross-site
+// XHR/fetch cookies (it only rides along on top-level navigations), so verify always saw no
+// cookie and returned "session expired" even for a genuinely fresh, successful payment.
+// sameSite:'none' is required for cross-site delivery, and browsers mandate secure:true whenever
+// sameSite is 'none' — so secure can no longer be conditional on NODE_ENV.
 const paymentCookieOptions = {
     httpOnly: true,             // JS on the page can never read it sir
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
     maxAge: PAYMENT_SESSION_MINUTES * 60 * 1000,
 }
 
