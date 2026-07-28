@@ -5,6 +5,9 @@ const initialState = {
     applications: [],
     loading: false,
     saving: false,
+    // outcome-linked analytics sir — score bucket -> interview rate, Pro Max only
+    analytics: null,
+    analyticsLoading: false,
 };
 
 const applicationSlice = createSlice({
@@ -19,9 +22,15 @@ const applicationSlice = createSlice({
         },
         setSaving(state, value) {
             state.saving = value.payload
+        },
+        setAnalytics(state, value) {
+            state.analytics = value.payload
+        },
+        setAnalyticsLoading(state, value) {
+            state.analyticsLoading = value.payload
         }
     }
 })
 
-export const { setApplications, setLoading, setSaving } = applicationSlice.actions
+export const { setApplications, setLoading, setSaving, setAnalytics, setAnalyticsLoading } = applicationSlice.actions
 export default applicationSlice.reducer

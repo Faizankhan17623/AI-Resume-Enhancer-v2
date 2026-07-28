@@ -56,6 +56,14 @@ const applicationSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'BuiltResume',
         },
+        // which past ATS review this application was sent with sir — set explicitly by the user
+        // (Review has no ref back to the resume it scored, so this can't be auto-inferred reliably;
+        // letting the user pick from their own review history is the honest option). Powers the
+        // outcome-linked analytics view: does a higher atsScore actually correlate with interviews?
+        review: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'Review',
+        },
     }, { timestamps: true }
 )
 

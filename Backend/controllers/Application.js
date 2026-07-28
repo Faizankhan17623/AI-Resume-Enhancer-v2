@@ -1,5 +1,7 @@
 const mongoose = require('mongoose')
 const Application = require('../Models/Application')
+const Review = require('../Models/Review')
+const { getUserPlan } = require('../utils/Plans')
 
 const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
 
@@ -7,7 +9,7 @@ const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
 exports.createApplication = async (req, res) => {
     try {
         const id = req?.User.id
-        const { company, role, status, location, jobUrl, notes, appliedDate, resume, builtResume } = req.body
+        const { company, role, status, location, jobUrl, notes, appliedDate, resume, builtResume, review } = req.body
 
         if (!company?.trim() || !role?.trim()) {
             return res.status(400).json({
@@ -29,6 +31,16 @@ exports.createApplication = async (req, res) => {
         if (builtResume && !mongoose.isValidObjectId(builtResume)) {
             return res.status(400).json({ success: false, message: 'Invalid built resume id' })
         }
+        if (review) {
+            if (!mongoose.isValidObjectId(review)) {
+                return res.status(400).json({ success: false, message: 'Invalid review id' })
+            }
+            // must be one of THIS user's own reviews sir, not just any valid id
+            const owned = await Review.exists({ _id: review, user: id })
+            if (!owned) {
+                return res.status(400).json({ success: false, message: 'Review not found' })
+            }
+        }
 
         const application = await Application.create({
             user: id,
@@ -41,6 +53,7 @@ exports.createApplication = async (req, res) => {
             appliedDate: appliedDate || Date.now(),
             resume: resume || undefined,
             builtResume: builtResume || undefined,
+            review: review || undefined,
         })
 
         return res.status(201).json({
@@ -64,7 +77,7 @@ exports.getApplications = async (req, res) => {
         const id = req?.User.id
 
         const applications = await Application.find({ user: id })
-            .select('company role status location jobUrl notes appliedDate resume builtResume createdAt updatedAt')
+            .select('company role status location jobUrl notes appliedDate resume builtResume review createdAt updatedAt')
             .sort({ createdAt: -1 })
 
         return res.status(200).json({
@@ -86,7 +99,7 @@ exports.updateApplication = async (req, res) => {
     try {
         const id = req?.User.id
         const { applicationId } = req.params
-        const { company, role, status, location, jobUrl, notes, appliedDate, resume, builtResume } = req.body
+        const { company, role, status, location, jobUrl, notes, appliedDate, resume, builtResume, review } = req.body
 
         if (!mongoose.isValidObjectId(applicationId)) {
             return res.status(400).json({
@@ -128,6 +141,18 @@ exports.updateApplication = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Invalid built resume id' })
             }
             application.builtResume = builtResume || undefined
+        }
+        if (review !== undefined) {
+            if (review) {
+                if (!mongoose.isValidObjectId(review)) {
+                    return res.status(400).json({ success: false, message: 'Invalid review id' })
+                }
+                const owned = await Review.exists({ _id: review, user: id })
+                if (!owned) {
+                    return res.status(400).json({ success: false, message: 'Review not found' })
+                }
+            }
+            application.review = review || undefined
         }
 
         await application.save()
@@ -178,6 +203,77 @@ exports.deleteApplication = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the application',
+        })
+    }
+}
+
+// GET /applications/analytics — Pro Max only sir, correlates the ATS score of the review
+// actually attached to each application against real outcomes. Only applications with a
+// `review` link are included — there is no reliable way to auto-infer that link (Review has
+// no ref back to the resume it scored), so this view is only as complete as what the user has
+// explicitly tagged, and the frontend should say so rather than imply full coverage.
+exports.getApplicationAnalytics = async (req, res) => {
+    try {
+        const id = req?.User.id
+
+        const plan = await getUserPlan(id)
+        if (!plan || plan.key !== 'ProMax') {
+            return res.status(403).json({
+                success: false,
+                message: 'Outcome analytics are a Pro Max feature, please upgrade your plan',
+            })
+        }
+
+        const buckets = await Application.aggregate([
+            { $match: { user: new mongoose.Types.ObjectId(id), review: { $ne: null } } },
+            {
+                $lookup: {
+                    from: 'reviews',
+                    localField: 'review',
+                    foreignField: '_id',
+                    as: 'reviewDoc',
+                },
+            },
+            { $unwind: '$reviewDoc' },
+            {
+                $bucket: {
+                    groupBy: '$reviewDoc.atsScore',
+                    boundaries: [0, 60, 80, 101],
+                    default: 'other',
+                    output: {
+                        total: { $sum: 1 },
+                        interviewsOrOffers: {
+                            $sum: { $cond: [{ $in: ['$status', ['Interview', 'Offer']] }, 1, 0] },
+                        },
+                    },
+                },
+            },
+        ])
+
+        const labels = { 0: 'Below 60', 60: '60-79', 80: '80+' }
+        const results = buckets
+            .filter((b) => b._id !== 'other')
+            .map((b) => ({
+                scoreRange: labels[b._id] || String(b._id),
+                total: b.total,
+                interviewRate: b.total > 0 ? Math.round((b.interviewsOrOffers / b.total) * 100) : 0,
+            }))
+
+        const linkedCount = results.reduce((sum, b) => sum + b.total, 0)
+        const totalCount = await Application.countDocuments({ user: id })
+
+        return res.status(200).json({
+            success: true,
+            results,
+            linkedCount,
+            totalCount,
+        })
+    } catch (error) {
+        console.log(error)
+        console.log(error.message)
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your application analytics',
         })
     }
 }

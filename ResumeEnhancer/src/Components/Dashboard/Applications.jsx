@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase } from 'react-icons/fa'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel, fadeUp, staggerContainer } from '../../utils/motion'
-import { GetApplications, CreateApplication, UpdateApplication, DeleteApplication } from '../../Services/operations/Application'
+import { GetApplications, CreateApplication, UpdateApplication, DeleteApplication, GetApplicationAnalytics } from '../../Services/operations/Application'
+import { GetAllReviews } from '../../Services/operations/Review'
 
 const COLUMNS = [
   { status: 'Applied', label: 'Applied', accent: 'border-blue-700', dot: 'bg-blue-100' },
@@ -17,14 +20,20 @@ const COLUMNS = [
   { status: 'Rejected', label: 'Rejected', accent: 'border-pink-700', dot: 'bg-pink-200' },
 ]
 
-const emptyForm = { company: '', role: '', location: '', jobUrl: '', notes: '', status: 'Applied' }
+const emptyForm = { company: '', role: '', location: '', jobUrl: '', notes: '', status: 'Applied', review: '' }
 
 // ---------- add/edit modal sir — same form for both, editing pre-fills from the card ----------
 const ApplicationModal = ({ editing, onClose }) => {
-  const [form, setForm] = useState(editing || emptyForm)
+  const [form, setForm] = useState(editing ? { ...emptyForm, ...editing, review: editing.review || '' } : emptyForm)
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { saving } = useSelector((state) => state.application)
+  const { allReviews } = useSelector((state) => state.review)
+
+  useEffect(() => {
+    dispatch(GetAllReviews(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -118,6 +127,23 @@ const ApplicationModal = ({ editing, onClose }) => {
             />
           </div>
 
+          <div>
+            <label className="text-xs font-medium text-richblack-300 mb-1.5 block">Resume used (optional)</label>
+            <select
+              value={form.review}
+              onChange={(e) => setForm({ ...form, review: e.target.value })}
+              className="w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50"
+            >
+              <option value="">Not linked to a review</option>
+              {allReviews.map((r) => (
+                <option key={r._id} value={r._id}>
+                  {(r.jdTitle || 'Review')} — {r.atsScore}/100 ({new Date(r.createdAt).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-richblack-400 mt-1.5">Link the ATS review you used for this application to unlock outcome analytics below.</p>
+          </div>
+
           <IconBtn text={saving ? 'Saving...' : editing ? 'Save changes' : 'Add application'} type="submit" disabled={saving} customClasses="w-full justify-center text-sm" />
         </form>
       </motion.div>
@@ -165,6 +191,68 @@ const ApplicationCard = ({ app, onEdit, onDelete, onDragStart }) => (
   </motion.div>
 )
 
+// ---------- outcome-linked analytics sir — Pro Max only, score bucket -> interview rate ----------
+const OutcomeAnalytics = () => {
+  const dispatch = useDispatch()
+  const { token, user } = useSelector((state) => state.auth)
+  const { analytics, analyticsLoading } = useSelector((state) => state.application)
+  const isProMax = user?.SubType === 'ProMax'
+
+  useEffect(() => {
+    if (isProMax) dispatch(GetApplicationAnalytics(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!isProMax) {
+    return (
+      <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-8 mb-6 flex items-center gap-4">
+        <FaCrown className="text-2xl text-yellow-50 shrink-0" />
+        <div className="flex-1">
+          <p className="text-richblack-100 font-semibold text-sm">See which resume score actually gets interviews</p>
+          <p className="text-richblack-400 text-xs mt-0.5">Outcome analytics are a Pro Max feature — upgrade to see how your ATS score correlates with real interview outcomes.</p>
+        </div>
+        <Link to="/Pricing" className="shrink-0">
+          <IconBtn text="View plans" customClasses="text-sm" />
+        </Link>
+      </div>
+    )
+  }
+
+  if (analyticsLoading || !analytics) return null
+
+  if (analytics.linkedCount === 0) {
+    return (
+      <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 mb-6">
+        <p className="text-sm text-richblack-200 flex items-center gap-2"><FaChartBar className="text-yellow-50" /> Outcome analytics</p>
+        <p className="text-xs text-richblack-400 mt-1.5">Link a review to at least one application (edit a card and pick "Resume used") to see how your ATS score correlates with interviews.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 mb-6">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm font-semibold text-richblack-5 flex items-center gap-2"><FaChartBar className="text-yellow-50" /> Outcome analytics</p>
+        <span className="text-xs text-richblack-400">{analytics.linkedCount} of {analytics.totalCount} applications linked to a review</span>
+      </div>
+      <p className="text-xs text-richblack-400 mb-4">Interview/offer rate by the ATS score of the resume you used — only applications you've linked to a review are counted.</p>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={analytics.results}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#3A3428" />
+          <XAxis dataKey="scoreRange" stroke="#8B93A0" fontSize={12} />
+          <YAxis domain={[0, 100]} stroke="#8B93A0" fontSize={12} unit="%" />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#1F1C16', border: '1px solid #3A3428', borderRadius: '10px', color: '#F3EFE6' }}
+            labelStyle={{ color: '#F3EFE6' }}
+            formatter={(value, name, props) => [`${value}% (${props.payload.total} applications)`, 'Interview/offer rate']}
+          />
+          <Bar dataKey="interviewRate" fill="#2F6F5E" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
 const Applications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
@@ -211,6 +299,8 @@ const Applications = () => {
             <FaPlus className="text-xs" />
           </IconBtn>
         </div>
+
+        <OutcomeAnalytics />
 
         {loading ? (
           <Loading text="Loading your applications..." />
