@@ -1,10 +1,10 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setApplications, setLoading, setSaving } from '../../Slices/applicationSlice.js'
+import { setApplications, setLoading, setSaving, setAnalytics, setAnalyticsLoading } from '../../Slices/applicationSlice.js'
 import { ApplicationData } from '../Apis/ApplicationApi.js'
 
-const { create, all, update, remove } = ApplicationData
+const { create, all, update, remove, analytics } = ApplicationData
 
 export function GetApplications(token) {
     return async (dispatch) => {
@@ -73,6 +73,28 @@ export function UpdateApplication(applicationId, payload, token, { silent = fals
             // a silent (drag-and-drop) failure still needs the board re-synced to the real state sir
             if (silent) dispatch(GetApplications(token))
             return false
+        }
+    }
+}
+
+// score bucket -> interview rate sir, Pro Max only (backend 403s everyone else)
+export function GetApplicationAnalytics(token) {
+    return async (dispatch) => {
+        dispatch(setAnalyticsLoading(true))
+        try {
+            const response = await apiConnector("GET", analytics, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setAnalytics(response.data))
+        } catch (error) {
+            logApiError("Error fetching application analytics", error)
+        } finally {
+            dispatch(setAnalyticsLoading(false))
         }
     }
 }

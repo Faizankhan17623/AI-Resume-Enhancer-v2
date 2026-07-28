@@ -292,4 +292,65 @@ ${BUILT_RESUME_SHAPE}
 ${BUILT_RESUME_RULES}
 - Every fact must come from the candidate's EXISTING resume — the JD guides emphasis and wording only, never invents new experience.`
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt }
+// ---------- MOCK INTERVIEW PROMPTS (controllers/MockInterview.js) — ProMax only ----------
+
+// the opening question of a session sir — grounded in the resume+JD, same interpolation
+// style as buildChatSystemPrompt
+const buildMockInterviewStartPrompt = (resumeText, jd) => `You are an expert technical interviewer with 10+ years of hiring experience, running a mock interview for a candidate preparing for a real interview.
+
+=== THE CANDIDATE'S RESUME ===
+${resumeText}
+
+=== THE JOB DESCRIPTION ===
+${jd}
+
+Ask the FIRST interview question for this role, grounded in the resume and JD above — something a real interviewer would realistically open with (e.g. background/experience, a relevant project, or a core skill the JD demands).
+
+Respond ONLY with a valid JSON object in EXACTLY this shape:
+{
+  "question": "the interview question, written as you would say it to the candidate",
+  "category": "e.g. Background, Technical, Behavioral, System Design, Project Deep-Dive",
+  "difficulty": "easy | medium | hard"
+}`
+
+// scores the candidate's last answer AND produces the next question in one call sir —
+// priorTurns is the array of already-completed {question, answer, score} turns, used so the
+// next question doesn't repeat ground already covered
+const buildMockInterviewAnswerPrompt = (resumeText, jd, priorTurns, question, answer) => {
+    const history = priorTurns.length
+        ? priorTurns.map((t, i) => `Q${i + 1} (${t.category || 'General'}): ${t.question}\nCandidate's answer: ${t.answer}\nScore given: ${t.score}/10`).join('\n\n')
+        : '(this is the first question of the session)'
+
+    return `You are an expert technical interviewer with 10+ years of hiring experience, running a mock interview for a candidate preparing for a real interview.
+
+=== THE CANDIDATE'S RESUME ===
+${resumeText}
+
+=== THE JOB DESCRIPTION ===
+${jd}
+
+=== QUESTIONS ASKED SO FAR ===
+${history}
+
+=== CURRENT QUESTION ===
+${question}
+
+=== CANDIDATE'S ANSWER TO THE CURRENT QUESTION ===
+${answer}
+
+Score the candidate's answer to the CURRENT question honestly (be a real interviewer, not a cheerleader — a vague or generic answer should score low), give specific feedback on what was strong and what was weak, and write a stronger sample answer grounded in the candidate's ACTUAL resume. Then ask the NEXT interview question — realistic for this role, not a repeat of ground already covered above.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape:
+{
+  "score": 7,
+  "feedback": "2-3 sentences on what was strong and what was weak in the answer",
+  "sampleAnswer": "a stronger answer to the CURRENT question, using only real experience from the candidate's resume",
+  "nextQuestion": {
+    "question": "the next interview question",
+    "category": "e.g. Background, Technical, Behavioral, System Design, Project Deep-Dive",
+    "difficulty": "easy | medium | hard"
+  }
+}`
+}
+
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt }

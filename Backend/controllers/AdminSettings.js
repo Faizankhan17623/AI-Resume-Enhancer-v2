@@ -4,7 +4,7 @@ const { invalidateFeatureFlagCache } = require('../utils/FeatureFlags')
 
 // the keys the admin UI is allowed to create/toggle sir — keeps this from becoming a
 // free-form KV store; add a new key here when a controller gets a new gate
-const KNOWN_KEYS = ['feature.review', 'feature.coverLetter', 'feature.jobSearch']
+const KNOWN_KEYS = ['feature.review', 'feature.coverLetter', 'feature.jobSearch', 'feature.learningResources', 'feature.mockInterview']
 
 // GET /admin/settings sir — the known keys, defaulting missing ones to enabled so the UI
 // always shows every togglable feature even before it's ever been touched

@@ -39,6 +39,7 @@ const Leaderboard = lazy(() => import('./Components/Dashboard/Leaderboard'))
 const Chat = lazy(() => import('./Components/Dashboard/Chat'))
 const CoverLetter = lazy(() => import('./Components/Dashboard/CoverLetter'))
 const JobSearch = lazy(() => import('./Components/Dashboard/JobSearch'))
+const MockInterview = lazy(() => import('./Components/Dashboard/MockInterview'))
 const Account = lazy(() => import('./Components/Dashboard/Account'))
 const AdminOverview = lazy(() => import('./Components/Admin/Overview'))
 const AdminUsers = lazy(() => import('./Components/Admin/Users'))
@@ -140,6 +141,8 @@ function App() {
           <Route path="/Dashboard/Chat/:chatId" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/Dashboard/Cover-Letter" element={<PrivateRoute><CoverLetter /></PrivateRoute>} />
           <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
+          <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
+          <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
           <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
 
           {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of

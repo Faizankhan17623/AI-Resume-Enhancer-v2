@@ -5,4 +5,5 @@ export const ApplicationData = {
     all: BASE_URL + "/applications",
     update: BASE_URL + "/applications",   // + /:applicationId
     remove: BASE_URL + "/applications",   // + /:applicationId
+    analytics: BASE_URL + "/applications/analytics",
 }

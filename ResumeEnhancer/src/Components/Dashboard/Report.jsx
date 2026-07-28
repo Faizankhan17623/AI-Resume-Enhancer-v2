@@ -1,16 +1,94 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
-import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle, FaSearch } from 'react-icons/fa'
+import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle, FaSearch, FaExternalLinkAlt, FaSpinner } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import ScoreRing from '../extra/ScoreRing'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { GetSingleReview, DownloadReviewPdf, ToggleShare, UpdateShareAudience } from '../../Services/operations/Review'
+import { apiConnector } from '../../Services/apiConnector'
+import { LearningResourcesData } from '../../Services/Apis/LearningResourcesApi'
+import { logApiError } from '../../Services/logApiError'
+
+// lazy "find real courses" lookup for one learningRoadmap item sir — only fires on click,
+// never on page load, so we don't burn Tavily calls on roadmap items the user never expands
+const LearningResourceFinder = ({ query, token }) => {
+  const [state, setState] = useState('idle') // idle | loading | done | error
+  const [results, setResults] = useState([])
+
+  const handleFind = async () => {
+    setState('loading')
+    try {
+      const response = await apiConnector('POST', LearningResourcesData.search, { query }, {
+        Authorization: `Bearer ${token}`
+      })
+      if (!response.data.success) throw new Error(response.data.message)
+      setResults(response.data.results || [])
+      setState('done')
+    } catch (error) {
+      logApiError('Error finding learning resources', error)
+      setState('error')
+    }
+  }
+
+  if (state === 'idle') {
+    return (
+      <button
+        type="button"
+        onClick={handleFind}
+        className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-blue-100 hover:text-blue-50 transition-colors duration-200"
+      >
+        <FaSearch className="text-[10px]" /> Find real courses: {query}
+      </button>
+    )
+  }
+
+  if (state === 'loading') {
+    return (
+      <p className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-richblack-300">
+        <FaSpinner className="text-[10px] animate-spin" /> Searching for courses...
+      </p>
+    )
+  }
+
+  if (state === 'error') {
+    return (
+      <p className="mt-2 text-xs text-pink-200">
+        Couldn't find courses right now.{' '}
+        <button type="button" onClick={handleFind} className="underline hover:text-pink-100">Try again</button>
+      </p>
+    )
+  }
+
+  if (results.length === 0) {
+    return <p className="mt-2 text-xs text-richblack-400">No real courses found for this search.</p>
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {results.map((r, i) => (
+        <a
+          key={i}
+          href={r.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-start justify-between gap-2 rounded-lg bg-richblack-700/60 border border-richblack-600 px-3 py-2 hover:border-yellow-50/60 transition-colors duration-200 group"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-richblack-5 group-hover:text-yellow-50 transition-colors duration-200 truncate">{r.title}</p>
+            <p className="text-[11px] text-richblack-300 line-clamp-2 mt-0.5">{r.snippet}</p>
+          </div>
+          <FaExternalLinkAlt className="text-richblack-400 group-hover:text-yellow-50 transition-colors duration-200 shrink-0 mt-1 text-[10px]" />
+        </a>
+      ))}
+    </div>
+  )
+}
 
 // score → color, same rule everywhere sir
 const scoreColor = (score) =>
@@ -393,14 +471,7 @@ const Report = () => {
                     </p>
                     <p className="text-sm text-richblack-200 mt-1">{item.advice}</p>
                     {item.resourceQuery && (
-                      <a
-                        href={`https://www.google.com/search?q=${encodeURIComponent(item.resourceQuery)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-blue-100 hover:text-blue-50 transition-colors duration-200"
-                      >
-                        <FaSearch className="text-[10px]" /> Find a course: {item.resourceQuery}
-                      </a>
+                      <LearningResourceFinder query={item.resourceQuery} token={token} />
                     )}
                   </div>
                 </div>
