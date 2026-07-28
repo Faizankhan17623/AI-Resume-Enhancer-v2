@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 
 const Testimonial = require('../Models/Testimonial')
 const { logAction } = require('../utils/AdminLog')
+const { notify } = require('../utils/NotificationLog')
 
 // user-submitted homepage testimonials sir — a User submits one, Admin/Support moderates it,
 // only 'approved' ones are ever served by the public endpoint
@@ -145,6 +146,16 @@ exports.moderateTestimonial = async (req, res) => {
             testimonial.user,
             { quote: testimonial.quote }
         )
+
+        notify({
+            user: testimonial.user,
+            type: 'testimonial',
+            title: status === 'approved' ? 'Your testimonial is live!' : "Your testimonial wasn't approved",
+            message: status === 'approved'
+                ? 'Thanks for sharing — your testimonial is now shown on the homepage.'
+                : "Your submission wasn't approved for the homepage. You're welcome to submit a new one.",
+            link: '/Dashboard/Account',
+        })
 
         return res.status(200).json({
             success: true,

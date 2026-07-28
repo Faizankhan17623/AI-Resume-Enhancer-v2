@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ['streak-break', 'win-back', 'digest', 'health-check', 'system'],
+            enum: ['streak-break', 'win-back', 'digest', 'health-check', 'system', 'testimonial'],
             default: 'system',
         },
         title: {
