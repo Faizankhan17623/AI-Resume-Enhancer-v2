@@ -94,17 +94,21 @@ A full-stack web application that helps users improve their resumes using AI-pow
 
 - **Authentication** — signup/login with OTP email verification, JWT-based sessions, per-account brute-force lockout (5 failed attempts locks the account for 15 minutes), and Google/GitHub OAuth
 - **AI Resume Chat** — upload a resume (PDF) and get AI-generated feedback and suggestions via Groq (`openai/gpt-oss-120b`)
-- **Resume Builder** — build a resume from structured form data with a live template preview; export it as a print-ready PDF or a real, ATS-safe **DOCX** file
+- **Resume Builder** — build a resume from structured form data across 11 templates with a live preview; export it as a print-ready PDF or a real, ATS-safe **DOCX** file
 - **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded images, missing text layer, non-standard fonts) that catches parsing issues real ATS software chokes on, independent of the AI's subjective review
 - **Resume Library** — save parsed resumes for reuse across reviews, chats, and cover letters without re-uploading; supports renaming and a default resume
+- **Keyword Bank** — save and reuse frequently-missed keywords/phrases surfaced by reviews
+- **Structured Mock Interview** (ProMax) — one AI-generated question at a time grounded in the resume + JD, scored 1-10 with feedback and a stronger sample answer; sessions are saved with full history
+- **Application Tracker** — a Kanban board (Applied/Interview/Offer/Rejected) for job applications, with optional linking to the ATS review it was sent with and outcome-linked analytics (interview/offer rate bucketed by ATS score)
 - **Onboarding Checklist** — a dashboard "Get started" progress card for new users that tracks real activity and dismisses itself for good once complete
 - **AI Cover Letter Generator** — generate a tailored cover letter from a resume + job description (Pro+ feature), with an automatic genericness check
 - **Job Search** — live web search for matching job postings via Tavily (Pro+ feature)
+- **Learning Resources** — real course/tutorial links (live Tavily search, Mongo-cached by query) for each skill gap in a review's learning roadmap, instead of a plain Google search link (Pro+ feature)
 - **Payments** — subscription/checkout support via Razorpay and Stripe
-- **Reviews** — users can leave reviews after using the platform, and can frame a shared report for a friend or a recruiter
+- **Reviews & Testimonials** — users can leave reviews after using the platform and can frame a shared report for a friend or a recruiter; user-submitted homepage testimonials go through an Admin/Support moderation queue before appearing publicly
 - **Notifications** — an in-app bell (unread badge, mark read) alongside per-type email opt-in/opt-out (streak, win-back, digest, monthly health check)
 - **Account Self-Service** — edit profile fields inline, export your own data as JSON, and delete your account with a 2-day recovery window
-- **Admin Dashboard** — manage users (with bulk actions including role change, CSV export, and a read-only detail drawer), payments, announcements (editable, schedulable), and feature flags (schedulable disable/re-enable) with a filterable/searchable/exportable audit log, a global search bar, a security panel for account lockouts, a weekly activity digest email to Admins, mobile-responsive tables, and no full-page loading flash on pagination; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
+- **Admin Dashboard** — manage users (with bulk actions including role change, CSV export, and a read-only detail drawer), payments, announcements (editable, schedulable), testimonial moderation, and feature flags (schedulable disable/re-enable) with a filterable/searchable/exportable audit log, a global search bar, a security panel for account lockouts, a weekly activity digest email to Admins, mobile-responsive tables, and no full-page loading flash on pagination; also surfaces account-deletion (2-day purge) status and AI cost-alert firings in-app instead of console/email-only
 - **Cloud File Storage** — resume uploads stored via Cloudinary
 
 ## Tech Stack
@@ -129,7 +133,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 ## Project Structure
 
 ```
-AiResumeEnhancer/
+AI-Resume-Enhancer-v2/
 ├── Backend/              # Express API server
 │   ├── controllers/      # Route handlers
 │   ├── Routes/           # API route definitions
@@ -141,7 +145,7 @@ AiResumeEnhancer/
 │   └── index.js          # Server entry point
 └── ResumeEnhancer/       # React frontend
     └── src/
-        ├── Components/   # UI components (Home, Login, Dashboard incl. Resumes/CoverLetter/JobSearch, Admin, etc.)
+        ├── Components/   # UI components (Home, Login, Dashboard incl. Resumes/CoverLetter/JobSearch/Applications/MockInterview, ResumeBuilder/Templates, Admin, etc.)
         ├── Services/     # API call definitions
         ├── Slices/       # Redux slices
         └── reducer/      # Redux store setup
@@ -185,8 +189,8 @@ npm test
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/Faizankhan17623/AI-Resume-Enhancer.git
-   cd AI-Resume-Enhancer
+   git clone https://github.com/Faizankhan17623/AI-Resume-Enhancer-v2.git
+   cd AI-Resume-Enhancer-v2
    ```
 
 2. Install dependencies
