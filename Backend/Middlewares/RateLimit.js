@@ -140,4 +140,15 @@ const grammarCheckLimiter = rateLimit({
     message: tooMany('You are sending requests too fast, please wait a minute and try again'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter }
+// testimonial text ends up in a moderation queue and (once approved) on the public homepage sir —
+// tighter than the global default even though the one-pending-submission-per-user guard in the
+// controller already blocks rapid resubmission; this just makes the limit explicit
+const testimonialLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many testimonial submissions, please try again later'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter }

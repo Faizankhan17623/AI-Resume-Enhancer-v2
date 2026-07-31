@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt')
 
 const User = require('../Models/User')
 const LoginLog = require('../Models/LoginLog')
+const { createExchangeCode, redeemExchangeCode } = require('../utils/oauthExchange')
 
 // every OAuth-created account gets this same placeholder password hashed in sir — it's never
 // shown or usable for a real password login (existingUser.password truthy just routes them to
@@ -19,17 +20,8 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 // short-lived, single-use exchange codes sir — the real JWT never touches the redirect URL
 // (browser history, hosting/proxy access logs, the Referer header), only this random opaque
 // code does, and it's dead the instant /auth/google/exchange consumes it or the TTL passes.
-// 5 minutes (not 60s) sir — Render's free tier cold-starts in 30-60s, and that on top of the
-// user actually looking at and clicking through Google's consent screen blew past 60s and
-// expired the code before the frontend could redeem it
-const EXCHANGE_TTL_MS = 5 * 60 * 1000
-const pendingExchanges = new Map() // code -> { payload, expiresAt }
-
-const createExchangeCode = (payload) => {
-    const code = crypto.randomBytes(24).toString('base64url')
-    pendingExchanges.set(code, { payload, expiresAt: Date.now() + EXCHANGE_TTL_MS })
-    return code
-}
+// Backed by Mongo (utils/oauthExchange.js), not an in-memory Map, so the code minted on one
+// Render instance can still be redeemed if the exchange request lands on a different instance.
 
 // same first-item-only parsing as the password-reset link sir — FRONTEND_URL can be a
 // comma-separated list (see index.js's CORS parsing), a redirect target needs exactly one
@@ -214,7 +206,7 @@ exports.googleCallback = async (req, res) => {
         // never put the live JWT in a URL sir — hand back a short-lived single-use code
         // instead, the frontend immediately exchanges it (POST, response body only) for the
         // real token in /auth/google/exchange below
-        const exchangeCode = createExchangeCode({
+        const exchangeCode = await createExchangeCode({
             token: jwtToken,
             user: {
                 id: user._id,
@@ -238,23 +230,22 @@ exports.googleCallback = async (req, res) => {
 // /oauth/complete, trading the one-time code (from the URL) for the real token + user
 // object in the response BODY, never the URL. The code is deleted on first use (or expires
 // in 60s regardless), so replaying an old URL (history, logs) yields nothing.
-exports.exchangeGoogleCode = (req, res) => {
+exports.exchangeGoogleCode = async (req, res) => {
     const { code } = req.body
 
     if (!code || typeof code !== 'string') {
         return res.status(400).json({ success: false, message: 'Missing exchange code' })
     }
 
-    const pending = pendingExchanges.get(code)
-    pendingExchanges.delete(code) // single-use sir, win or lose
+    const payload = await redeemExchangeCode(code)
 
-    if (!pending || pending.expiresAt < Date.now()) {
+    if (!payload) {
         return res.status(400).json({ success: false, message: 'This sign-in link has expired, please try again' })
     }
 
     return res.status(200).json({
         success: true,
-        token: pending.payload.token,
-        user: pending.payload.user,
+        token: payload.token,
+        user: payload.user,
     })
 }

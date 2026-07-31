@@ -157,8 +157,15 @@ const Account = () => {
     Swal.fire({
       ...swalDark,
       title: 'Delete your account?',
-      text: 'Your account will be suspended immediately and permanently deleted in 2 days. Log back in before then to undo this.',
+      html: 'Your account will be suspended immediately and permanently deleted in 2 days. Log back in before then to undo this.<br/><br/>Type <b>delete my account</b> below to confirm.',
       icon: 'warning',
+      input: 'text',
+      inputPlaceholder: 'delete my account',
+      inputValidator: (value) => {
+        if ((value || '').trim().toLowerCase() !== 'delete my account') {
+          return 'Please type "delete my account" exactly to confirm'
+        }
+      },
       showCancelButton: true,
       confirmButtonText: 'Delete my account',
       confirmButtonColor: '#C1443C',

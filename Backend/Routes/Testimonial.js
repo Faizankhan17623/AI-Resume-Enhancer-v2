@@ -1,7 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const { Auth, isUser, isSupport, isAdmin } = require('../Middlewares/Auth.js')
-const { adminWriteLimiter, adminReadLimiter } = require('../Middlewares/RateLimit.js')
+const { adminWriteLimiter, adminReadLimiter, testimonialLimiter } = require('../Middlewares/RateLimit.js')
 const {
     submitTestimonial,
     getMyTestimonial,
@@ -12,7 +12,7 @@ const {
 } = require('../controllers/Testimonial.js')
 
 // user-facing sir — isUser blocks Admin/Support too, same as Feedback
-route.post('/testimonials', Auth, isUser, submitTestimonial)
+route.post('/testimonials', Auth, isUser, testimonialLimiter, submitTestimonial)
 route.get('/testimonials/mine', Auth, isUser, getMyTestimonial)
 
 // moderation sir — Support can view the queue, only Admin can approve/reject/delete

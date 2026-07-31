@@ -1,5 +1,11 @@
 require('dotenv').config({quiet:true})
 
+// fail fast in production sir — see utils/checkRequiredEnv.js. Skipped for tests so the test
+// suite's own env setup (not this file's) decides what's required.
+if (process.env.NODE_ENV !== 'test') {
+    require('./utils/checkRequiredEnv')()
+}
+
 const express = require('express')
 const app = express()
 const cors = require('cors')
@@ -82,7 +88,13 @@ app.use(cors({
     credentials: true
 }))
 app.use(cookieParser())
-app.use(fileUpload())
+// 15MB cap sir — matches utils/upload.js's own 10MB Cloudinary check with headroom, and stops
+// express-fileupload from buffering unbounded request bodies into memory on a constrained Render dyno
+app.use(fileUpload({
+    limits: { fileSize: 15 * 1024 * 1024 },
+    abortOnLimit: true,
+    responseOnLimit: JSON.stringify({ success: false, message: 'File is too large. Maximum allowed size is 15MB.' }),
+}))
 
 // generous global rate limit sir — the tight per-route ones live in the route files
 app.use(globalLimiter)
@@ -114,6 +126,26 @@ app.get("/", (req, res) => {
 	return res.json({
 		success: true,
 		message: "Your server is up and running ...",
+	});
+});
+
+// unmatched route sir — every controller returns {success:false, message}, so 404s should match
+app.use((req, res) => {
+	res.status(404).json({
+		success: false,
+		message: 'Route not found',
+	});
+});
+
+// last-resort error handler sir — every controller already self-catches, but this is the safety net
+// for anything that throws outside a try/catch (middleware, a future route, etc.) so the frontend
+// always gets the {success:false, message} shape it parses instead of Express's default HTML page
+app.use((err, req, res, next) => {
+	console.error('Unhandled error:', err);
+	if (res.headersSent) return next(err);
+	res.status(err.status || err.statusCode || 500).json({
+		success: false,
+		message: err.message || 'Something went wrong. Please try again later.',
 	});
 });
 
