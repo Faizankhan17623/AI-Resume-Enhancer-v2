@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_MAIN_BACKEND_URL
+import BASE_URL from '../../utils/backendUrl'
 
 export const CoverLetterData = {
     generate: BASE_URL + "/cover-letter",

@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt')
 
 const User = require('../Models/User')
 const LoginLog = require('../Models/LoginLog')
+const { createExchangeCode, redeemExchangeCode } = require('../utils/oauthExchange')
 
 // every OAuth-created account gets this same placeholder password hashed in sir — it's never
 // shown or usable for a real password login (existingUser.password truthy just routes them to
@@ -18,17 +19,8 @@ const GITHUB_USER_URL = 'https://api.github.com/user'
 const GITHUB_EMAILS_URL = 'https://api.github.com/user/emails'
 
 // short-lived, single-use exchange codes sir — same pattern as GoogleAuth.js, the real JWT
-// never touches the redirect URL, only this random opaque code does. 5 minutes (not 60s) sir
-// — see GoogleAuth.js for why: Render's free-tier cold start plus the user clicking through
-// the provider's consent screen easily exceeds 60 seconds
-const EXCHANGE_TTL_MS = 5 * 60 * 1000
-const pendingExchanges = new Map() // code -> { payload, expiresAt }
-
-const createExchangeCode = (payload) => {
-    const code = crypto.randomBytes(24).toString('base64url')
-    pendingExchanges.set(code, { payload, expiresAt: Date.now() + EXCHANGE_TTL_MS })
-    return code
-}
+// never touches the redirect URL, only this random opaque code does. Backed by Mongo
+// (utils/oauthExchange.js), not an in-memory Map, so it works across multiple Render instances.
 
 const frontendOrigin = () => process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
@@ -205,7 +197,7 @@ exports.githubCallback = async (req, res) => {
             userAgent: req.headers['user-agent'],
         }).catch((err) => console.log('login log failed:', err.message))
 
-        const exchangeCode = createExchangeCode({
+        const exchangeCode = await createExchangeCode({
             token: jwtToken,
             user: {
                 id: user._id,
@@ -226,23 +218,22 @@ exports.githubCallback = async (req, res) => {
 }
 
 // POST /auth/github/exchange
-exports.exchangeGitHubCode = (req, res) => {
+exports.exchangeGitHubCode = async (req, res) => {
     const { code } = req.body
 
     if (!code || typeof code !== 'string') {
         return res.status(400).json({ success: false, message: 'Missing exchange code' })
     }
 
-    const pending = pendingExchanges.get(code)
-    pendingExchanges.delete(code)
+    const payload = await redeemExchangeCode(code)
 
-    if (!pending || pending.expiresAt < Date.now()) {
+    if (!payload) {
         return res.status(400).json({ success: false, message: 'This sign-in link has expired, please try again' })
     }
 
     return res.status(200).json({
         success: true,
-        token: pending.payload.token,
-        user: pending.payload.user,
+        token: payload.token,
+        user: payload.user,
     })
 }

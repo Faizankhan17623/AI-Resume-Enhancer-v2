@@ -9,6 +9,7 @@ const AiLog = require('../Models/AiLog')
 const AuditLog = require('../Models/AuditLog')
 const LoginLog = require('../Models/LoginLog')
 const VisitorLog = require('../Models/VisitorLog')
+const { REQUIRED_ENV_VARS } = require('../utils/checkRequiredEnv')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
 
@@ -175,10 +176,6 @@ exports.getAiStats = async (req, res) => {
         })
     }
 }
-
-// required-at-runtime env vars sir — if any of these are missing, something else is
-// already broken (auth, DB, or AI), this just makes that visible instead of a mystery 500
-const REQUIRED_ENV_VARS = ['MONGO_DB_URL', 'GROK_API_KEY', 'JWT_PRIVATE_KEY']
 
 // GET /admin/health — green/red dots for the dashboard sir
 exports.getHealth = async (req, res) => {

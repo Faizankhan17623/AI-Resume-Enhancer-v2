@@ -1,16 +1,30 @@
 import nodemailer from 'nodemailer'
+import crypto from 'crypto'
 
 // mail relay sir — Render's free tier blocks outbound SMTP ports (25/465/587), but Vercel
 // only blocks port 25. So the backend POSTs the email here over HTTPS and THIS function does
 // the real Nodemailer+Gmail send from Vercel's network. Guarded by a shared secret that must
 // match MAIL_RELAY_SECRET on both the Render backend and this Vercel project.
+
+// constant-time compare sir — a plain !== leaks how many leading bytes matched via response
+// timing; timingSafeEqual needs equal-length buffers first (a length mismatch is safe to
+// reveal, it says nothing about the secret's content)
+const secretMatches = (provided) => {
+  const expected = process.env.MAIL_RELAY_SECRET
+  if (!expected || typeof provided !== 'string') return false
+  const expectedBuf = Buffer.from(expected)
+  const providedBuf = Buffer.from(provided)
+  if (expectedBuf.length !== providedBuf.length) return false
+  return crypto.timingSafeEqual(expectedBuf, providedBuf)
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method not allowed' })
   }
 
   // never run open sir — if the secret isn't configured, refuse everything
-  if (!process.env.MAIL_RELAY_SECRET || req.headers['x-relay-secret'] !== process.env.MAIL_RELAY_SECRET) {
+  if (!secretMatches(req.headers['x-relay-secret'])) {
     return res.status(401).json({ success: false, message: 'Unauthorized' })
   }
 
