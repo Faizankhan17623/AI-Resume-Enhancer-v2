@@ -221,6 +221,10 @@ exports.answerMockInterview = async (req, res) => {
             })
         }
 
+        // captured up front sir — this exact turn is what the closing atomic update below
+        // re-checks is STILL unanswered, so a concurrent duplicate request (double-click,
+        // client retry-on-timeout) can't silently overwrite this one's scored answer
+        const currentTurnId = currentTurn._id
         const priorTurns = session.turns.slice(0, -1)
         const atCap = session.turns.length >= MAX_TURNS
 
@@ -250,38 +254,82 @@ exports.answerMockInterview = async (req, res) => {
             })
         }
 
-        currentTurn.answer = answer.trim()
-        currentTurn.score = scored.score
-        currentTurn.feedback = scored.feedback
-        currentTurn.sampleAnswer = scored.sampleAnswer
+        const scoredAnswer = answer.trim()
+        const nextStatus = atCap
+            ? 'completed'
+            : (scored.nextQuestion?.question ? 'in-progress' : 'completed')
 
-        if (atCap) {
-            session.status = 'completed'
-        } else if (scored.nextQuestion?.question) {
-            session.turns.push({
-                question: scored.nextQuestion.question,
-                category: scored.nextQuestion.category,
-                difficulty: scored.nextQuestion.difficulty,
+        // atomic sir — the filter re-checks (by _id AND still-unanswered) exactly what the
+        // in-memory guard above already checked, closing the gap between that read and this
+        // write. If a concurrent duplicate request already answered this same turn first,
+        // this matches zero documents and we report 409 instead of clobbering their save.
+        // (MongoDB won't allow a positional-filtered `$set` on `turns.$[cur].*` combined with
+        // a `$push` on that same `turns` array in one update — "ConflictingUpdateOperators" —
+        // so the append below has to be a second, separate call.)
+        const updated = await MockInterview.findOneAndUpdate(
+            {
+                _id: sessionId,
+                user: id,
+                status: 'in-progress',
+                turns: { $elemMatch: { _id: currentTurnId, answer: { $in: [null, undefined, ''] } } },
+            },
+            {
+                $set: {
+                    'turns.$[cur].answer': scoredAnswer,
+                    'turns.$[cur].score': scored.score,
+                    'turns.$[cur].feedback': scored.feedback,
+                    'turns.$[cur].sampleAnswer': scored.sampleAnswer,
+                    status: nextStatus,
+                },
+            },
+            {
+                new: true,
+                arrayFilters: [{ 'cur._id': currentTurnId }],
+            }
+        )
+
+        if (!updated) {
+            return res.status(409).json({
+                success: false,
+                message: 'This question was already answered by another request, please refresh the session',
             })
-        } else {
-            // model didn't give a next question sir — end the session cleanly rather than error
-            session.status = 'completed'
         }
 
-        await session.save()
+        let finalDoc = updated
+        if (nextStatus === 'in-progress') {
+            // safe as a second, separate, unconditional append sir — the race this function
+            // guards against is two requests double-answering the SAME turn, not which one
+            // gets to append the next turn (only the request that won the update above gets here)
+            finalDoc = await MockInterview.findByIdAndUpdate(
+                sessionId,
+                {
+                    $push: {
+                        turns: {
+                            question: scored.nextQuestion.question,
+                            category: scored.nextQuestion.category,
+                            difficulty: scored.nextQuestion.difficulty,
+                        },
+                    },
+                },
+                { new: true }
+            )
+        }
+
         updateStreak(id)
+
+        const scoredTurn = finalDoc.turns.id(currentTurnId)
 
         return res.status(200).json({
             success: true,
             scoredTurn: {
-                question: currentTurn.question,
-                answer: currentTurn.answer,
-                score: currentTurn.score,
-                feedback: currentTurn.feedback,
-                sampleAnswer: currentTurn.sampleAnswer,
+                question: scoredTurn.question,
+                answer: scoredTurn.answer,
+                score: scoredTurn.score,
+                feedback: scoredTurn.feedback,
+                sampleAnswer: scoredTurn.sampleAnswer,
             },
-            status: session.status,
-            nextTurn: session.status === 'in-progress' ? session.turns[session.turns.length - 1] : null,
+            status: finalDoc.status,
+            nextTurn: finalDoc.status === 'in-progress' ? finalDoc.turns[finalDoc.turns.length - 1] : null,
         })
     } catch (error) {
         console.log(error)

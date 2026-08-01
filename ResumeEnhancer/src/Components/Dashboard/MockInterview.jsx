@@ -27,6 +27,10 @@ const NewSessionModal = ({ onClose }) => {
       toast.error("Please upload a PDF file")
       return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("The file must be under 5 MB")
+      return
+    }
     setPdfFile(file)
   }
 

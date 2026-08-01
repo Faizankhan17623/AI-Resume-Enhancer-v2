@@ -107,8 +107,19 @@ exports.facebookCallback = async (req, res) => {
 
             if (user) {
                 if (user.provider === 'local') {
+                    // keep provider as 'local' sir — this account still logs in with its
+                    // original password too, we're just also letting Facebook sign-in resolve
+                    // to it going forward (matched by providerId on the next Facebook login)
                     user.providerId = profile.id
                     await user.save()
+                } else {
+                    // the email matches an account that already belongs to a DIFFERENT
+                    // provider (or this same provider under a different providerId) sir — do
+                    // NOT silently log them in, that's an account-takeover vector (anyone who
+                    // can get a provider to report a victim's email as their own OAuth email
+                    // would otherwise walk straight into the victim's account, no password required)
+                    const providerLabel = user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
+                    return failRedirect(`An account with this email already exists using ${providerLabel} sign-in. Please log in with ${providerLabel} instead, or contact support to link accounts.`)
                 }
             } else {
                 let firstName = (profile.first_name || 'Facebook').slice(0, 50)

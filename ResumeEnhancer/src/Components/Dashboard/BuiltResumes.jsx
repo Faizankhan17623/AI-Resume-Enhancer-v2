@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaLayerGroup, FaCopy, FaTrash, FaPen, FaSearch } from 'react-icons/fa'
@@ -58,8 +59,9 @@ const BuiltResumes = () => {
     })
   }
 
-  // sequential, not Promise.all sir — reuses the existing single-delete endpoint one at a time
-  // rather than adding a new bulk-delete route, so this stays a small, low-risk frontend change
+  // reuses the existing single-delete endpoint one item at a time sir, rather than adding a
+  // new bulk-delete route — but runs each call silent + skips its per-item refetch, so the
+  // whole batch ends in exactly one combined toast and one list refetch, not N of each
   const handleBulkDelete = () => {
     if (selected.length === 0) return
     Swal.fire({
@@ -72,9 +74,18 @@ const BuiltResumes = () => {
     }).then(async (result) => {
       if (!result.isConfirmed) return
       setBulkDeleting(true)
-      for (const id of selected) {
-        await dispatch(DeleteBuiltResume(id, token))
+      const count = selected.length
+      const results = await Promise.all(
+        selected.map((id) => dispatch(DeleteBuiltResume(id, token, { silent: true, skipRefetch: true })))
+      )
+      const deletedCount = results.filter(Boolean).length
+      if (deletedCount > 0) {
+        toast.success(`${deletedCount} resume${deletedCount > 1 ? 's' : ''} deleted`)
       }
+      if (deletedCount < count) {
+        toast.error(`Could not delete ${count - deletedCount} resume${count - deletedCount > 1 ? 's' : ''}`)
+      }
+      dispatch(GetBuiltResumes(token))
       setSelected([])
       setBulkDeleting(false)
     })

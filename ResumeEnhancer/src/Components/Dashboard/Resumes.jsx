@@ -44,8 +44,9 @@ const Resumes = () => {
     setSelected((prev) => (prev.length === visibleResumes.length ? [] : visibleResumes.map((r) => r._id)))
   }
 
-  // sequential, not Promise.all sir — reuses the existing single-delete endpoint one at a time
-  // rather than adding a new bulk-delete route, so this stays a small, low-risk frontend change
+  // reuses the existing single-delete endpoint one item at a time sir, rather than adding a
+  // new bulk-delete route — but runs each call silent + skips its per-item refetch, so the
+  // whole batch ends in exactly one combined toast and one list refetch, not N of each
   const handleBulkDelete = () => {
     if (selected.length === 0) return
     Swal.fire({
@@ -58,9 +59,18 @@ const Resumes = () => {
     }).then(async (result) => {
       if (!result.isConfirmed) return
       setBulkDeleting(true)
-      for (const id of selected) {
-        await dispatch(DeleteResume(id, token))
+      const count = selected.length
+      const results = await Promise.all(
+        selected.map((id) => dispatch(DeleteResume(id, token, { silent: true, skipRefetch: true })))
+      )
+      const deletedCount = results.filter(Boolean).length
+      if (deletedCount > 0) {
+        toast.success(`${deletedCount} resume${deletedCount > 1 ? 's' : ''} deleted`)
       }
+      if (deletedCount < count) {
+        toast.error(`Could not delete ${count - deletedCount} resume${count - deletedCount > 1 ? 's' : ''}`)
+      }
+      dispatch(GetResumes(token))
       setSelected([])
       setBulkDeleting(false)
     })

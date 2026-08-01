@@ -682,7 +682,10 @@ exports.forgotPassword = async (req, res) => {
           const user = await User.findOneAndUpdate(
             { email: email },
             {
-                token: token,
+                // separate field from the session JWT sir (`token`) — sharing one field meant
+                // logging in (password or OAuth) after requesting a reset silently clobbered
+                // the emailed reset link, and requesting a reset clobbered the last-issued JWT
+                resetPasswordToken: token,
                 resetPasswordExpires: Date.now() + 3600000,
             },
             { returnDocument: 'after' }
@@ -747,7 +750,7 @@ exports.resetPassword = async (req, res) => {
         message: "Password and Confirm Password Does not Match",
       })
     }
-    const userDetails = await User.findOne({ token: token })
+    const userDetails = await User.findOne({ resetPasswordToken: token })
     if (!userDetails) {
       return res.json({
         success: false,
@@ -771,9 +774,11 @@ exports.resetPassword = async (req, res) => {
     }
 
       const encryptedPassword = await bcrypt.hash(newPassword, 10)
+    // clear resetPasswordToken (not `token` sir — that field is the live session JWT and is
+    // untouched by a password reset) so this one-time link can't be replayed
     await User.findOneAndUpdate(
-      { token: token },
-      { password: encryptedPassword, token: null, resetPasswordExpires: null },
+      { resetPasswordToken: token },
+      { password: encryptedPassword, resetPasswordToken: null, resetPasswordExpires: null },
       { returnDocument: 'after' }
     )
         return res.status(200).json({

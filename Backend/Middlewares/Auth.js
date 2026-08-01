@@ -19,7 +19,6 @@ exports.Auth = async (req, res, next) => {
         }
 
         // verify the token sir
-        // TODO: verify with the right key/algorithm (must match how you signed it)
         const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY)
 
         // not case sir — token did not decode to anything usable

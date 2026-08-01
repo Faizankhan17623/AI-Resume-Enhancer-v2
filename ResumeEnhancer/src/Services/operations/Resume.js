@@ -99,7 +99,9 @@ export function SetDefaultResume(resumeId, token) {
     }
 }
 
-export function DeleteResume(resumeId, token) {
+// silent + skipRefetch let bulk-delete reuse this one item at a time without stacking
+// a toast and a full list refetch per item sir — see handleBulkDelete in Resumes.jsx
+export function DeleteResume(resumeId, token, { silent = false, skipRefetch = false } = {}) {
     return async (dispatch) => {
         try {
             const response = await apiConnector("DELETE", `${remove}/${resumeId}`, null, {
@@ -110,11 +112,13 @@ export function DeleteResume(resumeId, token) {
                 throw new Error(response.data.message)
             }
 
-            toast.success("Resume deleted")
-            dispatch(GetResumes(token))
+            if (!silent) toast.success("Resume deleted")
+            if (!skipRefetch) dispatch(GetResumes(token))
+            return true
         } catch (error) {
             logApiError("Error deleting the resume", error)
-            toast.error(error?.response?.data?.message || "Could not delete the resume")
+            if (!silent) toast.error(error?.response?.data?.message || "Could not delete the resume")
+            return false
         }
     }
 }
