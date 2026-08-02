@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
+import toast from 'react-hot-toast'
 import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
@@ -50,16 +51,41 @@ const BuilderEditor = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeId])
 
-  // debounced autosave sir — fires 1.5s after the last edit, silent so it doesn't toast on every keystroke pause
+  // debounced autosave sir — fires 1.5s after the last edit, silent so it doesn't toast on every keystroke pause.
+  // Stash the latest pending payload in a ref too, so the unmount cleanup below can flush it
+  // immediately instead of just cancelling the timer and losing the edit.
+  const pendingSaveData = useRef(null)
+
+  // cancels the debounced timer sir — used by every "save immediately instead" handler below,
+  // so the pending-save ref never lingers past a save that already happened another way
+  const cancelScheduledSave = () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    pendingSaveData.current = null
+  }
+
   const scheduleSave = (nextData) => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
+    pendingSaveData.current = nextData
     saveTimer.current = setTimeout(() => {
+      pendingSaveData.current = null
       dispatch(SaveBuiltResume(resumeId, nextData, token, { silent: true }))
     }, 1500)
   }
 
   useEffect(() => {
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+    return () => {
+      // flush sir — if a debounced save was still pending when the user navigated away
+      // (quick edit + quick nav, before the 1.5s timer fired), fire it now instead of
+      // silently dropping the last edit
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        if (pendingSaveData.current) {
+          dispatch(SaveBuiltResume(resumeId, pendingSaveData.current, token, { silent: true }))
+          pendingSaveData.current = null
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const patch = (partial) => {
@@ -74,7 +100,7 @@ const BuilderEditor = () => {
 
   // color is saved immediately sir — a swatch click is one discrete choice, not typing to debounce
   const handlePickColor = (color) => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     dispatch(patchCurrentResume({ color }))
     dispatch(SaveBuiltResume(resumeId, { ...current, color }, token, { silent: true }))
   }
@@ -83,6 +109,14 @@ const BuilderEditor = () => {
     const file = e.target.files?.[0]
     e.target.value = '' // sir — lets picking the same file twice re-trigger onChange
     if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error("Please upload a JPEG, PNG or WEBP image")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("The file must be under 5 MB")
+      return
+    }
     setUploadingPhoto(true)
     await dispatch(UploadBuiltResumePhoto(resumeId, file, token))
     setUploadingPhoto(false)
@@ -95,7 +129,7 @@ const BuilderEditor = () => {
   // opens the version-history dropdown sir — saves whatever's pending first, so the list the
   // user sees (and any restore they do next) reflects the resume as it actually is right now
   const handleOpenVersions = async () => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
     setVersionsOpen((o) => !o)
     if (!versionsOpen) {
@@ -120,7 +154,7 @@ const BuilderEditor = () => {
       setTemplatePickerOpen(false)
       return
     }
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     dispatch(patchCurrentResume({ templateId }))
     dispatch(SaveBuiltResume(resumeId, { ...current, templateId }, token, { silent: true }))
     setTemplatePickerOpen(false)
@@ -161,7 +195,7 @@ const BuilderEditor = () => {
   }
 
   const handleManualSave = () => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     dispatch(SaveBuiltResume(resumeId, current, token))
   }
 
@@ -171,7 +205,7 @@ const BuilderEditor = () => {
 
   // ATS-safe export sir — a real .docx (single column, real text, no images), unlike the print-to-PDF button
   const handleDownloadDocx = async () => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
     DownloadBuiltResumeDocx(resumeId, current.title, token)
   }
@@ -179,7 +213,7 @@ const BuilderEditor = () => {
   const handleScore = async () => {
     if (!scoreJd.trim()) return
     // save first sir — the score should reflect what's actually in the editor right now, not a stale autosave
-    if (saveTimer.current) clearTimeout(saveTimer.current)
+    cancelScheduledSave()
     await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
     dispatch(ReviewBuiltResume(resumeId, scoreJd.trim(), token, navigate))
     setScoreModalOpen(false)

@@ -50,7 +50,10 @@ const OAuthComplete = () => {
         localStorage.setItem('user', JSON.stringify(user))
 
         toast.success(`Welcome ${user?.firstName || ''}`)
-        navigate('/Dashboard', { replace: true })
+        // each role lands on its OWN dashboard sir — same rule LoginUser uses in Services/operations/Auth.js,
+        // never a shared landing page (OAuth accounts can be Admin/Support too, not just User)
+        const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
+        navigate(landingPath, { replace: true })
       })
       .catch((error) => {
         if (!alive) return

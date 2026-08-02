@@ -104,6 +104,19 @@ const Resumes = () => {
     setRenamingId(null)
   }
 
+  const handleDelete = (resume) => {
+    Swal.fire({
+      ...swalDark,
+      title: `Delete "${resume.label || resume.originalFilename || 'this resume'}"?`,
+      text: 'This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+    }).then((result) => {
+      if (result.isConfirmed) dispatch(DeleteResume(resume._id, token))
+    })
+  }
+
   return (
     <DashboardLayout title="My resumes">
       <Helmet>
@@ -227,7 +240,7 @@ const Resumes = () => {
                   <button onClick={() => startRename(resume)} className="hover:text-richblack-5 transition-colors duration-200 cursor-pointer" title="Rename">
                     <FaPen className="text-sm" />
                   </button>
-                  <button onClick={() => dispatch(DeleteResume(resume._id, token))} className="hover:text-pink-200 transition-colors duration-200 cursor-pointer" title="Delete">
+                  <button onClick={() => handleDelete(resume)} className="hover:text-pink-200 transition-colors duration-200 cursor-pointer" title="Delete">
                     <FaTrash className="text-sm" />
                   </button>
                 </div>

@@ -12,7 +12,7 @@ const { builtResumeToText } = require('../utils/BuiltResumeText')
 const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel')
 const { runReview } = require('./AI')
 
-const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
+const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
 // fields a client is allowed to write sir — keeps user/_id/timestamps out of req.body reaching the DB
 const WRITABLE_FIELDS = ['templateId', 'title', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'photoUrl', 'color']

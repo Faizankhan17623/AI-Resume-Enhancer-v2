@@ -77,11 +77,15 @@ export function GetSingleChat(chatId, token) {
     }
 }
 
+// the stream legitimately runs long (a slow model, a long answer), but it must never hang
+// forever if the connection stalls sir — 55s covers a normal reply with room to spare
+const STREAM_TIMEOUT_MS = 55000
+
 // send one message sir — the user bubble shows instantly, then the AI reply streams in
 // token by token via fetch()+ReadableStream (axios can't consume a live stream, and
 // EventSource can't carry our Authorization header, so this is a plain fetch call)
 export function SendMessage(chatId, message, token, currentChat) {
-    return async (dispatch) => {
+    return async (dispatch, getState) => {
         dispatch(setReplying(true))
         dispatch(resetStreamingReply())
 
@@ -93,6 +97,14 @@ export function SendMessage(chatId, message, token, currentChat) {
         }
         dispatch(setCurrentChat(withUserBubble))
 
+        // true only while the chat this request was sent for is still the one on screen sir —
+        // if the user navigates to a different chat mid-stream, the eventual success/error/rollback
+        // dispatch below must NOT clobber whatever they've since navigated to
+        const isStillActiveChat = () => getState().chat.currentChat?._id === chatId
+
+        const controller = new AbortController()
+        let timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS)
+
         try {
             const response = await fetch(`${sendmessage}/${chatId}/message`, {
                 method: 'POST',
@@ -101,7 +113,8 @@ export function SendMessage(chatId, message, token, currentChat) {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message }),
+                signal: controller.signal
             })
 
             if (!response.ok || !response.body) {
@@ -119,6 +132,11 @@ export function SendMessage(chatId, message, token, currentChat) {
                 const { done, value } = await reader.read()
                 if (done) break
 
+                // a new chunk arrived sir — push the timeout back out so a normal but slow
+                // stream doesn't get killed just for taking a while, only a truly stalled one does
+                clearTimeout(timeoutId)
+                timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS)
+
                 buffer += decoder.decode(value, { stream: true })
                 const lines = buffer.split('\n')
                 buffer = lines.pop() // sir — the last split piece may be a half-received line, keep it for next time
@@ -129,7 +147,7 @@ export function SendMessage(chatId, message, token, currentChat) {
 
                     if (event.type === 'chunk') {
                         fullReply += event.content
-                        dispatch(appendStreamingReply(event.content))
+                        if (isStillActiveChat()) dispatch(appendStreamingReply(event.content))
                     } else if (event.type === 'error') {
                         serverError = event.message
                     }
@@ -141,23 +159,33 @@ export function SendMessage(chatId, message, token, currentChat) {
                 throw new Error(serverError || 'The AI returned an empty response, please try again')
             }
 
-            // fold the finished reply into the permanent message list sir
-            dispatch(setCurrentChat({
-                ...withUserBubble,
-                messages: [...withUserBubble.messages, { role: 'assistant', content: fullReply }]
-            }))
+            // fold the finished reply into the permanent message list sir — but only if the
+            // user is still looking at THIS chat; if they've switched away, drop the update
+            // silently rather than overwrite whatever chat is now on screen
+            if (isStillActiveChat()) {
+                dispatch(setCurrentChat({
+                    ...withUserBubble,
+                    messages: [...withUserBubble.messages, { role: 'assistant', content: fullReply }]
+                }))
+            }
         } catch (error) {
-            logApiError("Error sending the message", error)
-            toast.error(error?.message || "Could not send the message")
-            // roll the optimistic bubble back sir
-            dispatch(setCurrentChat(currentChat))
+            const wasTimeout = error?.name === 'AbortError'
+            logApiError(wasTimeout ? "Chat stream timed out" : "Error sending the message", error)
+            toast.error(wasTimeout ? "The response timed out, please try again" : (error?.message || "Could not send the message"))
+            // roll the optimistic bubble back sir — again, only if this chat is still the one open
+            if (isStillActiveChat()) dispatch(setCurrentChat(currentChat))
         } finally {
+            clearTimeout(timeoutId)
             dispatch(resetStreamingReply())
             dispatch(setReplying(false))
         }
     }
 }
 
+// navigate is only ever passed by the caller when the deleted chatId IS the currently-open
+// chat sir (see Chat.jsx handleDelete) — so it doubles here as the "was this the open chat"
+// flag. Deleting a different chat from the sidebar should just drop it from the list and
+// leave whatever's currently open alone, not clear it out from under the user.
 export function DeleteChat(chatId, token, navigate) {
     return async (dispatch) => {
         const toastId = toast.loading("Deleting the chat...")
@@ -171,9 +199,11 @@ export function DeleteChat(chatId, token, navigate) {
             }
 
             toast.success("Chat deleted")
-            dispatch(setCurrentChat(null))
             dispatch(GetAllChats(token))
-            if (navigate) navigate("/Dashboard/Chats")
+            if (navigate) {
+                dispatch(setCurrentChat(null))
+                navigate("/Dashboard/Chats")
+            }
         } catch (error) {
             logApiError("Error deleting the chat", error)
             toast.error(error?.response?.data?.message || "Could not delete the chat")

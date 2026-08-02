@@ -48,6 +48,9 @@ exports.searchJobs = async (req, res) => {
                 max_results: 12,
                 include_answer: false,
             }),
+            // a hung Tavily backend must not leave this request open indefinitely sir —
+            // same style of fetch-level timeout as Nodemailer.js's mail relay call
+            signal: AbortSignal.timeout(15000),
         })
 
         if (!tavilyRes.ok) {

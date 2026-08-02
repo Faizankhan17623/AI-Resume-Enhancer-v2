@@ -205,7 +205,11 @@ const MockInterview = () => {
       color: '#F3EFE6'
     }).then((result) => {
       if (result.isConfirmed) {
-        dispatch(DeleteMockInterview(id, token, navigate))
+        // only clear the open session + navigate away if THIS is the session that's currently
+        // open sir — deleting a different one from the sidebar shouldn't kick the user out of
+        // the session they're viewing
+        const isOpenSession = id === sessionId
+        dispatch(DeleteMockInterview(id, token, isOpenSession ? navigate : null))
       }
     })
   }
@@ -298,7 +302,7 @@ const MockInterview = () => {
               )}
               {currentSession.turns.map((turn, index) => (
                 <TurnCard
-                  key={index}
+                  key={turn._id}
                   turn={turn}
                   isCurrent={index === currentSession.turns.length - 1 && currentSession.status === 'in-progress'}
                   onSubmitAnswer={handleSubmitAnswer}

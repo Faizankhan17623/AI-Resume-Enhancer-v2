@@ -11,7 +11,7 @@ const LoginLog = require('../Models/LoginLog')
 const VisitorLog = require('../Models/VisitorLog')
 const { REQUIRED_ENV_VARS } = require('../utils/checkRequiredEnv')
 
-const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
+const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
 // event-loop lag sir — one histogram, kept running for the whole process lifetime, so
 // getHealth just reads its current snapshot instead of sampling on the spot

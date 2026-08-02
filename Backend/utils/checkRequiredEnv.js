@@ -1,7 +1,50 @@
 // same list AdminSystem.js's health dashboard already checks sir — that endpoint made a
 // missing var *visible*, this makes it *fatal* at boot in production instead of letting the
 // server come up "healthy" and then throw on the first login/AI/DB call that needs it
-const REQUIRED_ENV_VARS = ['MONGO_DB_URL', 'GROK_API_KEY', 'JWT_PRIVATE_KEY']
+//
+// Widened past the original core 3 (Mongo/Groq/JWT) to also cover Razorpay, Cloudinary, and
+// all four OAuth providers sir — these were previously silent-fail at boot and only surfaced
+// as a broken checkout/upload/login click deep into a user's session. Exact var names below
+// are pulled straight from where each is actually read:
+//   Razorpay      -> utils/Razorpay.js, controllers/Payment.js (webhook, fix #4)
+//   Cloudinary    -> Installation/Cloudinary.js
+//   Google OAuth  -> controllers/GoogleAuth.js
+//   Facebook OAuth-> controllers/FacebookAuth.js
+//   GitHub OAuth  -> controllers/GitHubAuth.js
+//   LinkedIn OAuth-> controllers/LinkedInAuth.js
+//
+// Deliberately NOT included: MAIL_RELAY_URL / MAIL_RELAY_SECRET — utils/Nodemailer.js already
+// falls back to a "would have sent" log when unset, so that's an accepted soft-fail, not
+// something that should block boot.
+const REQUIRED_ENV_VARS = [
+    'MONGO_DB_URL',
+    'GROK_API_KEY',
+    'JWT_PRIVATE_KEY',
+
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
+    'RAZORPAY_WEBHOOK_SECRET',
+
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_CALLBACK_URL',
+
+    'FACEBOOK_CLIENT_ID',
+    'FACEBOOK_CLIENT_SECRET',
+    'FACEBOOK_CALLBACK_URL',
+
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'GITHUB_CALLBACK_URL',
+
+    'LINKEDIN_CLIENT_ID',
+    'LINKEDIN_CLIENT_SECRET',
+    'LINKEDIN_CALLBACK_URL',
+]
 
 function checkRequiredEnv() {
     const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key])

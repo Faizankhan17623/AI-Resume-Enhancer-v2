@@ -12,6 +12,7 @@ const { logSystemAction } = require('../utils/AdminLog.js')
 
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
+const { otpEmail } = require('../Templates/OTP.js')
 // ============================================================
 // CREATE USER (Register)
 // ============================================================
@@ -328,9 +329,23 @@ exports.SendOtp = async(req,res)=>{
         await OTP.create(otpPayload)
 
         // never echo the OTP back in the response sir — it must only reach the user via
-        // email (Models/OTP.js's pre-save hook sends it); returning it here would let
-        // anyone who can call this endpoint read the code straight from the Network tab
-        // and skip email verification entirely
+        // email; returning it here would let anyone who can call this endpoint read the
+        // code straight from the Network tab and skip email verification entirely
+
+        // OTP is already persisted at this point sir — the email send is a separate,
+        // best-effort step now (see Models/OTP.js for why this moved out of a pre-save
+        // hook). A relay hiccup must not fail the signup request when the OTP itself
+        // saved fine, so this gets its own try/catch instead of falling into the outer one.
+        try {
+            await mailSender(email, "Verification Email", otpEmail(OtpCreate))
+        } catch (mailError) {
+            console.log(`[SendOtp] email delivery failed for email="${email}":`, mailError.message)
+            return res.status(200).json({
+                success: true,
+                message: 'OTP created, but the verification email is delayed — please try again shortly if it does not arrive',
+            })
+        }
+
         res.status(200).json({
             success: true,
             message: `OTP Sent Successfully`,
@@ -708,12 +723,23 @@ exports.forgotPassword = async (req, res) => {
             : "http://localhost:5173"
         const url = `${frontendUrl}/reset-password/${token}`
 
-        await mailSender(
-            email,
-            "Reset Your  Password",
-            passwordResetTemplate(`${user.firstName} ${user.lastName}`, url)
-        )
-
+        // token is already persisted at this point sir — the send itself gets its own
+        // try/catch so a relay hiccup doesn't surface as a generic 500 (which, unlike other
+        // failure modes here, would also leak nothing new — same "sent" wording either way
+        // keeps us from revealing whether the email is registered)
+        try {
+            await mailSender(
+                email,
+                "Reset Your  Password",
+                passwordResetTemplate(`${user.firstName} ${user.lastName}`, url)
+            )
+        } catch (mailError) {
+            console.log(`[forgotPassword] email delivery failed for email="${email}":`, mailError.message)
+            return res.status(200).json({
+                success: true,
+                message: 'If that email is registered, a reset link is on its way — if it does not arrive shortly, please try again',
+            })
+        }
 
         return res.status(200).json({
             success: true,
@@ -745,14 +771,14 @@ exports.resetPassword = async (req, res) => {
         }
 
          if (newPassword !== confirmNewPassword) {
-      return res.json({
+      return res.status(400).json({
         success: false,
         message: "Password and Confirm Password Does not Match",
       })
     }
     const userDetails = await User.findOne({ resetPasswordToken: token })
     if (!userDetails) {
-      return res.json({
+      return res.status(404).json({
         success: false,
         message: "Token is Invalid",
       })

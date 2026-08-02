@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar } from 'react-icons/fa'
@@ -21,6 +22,8 @@ const COLUMNS = [
 ]
 
 const emptyForm = { company: '', role: '', location: '', jobUrl: '', notes: '', status: 'Applied', review: '' }
+
+const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
 // ---------- add/edit modal sir — same form for both, editing pre-fills from the card ----------
 const ApplicationModal = ({ editing, onClose }) => {
@@ -270,6 +273,19 @@ const Applications = () => {
     e.dataTransfer.setData('fromStatus', app.status)
   }
 
+  const handleDelete = (id) => {
+    Swal.fire({
+      ...swalDark,
+      title: 'Delete this application?',
+      text: 'This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+    }).then((result) => {
+      if (result.isConfirmed) dispatch(DeleteApplication(id, token))
+    })
+  }
+
   const handleDrop = (e, targetStatus) => {
     e.preventDefault()
     setDragOverStatus(null)
@@ -336,7 +352,7 @@ const Applications = () => {
                         key={app._id}
                         app={app}
                         onEdit={setModalState}
-                        onDelete={(id) => dispatch(DeleteApplication(id, token))}
+                        onDelete={handleDelete}
                         onDragStart={handleDragStart}
                       />
                     ))}

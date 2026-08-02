@@ -39,6 +39,9 @@ export function GetAllPlans() {
 }
 
 // the full purchase flow sir — order → razorpay checkout → verify (the payment-session cookie rides along)
+// returns a promise that resolves once the razorpay window is open (or the setup step failed) sir,
+// so the caller's `buying` state only needs to stay true for THIS setup phase — not the whole
+// checkout, which can otherwise sit open for minutes waiting on the user to pay
 export function BuyPlan(plan, token, user, navigate) {
     return async (dispatch) => {
         const toastId = toast.loading("Setting up the payment...")

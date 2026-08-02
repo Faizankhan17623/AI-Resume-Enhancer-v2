@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
@@ -54,13 +54,16 @@ const Pricing = () => {
   const navigate = useNavigate()
   const { plans, loading } = useSelector((state) => state.payment)
   const { token, user } = useSelector((state) => state.auth)
+  // tracks which plan's buy button is mid-flight sir — keyed by plan.key so only the
+  // clicked card's button disables/spins, not every "Get X" button on the page
+  const [buyingPlan, setBuyingPlan] = useState(null)
 
   useEffect(() => {
     dispatch(GetAllPlans())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleBuy = (planKey) => {
+  const handleBuy = async (planKey) => {
     // not logged in sir — the purchase needs an account first
     if (!token) {
       navigate("/Login")
@@ -72,7 +75,12 @@ const Pricing = () => {
       toast.error("Only a normal user account can purchase a plan")
       return
     }
-    dispatch(BuyPlan(planKey, token, user, navigate))
+    setBuyingPlan(planKey)
+    try {
+      await dispatch(BuyPlan(planKey, token, user, navigate))
+    } finally {
+      setBuyingPlan(null)
+    }
   }
 
   return (
@@ -215,8 +223,10 @@ const Pricing = () => {
                       </button>
                     ) : (
                       <IconBtn
-                        text={`Get ${plan.name}`}
+                        text={buyingPlan === plan.key ? 'Setting up...' : `Get ${plan.name}`}
                         onclick={() => handleBuy(plan.key)}
+                        loading={buyingPlan === plan.key}
+                        disabled={buyingPlan !== null}
                         customClasses="w-full justify-center"
                       />
                     )}

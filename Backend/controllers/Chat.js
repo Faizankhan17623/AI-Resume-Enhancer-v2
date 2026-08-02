@@ -11,7 +11,7 @@ const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { AI_MODEL } = require('../utils/AiModel')
 
-const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
+const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
 // fallback for how many past messages we replay sir — the real number comes from the user's plan
 const CONTEXT_WINDOW = 10

@@ -6,13 +6,15 @@ const UserCreation = new mongoose.Schema(
             type: String,
             required: true,
             maxlength: 50,
-            trim: true
+            trim: true,
+            index: true
         },
         lastName: {
             type: String,
             required: true,
             maxlength: 50,
-            trim: true
+            trim: true,
+            index: true
         },
         email: {
             type: String,
@@ -36,6 +38,7 @@ const UserCreation = new mongoose.Schema(
         },
         resetPasswordToken: {
             type: String,
+            index: true
         },
         resetPasswordExpires: {
             type: Date,
@@ -49,7 +52,8 @@ const UserCreation = new mongoose.Schema(
         number:{
             type: String,
             required: function () { return this.provider === 'local' },
-            match: [/^[0-9]{10}$/, 'Phone number must be exactly 10 digits']
+            match: [/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'],
+            index: true
         },
         CountryCode:{
             type: String,

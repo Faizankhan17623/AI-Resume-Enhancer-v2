@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
+import { useDispatch } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
+import { setUser, setToken, setLogin } from './Slices/authSlice'
 import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
@@ -15,6 +17,7 @@ import SupportRoute from './Hooks/SupportRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 import CookieConsent from './Components/extra/CookieConsent'
+import ErrorBoundary from './Components/extra/ErrorBoundary'
 
 // Lazy-loaded route components — split into separate chunks for faster initial load sir
 const Join = lazy(() => import('./Components/UserCreation/Join'))
@@ -77,6 +80,32 @@ const Homelayout = () => {
 }
 
 function App() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // cross-tab logout sync sir — LogoutUser/DeleteAccount (Services/operations/Auth.js) and the
+  // apiConnector 401 interceptor all clear the "token" key on logout/session-expiry. That only
+  // touches THIS tab's Redux store though — a second tab left open keeps thinking it's still
+  // logged in until it hits its own 401. The "storage" event fires in every OTHER tab (never
+  // the one that made the change) whenever localStorage changes, so listen for "token" going
+  // away and mirror the same clear-state here, then bounce to /Login if not already there.
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key !== 'token') return
+      if (event.newValue) return // token was SET (login), not cleared — nothing to sync
+      dispatch(setToken(null))
+      dispatch(setUser(null))
+      dispatch(setLogin(false))
+      if (location.pathname !== '/Login') {
+        navigate('/Login')
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
+
   // Render free tier sleeps after inactivity sir — ping the backend root the moment
   // anyone lands so the 30-60s cold start happens NOW, not on their first real API call
   useEffect(() => {
@@ -109,68 +138,70 @@ function App() {
       {/* cookie consent card sir — shows once until accepted */}
       <CookieConsent />
       <ScrollToTop />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Public sir */}
-          <Route path="/" element={<Homelayout />} />
-          <Route path="/Pricing" element={<Pricing />} />
-          <Route path="/Shared/:shareId" element={<SharedReport />} />
-          <Route path="/oauth/complete" element={<OAuthComplete />} />
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public sir */}
+            <Route path="/" element={<Homelayout />} />
+            <Route path="/Pricing" element={<Pricing />} />
+            <Route path="/Shared/:shareId" element={<SharedReport />} />
+            <Route path="/oauth/complete" element={<OAuthComplete />} />
 
-          {/* Only for the logged-OUT sir */}
-          <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />
-          <Route path="/Verify-Otp" element={<OpenRoute><OTP /></OpenRoute>} />
-          <Route path="/Login" element={<OpenRoute><Login /></OpenRoute>} />
-          <Route path="/Forgot-Password" element={<OpenRoute><ForgotPassword /></OpenRoute>} />
-          <Route path="/reset-password/:token" element={<OpenRoute><ResetPassword /></OpenRoute>} />
+            {/* Only for the logged-OUT sir */}
+            <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />
+            <Route path="/Verify-Otp" element={<OpenRoute><OTP /></OpenRoute>} />
+            <Route path="/Login" element={<OpenRoute><Login /></OpenRoute>} />
+            <Route path="/Forgot-Password" element={<OpenRoute><ForgotPassword /></OpenRoute>} />
+            <Route path="/reset-password/:token" element={<OpenRoute><ResetPassword /></OpenRoute>} />
 
-          {/* Only for the logged-IN sir */}
-          <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
-          <Route path="/Dashboard/New-Review" element={<PrivateRoute><NewReview /></PrivateRoute>} />
-          <Route path="/Dashboard/Templates" element={<PrivateRoute><TemplatePicker /></PrivateRoute>} />
-          <Route path="/Dashboard/Build-Resume" element={<PrivateRoute><BuildResumePicker /></PrivateRoute>} />
-          <Route path="/Dashboard/Build-Resume/:resumeId" element={<PrivateRoute><BuilderEditor /></PrivateRoute>} />
-          <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />
-          <Route path="/Dashboard/Built-Resumes" element={<PrivateRoute><BuiltResumes /></PrivateRoute>} />
-          <Route path="/Dashboard/Applications" element={<PrivateRoute><Applications /></PrivateRoute>} />
-          <Route path="/Dashboard/Keyword-Bank" element={<PrivateRoute><KeywordBank /></PrivateRoute>} />
-          <Route path="/Dashboard/Review/:reviewId" element={<PrivateRoute><Report /></PrivateRoute>} />
-          <Route path="/Dashboard/History" element={<PrivateRoute><History /></PrivateRoute>} />
-          <Route path="/Dashboard/Leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
-          <Route path="/Dashboard/Chats" element={<PrivateRoute><Chat /></PrivateRoute>} />
-          <Route path="/Dashboard/Chat/:chatId" element={<PrivateRoute><Chat /></PrivateRoute>} />
-          <Route path="/Dashboard/Cover-Letter" element={<PrivateRoute><CoverLetter /></PrivateRoute>} />
-          <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
-          <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
-          <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
-          <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
+            {/* Only for the logged-IN sir */}
+            <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
+            <Route path="/Dashboard/New-Review" element={<PrivateRoute><NewReview /></PrivateRoute>} />
+            <Route path="/Dashboard/Templates" element={<PrivateRoute><TemplatePicker /></PrivateRoute>} />
+            <Route path="/Dashboard/Build-Resume" element={<PrivateRoute><BuildResumePicker /></PrivateRoute>} />
+            <Route path="/Dashboard/Build-Resume/:resumeId" element={<PrivateRoute><BuilderEditor /></PrivateRoute>} />
+            <Route path="/Dashboard/Resumes" element={<PrivateRoute><Resumes /></PrivateRoute>} />
+            <Route path="/Dashboard/Built-Resumes" element={<PrivateRoute><BuiltResumes /></PrivateRoute>} />
+            <Route path="/Dashboard/Applications" element={<PrivateRoute><Applications /></PrivateRoute>} />
+            <Route path="/Dashboard/Keyword-Bank" element={<PrivateRoute><KeywordBank /></PrivateRoute>} />
+            <Route path="/Dashboard/Review/:reviewId" element={<PrivateRoute><Report /></PrivateRoute>} />
+            <Route path="/Dashboard/History" element={<PrivateRoute><History /></PrivateRoute>} />
+            <Route path="/Dashboard/Leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
+            <Route path="/Dashboard/Chats" element={<PrivateRoute><Chat /></PrivateRoute>} />
+            <Route path="/Dashboard/Chat/:chatId" element={<PrivateRoute><Chat /></PrivateRoute>} />
+            <Route path="/Dashboard/Cover-Letter" element={<PrivateRoute><CoverLetter /></PrivateRoute>} />
+            <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
+            <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
+            <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
+            <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
 
-          {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
-              these gets redirected to their OWN dashboard at /Support, never let through. */}
-          <Route path="/Admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
-          <Route path="/Admin/Users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          <Route path="/Admin/Payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
-          <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
-          <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
-          <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
-          <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
-          <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+            {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
+                these gets redirected to their OWN dashboard at /Support, never let through. */}
+            <Route path="/Admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
+            <Route path="/Admin/Users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/Admin/Payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+            <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
+            <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+            <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
+            <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+            <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
-          {/* Support-only sir — strictly, see SupportRoute.jsx. An Admin hitting any of these
-              gets redirected to /Admin instead. Reuses the same Overview/Users/Payments/
-              Announcements components (they already self-gate write actions by role
-              internally), just under their own URL space with no Audit/Settings routes at all. */}
-          <Route path="/Support" element={<SupportRoute><AdminOverview /></SupportRoute>} />
-          <Route path="/Support/Users" element={<SupportRoute><AdminUsers /></SupportRoute>} />
-          <Route path="/Support/Payments" element={<SupportRoute><AdminPayments /></SupportRoute>} />
-          <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
-          <Route path="/Support/Testimonials" element={<SupportRoute><AdminTestimonials /></SupportRoute>} />
-          <Route path="/Support/Reports" element={<SupportRoute><AdminReports /></SupportRoute>} />
+            {/* Support-only sir — strictly, see SupportRoute.jsx. An Admin hitting any of these
+                gets redirected to /Admin instead. Reuses the same Overview/Users/Payments/
+                Announcements components (they already self-gate write actions by role
+                internally), just under their own URL space with no Audit/Settings routes at all. */}
+            <Route path="/Support" element={<SupportRoute><AdminOverview /></SupportRoute>} />
+            <Route path="/Support/Users" element={<SupportRoute><AdminUsers /></SupportRoute>} />
+            <Route path="/Support/Payments" element={<SupportRoute><AdminPayments /></SupportRoute>} />
+            <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
+            <Route path="/Support/Testimonials" element={<SupportRoute><AdminTestimonials /></SupportRoute>} />
+            <Route path="/Support/Reports" element={<SupportRoute><AdminReports /></SupportRoute>} />
 
-          {/* anything unknown goes home sir */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Suspense>
+            {/* anything unknown goes home sir */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </>
   )
 }

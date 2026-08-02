@@ -110,6 +110,10 @@ export function AnswerMockInterview(sessionId, userAnswer, token, currentSession
     }
 }
 
+// navigate is only ever passed by the caller when the deleted sessionId IS the currently-open
+// session sir (see MockInterview.jsx handleDelete) — so it doubles here as the "was this the
+// open session" flag. Deleting a different session from the sidebar should just drop it from
+// the list and leave whatever's currently open alone, not clear it out from under the user.
 export function DeleteMockInterview(sessionId, token, navigate) {
     return async (dispatch) => {
         const toastId = toast.loading("Deleting the session...")
@@ -123,9 +127,11 @@ export function DeleteMockInterview(sessionId, token, navigate) {
             }
 
             toast.success("Session deleted")
-            dispatch(setCurrentSession(null))
             dispatch(GetAllMockInterviews(token))
-            if (navigate) navigate("/Dashboard/Mock-Interview")
+            if (navigate) {
+                dispatch(setCurrentSession(null))
+                navigate("/Dashboard/Mock-Interview")
+            }
         } catch (error) {
             logApiError("Error deleting the mock interview session", error)
             toast.error(error?.response?.data?.message || "Could not delete the session")

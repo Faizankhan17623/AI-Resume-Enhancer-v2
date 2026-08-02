@@ -27,6 +27,10 @@ const NewChatModal = ({ onClose }) => {
       toast.error("Please upload a PDF file")
       return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("The file must be under 5 MB")
+      return
+    }
     setPdfFile(file)
   }
 
@@ -161,7 +165,10 @@ const Chat = () => {
       color: '#F3EFE6'
     }).then((result) => {
       if (result.isConfirmed) {
-        dispatch(DeleteChat(id, token, navigate))
+        // only clear the open chat + navigate away if THIS is the chat that's currently open sir —
+        // deleting a different chat from the sidebar shouldn't kick the user out of the one they're viewing
+        const isOpenChat = id === chatId
+        dispatch(DeleteChat(id, token, isOpenChat ? navigate : null))
       }
     })
   }

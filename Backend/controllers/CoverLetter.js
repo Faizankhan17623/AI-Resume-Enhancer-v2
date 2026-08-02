@@ -11,7 +11,7 @@ const { AI_MODEL } = require('../utils/AiModel')
 const { detectGenericness } = require('../utils/GenericPhraseDetector')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
 
-const grok = new Grok({ apiKey: process.env.GROK_API_KEY })
+const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
 // POST /cover-letter — generate a tailored cover letter from a resume PDF + JD sir
 // Pro+ feature, same as the chat coach's cover-letter drafting — no separate credit spend,
