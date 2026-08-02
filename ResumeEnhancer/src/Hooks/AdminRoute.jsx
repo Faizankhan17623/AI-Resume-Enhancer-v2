@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux'
-import { Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router'
 
 // Admin only sir — strictly. Every role is locked to its own dashboard: a Support user
 // hitting an /Admin/* URL gets sent to their real dashboard at /Support, not let through

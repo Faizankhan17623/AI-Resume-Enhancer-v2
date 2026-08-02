@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router'
 import toast from 'react-hot-toast'
 import { setToken, setUser, setLogin } from '../../Slices/authSlice'
 import { apiConnector } from '../../Services/apiConnector'

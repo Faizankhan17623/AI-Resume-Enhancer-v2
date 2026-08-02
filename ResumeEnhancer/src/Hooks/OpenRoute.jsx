@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux'
-import { Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router'
 
 // logged-out-only pages (Login/Signup/etc) sir — an already-logged-in user gets bounced
 // straight to their OWN dashboard, same role split as everywhere else

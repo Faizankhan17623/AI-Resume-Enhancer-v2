@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useSelector } from 'react-redux'
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { FaMagic } from 'react-icons/fa'

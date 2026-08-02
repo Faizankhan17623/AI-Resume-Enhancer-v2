@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router"
 import { useDispatch } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { setUser, setToken, setLogin } from './Slices/authSlice'

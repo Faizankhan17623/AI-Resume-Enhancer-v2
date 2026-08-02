@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useSelector } from 'react-redux'
 import { useGSAP } from '@gsap/react'
 import { FaArrowRight, FaCheckCircle, FaStar } from 'react-icons/fa'

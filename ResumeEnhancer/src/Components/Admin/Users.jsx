@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
 import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload } from 'react-icons/fa'

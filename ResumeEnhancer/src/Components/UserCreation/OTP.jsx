@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import OtpInput from 'react-otp-input'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { FiMail } from 'react-icons/fi'
 import Navbar from '../Home/Navbar'

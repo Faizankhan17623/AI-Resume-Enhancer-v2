@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux"
-import { Navigate } from "react-router-dom"
+import { Navigate } from "react-router"
 
 // User-only sir — strict isolation, same rule as AdminRoute/SupportRoute. An Admin or
 // Support account can never use the product's own Dashboard pages (reviews, chat, builder,

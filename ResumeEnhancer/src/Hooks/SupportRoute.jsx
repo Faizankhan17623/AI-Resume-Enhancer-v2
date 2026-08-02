@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux'
-import { Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router'
 
 // Support only sir — this is deliberately its OWN role check, not a relaxed AdminRoute.
 // An Admin landing on a /Support/* URL gets sent to their real dashboard at /Admin instead

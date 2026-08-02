@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router'
 import { useDispatch } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
