@@ -1,3 +1,5 @@
 .vercel
 .env*
 FEATURE_MANIFEST.md
+.claude/
+Backend/tests/
