@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const Testimonial = require('../Models/Testimonial')
 const { logAction } = require('../utils/AdminLog')
 const { notify } = require('../utils/NotificationLog')
+const logger = require('../utils/logger')
 
 // user-submitted homepage testimonials sir — a User submits one, Admin/Support moderates it,
 // only 'approved' ones are ever served by the public endpoint
@@ -52,8 +53,7 @@ exports.submitTestimonial = async (req, res) => {
             testimonial,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('submit testimonial failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while submitting your testimonial',
@@ -72,8 +72,7 @@ exports.getMyTestimonial = async (req, res) => {
             testimonial,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get my testimonial failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your testimonial',
@@ -97,8 +96,7 @@ exports.getTestimonials = async (req, res) => {
             testimonials,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get testimonials failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the testimonials',
@@ -163,8 +161,7 @@ exports.moderateTestimonial = async (req, res) => {
             testimonial,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('moderate testimonial failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the testimonial',
@@ -201,8 +198,7 @@ exports.deleteTestimonial = async (req, res) => {
             message: 'Testimonial deleted',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete testimonial failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the testimonial',
@@ -224,8 +220,7 @@ exports.getApprovedTestimonials = async (req, res) => {
             testimonials,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get approved testimonials failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the testimonials',

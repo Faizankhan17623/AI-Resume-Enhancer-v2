@@ -12,7 +12,7 @@ const { syncKeywordBankFromReview } = require('../utils/KeywordBank');
 const { updateStreak } = require('../utils/Streak');
 const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
-const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel');
+const { getModelForPlan } = require('../utils/AiModel');
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
 const logger = require('../utils/logger');
 
@@ -179,10 +179,6 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     recordFeatureUse(userId)
     if (reviewId) syncKeywordBankFromReview(userId, reviewId, review)
 
-    // deliberate per-plan wait sir — added here, AFTER the real AI call + DB save already
-    // finished, so "faster reviews on a paid plan" is a genuine, felt difference without adding
-    // any risk to the Groq call itself (see utils/AiModel.js for the Basic/Pro/ProMax delay map)
-    await applyPlanDelay(spend.plan)
 
     return res.status(200).json({
         success: true,
@@ -232,8 +228,7 @@ exports.Calling = async (req,res) =>{
 
         return await runReview(req, res, { userId: id, resumeText: result.text, formattingCheck })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('calling failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while analyzing the resume',
@@ -259,8 +254,7 @@ exports.CallingFromSavedResume = async (req, res) => {
 
         return await runReview(req, res, { userId: id, resumeText: resume.resumeText, formattingCheck: resume.formattingCheck })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('calling from saved resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while analyzing the resume',

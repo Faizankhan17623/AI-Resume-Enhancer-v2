@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2
+const logger = require('./logger')
 const fs = require('fs')
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -8,7 +9,7 @@ const uploadFile = async (path) => {
         const { size } = fs.statSync(path)
         if (size > MAX_FILE_SIZE) {
             fs.unlinkSync(path) 
-            console.log('File exceeds the 10 MB limit')
+            logger.info('File exceeds the 10 MB limit')
             return null
         }
 
@@ -19,7 +20,7 @@ const uploadFile = async (path) => {
         return result.secure_url
     } catch (error) {
         if (fs.existsSync(path)) fs.unlinkSync(path) 
-        console.log(error.message)
+        logger.error('upload file failed', { err: error })
         return null
     }
 }

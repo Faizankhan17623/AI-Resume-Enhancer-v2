@@ -1,4 +1,5 @@
 const KeywordBankItem = require('../Models/KeywordBankItem')
+const logger = require('./logger')
 
 // pulls every keyword out of a just-created Review's AI response sir and upserts each into the
 // user's running keyword bank. FIRE-AND-FORGET like AdminLog's loggers — a sync failure must
@@ -50,7 +51,7 @@ const syncKeywordBankFromReview = async (userId, reviewId, review) => {
             await KeywordBankItem.updateOne({ _id: existing._id }, update)
         }
     } catch (err) {
-        console.log('keyword bank sync failed:', err.message)
+        logger.error('keyword bank sync failed', { err: err })
     }
 }
 

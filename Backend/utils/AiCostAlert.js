@@ -1,4 +1,5 @@
 const { scheduleJob } = require('./scheduler')
+const logger = require('./logger')
 const AiLog = require('../Models/AiLog')
 const mailSender = require('./Nodemailer')
 const { logSystemAction } = require('./AdminLog')
@@ -63,12 +64,12 @@ const checkAiUsageAndAlert = async () => {
     logSystemAction('AI_COST_ALERT', {}, stats)
 
     if (!process.env.ADMIN_ALERT_EMAIL) {
-        console.log('AI usage threshold breached but ADMIN_ALERT_EMAIL is not set:', stats)
+        logger.warn('AI usage threshold breached but ADMIN_ALERT_EMAIL is not set', { stats })
         return
     }
 
     await mailSender(process.env.ADMIN_ALERT_EMAIL, 'AI usage alert — threshold exceeded', alertEmailHtml(stats))
-        .catch((err) => console.log('AI cost alert email failed:', err.message))
+        .catch((err) => logger.error('AI cost alert email failed', { err: err }))
 }
 
 // registered once from index.js sir — hourly, the aggregation is cheap and the cooldown above

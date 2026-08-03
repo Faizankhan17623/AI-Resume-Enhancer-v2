@@ -26,22 +26,18 @@ const AI_MODEL = process.env.GROQ_MODEL || MODEL_BY_PLAN.ProMax
 // anything unrecognized (a stale/expired plan, or a caller that hasn't resolved a plan yet)
 const getModelForPlan = (plan) => MODEL_BY_PLAN[plan] || MODEL_BY_PLAN.Basic
 
-// deliberate artificial wait sir, added AFTER the real Groq call already finished — a felt
-// speed difference per tier so "upgrade for faster reviews" is a real, honest selling point on
-// the Pricing page, not just marketing copy. ProMax gets none (0ms), Pro a small tax, Basic the
-// full one. Unrecognized/stale plan falls back to Basic's delay, same as getModelForPlan above.
-const DELAY_MS_BY_PLAN = {
-    Basic: 5000,
-    Pro: 2000,
-    ProMax: 0,
-}
-
-const getDelayMsForPlan = (plan) => DELAY_MS_BY_PLAN[plan] ?? DELAY_MS_BY_PLAN.Basic
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// awaits the per-plan artificial delay sir — call right before sending the response,
-// after the real AI work (and DB save) is already done, so the delay never adds retry/timeout risk
-const applyPlanDelay = (plan) => sleep(getDelayMsForPlan(plan))
-
-module.exports = { AI_MODEL, MODEL_BY_PLAN, getModelForPlan, DELAY_MS_BY_PLAN, getDelayMsForPlan, applyPlanDelay }
+// REMOVED sir: applyPlanDelay / DELAY_MS_BY_PLAN.
+//
+// It slept 5s for every Basic user and 2s for every Pro user before responding, purely to
+// manufacture a felt speed difference between tiers. Two problems made it worth deleting:
+//
+//   1. Cost. Node serves requests on one thread; an awaited sleep holds the request, its socket
+//      and its whole context open for the duration. On a constrained dyno that is deliberately
+//      burned concurrency, and it is spent on exactly the free-tier users you have the most of.
+//   2. It is not a real product difference. The tiers already differ honestly — credits, message
+//      limits, prompt depth, and a genuinely larger model for ProMax (see MODEL_BY_PLAN above).
+//      Slowing the free tier down on purpose does not make the paid tier faster.
+//
+// If a felt difference is wanted again, the honest version is a queue/priority lane where paid
+// requests are served first under load, not a fixed sleep applied when there is no load at all.
+module.exports = { AI_MODEL, MODEL_BY_PLAN, getModelForPlan }

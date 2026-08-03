@@ -1,4 +1,5 @@
 const Review = require('../Models/Review')
+const logger = require('../utils/logger')
 const User = require('../Models/User')
 
 // shared shape sir — every board is anonymized the same way, index-based labels, no user field ever returned
@@ -35,8 +36,7 @@ exports.getLeaderboard = async (req, res) => {
             leaderboard,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get leaderboard failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the leaderboard',
@@ -63,8 +63,7 @@ exports.getWeeklyReviewsLeaderboard = async (req, res) => {
             leaderboard: anonymize(rows, 'reviewCount', id),
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get weekly reviews leaderboard failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the weekly reviews leaderboard',
@@ -94,8 +93,7 @@ exports.getStreaksLeaderboard = async (req, res) => {
             leaderboard,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get streaks leaderboard failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the streaks leaderboard',

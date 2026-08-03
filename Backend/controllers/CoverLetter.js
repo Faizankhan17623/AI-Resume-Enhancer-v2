@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
 
@@ -115,7 +116,7 @@ exports.generateCoverLetter = async (req, res) => {
             })
             coverLetterId = saved._id
         } catch (saveErr) {
-            console.log('cover letter save failed:', saveErr.message)
+            (req.log || logger).error('cover letter save failed', { err: saveErr })
         }
 
         // fire-and-forget sir — same rule as the review/chat controllers
@@ -128,8 +129,7 @@ exports.generateCoverLetter = async (req, res) => {
             genericCheck,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('generate cover letter failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while generating the cover letter',
@@ -151,8 +151,7 @@ exports.getCoverLetters = async (req, res) => {
             letters,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get cover letters failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your cover letters',
@@ -187,8 +186,7 @@ exports.getCoverLetter = async (req, res) => {
             letter,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get cover letter failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the cover letter',

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 
 const Announcement = require('../Models/Announcement')
 const { logAction } = require('../utils/AdminLog')
@@ -95,8 +96,7 @@ exports.createAnnouncement = async (req, res) => {
         if (error.statusCode) {
             return res.status(error.statusCode).json({ success: false, message: error.message })
         }
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('create announcement failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while creating the announcement',
@@ -116,8 +116,7 @@ exports.getAnnouncements = async (req, res) => {
             announcements
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get announcements failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the announcements',
@@ -205,8 +204,7 @@ exports.updateAnnouncement = async (req, res) => {
         if (error.statusCode) {
             return res.status(error.statusCode).json({ success: false, message: error.message })
         }
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update announcement failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the announcement',
@@ -243,8 +241,7 @@ exports.deleteAnnouncement = async (req, res) => {
             message: 'Announcement deleted',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete announcement failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the announcement',
@@ -274,8 +271,7 @@ exports.getActiveAnnouncement = async (req, res) => {
             announcement // null when there is nothing to show sir
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get active announcement failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the announcement',

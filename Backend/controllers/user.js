@@ -127,7 +127,7 @@ exports.createUser = async (req, res) => {
             },
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('create user failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to create user',
@@ -256,7 +256,7 @@ exports.loginUser = async (req, res) => {
             user: _id,
             ip: req.ip,
             userAgent: req.headers['user-agent'],
-        }).catch((err) => console.log('login log failed:', err.message))
+        }).catch((err) => logger.error('login log failed', { err: err }))
 
         return res.status(200).json({
             success: true,
@@ -360,7 +360,7 @@ exports.SendOtp = async(req,res)=>{
         try {
             await mailSender(email, "Verification Email", otpEmail(OtpCreate))
         } catch (mailError) {
-            console.log(`[SendOtp] email delivery failed for email="${email}":`, mailError.message)
+            (req.log || logger).error('OTP email delivery failed', { err: mailError, email })
             return res.status(200).json({
                 success: true,
                 message: 'OTP created, but the verification email is delayed — please try again shortly if it does not arrive',
@@ -373,7 +373,7 @@ exports.SendOtp = async(req,res)=>{
         })
 
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('send otp failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to Send Otp',
@@ -428,7 +428,7 @@ exports.updateFirstName = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('update first name failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update first name',
@@ -483,7 +483,7 @@ exports.updateLastName = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('update last name failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update last name',
@@ -638,7 +638,7 @@ exports.updateEmail = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('update email failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update email',
@@ -702,7 +702,7 @@ exports.updateNumber = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('update number failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update number',
@@ -768,7 +768,7 @@ exports.forgotPassword = async (req, res) => {
                 passwordResetTemplate(`${user.firstName} ${user.lastName}`, url)
             )
         } catch (mailError) {
-            console.log(`[forgotPassword] email delivery failed for email="${email}":`, mailError.message)
+            (req.log || logger).error('password reset email delivery failed', { err: mailError, email })
             return res.status(200).json({
                 success: true,
                 message: 'If that email is registered, a reset link is on its way — if it does not arrive shortly, please try again',
@@ -780,8 +780,8 @@ exports.forgotPassword = async (req, res) => {
             message: 'Password reset email sent',
         });
     } catch (error) {
-        console.log(`[forgotPassword] failed for email="${email}" at ${new Date().toISOString()}`)
-        console.log(error);
+        // email is the useful correlator here sir — it's the thing being reset
+        ;(req.log || logger).error('forgot password failed', { err: error, email })
         return res.status(500).json({
             success: false,
             message: 'Failed to send reset email',
@@ -910,7 +910,7 @@ exports.exportMyData = async (req, res) => {
             payments,
         })
     } catch (error) {
-        console.log(error.message)
+        (req.log || logger).error('export my data failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to export your data',
@@ -975,7 +975,7 @@ exports.deleteAccount = async (req, res) => {
             );
         } catch (mailError) {
             // don't fail the whole request just because the mail didn't send sir
-            console.log('Delete-account mail failed:', mailError.message);
+            (req.log || logger).error('Delete-account mail failed', { err: mailError });
         }
 
         return res.status(200).json({
@@ -984,7 +984,7 @@ exports.deleteAccount = async (req, res) => {
             deletionDate: bufferTiming,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('delete account failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to delete account',
@@ -1043,7 +1043,7 @@ exports.recoverAccount = async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('recover account failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to recover account',
@@ -1104,7 +1104,7 @@ exports.getProfile = async (req, res) => {
             }
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('get profile failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to get the profile',
@@ -1153,7 +1153,7 @@ exports.updateNotificationPrefs = async (req, res) => {
             notifyHealthCheck: updatedUser.notifyHealthCheck,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('update notification prefs failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update notification preferences',
@@ -1184,7 +1184,7 @@ exports.completeOnboarding = async (req, res) => {
             onboardingCompleted: updatedUser.onboardingCompleted,
         });
     } catch (error) {
-        console.log(error.message);
+        (req.log || logger).error('complete onboarding failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Failed to update onboarding status',

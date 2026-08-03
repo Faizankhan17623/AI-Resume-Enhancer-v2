@@ -1,4 +1,5 @@
 const User = require('../Models/User')
+const logger = require('./logger')
 const mailSender = require('./Nodemailer')
 
 const MILESTONES = [7, 30, 100]
@@ -51,10 +52,10 @@ const updateStreak = async (userId) => {
         // event-driven milestone email sir — fires the moment a threshold is crossed, no cron needed
         if (MILESTONES.includes(nextStreak)) {
             mailSender(user.email, `${nextStreak}-day streak!`, milestoneEmailHtml(user.firstName, nextStreak))
-                .catch((err) => console.log('streak milestone email failed:', err.message))
+                .catch((err) => logger.error('streak milestone email failed', { err: err }))
         }
     } catch (err) {
-        console.log('streak update failed:', err.message)
+        logger.error('streak update failed', { err: err })
     }
 }
 

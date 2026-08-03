@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const Application = require('../Models/Application')
 const Review = require('../Models/Review')
 const { getUserPlan } = require('../utils/Plans')
@@ -62,8 +63,7 @@ exports.createApplication = async (req, res) => {
             application,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('create application failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while adding the application',
@@ -85,8 +85,7 @@ exports.getApplications = async (req, res) => {
             applications,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get applications failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your applications',
@@ -163,8 +162,7 @@ exports.updateApplication = async (req, res) => {
             application,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update application failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the application',
@@ -198,8 +196,7 @@ exports.deleteApplication = async (req, res) => {
             message: 'Application deleted',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete application failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the application',
@@ -269,8 +266,7 @@ exports.getApplicationAnalytics = async (req, res) => {
             totalCount,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get application analytics failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your application analytics',

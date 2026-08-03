@@ -259,8 +259,7 @@ exports.sendMessage = async (req, res) => {
         writeLine({ type: 'done' })
         return res.end()
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('send message failed', { err: error })
         // headers may already be sent once streaming has started sir — fall back to a write+end
         if (res.headersSent) {
             res.write(JSON.stringify({ type: 'error', message: 'Something went wrong while sending the message' }) + '\n')
@@ -287,8 +286,7 @@ exports.getChats = async (req, res) => {
             chats
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get chats failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the chats',
@@ -325,8 +323,7 @@ exports.getChat = async (req, res) => {
             chat
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get chat failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the chat',
@@ -364,8 +361,7 @@ exports.deleteChat = async (req, res) => {
             message: 'Chat deleted successfully',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete chat failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the chat',

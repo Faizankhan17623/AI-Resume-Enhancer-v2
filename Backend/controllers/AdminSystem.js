@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const Grok = require('groq-sdk')
 const { monitorEventLoopDelay } = require('node:perf_hooks')
 
@@ -83,8 +84,7 @@ exports.getPayments = async (req, res) => {
             pagination: { page, limit, total, pages: Math.ceil(total / limit) }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get payments failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the payments',
@@ -168,8 +168,7 @@ exports.getAiStats = async (req, res) => {
             recentErrors
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get ai stats failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the AI stats',
@@ -290,8 +289,7 @@ exports.getHealth = async (req, res) => {
             health,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get health failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while checking the health',
@@ -334,8 +332,7 @@ exports.getInsights = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get insights failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the insights',
@@ -393,8 +390,7 @@ exports.getTraffic = async (req, res) => {
             },
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get traffic failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the traffic stats',
@@ -460,8 +456,7 @@ exports.getAuditLogs = async (req, res) => {
             pagination: { page, limit, total, pages: Math.ceil(total / limit) }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get audit logs failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the audit logs',
@@ -507,8 +502,7 @@ exports.getDeletions = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get deletions failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the deletion stats',
@@ -548,8 +542,7 @@ exports.getSecurity = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get security failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the security stats',
@@ -599,8 +592,7 @@ exports.getGlobalSearch = async (req, res) => {
 
         return res.status(200).json({ success: true, users, payments })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get global search failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while searching',

@@ -1,6 +1,7 @@
 const { getUserPlan } = require('../utils/Plans')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
+const logger = require('../utils/logger')
 
 // POST /job-search — Pro+ feature sir, searches the live web via Tavily for real job postings
 // matching the user's query. No Groq call, no credit spend — same reasoning as cover letter's
@@ -55,7 +56,7 @@ exports.searchJobs = async (req, res) => {
 
         if (!tavilyRes.ok) {
             const errText = await tavilyRes.text()
-            console.log('Tavily error:', tavilyRes.status, errText)
+            ;(req.log || logger).error('job search upstream (Tavily) failed', { status: tavilyRes.status, body: errText?.slice(0, 500) })
             return res.status(502).json({
                 success: false,
                 message: 'The job search service is unavailable right now, please try again',
@@ -79,8 +80,7 @@ exports.searchJobs = async (req, res) => {
             jobs,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('search jobs failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while searching for jobs',

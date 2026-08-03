@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const jwt = require('jsonwebtoken')
 
 const User = require('../Models/User')
@@ -23,7 +24,8 @@ const sendSupportPromotionEmailIfNeeded = async (user, oldRole, newRole) => {
             supportPromotionTemplate(`${user.firstName} ${user.lastName}`)
         )
     } catch (mailError) {
-        console.log('Failed to send support-promotion email:', mailError.message)
+        // bare logger sir — this is a shared helper, called with a user, not a request
+        logger.error('Failed to send support-promotion email', { err: mailError })
     }
 }
 
@@ -116,8 +118,7 @@ exports.getDashboardStats = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get dashboard stats failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the dashboard stats',
@@ -172,8 +173,7 @@ exports.getUsers = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get users failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the users',
@@ -222,8 +222,7 @@ exports.getUserDetail = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get user detail failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the user',
@@ -294,8 +293,7 @@ exports.updateUserRole = async (req, res) => {
             user
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update user role failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the role',
@@ -358,8 +356,7 @@ exports.bulkUpdateUserRole = async (req, res) => {
             skipped,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('bulk update user role failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the roles',
@@ -418,8 +415,7 @@ exports.updateUserPlan = async (req, res) => {
             user
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update user plan failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the plan',
@@ -470,8 +466,7 @@ exports.deleteUser = async (req, res) => {
             message: `${user.email} and all their chats/reviews were deleted`,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete user failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the user',
@@ -535,8 +530,7 @@ exports.bulkBanUsers = async (req, res) => {
             skipped,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('bulk ban users failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the accounts',
@@ -603,8 +597,7 @@ exports.banUser = async (req, res) => {
             user
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('ban user failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the ban status',
@@ -656,8 +649,7 @@ exports.adjustCredits = async (req, res) => {
             user
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('adjust credits failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while adjusting the credits',
@@ -708,8 +700,7 @@ exports.impersonateUser = async (req, res) => {
             token
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('impersonate user failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while creating the impersonation token',
@@ -740,8 +731,7 @@ exports.getUserReviews = async (req, res) => {
             reviews
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get user reviews failed', { err: error })
         return res.status(500).json({
             success: false,
             message: "Something went wrong while getting the user's reviews",
@@ -770,8 +760,7 @@ exports.getUserChats = async (req, res) => {
             chats
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get user chats failed', { err: error })
         return res.status(500).json({
             success: false,
             message: "Something went wrong while getting the user's chats",
@@ -807,8 +796,7 @@ exports.getChatDetail = async (req, res) => {
             chat
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get chat detail failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the chat',

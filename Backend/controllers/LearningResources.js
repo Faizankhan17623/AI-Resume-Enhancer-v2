@@ -1,4 +1,5 @@
 const { getUserPlan } = require('../utils/Plans')
+const logger = require('../utils/logger')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
 const LearningResourceCache = require('../Models/LearningResourceCache')
 
@@ -27,7 +28,7 @@ const fetchResourcesFor = async (query) => {
 
     if (!tavilyRes.ok) {
         const errText = await tavilyRes.text()
-        console.log('Tavily error:', tavilyRes.status, errText)
+        logger.error('learning resources upstream (Tavily) failed', { status: tavilyRes.status, body: errText?.slice(0, 500) })
         return null
     }
 
@@ -40,7 +41,7 @@ const fetchResourcesFor = async (query) => {
     }))
 
     // fire-and-forget sir — a cache-write failure must never break the response the user is waiting on
-    LearningResourceCache.create({ query, results }).catch((err) => console.log('learning resource cache write failed:', err.message))
+    LearningResourceCache.create({ query, results }).catch((err) => logger.error('learning resource cache write failed', { err: err }))
 
     return results
 }
@@ -92,8 +93,7 @@ exports.getLearningResources = async (req, res) => {
             results,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get learning resources failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while finding learning resources',

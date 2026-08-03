@@ -1,4 +1,5 @@
 const User = require('../Models/User')
+const logger = require('../utils/logger')
 const Feedback = require('../Models/Feedback')
 
 // popup shows on the 1st completed feature use, then every 2nd use after that,
@@ -27,8 +28,7 @@ exports.getFeedbackStatus = async (req, res) => {
             shouldShow: shouldShowPopup(user.featureUseCount, user.feedbackSubmitted),
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get feedback status failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while checking feedback status',
@@ -74,8 +74,7 @@ exports.submitFeedback = async (req, res) => {
             message: 'Thanks for the feedback!',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('submit feedback failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while submitting your feedback',

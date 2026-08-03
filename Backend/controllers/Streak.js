@@ -1,4 +1,5 @@
 const User = require('../Models/User')
+const logger = require('../utils/logger')
 
 // GET /streak — the current user's activity streak sir, for the dashboard badge
 exports.getStreak = async (req, res) => {
@@ -21,8 +22,7 @@ exports.getStreak = async (req, res) => {
             lastActivityDate: user.lastActivityDate,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get streak failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the streak',

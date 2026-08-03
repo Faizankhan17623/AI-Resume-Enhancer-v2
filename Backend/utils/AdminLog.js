@@ -1,4 +1,5 @@
 const AuditLog = require('../Models/AuditLog')
+const logger = require('./logger')
 const AiLog = require('../Models/AiLog')
 
 // both loggers here are FIRE-AND-FORGET sir — a logging failure must never break the real request,
@@ -13,7 +14,7 @@ const logAction = (actorId, action, target, details = {}) => {
         targetUser: target?._id,
         targetEmail: target?.email,
         details,
-    }).catch((err) => console.log('audit log failed:', err.message))
+    }).catch((err) => logger.error('audit log failed', { err: err }))
 }
 
 // record a cron/system-fired event sir — no human actor, so isSystem carries that instead
@@ -24,7 +25,7 @@ const logSystemAction = (action, target = {}, details = {}) => {
         action,
         targetEmail: target?.email,
         details,
-    }).catch((err) => console.log('system audit log failed:', err.message))
+    }).catch((err) => logger.error('system audit log failed', { err: err }))
 }
 
 // record one Groq call sir — usage comes straight off the completion response
@@ -41,7 +42,7 @@ const logAi = ({ user, type, plan, model, usage, latencyMs, success = true, erro
         latencyMs,
         success,
         error,
-    }).catch((err) => console.log('ai log failed:', err.message))
+    }).catch((err) => logger.error('ai log failed', { err: err }))
 }
 
 module.exports = { logAction, logSystemAction, logAi }

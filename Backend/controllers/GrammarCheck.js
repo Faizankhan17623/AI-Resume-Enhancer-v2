@@ -1,5 +1,6 @@
 const { PDFParse } = require('pdf-parse')
 const { checkResumeText } = require('../utils/GrammarCheck')
+const logger = require('../utils/logger')
 
 // POST /grammar-check — free, instant pre-check sir, no AI credit spent
 // runs before the paid ATS review so the user can fix typos before burning a credit
@@ -31,8 +32,7 @@ exports.checkGrammar = async (req, res) => {
             issues,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('check grammar failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while checking the resume',

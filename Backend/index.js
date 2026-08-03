@@ -28,11 +28,10 @@ const { buildApiRouter } = require('./Routes')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
 const logger = require('./utils/logger.js')
 const { requestContext } = require('./Middlewares/RequestContext.js')
-const { startStreakCron } = require('./utils/StreakCron.js')
-const { startAiCostAlertCron } = require('./utils/AiCostAlert.js')
-const { startAccountPurgeCron } = require('./utils/AccountPurgeCron.js')
-const { startFeatureFlagCron } = require('./utils/FeatureFlagCron.js')
-const { startAdminDigestCron } = require('./utils/AdminDigestCron.js')
+
+// NOTE sir: scheduled jobs deliberately do NOT start here — they live in worker.js and run as a
+// separate process (`npm run worker`). Running them inside the web process meant job CPU competed
+// with request serving, and scaling the API for traffic silently duplicated every cron.
 
 // deployed behind a proxy (Render/Railway/nginx) sir — needed so the rate limiter sees the REAL client IP
 app.set('trust proxy', 1)
@@ -144,11 +143,6 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'test') {
 	connectDB()
 	cloud()
-	startStreakCron()
-	startAiCostAlertCron()
-	startAccountPurgeCron()
-	startFeatureFlagCron()
-	startAdminDigestCron()
 	app.listen(Port,()=>{
 		logger.info('server listening', { port: Port, env: process.env.NODE_ENV || 'development' })
 	})

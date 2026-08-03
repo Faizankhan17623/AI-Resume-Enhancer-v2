@@ -1,4 +1,5 @@
 const Settings = require('../Models/Settings')
+const logger = require('../utils/logger')
 const { logAction } = require('../utils/AdminLog')
 const { invalidateFeatureFlagCache } = require('../utils/FeatureFlags')
 
@@ -29,8 +30,7 @@ exports.getSettings = async (req, res) => {
             settings,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get settings failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the settings',
@@ -114,8 +114,7 @@ exports.upsertSetting = async (req, res) => {
             setting,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('upsert setting failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the setting',

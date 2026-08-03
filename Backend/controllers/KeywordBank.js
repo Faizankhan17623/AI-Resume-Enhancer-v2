@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const KeywordBankItem = require('../Models/KeywordBankItem')
+const logger = require('../utils/logger')
 
 // GET /keyword-bank — every keyword the AI has ever flagged for this user sir, newest first
 exports.getKeywordBank = async (req, res) => {
@@ -29,8 +30,7 @@ exports.getKeywordBank = async (req, res) => {
             },
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get keyword bank failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your keyword bank',
@@ -79,8 +79,7 @@ exports.updateKeywordStatus = async (req, res) => {
             item,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update keyword status failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the keyword',

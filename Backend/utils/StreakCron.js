@@ -1,4 +1,5 @@
 const { scheduleJob } = require('./scheduler')
+const logger = require('./logger')
 const User = require('../Models/User')
 const Review = require('../Models/Review')
 const Resume = require('../Models/Resume')
@@ -89,7 +90,7 @@ const sendWeeklyDigest = async () => {
             improvement: scores[scores.length - 1] - scores[0],
         }
         mailSender(user.email, 'Your weekly resume review digest', digestEmailHtml(user.firstName, stats))
-            .catch((err) => console.log('weekly digest email failed:', err.message))
+            .catch((err) => logger.error('weekly digest email failed', { err: err }))
         notify({
             user: user._id,
             type: 'digest',
@@ -111,7 +112,7 @@ const sendStreakBreakNudges = async () => {
 
     for (const user of users) {
         mailSender(user.email, 'Your streak is about to end', streakBreakEmailHtml(user.firstName, user.currentStreak))
-            .catch((err) => console.log('streak-break email failed:', err.message))
+            .catch((err) => logger.error('streak-break email failed', { err: err }))
         notify({
             user: user._id,
             type: 'streak-break',
@@ -132,7 +133,7 @@ const sendWinBackNudges = async () => {
 
     for (const user of users) {
         mailSender(user.email, 'We miss you at AI Resume Enhancer', winBackEmailHtml(user.firstName))
-            .catch((err) => console.log('win-back email failed:', err.message))
+            .catch((err) => logger.error('win-back email failed', { err: err }))
         notify({
             user: user._id,
             type: 'win-back',
@@ -171,7 +172,7 @@ const sendMonthlyHealthCheck = async () => {
                 score: resume.formattingCheck.score,
                 topIssue,
             })
-        ).catch((err) => console.log('health-check email failed:', err.message))
+        ).catch((err) => logger.error('health-check email failed', { err: err }))
         notify({
             user: user._id,
             type: 'health-check',

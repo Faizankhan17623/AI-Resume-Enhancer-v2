@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 
 const Report = require('../Models/Report')
 const { logAction } = require('../utils/AdminLog')
+const logger = require('../utils/logger')
 
 // user-submitted bug reports + feature suggestions sir — any logged-in role can submit
 // (unlike Feedback/Testimonial this isn't gated to isUser, an Admin/Support account can
@@ -42,8 +43,7 @@ exports.submitReport = async (req, res) => {
             report,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('submit report failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while submitting your report',
@@ -62,8 +62,7 @@ exports.getMyReports = async (req, res) => {
             reports,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get my reports failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your reports',
@@ -89,8 +88,7 @@ exports.getReports = async (req, res) => {
             reports,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get reports failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the reports',
@@ -140,8 +138,7 @@ exports.updateReportStatus = async (req, res) => {
             report,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update report status failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the report',
@@ -178,8 +175,7 @@ exports.deleteReport = async (req, res) => {
             message: 'Report deleted',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete report failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the report',

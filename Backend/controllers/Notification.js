@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const Notification = require('../Models/Notification')
 
 // GET /notifications — newest-first, capped so the bell dropdown never loads unbounded history sir
@@ -18,7 +19,7 @@ exports.getNotifications = async (req, res) => {
             unreadCount,
         })
     } catch (error) {
-        console.log(error.message)
+        (req.log || logger).error('get notifications failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your notifications',
@@ -38,7 +39,7 @@ exports.getUnreadCount = async (req, res) => {
             unreadCount,
         })
     } catch (error) {
-        console.log(error.message)
+        (req.log || logger).error('get unread count failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your unread count',
@@ -77,7 +78,7 @@ exports.markAsRead = async (req, res) => {
             notification,
         })
     } catch (error) {
-        console.log(error.message)
+        (req.log || logger).error('mark as read failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the notification',
@@ -97,7 +98,7 @@ exports.markAllAsRead = async (req, res) => {
             message: 'All notifications marked as read',
         })
     } catch (error) {
-        console.log(error.message)
+        (req.log || logger).error('mark all as read failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating your notifications',

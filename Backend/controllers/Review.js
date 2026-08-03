@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const logger = require('../utils/logger')
 const crypto = require('crypto')
 const PDFDocument = require('pdfkit')
 
@@ -20,8 +21,7 @@ exports.getReviews = async (req, res) => {
             reviews
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get reviews failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the review history',
@@ -55,8 +55,7 @@ exports.getProgress = async (req, res) => {
             points
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get progress failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the progress data',
@@ -92,8 +91,7 @@ exports.getReview = async (req, res) => {
             review
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get review failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the review',
@@ -146,8 +144,7 @@ exports.toggleShare = async (req, res) => {
             shareAudience: review.shareAudience,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('toggle share failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the share link',
@@ -195,8 +192,7 @@ exports.updateShareAudience = async (req, res) => {
             shareAudience: review.shareAudience,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update share audience failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the share audience',
@@ -233,8 +229,7 @@ exports.getPublicReview = async (req, res) => {
             },
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get public review failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the shared report',
@@ -443,8 +438,7 @@ exports.downloadReviewPdf = async (req, res) => {
 
         doc.end()
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('download review pdf failed', { err: error })
         // headers may already be sent mid-stream sir — only send JSON if they are not
         if (!res.headersSent) {
             return res.status(500).json({

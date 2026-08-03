@@ -10,7 +10,7 @@ const logger = require('../utils/logger')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
-const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel')
+const { getModelForPlan } = require('../utils/AiModel')
 const { runReview } = require('./AI')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
@@ -74,8 +74,7 @@ exports.createBuiltResume = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('create built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while creating the resume',
@@ -97,8 +96,7 @@ exports.getBuiltResumes = async (req, res) => {
             resumes,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get built resumes failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your resumes',
@@ -132,8 +130,7 @@ exports.getBuiltResume = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the resume',
@@ -175,8 +172,7 @@ exports.updateBuiltResume = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while saving the resume',
@@ -229,8 +225,7 @@ exports.duplicateBuiltResume = async (req, res) => {
             resume: copy,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('duplicate built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while duplicating the resume',
@@ -264,8 +259,7 @@ exports.deleteBuiltResume = async (req, res) => {
             message: 'Resume deleted successfully',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the resume',
@@ -306,8 +300,7 @@ exports.getBuiltResumeVersions = async (req, res) => {
             versions,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get built resume versions failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the resume versions',
@@ -357,8 +350,7 @@ exports.restoreBuiltResumeVersion = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('restore built resume version failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while restoring the resume version',
@@ -430,8 +422,7 @@ exports.uploadBuiltResumePhoto = async (req, res) => {
             photoUrl: resume.photoUrl,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('upload built resume photo failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while uploading the photo',
@@ -469,8 +460,7 @@ exports.removeBuiltResumePhoto = async (req, res) => {
             message: 'Photo removed',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('remove built resume photo failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while removing the photo',
@@ -505,8 +495,7 @@ exports.reviewBuiltResume = async (req, res) => {
         const resumeText = builtResumeToText(resume)
         return await runReview(req, res, { userId: id, resumeText, formattingCheck: null })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('review built resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while reviewing the resume',
@@ -624,8 +613,7 @@ exports.downloadBuiltResumeDocx = async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${(resume.title || 'resume').replace(/[^a-z0-9-_]+/gi, '_')}.docx"`)
         return res.send(buffer)
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('download built resume docx failed', { err: error })
         if (!res.headersSent) {
             return res.status(500).json({
                 success: false,
@@ -672,10 +660,10 @@ const runBuilderAi = async ({ userId, plan, type, systemPrompt, userContent }) =
     try {
         return { data: JSON.parse(raw) }
     } catch (parseErr) {
-        console.log('JSON parse failed:', parseErr.message)
         // truncated sir — raw is derived from the user's resume/JD text (PII), only the first 200
         // chars go to the server log, enough to spot a malformed-JSON pattern without dumping the resume
-        console.log('Raw model output (truncated):', raw?.slice(0, 200))
+        // bare logger sir — runBuilderAi is a standalone helper with no request in scope
+        logger.error('JSON parse failed', { err: parseErr, rawPreview: raw?.slice(0, 200) })
         return { error: 'The AI response was not in the expected format, please try again' }
     }
 }
@@ -740,8 +728,6 @@ exports.generateResume = async (req, res) => {
             certifications: data.certifications || [],
         })
 
-        // deliberate per-plan wait sir — see utils/AiModel.js, applied after the real work is done
-        await applyPlanDelay(spend.plan)
 
         return res.status(201).json({
             success: true,
@@ -749,8 +735,7 @@ exports.generateResume = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('generate resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while generating the resume',
@@ -833,8 +818,6 @@ exports.tailorResume = async (req, res) => {
             certifications: data.certifications || [],
         })
 
-        // deliberate per-plan wait sir — see utils/AiModel.js, applied after the real work is done
-        await applyPlanDelay(spend.plan)
 
         return res.status(201).json({
             success: true,
@@ -842,8 +825,7 @@ exports.tailorResume = async (req, res) => {
             resume,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('tailor resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while tailoring the resume',

@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer')
+const logger = require('./logger')
 const dns = require('dns')
 
 // Render's free tier blocks outbound SMTP ports (25/465/587) sir — so in production the
@@ -34,7 +35,7 @@ const mailSender = async (email, title, body) => {
 
         // no SMTP configured sir — skip sending instead of crashing the caller
         if (!process.env.MAIL_HOST || !process.env.MAIL_USER || !process.env.MAIL_PASS) {
-            console.log(`Mail not configured — would have sent "${title}" to ${email}`)
+            logger.info('mail not configured, skipping send', { title, to: email })
             return null
         }
 
@@ -70,7 +71,7 @@ const mailSender = async (email, title, body) => {
 
         return info
     } catch (error) {
-        console.log('mailSender error:', error.message)
+        logger.error('mailSender error', { err: error })
         throw error
     }
 }

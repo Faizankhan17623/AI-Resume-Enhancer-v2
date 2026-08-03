@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const logger = require('../utils/logger')
 
 const VisitorLog = require('../Models/VisitorLog')
 
@@ -33,14 +34,13 @@ exports.trackVisit = async (req, res) => {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
             }).catch((err) => {
-                if (err.code !== 11000) console.log('visitor log failed:', err.message)
+                if (err.code !== 11000) (req.log || logger).error('visitor log failed', { err: err })
             })
         }
 
         return res.status(200).json({ success: true })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('track visit failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while tracking the visit',

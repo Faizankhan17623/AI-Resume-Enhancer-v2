@@ -1,4 +1,5 @@
 const User = require('../Models/User')
+const logger = require('./logger')
 
 // recordFeatureUse(userId) sir — call this right after any feature completes successfully
 // (review, chat, cover letter, job search). Drives the feedback popup cadence, separate
@@ -8,7 +9,7 @@ const recordFeatureUse = async (userId) => {
     try {
         await User.findByIdAndUpdate(userId, { $inc: { featureUseCount: 1 } })
     } catch (err) {
-        console.log('feature use tracking failed:', err.message)
+        logger.error('feature use tracking failed', { err: err })
     }
 }
 

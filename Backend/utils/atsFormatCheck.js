@@ -1,4 +1,5 @@
 // Structural ATS compatibility checker sir — pdf-parse only gives us flat text, so it can't see
+const logger = require('./logger')
 // the things that actually break real ATS parsers (Workday, Greenhouse, Taleo, etc): multi-column
 // layouts that get read left-to-right across columns and scramble word order, tables that collapse
 // into unreadable text soup, images/icons the parser just drops (including a fully scanned resume
@@ -78,7 +79,7 @@ exports.checkAtsFormatting = async (buffer) => {
     try {
         pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
     } catch (err) {
-        console.log('pdfjs-dist load failed:', err.message)
+        logger.error('pdfjs-dist load failed', { err: err })
         return { score: null, issues: [], checkedPages: 0 }
     }
 
@@ -91,7 +92,7 @@ exports.checkAtsFormatting = async (buffer) => {
         })
         doc = await loadingTask.promise
     } catch (err) {
-        console.log('pdfjs parse failed:', err.message)
+        logger.error('pdfjs parse failed', { err: err })
         return { score: null, issues: [], checkedPages: 0 }
     }
 

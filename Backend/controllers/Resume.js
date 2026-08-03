@@ -3,6 +3,7 @@ const { PDFParse } = require('pdf-parse')
 
 const Resume = require('../Models/Resume')
 const { checkAtsFormatting } = require('../utils/atsFormatCheck')
+const logger = require('../utils/logger')
 
 // POST /resumes — save a parsed resume for reuse sir, no AI call, no credit spent
 exports.saveResume = async (req, res) => {
@@ -37,7 +38,7 @@ exports.saveResume = async (req, res) => {
         try {
             formattingCheck = await checkAtsFormatting(PDf.data)
         } catch (fmtErr) {
-            console.log('ATS formatting check failed:', fmtErr.message)
+            (req.log || logger).error('ATS formatting check failed', { err: fmtErr })
         }
 
         const resume = await Resume.create({
@@ -62,8 +63,7 @@ exports.saveResume = async (req, res) => {
             },
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('label failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while saving the resume',
@@ -86,8 +86,7 @@ exports.getResumes = async (req, res) => {
             resumes,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get resumes failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your resumes',
@@ -141,8 +140,7 @@ exports.updateResume = async (req, res) => {
             },
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('update resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the resume',
@@ -185,8 +183,7 @@ exports.deleteResume = async (req, res) => {
             message: 'Resume deleted successfully',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete resume failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the resume',

@@ -32,8 +32,10 @@ const parseJsonReply = (raw) => {
     try {
         return JSON.parse(raw)
     } catch (parseErr) {
-        console.log('mock interview JSON parse failed:', parseErr.message)
-        console.log('Raw model output (truncated):', raw?.slice(0, 200))
+        // truncated sir — raw can carry the user's own interview answers (PII), so only a short
+        // preview goes to the log, enough to spot a malformed-JSON pattern.
+        // bare logger, not req.log — this is a standalone helper with no request in scope.
+        logger.error('mock interview JSON parse failed', { err: parseErr, rawPreview: raw?.slice(0, 200) })
         return null
     }
 }
@@ -172,8 +174,7 @@ exports.startMockInterview = async (req, res) => {
             turn: session.turns[0],
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('start mock interview failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while starting the mock interview',
@@ -244,7 +245,7 @@ exports.answerMockInterview = async (req, res) => {
                 { role: 'user', content: 'Score the answer and return the next question. Return only the JSON.' },
             ])
         } catch (aiErr) {
-            console.log(aiErr)
+            (req.log || logger).error('answer mock interview failed', { err: aiErr })
             return res.status(502).json({
                 success: false,
                 message: 'The AI is unavailable right now, please try again',
@@ -337,8 +338,7 @@ exports.answerMockInterview = async (req, res) => {
             nextTurn: finalDoc.status === 'in-progress' ? finalDoc.turns[finalDoc.turns.length - 1] : null,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('answer mock interview failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while scoring the answer',
@@ -360,8 +360,7 @@ exports.getMockInterviews = async (req, res) => {
             sessions,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get mock interviews failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the mock interview sessions',
@@ -398,8 +397,7 @@ exports.getMockInterview = async (req, res) => {
             session,
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('get mock interview failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the mock interview session',
@@ -433,8 +431,7 @@ exports.deleteMockInterview = async (req, res) => {
             message: 'Mock interview session deleted',
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        (req.log || logger).error('delete mock interview failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while deleting the mock interview session',
