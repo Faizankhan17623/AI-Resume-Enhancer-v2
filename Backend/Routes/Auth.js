@@ -3,6 +3,20 @@ const route = express.Router()
 const {Calling, CallingFromSavedResume} = require('../controllers/AI')
 const {Auth, isUser} = require('../Middlewares/Auth.js')
 const { authLimiter, otpLimiter, aiLimiter } = require('../Middlewares/RateLimit.js')
+const { validate } = require('../Middlewares/Validate.js')
+const {
+    createUserSchema,
+    loginSchema,
+    sendOtpSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+    changePasswordSchema,
+    updateFirstNameSchema,
+    updateLastNameSchema,
+    updateEmailSchema,
+    updateNumberSchema,
+    notificationPrefsSchema,
+} = require('../Validation/schemas.js')
 const {
     createUser,
     loginUser,
@@ -32,13 +46,16 @@ const { linkedinLogin, linkedinCallback, exchangeLinkedInCode } = require('../co
 route.post('/response',aiLimiter,Auth,isUser,Calling)
 route.post('/response/from-resume/:resumeId',aiLimiter,Auth,isUser,CallingFromSavedResume)
 
-// authLimiter stops brute-force sir, otpLimiter stops email spam
-route.post('/Createuser',authLimiter,createUser)
-route.post('/Login',authLimiter,loginUser)
+// authLimiter stops brute-force sir, otpLimiter stops email spam.
+// validate() runs BEFORE the controller so a malformed request is rejected with a 400 and a
+// { field, message } the form can highlight, and the controller only ever sees a known shape
+// with unknown keys already stripped (see Middlewares/Validate.js).
+route.post('/Createuser',authLimiter,validate({ body: createUserSchema }),createUser)
+route.post('/Login',authLimiter,validate({ body: loginSchema }),loginUser)
 // revokes the session server-side sir — bumps tokenVersion so the token dies everywhere,
 // instead of the frontend merely forgetting it while it stays valid for another 7 days
 route.post('/Logout',Auth,logoutUser)
-route.post('/Send-otp',otpLimiter,SendOtp)
+route.post('/Send-otp',otpLimiter,validate({ body: sendOtpSchema }),SendOtp)
 
 // full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered
 route.get('/auth/google',authLimiter,googleLogin)
@@ -60,19 +77,21 @@ route.get('/auth/linkedin/callback',authLimiter,linkedinCallback)
 route.post('/auth/linkedin/exchange',authLimiter,exchangeLinkedInCode)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
-route.post('/forgot-password',authLimiter,forgotPassword)
-route.post('/reset-password',authLimiter,resetPassword)
-route.put('/change-password',Auth,updatePassword)
+route.post('/forgot-password',authLimiter,validate({ body: forgotPasswordSchema }),forgotPassword)
+// the reset path now enforces the SAME password policy as signup sir — it previously had none,
+// so a reset could set a weaker password than registration would ever have accepted
+route.post('/reset-password',authLimiter,validate({ body: resetPasswordSchema }),resetPassword)
+route.put('/change-password',Auth,validate({ body: changePasswordSchema }),updatePassword)
 route.delete('/delete-account',Auth,deleteAccount)
 
 // the account page reads everything from here sir
 route.get('/profile',Auth,getProfile)
-route.patch('/profile/notifications',Auth,updateNotificationPrefs)
+route.patch('/profile/notifications',Auth,validate({ body: notificationPrefsSchema }),updateNotificationPrefs)
 route.patch('/profile/onboarding',Auth,completeOnboarding)
-route.patch('/profile/first-name',Auth,updateFirstName)
-route.patch('/profile/last-name',Auth,updateLastName)
-route.patch('/profile/email',Auth,updateEmail)
-route.patch('/profile/number',Auth,updateNumber)
+route.patch('/profile/first-name',Auth,validate({ body: updateFirstNameSchema }),updateFirstName)
+route.patch('/profile/last-name',Auth,validate({ body: updateLastNameSchema }),updateLastName)
+route.patch('/profile/email',Auth,validate({ body: updateEmailSchema }),updateEmail)
+route.patch('/profile/number',Auth,validate({ body: updateNumberSchema }),updateNumber)
 
 // GDPR-style self-service data dump sir, separate from delete-account
 route.get('/profile/export',Auth,exportMyData)
