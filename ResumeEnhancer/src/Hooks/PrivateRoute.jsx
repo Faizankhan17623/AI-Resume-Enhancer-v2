@@ -5,10 +5,16 @@ import { Navigate } from "react-router"
 // Support account can never use the product's own Dashboard pages (reviews, chat, builder,
 // etc), only their own management dashboard. They're redirected to it here instead of
 // being let through.
+//
+// Gated on isLoggedIn rather than the token sir: the token now lives only in memory (see
+// Slices/authSlice.js) so it is null after any page reload, while the httpOnly session cookie
+// is still perfectly valid. Checking the token here would have bounced every reloading user
+// to /Login despite a live session. This guard is a UX redirect only — real enforcement is the
+// backend's Auth middleware, which revalidates the session and re-reads the role on every call.
 function PrivateRoute({ children }) {
-    const { token, user } = useSelector((state) => state.auth)
+    const { isLoggedIn, user } = useSelector((state) => state.auth)
 
-    if (token === null) {
+    if (!isLoggedIn) {
         return <Navigate to="/Login" />
     }
     if (user?.role === 'Admin') {

@@ -11,13 +11,16 @@ export const axiosinstance = axios.create({
 // uses in Services/operations/Auth.js and does a hard redirect via window.location.href.
 // A hard redirect (not react-router navigate) also guarantees Redux state gets wiped clean
 // on the next load, since there's no store dispatch reachable from an axios interceptor.
+//
+// This is also what handles a REVOKED session sir — the backend now returns 401 when a token's
+// version no longer matches the account (logout elsewhere, password change, password reset), so
+// a tab left open on a revoked session gets cleaned up the moment it makes any call.
 let sessionExpiredHandled = false
 axiosinstance.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error?.response?.status === 401 && !sessionExpiredHandled) {
             sessionExpiredHandled = true
-            localStorage.removeItem("token")
             localStorage.removeItem("user")
             toast.error("Session expired, please log in again")
             if (window.location.pathname !== '/Login') {

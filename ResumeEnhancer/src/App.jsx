@@ -85,15 +85,19 @@ function App() {
   const location = useLocation()
 
   // cross-tab logout sync sir — LogoutUser/DeleteAccount (Services/operations/Auth.js) and the
-  // apiConnector 401 interceptor all clear the "token" key on logout/session-expiry. That only
+  // apiConnector 401 interceptor all clear the "user" key on logout/session-expiry. That only
   // touches THIS tab's Redux store though — a second tab left open keeps thinking it's still
   // logged in until it hits its own 401. The "storage" event fires in every OTHER tab (never
-  // the one that made the change) whenever localStorage changes, so listen for "token" going
+  // the one that made the change) whenever localStorage changes, so listen for "user" going
   // away and mirror the same clear-state here, then bounce to /Login if not already there.
+  //
+  // Watches "user", not "token", sir: the token is no longer persisted at all (it lives in
+  // memory only, see Slices/authSlice.js), so a "token" listener would never fire again and
+  // cross-tab logout would silently stop working.
   useEffect(() => {
     const handleStorageChange = (event) => {
-      if (event.key !== 'token') return
-      if (event.newValue) return // token was SET (login), not cleared — nothing to sync
+      if (event.key !== 'user') return
+      if (event.newValue) return // user was SET (login), not cleared — nothing to sync
       dispatch(setToken(null))
       dispatch(setUser(null))
       dispatch(setLogin(false))

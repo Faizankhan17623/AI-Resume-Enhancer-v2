@@ -13,6 +13,8 @@ const { logSystemAction } = require('../utils/AdminLog.js')
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
 const { otpEmail } = require('../Templates/OTP.js')
+const { issueSession, publicUser, buildClearAuthCookie } = require('../utils/session.js')
+const logger = require('../utils/logger.js')
 // ============================================================
 // CREATE USER (Register)
 // ============================================================
@@ -235,27 +237,20 @@ exports.loginUser = async (req, res) => {
             accountRecovered = true
         }
 
-        User.id =existingUser._id
-
         const {_id,firstName,lastName} = existingUser
 
-        const JwtCreation = await jwt.sign({
-            id: _id, firstName: firstName, lastName: lastName
-        },process.env.JWT_PRIVATE_KEY,{  expiresIn: 7 * 24 * 60 * 60 })
+        // `User.id = existingUser._id` used to be assigned here sir — that set a property on the
+        // mongoose MODEL itself (process-global, shared by every concurrent request) and then read
+        // it back for the update. Under any concurrency two simultaneous logins could clobber each
+        // other's id and write one user's token onto another user's record. Removed entirely; the
+        // local _id is used directly.
+        //
+        // Token minting and the cookie now come from utils/session.js sir — one definition shared
+        // with the four OAuth flows, and it sets the cross-site cookie attributes that actually
+        // let the cookie reach a browser on a different origin.
+        const JwtCreation = issueSession(res, existingUser)
 
-        const Updation = await User.findByIdAndUpdate(User.id,{token:JwtCreation,Verified:true})
-
-        const SetCookie = cookie.stringifySetCookie({
-            name: 'token',
-            value: JwtCreation,
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60,
-            path: '/',
-        })
-
-        res.setHeader('Set-Cookie', SetCookie)
+        await User.findByIdAndUpdate(_id, { token: JwtCreation, Verified: true })
 
         // fire-and-forget sir — same pattern as logAi/logAction, a logging failure must never block a real login
         LoginLog.create({
@@ -267,27 +262,54 @@ exports.loginUser = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Logged in successfully',
-            // token + basic profile in the body too sir — the frontend stores these in redux/localStorage
+            // the httpOnly cookie set above is the REAL credential sir. The token is still
+            // returned in the body as an Authorization-header fallback for browsers that block
+            // third-party cookies outright — but the frontend no longer persists it to
+            // localStorage, so it lives only in memory for the tab's lifetime.
             token: JwtCreation,
             accountRecovered,
-            user: {
-                id: _id,
-                firstName,
-                lastName,
-                email: existingUser.email,
-                role: existingUser.role,
-                SubType: existingUser.SubType,
-            }
+            user: publicUser(existingUser)
         });
 
     } catch (error) {
-        console.log(error.message);
+        logger.error('login failed', { err: error });
         return res.status(500).json({
             success: false,
             message: 'Failed to login',
         });
     }
 };
+
+// ============================================================
+// LOGOUT
+// ============================================================
+// There was previously NO logout endpoint at all sir — the frontend simply dropped its local
+// copy of the token, while the token itself stayed valid server-side for its remaining 7 days.
+// Anyone who had captured it (shared machine, proxy log, XSS) kept full access after the user
+// believed they had signed out.
+//
+// This bumps tokenVersion, which invalidates every token ever issued to this account, and
+// clears the cookie with attributes matching how it was set so the browser actually drops it.
+exports.logoutUser = async (req, res) => {
+    try {
+        const userId = req.User.id
+
+        await User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 }, token: null })
+
+        res.setHeader('Set-Cookie', buildClearAuthCookie())
+
+        return res.status(200).json({
+            success: true,
+            message: 'Logged out successfully',
+        })
+    } catch (error) {
+        logger.error('logout failed', { err: error, userId: req?.User?.id })
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to log out',
+        })
+    }
+}
 
 // Send Otp 
 exports.SendOtp = async(req,res)=>{
@@ -536,18 +558,32 @@ exports.updatePassword = async (req, res) => {
         const saltRounds = 10;
         const hashing = await bcrypt.hash(newPassword, saltRounds);
 
-        // save the new hashed password to the db sir
-        await User.findByIdAndUpdate(userId, {
-            password: hashing,
-            confirmpassword: hashing,
-        });
+        // save the new hashed password and revoke every existing session sir — changing a
+        // password must log out every OTHER device, which is the whole point of changing it
+        // when you suspect it's compromised
+        const updated = await User.findByIdAndUpdate(
+            userId,
+            {
+                password: hashing,
+                confirmpassword: hashing,
+                $inc: { tokenVersion: 1 },
+            },
+            { returnDocument: 'after' }
+        );
+
+        // ...but keep THIS device signed in sir — the user is right here and just proved they
+        // know the old password. Re-issue a token carrying the new version so their current
+        // session survives while all the others die.
+        const token = issueSession(res, updated)
+        await User.findByIdAndUpdate(userId, { token })
 
         return res.status(200).json({
             success: true,
             message: 'Password updated successfully',
+            token,
         });
     } catch (error) {
-        console.log(error.message);
+        logger.error('password update failed', { err: error, userId: req?.User?.id });
         return res.status(500).json({
             success: false,
             message: 'Failed to update password',
@@ -800,19 +836,28 @@ exports.resetPassword = async (req, res) => {
     }
 
       const encryptedPassword = await bcrypt.hash(newPassword, 10)
-    // clear resetPasswordToken (not `token` sir — that field is the live session JWT and is
-    // untouched by a password reset) so this one-time link can't be replayed
+    // clear resetPasswordToken so this one-time link can't be replayed, and bump tokenVersion
+    // sir — a password reset is the one action that MUST kill every existing session. The whole
+    // reason someone resets a password is that it may be compromised; leaving already-issued
+    // JWTs valid for their remaining 7 days meant an attacker who had a token kept full access
+    // straight through the reset. Bumping the version invalidates all of them at once.
     await User.findOneAndUpdate(
       { resetPasswordToken: token },
-      { password: encryptedPassword, resetPasswordToken: null, resetPasswordExpires: null },
+      {
+        password: encryptedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        token: null,
+        $inc: { tokenVersion: 1 },
+      },
       { returnDocument: 'after' }
     )
         return res.status(200).json({
             success: true,
-            message: 'Password reset successfully',
+            message: 'Password reset successfully, please log in again',
         });
     } catch (error) {
-        console.log(error.message);
+        logger.error('password reset failed', { err: error });
         return res.status(500).json({
             success: false,
             message: 'Failed to reset password',

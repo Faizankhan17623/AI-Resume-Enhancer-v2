@@ -5,9 +5,9 @@ import { Navigate } from 'react-router'
 // hitting an /Admin/* URL gets sent to their real dashboard at /Support, not let through
 // with some buttons hidden. The backend re-checks with isAdmin on every call regardless.
 function AdminRoute({ children }) {
-    const { token, user } = useSelector((state) => state.auth)
+    const { isLoggedIn, user } = useSelector((state) => state.auth)
 
-    if (token === null) {
+    if (!isLoggedIn) {
         return <Navigate to="/Login" />
     }
     if (user?.role === 'Support') {

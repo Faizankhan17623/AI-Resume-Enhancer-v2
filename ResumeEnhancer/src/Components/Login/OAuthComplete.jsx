@@ -46,7 +46,9 @@ const OAuthComplete = () => {
         dispatch(setToken(token))
         dispatch(setUser(user))
         dispatch(setLogin(true))
-        localStorage.setItem('token', JSON.stringify(token))
+        // token stays in memory only sir — same rule as the password login (see
+        // Services/operations/Auth.js). The httpOnly cookie set by the exchange response is
+        // the real credential; only the non-sensitive user object is cached for paint-on-reload.
         localStorage.setItem('user', JSON.stringify(user))
 
         toast.success(`Welcome ${user?.firstName || ''}`)

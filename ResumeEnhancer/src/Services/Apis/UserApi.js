@@ -12,6 +12,12 @@ export const Login = {
     login: BASE_URL + "/Login"
 }
 
+// ends the session SERVER-side sir — bumps tokenVersion so the token dies everywhere,
+// rather than the client merely forgetting a token that stays valid for another 7 days
+export const Logout = {
+    logout: BASE_URL + "/Logout"
+}
+
 export const OAuth = {
     // full-page redirects sir — each button just navigates the browser here
     google: BASE_URL + "/auth/google",

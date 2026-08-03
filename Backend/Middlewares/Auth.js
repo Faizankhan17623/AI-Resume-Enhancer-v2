@@ -1,14 +1,24 @@
 
 const jwt = require('jsonwebtoken')
 const User = require('../Models/User')
+const logger = require('../utils/logger')
+
+// the ONE way a request presents its session sir — the httpOnly cookie first, then the
+// Authorization header for clients that can't rely on cross-site cookies.
+//
+// req.body.token was deliberately REMOVED as a source: accepting credentials from a JSON body
+// makes the token land in request logs and in any handler that echoes its own body back, and it
+// widens CSRF exposure because a form post can carry a body but not a custom header. Nothing in
+// the frontend ever sent it that way.
+const extractToken = (req) =>
+    req.cookies?.token ||
+    req.header('Authorization')?.replace('Bearer ', '')
+
+module.exports.extractToken = extractToken
 
 exports.Auth = async (req, res, next) => {
     try {
-        
-        const token =
-            req.cookies?.token ||
-            req.body?.token ||
-            req.header('Authorization')?.replace('Bearer ', '')
+        const token = extractToken(req)
 
         // not case sir — no token was sent
         if (!token) {
@@ -31,12 +41,23 @@ exports.Auth = async (req, res, next) => {
 
         // load the live account state sir — role and ban status must be FRESH from the DB,
         // never trusted from a token that could be days old
-        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer')
+        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer tokenVersion')
 
         if (!user) {
             return res.status(401).json({
                 success: false,
                 message: 'Account not found, please log in again',
+            })
+        }
+
+        // revocation check sir — a JWT can't be un-issued, so every token carries the
+        // tokenVersion it was minted with and we compare it against the live one. Logout, a
+        // password change and account deletion all bump the counter, which instantly kills every
+        // token issued before that point (including one an attacker already stole).
+        if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Your session has ended, please log in again',
             })
         }
 
@@ -67,7 +88,8 @@ exports.Auth = async (req, res, next) => {
         // hand off to the next middleware / controller sir
         next()
     } catch (error) {
-        console.log(error.message)
+        // expected for an expired/tampered token sir — debug, not error, so real problems stand out
+        logger.debug('authentication failed', { err: error })
         return res.status(401).json({
             success: false,
             message: 'Failed to authenticate',

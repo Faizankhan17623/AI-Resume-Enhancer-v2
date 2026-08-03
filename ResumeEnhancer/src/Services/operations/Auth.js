@@ -2,11 +2,12 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData } from '../../Slices/authSlice.js'
-import { CreateUser, SendOtp, Login, Password, Account } from '../Apis/UserApi.js'
+import { CreateUser, SendOtp, Login, Logout, Password, Account } from '../Apis/UserApi.js'
 
 const { createuser } = CreateUser
 const { createotp } = SendOtp
 const { login } = Login
+const { logout } = Logout
 const { forgotpassword, resetpassword } = Password
 const { deleteaccount } = Account
 
@@ -79,7 +80,10 @@ export function LoginUser(email, password, navigate) {
             dispatch(setUser(user))
             dispatch(setLogin(true))
 
-            localStorage.setItem("token", JSON.stringify(token))
+            // the token is NOT persisted sir — it stays in redux (memory) only, because the
+            // httpOnly session cookie set by this same response is the real credential and a
+            // localStorage copy would hand it to any XSS. Only the non-sensitive user object is
+            // cached, purely so a reload can paint the dashboard without a flash.
             localStorage.setItem("user", JSON.stringify(user))
 
             // longer + distinct toast sir — this is a meaningfully different event from a normal
@@ -153,11 +157,22 @@ export function ResetPassword(token, newPassword, confirmNewPassword, navigate) 
 }
 
 export function LogoutUser(navigate) {
-    return (dispatch) => {
+    return async (dispatch) => {
+        // tell the SERVER to end the session sir. Clearing local state alone used to leave the
+        // token valid for its full remaining 7 days, so anyone holding a copy stayed logged in
+        // after the user thought they'd signed out. This bumps tokenVersion server-side, which
+        // invalidates it everywhere, and clears the httpOnly cookie the browser can't touch.
+        try {
+            await apiConnector("POST", logout)
+        } catch (error) {
+            // never trap the user in a logged-in UI because the call failed sir — clear locally
+            // regardless. The session cookie expires on its own and a 401 will clean up the rest.
+            logApiError("Error logging out", error)
+        }
+
         dispatch(setToken(null))
         dispatch(setUser(null))
         dispatch(setLogin(false))
-        localStorage.removeItem("token")
         localStorage.removeItem("user")
         toast.success("Logged out")
         if (navigate) navigate("/")
@@ -183,7 +198,6 @@ export function DeleteAccount(token, navigate) {
             dispatch(setToken(null))
             dispatch(setUser(null))
             dispatch(setLogin(false))
-            localStorage.removeItem("token")
             localStorage.removeItem("user")
             if (navigate) navigate("/")
         } catch (error) {

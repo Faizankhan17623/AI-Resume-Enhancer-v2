@@ -36,6 +36,16 @@ const UserCreation = new mongoose.Schema(
         token: {
             type: String,
         },
+        // session revocation counter sir. A JWT is self-contained: once signed it stays valid
+        // for its full 7 days and NOTHING could previously invalidate it — a stolen token kept
+        // working after a password reset, after a logout, and after an admin banned the account.
+        // Every issued token carries the tv it was minted with; bumping this number instantly
+        // invalidates every token issued before the bump (see Middlewares/Auth.js).
+        // Bumped on: logout, password reset/change, and account deletion.
+        tokenVersion: {
+            type: Number,
+            default: 0
+        },
         resetPasswordToken: {
             type: String,
             index: true

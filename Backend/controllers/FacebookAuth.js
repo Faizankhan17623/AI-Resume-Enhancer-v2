@@ -1,229 +1,75 @@
-const jwt = require('jsonwebtoken')
-const cookie = require('cookie')
-const crypto = require('crypto')
-const bcrypt = require('bcrypt')
+// Facebook OAuth sir — see services/oauth.js for all the shared flow logic.
+// Facebook's Graph API takes the access token as a query parameter rather than a bearer header,
+// and returns first_name/last_name directly.
 
-const User = require('../Models/User')
-const LoginLog = require('../Models/LoginLog')
-const { createExchangeCode, redeemExchangeCode } = require('../utils/oauthExchange')
-
-// every OAuth-created account gets this same placeholder password hashed in sir — it's never
-// shown or usable for a real password login (existingUser.password truthy just routes them to
-// "use Continue with Google/Facebook/etc instead" in loginUser), it only exists to satisfy the
-// 8-char-minimum password field the schema expects a fully-populated account to carry
-const OAUTH_DEFAULT_PASSWORD = 'Oauth123'
+const { createOAuthController } = require('../services/oauth')
+const logger = require('../utils/logger')
 
 const FACEBOOK_AUTH_URL = 'https://www.facebook.com/v21.0/dialog/oauth'
 const FACEBOOK_TOKEN_URL = 'https://graph.facebook.com/v21.0/oauth/access_token'
 const FACEBOOK_USERINFO_URL = 'https://graph.facebook.com/me'
 
-// short-lived, single-use exchange codes sir — same pattern as GoogleAuth.js, the real JWT
-// never touches the redirect URL, only this random opaque code does. Backed by Mongo
-// (utils/oauthExchange.js), not an in-memory Map, so it works across multiple Render instances.
+const facebook = createOAuthController({
+    name: 'facebook',
+    label: 'Facebook',
+    stateCookie: 'fb_oauth_state',
 
-const frontendOrigin = () => process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
-    : 'http://localhost:5173'
-
-// GET /auth/facebook
-exports.facebookLogin = (req, res) => {
-    const state = crypto.randomBytes(16).toString('hex')
-
-    res.setHeader('Set-Cookie', cookie.stringifySetCookie({
-        name: 'fb_oauth_state',
-        value: state,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 10 * 60,
-        path: '/',
-    }))
-
-    const params = new URLSearchParams({
+    authUrl: (state) => `${FACEBOOK_AUTH_URL}?${new URLSearchParams({
         client_id: process.env.FACEBOOK_CLIENT_ID,
         redirect_uri: process.env.FACEBOOK_CALLBACK_URL,
         response_type: 'code',
         scope: 'email public_profile',
         state,
-    })
+    })}`,
 
-    return res.redirect(`${FACEBOOK_AUTH_URL}?${params.toString()}`)
-}
-
-// GET /auth/facebook/callback
-exports.facebookCallback = async (req, res) => {
-    const failRedirect = (message) => res.redirect(`${frontendOrigin()}/Login?oauthError=${encodeURIComponent(message)}`)
-
-    try {
-        const { code, state } = req.query
-        const cookieState = req.cookies?.fb_oauth_state
-
-        if (!code || !state || !cookieState || state !== cookieState) {
-            return failRedirect('Facebook sign-in could not be verified, please try again')
-        }
-
-        const tokenParams = new URLSearchParams({
+    getAccessToken: async (code) => {
+        const params = new URLSearchParams({
             code,
             client_id: process.env.FACEBOOK_CLIENT_ID,
             client_secret: process.env.FACEBOOK_CLIENT_SECRET,
             redirect_uri: process.env.FACEBOOK_CALLBACK_URL,
         })
 
-        const tokenRes = await fetch(`${FACEBOOK_TOKEN_URL}?${tokenParams.toString()}`)
+        const res = await fetch(`${FACEBOOK_TOKEN_URL}?${params}`)
 
-        if (!tokenRes.ok) {
-            console.log('Facebook token exchange failed:', await tokenRes.text())
-            return failRedirect('Facebook sign-in failed, please try again')
+        if (!res.ok) {
+            logger.warn('Facebook token exchange failed', { body: await res.text() })
+            return null
         }
 
-        const { access_token } = await tokenRes.json()
+        const { access_token } = await res.json()
+        return access_token
+    },
 
-        const profileParams = new URLSearchParams({
+    getProfile: async (accessToken) => {
+        const params = new URLSearchParams({
             fields: 'id,first_name,last_name,email',
-            access_token,
+            access_token: accessToken,
         })
-        const profileRes = await fetch(`${FACEBOOK_USERINFO_URL}?${profileParams.toString()}`)
 
-        if (!profileRes.ok) {
-            console.log('Facebook userinfo fetch failed:', await profileRes.text())
-            return failRedirect('Facebook sign-in failed, please try again')
+        const res = await fetch(`${FACEBOOK_USERINFO_URL}?${params}`)
+
+        if (!res.ok) {
+            logger.warn('Facebook userinfo fetch failed', { body: await res.text() })
+            return null
         }
 
-        const profile = await profileRes.json()
-        // profile: { id, first_name, last_name, email? }
+        const profile = await res.json()
 
+        // email is optional on Facebook sir — the user can decline that permission
         if (!profile.email) {
-            return failRedirect('Please grant email access to continue with Facebook sign-in')
+            return { reason: 'Please grant email access to continue with Facebook sign-in' }
         }
 
-        const email = profile.email.toLowerCase().trim()
-
-        // account linking sir — identical logic to GoogleAuth.js: match by providerId first,
-        // then fall back to matching by email and upgrading a 'local' account
-        let user = await User.findOne({ provider: 'facebook', providerId: profile.id })
-
-        if (!user) {
-            user = await User.findOne({ email })
-
-            if (user) {
-                if (user.provider === 'local') {
-                    // keep provider as 'local' sir — this account still logs in with its
-                    // original password too, we're just also letting Facebook sign-in resolve
-                    // to it going forward (matched by providerId on the next Facebook login)
-                    user.providerId = profile.id
-                    await user.save()
-                } else {
-                    // the email matches an account that already belongs to a DIFFERENT
-                    // provider (or this same provider under a different providerId) sir — do
-                    // NOT silently log them in, that's an account-takeover vector (anyone who
-                    // can get a provider to report a victim's email as their own OAuth email
-                    // would otherwise walk straight into the victim's account, no password required)
-                    const providerLabel = user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
-                    return failRedirect(`An account with this email already exists using ${providerLabel} sign-in. Please log in with ${providerLabel} instead, or contact support to link accounts.`)
-                }
-            } else {
-                let firstName = (profile.first_name || 'Facebook').slice(0, 50)
-                const lastName = (profile.last_name || 'User').slice(0, 50)
-
-                const collision = await User.findOne({ firstName })
-                if (collision) {
-                    firstName = `${firstName}${crypto.randomBytes(2).toString('hex')}`
-                }
-
-                const defaultPasswordHash = await bcrypt.hash(OAUTH_DEFAULT_PASSWORD, 10)
-
-                user = await User.create({
-                    firstName,
-                    lastName,
-                    email,
-                    password: defaultPasswordHash,
-                    confirmpassword: defaultPasswordHash,
-                    provider: 'facebook',
-                    providerId: profile.id,
-                    Verified: true,
-                })
-            }
+        return {
+            providerId: profile.id,
+            email: profile.email,
+            firstName: profile.first_name || 'Facebook',
+            lastName: profile.last_name || 'User',
         }
+    },
+})
 
-        if (user.isBanned) {
-            return failRedirect(user.banReason ? `Your account has been suspended: ${user.banReason}` : 'Your account has been suspended')
-        }
-
-        if (user.Buffer) {
-            const [dd, mm, yy] = (user.BufferTiming || '').split('/')
-            const deletionDate = new Date(2000 + Number(yy), Number(mm) - 1, Number(dd))
-            if (Date.now() > deletionDate.getTime()) {
-                return failRedirect('This account was permanently deleted, please sign up again')
-            }
-            user.Buffer = false
-            user.BufferTiming = null
-        }
-
-        user.Verified = true
-        const jwtToken = jwt.sign(
-            { id: user._id, firstName: user.firstName, lastName: user.lastName },
-            process.env.JWT_PRIVATE_KEY,
-            { expiresIn: 7 * 24 * 60 * 60 }
-        )
-        user.token = jwtToken
-        await user.save()
-
-        res.setHeader('Set-Cookie', [
-            cookie.stringifySetCookie({ name: 'fb_oauth_state', value: '', maxAge: 0, path: '/' }),
-            cookie.stringifySetCookie({
-                name: 'token',
-                value: jwtToken,
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 7 * 24 * 60 * 60,
-                path: '/',
-            }),
-        ])
-
-        LoginLog.create({
-            user: user._id,
-            ip: req.ip,
-            userAgent: req.headers['user-agent'],
-        }).catch((err) => console.log('login log failed:', err.message))
-
-        const exchangeCode = await createExchangeCode({
-            token: jwtToken,
-            user: {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role,
-                SubType: user.SubType,
-            },
-        })
-
-        return res.redirect(`${frontendOrigin()}/oauth/complete?code=${exchangeCode}&provider=facebook`)
-    } catch (error) {
-        console.log(error)
-        console.log(error.message)
-        return failRedirect('Something went wrong during Facebook sign-in')
-    }
-}
-
-// POST /auth/facebook/exchange
-exports.exchangeFacebookCode = async (req, res) => {
-    const { code } = req.body
-
-    if (!code || typeof code !== 'string') {
-        return res.status(400).json({ success: false, message: 'Missing exchange code' })
-    }
-
-    const payload = await redeemExchangeCode(code)
-
-    if (!payload) {
-        return res.status(400).json({ success: false, message: 'This sign-in link has expired, please try again' })
-    }
-
-    return res.status(200).json({
-        success: true,
-        token: payload.token,
-        user: payload.user,
-    })
-}
+exports.facebookLogin = facebook.login
+exports.facebookCallback = facebook.callback
+exports.exchangeFacebookCode = facebook.exchange

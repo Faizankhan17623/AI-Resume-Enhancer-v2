@@ -6,6 +6,7 @@ const { authLimiter, otpLimiter, aiLimiter } = require('../Middlewares/RateLimit
 const {
     createUser,
     loginUser,
+    logoutUser,
     SendOtp,
     getProfile,
     updateNotificationPrefs,
@@ -34,6 +35,9 @@ route.post('/response/from-resume/:resumeId',aiLimiter,Auth,isUser,CallingFromSa
 // authLimiter stops brute-force sir, otpLimiter stops email spam
 route.post('/Createuser',authLimiter,createUser)
 route.post('/Login',authLimiter,loginUser)
+// revokes the session server-side sir — bumps tokenVersion so the token dies everywhere,
+// instead of the frontend merely forgetting it while it stays valid for another 7 days
+route.post('/Logout',Auth,logoutUser)
 route.post('/Send-otp',otpLimiter,SendOtp)
 
 // full-page redirect flow sir, not XHR — authLimiter still applies so the callback can't be hammered

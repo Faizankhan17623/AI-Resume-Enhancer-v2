@@ -4,9 +4,9 @@ import { Navigate } from 'react-router'
 // logged-out-only pages (Login/Signup/etc) sir — an already-logged-in user gets bounced
 // straight to their OWN dashboard, same role split as everywhere else
 function OpenRoute({ children }) {
-    const { token, user } = useSelector((state) => state.auth)
+    const { isLoggedIn, user } = useSelector((state) => state.auth)
 
-    if (token === null) {
+    if (!isLoggedIn) {
         return children
     }
 
