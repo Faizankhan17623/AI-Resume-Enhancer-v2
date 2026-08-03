@@ -83,8 +83,9 @@ export function LoginUser(email, password, navigate) {
             // the token is NOT persisted sir — it stays in redux (memory) only, because the
             // httpOnly session cookie set by this same response is the real credential and a
             // localStorage copy would hand it to any XSS. Only the non-sensitive user object is
-            // cached, purely so a reload can paint the dashboard without a flash.
-            localStorage.setItem("user", JSON.stringify(user))
+            // cached, purely so a reload can paint the dashboard without a flash - and that cache is
+            // written by the setUser reducer itself (Slices/authSlice.js), so redux and
+            // localStorage cannot drift apart.
 
             // longer + distinct toast sir — this is a meaningfully different event from a normal
             // login and the user should notice their deletion got undone
@@ -172,8 +173,7 @@ export function LogoutUser(navigate) {
 
         dispatch(setToken(null))
         dispatch(setUser(null))
-        dispatch(setLogin(false))
-        localStorage.removeItem("user")
+        dispatch(setLogin(false))
         toast.success("Logged out")
         if (navigate) navigate("/")
     }
@@ -197,8 +197,7 @@ export function DeleteAccount(token, navigate) {
             toast.success("Account scheduled for deletion — check your email for details")
             dispatch(setToken(null))
             dispatch(setUser(null))
-            dispatch(setLogin(false))
-            localStorage.removeItem("user")
+            dispatch(setLogin(false))
             if (navigate) navigate("/")
         } catch (error) {
             logApiError("Error deleting the account", error)

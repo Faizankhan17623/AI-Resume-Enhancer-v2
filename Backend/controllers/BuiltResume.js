@@ -11,7 +11,7 @@ const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../util
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
 const { getModelForPlan } = require('../utils/AiModel')
-const { runReview } = require('./AI')
+const { runReview } = require('../services/reviewService')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -469,9 +469,12 @@ exports.removeBuiltResumePhoto = async (req, res) => {
 }
 
 // POST /built-resumes/:resumeId/review — score a built resume against a JD sir, same AI Review
-// pipeline as an uploaded PDF (runReview, exported from controllers/AI.js), just fed structured
-// data flattened to text instead of a parsed PDF. No formattingCheck — a built resume from one
-// of our own templates never has the multi-column/missing-text-layer problems that scan catches.
+// pipeline as an uploaded PDF (services/reviewService.js), just fed structured data flattened to
+// text instead of a parsed PDF. No formattingCheck — a built resume from one of our own templates
+// never has the multi-column/missing-text-layer problems that scan catches.
+//
+// This calls the SERVICE, not controllers/AI.js. It used to hand its own req/res to another
+// controller, which meant this endpoint could not shape its own response.
 exports.reviewBuiltResume = async (req, res) => {
     try {
         const id = req?.User.id
@@ -493,7 +496,23 @@ exports.reviewBuiltResume = async (req, res) => {
         }
 
         const resumeText = builtResumeToText(resume)
-        return await runReview(req, res, { userId: id, resumeText, formattingCheck: null })
+        const result = await runReview({ userId: id, resumeText, jd: req.body.jd, formattingCheck: null })
+
+        if (!result.ok) {
+            return res.status(result.status).json({
+                success: false,
+                message: result.message,
+                ...(result.note !== undefined ? { note: result.note } : {}),
+                ...(result.disabledUntil !== undefined ? { disabledUntil: result.disabledUntil } : {}),
+            })
+        }
+
+        return res.status(result.status).json({
+            success: true,
+            reviewId: result.reviewId,
+            review: result.review,
+            formattingCheck: result.formattingCheck,
+        })
     } catch (error) {
         (req.log || logger).error('review built resume failed', { err: error })
         return res.status(500).json({

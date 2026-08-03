@@ -92,10 +92,10 @@ export function BuyPlan(plan, token, user, navigate) {
 
                         toast.success(verifyResponse.data.message)
 
-                        // keep the navbar plan badge fresh sir
-                        const updatedUser = { ...user, SubType: verifyResponse.data.plan }
-                        dispatch(setUser(updatedUser))
-                        localStorage.setItem("user", JSON.stringify(updatedUser))
+                        // keep the navbar plan badge fresh sir — the reducer persists the cache
+                        // itself now (see Slices/authSlice.js), so there is no separate
+                        // localStorage write here that could fall out of step with redux
+                        dispatch(setUser({ ...user, SubType: verifyResponse.data.plan }))
 
                         if (navigate) navigate("/Dashboard")
                     } catch (error) {

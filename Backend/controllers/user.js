@@ -1087,7 +1087,11 @@ exports.getProfile = async (req, res) => {
         // a real plan, so don't hand back a fake "Basic" here, null makes that explicit
         return res.status(200).json({
             success: true,
-            user,
+            // SubType overridden with the EFFECTIVE plan sir. The stored column stays 'Pro' until
+            // the reconcile job demotes an expired subscriber (utils/SubscriptionReconcileCron.js),
+            // and the frontend caches this object and renders user.SubType as the current plan —
+            // so returning the raw column told lapsed users they were still on Pro.
+            user: { ...user.toObject(), SubType: plan.key },
             plan: user.role === 'User' ? {
                 key: plan.key,
                 name: plan.name,

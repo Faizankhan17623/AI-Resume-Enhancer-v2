@@ -2,6 +2,7 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted, setProfileUserFields } from '../../Slices/profileSlice.js'
+import { setUser } from '../../Slices/authSlice.js'
 import { Profile, Password } from '../Apis/UserApi.js'
 
 const {
@@ -24,6 +25,21 @@ export function GetProfile(token) {
             }
 
             dispatch(setProfile(response.data))
+
+            // Re-seat the cached auth user from the SERVER's answer sir.
+            //
+            // localStorage's copy of `user` is written at login and then only ever mutated
+            // locally (Payment.js patched SubType into it after a purchase). Nothing refreshed
+            // it from the server, so it drifted: a subscription that expired, was changed by an
+            // admin, or was bought in another tab left the navbar badge and every `user.SubType`
+            // read showing a plan the user no longer had.
+            //
+            // The backend returns the EFFECTIVE plan here (see Backend/utils/session.js and the
+            // reconcile job), so this is the authoritative value. Merging rather than replacing
+            // keeps any auth-only fields that /profile doesn't return.
+            if (response.data.user) {
+                dispatch(setUser(response.data.user))
+            }
         } catch (error) {
             logApiError("Error fetching the profile", error)
         } finally {

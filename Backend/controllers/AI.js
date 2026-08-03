@@ -1,204 +1,40 @@
 
 const { PDFParse } = require('pdf-parse');
-const Grok = require('groq-sdk')
 
-const User = require('../Models/User');
-const Review = require('../Models/Review');
 const Resume = require('../Models/Resume');
-const { consumeCredit, refundCredit } = require('../utils/Plans');
-const { buildReviewSystemPrompt } = require('../utils/Prompts');
-const { logAi } = require('../utils/AdminLog');
-const { syncKeywordBankFromReview } = require('../utils/KeywordBank');
-const { updateStreak } = require('../utils/Streak');
-const { recordFeatureUse } = require('../utils/FeatureUsage');
+const { runReview } = require('../services/reviewService');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
-const { getModelForPlan } = require('../utils/AiModel');
-const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
 const logger = require('../utils/logger');
 
-// timeout + maxRetries pinned explicitly sir — the SDK default retries 429/5xx with backoff
-// and a long default timeout, so a rate-limited or stalled call could silently eat minutes
-// before ever reaching our own error handling below. Fail fast instead: one retry, 30s cap.
-const grok = new Grok({apiKey:process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1})
+// Thin controllers sir — parse the request, call the service, shape the response.
+// The review logic itself lives in services/reviewService.js, so it can be reused and tested
+// without an HTTP layer. See that file for why the old (req, res) signature was a problem.
 
-// shared core sir — both a fresh PDF upload and a re-score from a saved resume land here once
-// the resume text is in hand. Spends one credit, calls Groq, saves the Review, returns the same
-// response shape either way.
-const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
-    if (!(await isFeatureEnabled('feature.review'))) {
-        const details = await getFeatureFlagDetails('feature.review')
-        return res.status(503).json({
+// one place that turns a service result into a response sir, so both endpoints answer identically
+const send = (res, result) => {
+    if (!result.ok) {
+        return res.status(result.status).json({
             success: false,
-            message: 'This feature is temporarily disabled',
-            note: details.note,
-            disabledUntil: details.disabledUntil,
+            message: result.message,
+            ...(result.note !== undefined ? { note: result.note } : {}),
+            ...(result.disabledUntil !== undefined ? { disabledUntil: result.disabledUntil } : {}),
         })
     }
 
-    const jd = req.body.jd
-
-    // not case sir
-    if (!jd || typeof jd !== 'string' || !jd.trim()) {
-        return res.status(400).json({
-            success: false,
-            message: 'Job Description and Resume are required',
-        });
-    }
-
-    const spend = await consumeCredit(userId)
-
-    if (!spend.ok) {
-        return res.status(403).json({
-            success: false,
-            message: spend.message
-        })
-    }
-
-    // plan-aware system prompt sir — Basic gets the core review, Pro adds keyword/section analysis, ProMax gets the full deep report
-    const Messages = [
-        {
-            role: "system",
-            content: buildReviewSystemPrompt(spend.plan)
-        },
-        {
-            role: "user",
-            content: `Analyze the following.\n\n=== JOB DESCRIPTION ===\n${jd}\n\n=== RESUME ===\n${resumeText}\n\nReturn only the JSON review.`
-        }
-    ]
-
-    // timed + logged sir — every call lands in AiLog for the admin cost monitor
-    // model is chosen per the user's plan sir — see utils/AiModel.js for the Basic/Pro/ProMax map
-    const model = getModelForPlan(spend.plan)
-
-    // occasionally the model itself emits malformed JSON (a stray brace, mismatched nesting) on
-    // the larger prompts (seen on ProMax's shape during testing) — Groq's own response_format
-    // validator catches this and rejects the call outright with a 400 json_validate_failed,
-    // BEFORE we ever see a choices[].message.content to parse ourselves. One silent retry here
-    // (same input, same temperature 0) resolves it most of the time since it's model
-    // non-determinism, not a real error — cheaper than making the user click "try again" by hand.
-    const isJsonValidationFailure = (err) => err?.error?.error?.code === 'json_validate_failed'
-
-    const callGroq = async () => {
-        const t0 = Date.now()
-        try {
-            const result = await grok.chat.completions.create({
-                messages: Messages,
-                "model": model,
-                "temperature": 0,
-                "response_format": { type: "json_object" },
-            })
-            logAi({ user: userId, type: 'review', plan: spend.plan, model, usage: result.usage, latencyMs: Date.now() - t0, success: true })
-            return result
-        } catch (aiErr) {
-            logAi({ user: userId, type: 'review', plan: spend.plan, model, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
-            throw aiErr
-        }
-    }
-
-    let Invoking
-    try {
-        Invoking = await callGroq()
-    } catch (aiErr) {
-        // the user paid a credit and got NOTHING sir — Groq errored out entirely. Hand the credit
-        // back before surfacing the failure, otherwise every upstream outage quietly bills users
-        // for reviews they never received.
-        if (!isJsonValidationFailure(aiErr)) {
-            await refundCredit(userId)
-            throw aiErr
-        }
-        try {
-            Invoking = await callGroq() // one retry only sir
-        } catch (retryErr) {
-            await refundCredit(userId)
-            throw retryErr
-        }
-    }
-
-    // pull the model's text, guard against an empty/odd response sir
-    let raw = Invoking?.choices?.[0]?.message?.content
-    if (!raw) {
-        await refundCredit(userId)
-        return res.status(502).json({
-            success: false,
-            message: 'The AI returned an empty response, please try again',
-        });
-    }
-
-    // strip the model's <think> reasoning block (qwen) sir
-    if (raw.includes('</think>')) {
-        raw = raw.split('</think>').pop()
-    }
-    // strip stray ```json fences in case the model wraps it sir
-    raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-
-    // parse the JSON safely — bad JSON shouldn't crash into the generic 500 sir
-    let review
-    try {
-        review = JSON.parse(raw)
-    } catch (parseErr) {
-        // truncated sir — raw is derived from the user's resume/JD text (PII), only the first 200
-        // chars go to the server log, enough to spot a malformed-JSON pattern without dumping the resume
-        logger.warn('AI review JSON parse failed', { err: parseErr, userId, rawPreview: raw?.slice(0, 200) })
-        await refundCredit(userId)
-        return res.status(502).json({
-            success: false,
-            message: 'The AI response was not in the expected format, please try again',
-        });
-    }
-
-    // basic shape check so the frontend never gets half-data sir
-    if (typeof review.atsScore !== 'number') {
-        await refundCredit(userId)
-        return res.status(502).json({
-            success: false,
-            message: 'The AI response was incomplete, please try again',
-        });
-    }
-
-    // save the review for history + the score-progress graph sir
-    // a save failure should never eat a review the user already paid a credit for, so it only logs
-    let reviewId = null
-    try {
-        const saved = await Review.create({
-            user: userId,
-            plan: spend.plan,
-            jdTitle: jd.trim().slice(0, 60),
-            atsScore: review.atsScore,
-            verdict: review.verdict,
-            scoreBreakdown: review.scoreBreakdown,
-            review,
-            formattingCheck,
-        })
-        reviewId = saved._id
-    } catch (saveErr) {
-        logger.error('review history save failed', { err: saveErr, userId })
-    }
-
-    // fire-and-forget sir — a streak failure must never break the review response
-    updateStreak(userId)
-    recordFeatureUse(userId)
-    if (reviewId) syncKeywordBankFromReview(userId, reviewId, review)
-
-
-    return res.status(200).json({
+    return res.status(result.status).json({
         success: true,
-        reviewId,
-        review,
-        formattingCheck,
-    });
+        reviewId: result.reviewId,
+        review: result.review,
+        formattingCheck: result.formattingCheck,
+    })
 }
 
-// exported sir — controllers/BuiltResume.js reuses this same core to score a built resume
-// against a JD without duplicating the credit-spend/Groq-call/save logic
-exports.runReview = runReview
-
-exports.Calling = async (req,res) =>{
+// POST /response — review a freshly uploaded PDF sir
+exports.Calling = async (req, res) => {
     try {
-
         const id = req?.User.id
 
         const PDf = req.files?.PDf;
-        // not a pdf or word file error sir
         if (!PDf) {
             return res.status(400).json({
                 success: false,
@@ -226,7 +62,12 @@ exports.Calling = async (req,res) =>{
             logger.warn('ATS formatting check failed', { err: fmtErr, userId: id })
         }
 
-        return await runReview(req, res, { userId: id, resumeText: result.text, formattingCheck })
+        return send(res, await runReview({
+            userId: id,
+            resumeText: result.text,
+            jd: req.body.jd,
+            formattingCheck,
+        }))
     } catch (error) {
         (req.log || logger).error('calling failed', { err: error })
         return res.status(500).json({
@@ -234,7 +75,6 @@ exports.Calling = async (req,res) =>{
             message: 'Something went wrong while analyzing the resume',
         });
     }
-
 }
 
 // POST /response/from-resume/:resumeId — re-score a previously saved resume against a new JD sir,
@@ -252,7 +92,12 @@ exports.CallingFromSavedResume = async (req, res) => {
             })
         }
 
-        return await runReview(req, res, { userId: id, resumeText: resume.resumeText, formattingCheck: resume.formattingCheck })
+        return send(res, await runReview({
+            userId: id,
+            resumeText: resume.resumeText,
+            jd: req.body.jd,
+            formattingCheck: resume.formattingCheck,
+        }))
     } catch (error) {
         (req.log || logger).error('calling from saved resume failed', { err: error })
         return res.status(500).json({

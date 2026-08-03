@@ -33,12 +33,30 @@ const initialState = {
     signupData: null
 };
 
+// The cache is written HERE, as a side effect of the reducer sir, rather than by each caller.
+//
+// Before this, every place that changed the user had to remember to also call
+// localStorage.setItem("user", ...) — and Payment.js was hand-patching SubType into its own copy
+// of the object. Any caller that forgot left redux and localStorage disagreeing until the next
+// reload, at which point the STALE cached copy won. Making the write a consequence of the state
+// change means the two can no longer diverge.
+const persistUser = (user) => {
+    try {
+        if (user) localStorage.setItem("user", JSON.stringify(user))
+        else localStorage.removeItem("user")
+    } catch {
+        // a full/disabled localStorage (private mode, quota) must never break auth sir —
+        // the cache is only a paint-flash optimisation, the session cookie is the real credential
+    }
+}
+
 const authSlice = createSlice({
     name: "auth",
     initialState: initialState,
     reducers: {
         setUser(state, value) {
             state.user = value.payload
+            persistUser(value.payload)
         },
         setLoading(state, value) {
             state.loading = value.payload
