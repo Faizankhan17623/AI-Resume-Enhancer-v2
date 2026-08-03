@@ -29,10 +29,13 @@ const UserCreation = new mongoose.Schema(
             type: String,
             required: function () { return this.provider === 'local' }
         },
-        confirmpassword:{
-            type: String,
-            required: function () { return this.provider === 'local' }
-        },
+        // NOTE sir: there is deliberately no `confirmpassword` field here.
+        // It used to be persisted as a SECOND bcrypt hash of the same password, written in ~30
+        // places. That is a form-submission concern, not domain state: it doubled the cost of
+        // every password write, and because the two hashes were computed independently they
+        // could silently diverge — at which point nothing in the app would notice or care,
+        // since only `password` was ever compared at login. Confirmation is now checked in the
+        // request validation layer (Validation/schemas.js) where it belongs, and discarded.
         token: {
             type: String,
         },

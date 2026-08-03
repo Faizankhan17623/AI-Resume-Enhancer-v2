@@ -14,7 +14,14 @@
 //
 // So this helper probes support once, then:
 //   - replica set  -> real transaction, real atomicity (production on Atlas)
-//   - standalone   -> runs the same callback with session:undefined, logging a warning once
+//   - standalone   -> runs the same callback with session:undefined (dev/test only)
+//
+// IN PRODUCTION THE STANDALONE FALLBACK IS REFUSED, not warned about. A warn-once log line is
+// invisible: it means a misconfigured deployment silently runs the payment path non-atomically
+// and produces charged-but-not-upgraded users that nothing in the codebase can detect or repair.
+// Losing atomicity on the money path is not a degraded mode worth serving, so production fails
+// loudly at the first multi-document write instead. Set ALLOW_NON_TRANSACTIONAL_WRITES=true to
+// deliberately override this (e.g. a self-hosted standalone deployment that accepts the risk).
 //
 // Callers pass the session into every query they make (`.session(session)` or `{ session }`),
 // which is a no-op when session is undefined. That way ONE code path serves both environments
@@ -26,6 +33,10 @@ const logger = require('./logger')
 // cached across calls sir — the topology doesn't change while the process is alive
 let transactionsSupported = null
 let warnedOnce = false
+
+// explicit, deliberate opt-out sir — must be set to the exact string 'true'
+const nonTransactionalWritesAllowed = () =>
+    process.env.ALLOW_NON_TRANSACTIONAL_WRITES === 'true'
 
 // mongoose exposes the negotiated topology description once connected sir. 'ReplicaSetWithPrimary'
 // and sharded ('Sharded') support transactions; 'Single' (standalone) does not.
@@ -55,11 +66,19 @@ const _setTransactionSupport = (value) => { transactionsSupported = value }
  */
 const withTransaction = async (fn) => {
     if (!supportsTransactions()) {
+        if (process.env.NODE_ENV === 'production' && !nonTransactionalWritesAllowed()) {
+            // refuse rather than silently corrupt sir — see the header. This surfaces as a 500
+            // through the error handler, which is strictly better than taking a payment and
+            // failing to grant the plan.
+            logger.error('refusing multi-document write: MongoDB deployment does not support transactions. Use a replica set (Atlas does this by default), or set ALLOW_NON_TRANSACTIONAL_WRITES=true to accept the risk.')
+            throw new Error('Database is not configured for atomic writes. This operation was refused to protect your data.')
+        }
+
         if (!warnedOnce && process.env.NODE_ENV === 'production') {
             warnedOnce = true
-            // production on a standalone is a real durability risk sir — say so loudly, once
-            logger.warn('MongoDB deployment does not support transactions; multi-document writes are NOT atomic. Use a replica set (Atlas does this by default) in production.')
+            logger.warn('ALLOW_NON_TRANSACTIONAL_WRITES is set; multi-document writes are NOT atomic on this deployment.')
         }
+
         return fn(undefined)
     }
 

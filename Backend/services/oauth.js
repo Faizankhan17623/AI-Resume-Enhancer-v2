@@ -229,7 +229,6 @@ const createOAuthUser = async (provider, providerId, email, profile) => {
         lastName,
         email,
         password: defaultPasswordHash,
-        confirmpassword: defaultPasswordHash,
         provider,
         providerId,
         Verified: true,

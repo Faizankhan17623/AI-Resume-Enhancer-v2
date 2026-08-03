@@ -1,4 +1,4 @@
-const cron = require('node-cron')
+const { scheduleJob } = require('./scheduler')
 const User = require('../Models/User')
 const Review = require('../Models/Review')
 const Resume = require('../Models/Resume')
@@ -182,34 +182,36 @@ const sendMonthlyHealthCheck = async () => {
     }
 }
 
-// registered once from index.js sir, guarded by NODE_ENV !== 'test' same as connectDB()/app.listen
-// runs once a day at 09:00 UTC
+// registered once from index.js sir. Every job goes through scheduleJob, which takes a
+// cluster-wide lease first — these all send real email, so running once per instance meant
+// users received duplicate nudges on any multi-instance deploy.
+// Leases are generous (10 min) because each job loops over users sending mail.
 const startStreakCron = () => {
-    cron.schedule('0 9 * * *', async () => {
-        try {
+    // daily 09:00 UTC
+    scheduleJob({
+        name: 'streak-nudges',
+        schedule: '0 9 * * *',
+        leaseMs: 10 * 60 * 1000,
+        task: async () => {
             await sendStreakBreakNudges()
             await sendWinBackNudges()
-        } catch (err) {
-            console.log('streak cron failed:', err.message)
-        }
+        },
     })
 
-    // weekly digest sir — Monday 08:00 UTC, once a week so it never competes with the daily nudges above
-    cron.schedule('0 8 * * 1', async () => {
-        try {
-            await sendWeeklyDigest()
-        } catch (err) {
-            console.log('weekly digest cron failed:', err.message)
-        }
+    // weekly digest sir — Monday 08:00 UTC, so it never competes with the daily nudges above
+    scheduleJob({
+        name: 'weekly-digest',
+        schedule: '0 8 * * 1',
+        leaseMs: 10 * 60 * 1000,
+        task: sendWeeklyDigest,
     })
 
     // monthly health check sir — 1st of the month, 08:00 UTC
-    cron.schedule('0 8 1 * *', async () => {
-        try {
-            await sendMonthlyHealthCheck()
-        } catch (err) {
-            console.log('health-check cron failed:', err.message)
-        }
+    scheduleJob({
+        name: 'monthly-health-check',
+        schedule: '0 8 1 * *',
+        leaseMs: 10 * 60 * 1000,
+        task: sendMonthlyHealthCheck,
     })
 }
 

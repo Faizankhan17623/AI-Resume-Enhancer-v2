@@ -109,7 +109,6 @@ exports.createUser = async (req, res) => {
             lastName: lastName,
             email: email,
             password: hashing,
-            confirmpassword: hashing,
             number: number,
             CountryCode: Code,
             Verified: false
@@ -414,7 +413,7 @@ exports.updateFirstName = async (req, res) => {
             userId,
             { firstName: firstName },
             { new: true }
-        ).select('-password -confirmpassword');
+        ).select('-password');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -469,7 +468,7 @@ exports.updateLastName = async (req, res) => {
             userId,
             { lastName: lastName },
             { new: true }
-        ).select('-password -confirmpassword');
+        ).select('-password');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -565,7 +564,6 @@ exports.updatePassword = async (req, res) => {
             userId,
             {
                 password: hashing,
-                confirmpassword: hashing,
                 $inc: { tokenVersion: 1 },
             },
             { returnDocument: 'after' }
@@ -625,7 +623,7 @@ exports.updateEmail = async (req, res) => {
             userId,
             { email: email },
             { new: true }
-        ).select('-password -confirmpassword');
+        ).select('-password');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -689,7 +687,7 @@ exports.updateNumber = async (req, res) => {
             userId,
             { number: number },
             { new: true }
-        ).select('-password -confirmpassword');
+        ).select('-password');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -880,7 +878,7 @@ exports.exportMyData = async (req, res) => {
         const Payment = require('../Models/Payment')
 
         const user = await User.findById(userId)
-            .select('-password -confirmpassword -token -resetPasswordToken -resetPasswordExpires')
+            .select('-password -token -resetPasswordToken -resetPasswordExpires')
 
         if (!user) {
             return res.status(404).json({

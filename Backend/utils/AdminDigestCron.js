@@ -1,8 +1,9 @@
-const cron = require('node-cron')
 const User = require('../Models/User')
 const AuditLog = require('../Models/AuditLog')
 const mailSender = require('./Nodemailer')
 const { adminDigestTemplate } = require('../Templates/adminDigestTemplate')
+const { scheduleJob } = require('./scheduler')
+const logger = require('./logger')
 
 const formatDate = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -33,20 +34,19 @@ const sendWeeklyAdminDigest = async () => {
                 weekStart: formatDate(weekStart),
                 weekEnd: formatDate(weekEnd),
             })
-        ).catch((err) => console.log('admin digest email failed:', err.message))
+        ).catch((err) => logger.warn('admin digest email failed', { err, to: admin.email }))
     }
 }
 
-// registered once from index.js sir, guarded by NODE_ENV !== 'test' same as the other crons.
-// Monday 09:00 UTC — after the streak/win-back crons (08:00) so it doesn't compete for the
-// mail relay in the same minute.
+// registered once from index.js sir. Monday 09:00 UTC — after the streak/win-back crons (08:00)
+// so it doesn't compete for the mail relay in the same minute. The lease stops every admin
+// receiving one copy of this digest per running instance.
 const startAdminDigestCron = () => {
-    cron.schedule('0 9 * * 1', async () => {
-        try {
-            await sendWeeklyAdminDigest()
-        } catch (err) {
-            console.log('admin digest cron failed:', err.message)
-        }
+    scheduleJob({
+        name: 'admin-weekly-digest',
+        schedule: '0 9 * * 1',
+        leaseMs: 10 * 60 * 1000,
+        task: sendWeeklyAdminDigest,
     })
 }
 

@@ -1,4 +1,4 @@
-const cron = require('node-cron')
+const { scheduleJob } = require('./scheduler')
 const AiLog = require('../Models/AiLog')
 const mailSender = require('./Nodemailer')
 const { logSystemAction } = require('./AdminLog')
@@ -71,15 +71,15 @@ const checkAiUsageAndAlert = async () => {
         .catch((err) => console.log('AI cost alert email failed:', err.message))
 }
 
-// registered once from index.js sir, guarded by NODE_ENV !== 'test' same as the streak cron
-// runs hourly — the aggregation is cheap and the cooldown above stops repeat emails
+// registered once from index.js sir — hourly, the aggregation is cheap and the cooldown above
+// stops repeat emails. The lease additionally stops N instances each sending their own copy of
+// the same alert for the same threshold breach.
 const startAiCostAlertCron = () => {
-    cron.schedule('0 * * * *', async () => {
-        try {
-            await checkAiUsageAndAlert()
-        } catch (err) {
-            console.log('AI cost alert cron failed:', err.message)
-        }
+    scheduleJob({
+        name: 'ai-cost-alert',
+        schedule: '0 * * * *',
+        leaseMs: 5 * 60 * 1000,
+        task: checkAiUsageAndAlert,
     })
 }
 

@@ -21,6 +21,7 @@
 
 const jwt = require('jsonwebtoken')
 const cookie = require('cookie')
+const { getEffectivePlan } = require('./Plans')
 
 const AUTH_COOKIE = 'token'
 const SESSION_DAYS = 7
@@ -80,14 +81,21 @@ const issueSession = (res, user, extraCookies = []) => {
 }
 
 // the public shape of a user sir — one definition so login, OAuth and /profile can never drift
-// into returning different fields for the same person
+// into returning different fields for the same person.
+//
+// SubType is the EFFECTIVE plan, not the stored column. An expired Pro subscriber still carries
+// SubType:'Pro' in the database until the reconcile job demotes them (see
+// utils/SubscriptionReconcileCron.js), and the frontend renders whatever this returns as the
+// user's current plan — so returning the raw field told lapsed users they were still on Pro.
+// getEffectivePlan is the same authority the credit-spend path uses, so what the user is TOLD
+// they have now always matches what they can actually DO.
 const publicUser = (user) => ({
     id: user._id,
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
     role: user.role,
-    SubType: user.SubType,
+    SubType: getEffectivePlan(user).key,
 })
 
 module.exports = {

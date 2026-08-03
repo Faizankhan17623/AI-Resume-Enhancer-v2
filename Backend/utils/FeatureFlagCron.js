@@ -1,7 +1,7 @@
-const cron = require('node-cron')
 const Settings = require('../Models/Settings')
 const { invalidateFeatureFlagCache } = require('./FeatureFlags')
 const { logSystemAction } = require('./AdminLog')
+const { scheduleJob } = require('./scheduler')
 
 // finds flags an admin scheduled a re-enable for, and whose time has come sir —
 // clears note/disabledUntil on the way back on, matching manual re-enable behavior
@@ -19,16 +19,15 @@ const reEnableDueFlags = async () => {
     }
 }
 
-// registered once from index.js sir, guarded by NODE_ENV !== 'test' same as the other crons.
-// runs every 5 minutes — frequent enough that a scheduled re-enable feels timely without
-// hammering the DB.
+// registered once from index.js sir. Runs every 5 minutes — frequent enough that a scheduled
+// re-enable feels timely without hammering the DB. Short lease (2 min) to stay well inside that
+// interval, since the sweep itself is quick.
 const startFeatureFlagCron = () => {
-    cron.schedule('*/5 * * * *', async () => {
-        try {
-            await reEnableDueFlags()
-        } catch (err) {
-            console.log('feature flag cron failed:', err.message)
-        }
+    scheduleJob({
+        name: 'feature-flag-reenable',
+        schedule: '*/5 * * * *',
+        leaseMs: 2 * 60 * 1000,
+        task: reEnableDueFlags,
     })
 }
 

@@ -1,9 +1,20 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
 const jwt = require('jsonwebtoken')
 const { getUserPlan } = require('../utils/Plans')
+const { createStore } = require('../utils/rateLimitStore')
 
 // all the rate limiters live here sir — tune the numbers ONLY here
 // every limiter sends the standard RateLimit headers so the frontend can show "try again in X"
+//
+// EVERY limiter passes an explicit `store` sir. express-rate-limit's default store is a
+// per-process Map, which means each counter lives inside ONE node process: a redeploy resets
+// every counter, and two instances behind a load balancer each keep their own tally so the
+// effective limit DOUBLES. For the OTP limiter (sends real emails) and the login limiter
+// (brute-force protection) that is a security control that silently does not hold.
+// See utils/rateLimitStore.js — it also documents the fail-open vs fail-closed policy below.
+//
+// The second argument is that policy: 'closed' for the security-critical limiters, 'open' for the
+// generous traffic-shaping ones that must never take the product down.
 
 // a common 429 reply shape matching the rest of our API sir
 const tooMany = (message) => ({
@@ -47,6 +58,9 @@ const globalLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many requests, please slow down and try again in a few minutes'),
+    // fail OPEN sir — this one exists to stop floods, not to protect a secret. If the store is
+    // down, serving traffic matters more than shaping it.
+    store: createStore('global', 'open'),
 })
 
 // login/signup brute-force protection sir — 20 tries per 15 min per IP
@@ -56,6 +70,9 @@ const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many login attempts, please try again after 15 minutes'),
+    // fail CLOSED sir — this is the brute-force control. A store outage must not become an
+    // unlimited password-guessing window.
+    store: createStore('auth', 'closed'),
 })
 
 // OTP is the most abusable route (it sends real emails) sir — keep this one tight
@@ -65,6 +82,8 @@ const otpLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many OTP requests, please try again after 15 minutes'),
+    // fail CLOSED sir — every request here spends real money on a real email.
+    store: createStore('otp', 'closed'),
 })
 
 // AI routes burn Groq tokens and credits sir — plan-aware ceiling per minute: Basic 10, Pro 20,
@@ -97,6 +116,8 @@ const aiLimiter = rateLimit({
         }
     },
     max: (req, res) => AI_LIMIT_BY_PLAN[res.locals.aiPlanKey] || AI_LIMIT_BY_PLAN.Basic,
+    // fail CLOSED sir — every request past this point burns Groq tokens and a user's paid credit.
+    store: createStore('ai', 'closed'),
 })
 
 // track-visit is public and unauthenticated sir — a real browser only ever calls it once
@@ -108,6 +129,7 @@ const visitorLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many requests, please try again later'),
+    store: createStore('visitor', 'open'),
 })
 
 // admin write actions are already Auth + role-gated sir — this is defense in depth in case a
@@ -118,6 +140,9 @@ const adminWriteLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many admin actions in a short time, please slow down'),
+    // fail OPEN sir — already Auth + role-gated, and locking admins out during an incident is
+    // exactly the wrong behaviour when they're the ones who need to fix it.
+    store: createStore('admin-write', 'open'),
 })
 
 // admin read/dashboard routes sir — also Auth + role-gated already, same defense-in-depth
@@ -128,6 +153,7 @@ const adminReadLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many admin requests in a short time, please slow down'),
+    store: createStore('admin-read', 'open'),
 })
 
 // grammar-check parses an uploaded PDF (real CPU/parsing cost) sir even though it's free/no-credit —
@@ -138,6 +164,8 @@ const grammarCheckLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('You are sending requests too fast, please wait a minute and try again'),
+    // fail CLOSED sir — real CPU cost per request (PDF parsing) on a constrained dyno.
+    store: createStore('grammar-check', 'closed'),
 })
 
 // testimonial text ends up in a moderation queue and (once approved) on the public homepage sir —
@@ -149,6 +177,8 @@ const testimonialLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: tooMany('Too many testimonial submissions, please try again later'),
+    // fail CLOSED sir — this content reaches the public homepage once approved.
+    store: createStore('testimonial', 'closed'),
 })
 
 module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter }

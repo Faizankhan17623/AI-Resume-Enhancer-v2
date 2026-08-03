@@ -5,7 +5,7 @@ const User = require('../Models/User')
 const Chat = require('../Models/Chat')
 const Review = require('../Models/Review')
 const Payment = require('../Models/Payment')
-const { PLANS } = require('../utils/Plans')
+const { PLANS, getEffectivePlan } = require('../utils/Plans')
 const { logAction } = require('../utils/AdminLog')
 const mailSender = require('../utils/Nodemailer.js')
 const { supportPromotionTemplate } = require('../Templates/supportPromotionTemplate.js')
@@ -156,7 +156,14 @@ exports.getUsers = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            users,
+            // effectivePlan, not the raw SubType sir — an expired Pro keeps SubType:'Pro' stored
+            // until the reconcile job demotes them (utils/SubscriptionReconcileCron.js), so the
+            // raw column showed support/admin staff a lapsed user as an active paying customer.
+            // Both are returned: effectivePlan is what they HAVE, SubType is what's on record.
+            users: users.map((u) => ({
+                ...u.toObject(),
+                effectivePlan: getEffectivePlan(u).key,
+            })),
             pagination: {
                 page,
                 limit,
@@ -187,7 +194,7 @@ exports.getUserDetail = async (req, res) => {
         }
 
         const user = await User.findById(userId)
-            .select('-password -confirmpassword -token -resetPasswordToken -resetPasswordExpires')
+            .select('-password -token -resetPasswordToken -resetPasswordExpires')
 
         if (!user) {
             return res.status(404).json({

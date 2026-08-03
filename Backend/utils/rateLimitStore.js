@@ -17,13 +17,30 @@
 // pay for, and keep available. The write volume here is tiny (one upsert per rate-limited
 // request) and each document is removed automatically by a TTL index.
 //
-// Falls back to express-rate-limit's built-in memory store when Mongo isn't connected (e.g. the
-// test suite before setup runs), so nothing hard-fails on a missing connection.
+// BEHAVIOUR WHEN MONGO IS UNAVAILABLE is a per-limiter POLICY decision, not one global rule:
+//
+//   failMode 'open'   -> a store outage lets the request through. Correct for the generous
+//                        traffic-shaping limiters (global, admin, visitor): a rate limiter must
+//                        never be the reason the whole product goes down.
+//   failMode 'closed' -> a store outage counts the request against a small in-process budget and
+//                        then rejects. Correct for the SECURITY limiters (login, OTP, password
+//                        reset): failing open there means a Mongo blip silently disables
+//                        brute-force protection and lets OTP email sending run unbounded, which
+//                        is precisely the window an attacker wants.
+//
+// Fail-closed is deliberately NOT a hard reject: a per-process fallback counter still allows a
+// small number of attempts per window so a brief blip doesn't lock every legitimate user out of
+// logging in entirely. It degrades the limit, it does not remove or absolutise it.
 
 const mongoose = require('mongoose')
 const logger = require('./logger')
 
 const COLLECTION = 'ratelimits'
+
+// how many requests a fail-CLOSED limiter still allows per window, per process, while the store
+// is unreachable sir. Small enough that brute-force is still throttled, large enough that a real
+// user retrying a login during an outage isn't locked out.
+const DEGRADED_ALLOWANCE = 3
 
 // one document per (limiter, key) pair sir — `expiresAt` drives both the window reset and the
 // TTL cleanup, so expired counters disappear on their own without a cron job
@@ -47,10 +64,14 @@ class MongoRateLimitStore {
     /**
      * @param {string} prefix distinguishes limiters that may share a key (same IP hitting both
      *                        the login and OTP limiter must NOT share one counter)
+     * @param {'open'|'closed'} failMode what to do when Mongo is unreachable (see header)
      */
-    constructor(prefix) {
+    constructor(prefix, failMode = 'open') {
         this.prefix = prefix
         this.windowMs = 60 * 1000
+        this.failMode = failMode
+        // per-process fallback counters, used ONLY while the store is unreachable sir
+        this.degraded = new Map() // key -> { count, resetAt }
     }
 
     // express-rate-limit calls this once with the limiter's resolved options sir
@@ -63,6 +84,34 @@ class MongoRateLimitStore {
     }
 
     /**
+     * The response used when Mongo can't be reached sir.
+     *
+     * fail-open reports a single hit, so the limiter never trips.
+     * fail-closed counts in-process against DEGRADED_ALLOWANCE, so the limiter still trips —
+     * express-rate-limit compares totalHits against the limiter's own `max`, so returning a
+     * number above that max is what produces the 429.
+     */
+    degradedResult(key, now) {
+        const resetTime = new Date(now.getTime() + this.windowMs)
+
+        if (this.failMode !== 'closed') {
+            return { totalHits: 1, resetTime }
+        }
+
+        const entry = this.degraded.get(key)
+        if (!entry || entry.resetAt <= now.getTime()) {
+            this.degraded.set(key, { count: 1, resetAt: resetTime.getTime() })
+            return { totalHits: 1, resetTime }
+        }
+
+        entry.count += 1
+        // once the degraded budget is spent sir, report a deliberately huge hit count so the
+        // limiter rejects regardless of which `max` this particular limiter was configured with
+        const totalHits = entry.count > DEGRADED_ALLOWANCE ? Number.MAX_SAFE_INTEGER : entry.count
+        return { totalHits, resetTime: new Date(entry.resetAt) }
+    }
+
+    /**
      * Atomically bump the counter and report the new total.
      * Must return { totalHits, resetTime } per the express-rate-limit Store contract.
      */
@@ -71,9 +120,8 @@ class MongoRateLimitStore {
         const _id = this.docId(key)
 
         if (!isConnected()) {
-            // no DB sir — fail OPEN rather than locking every user out of the app. A rate limiter
-            // is a safety control, never a hard dependency of serving traffic.
-            return { totalHits: 1, resetTime: new Date(now.getTime() + this.windowMs) }
+            // policy decides sir — see the header. Security limiters degrade rather than vanish.
+            return this.degradedResult(key, now)
         }
 
         try {
@@ -101,9 +149,12 @@ class MongoRateLimitStore {
 
             return { totalHits: fresh.count, resetTime: fresh.expiresAt }
         } catch (err) {
-            // same fail-open reasoning as above sir
-            logger.error('rate limit store increment failed, allowing request', { err, key: _id })
-            return { totalHits: 1, resetTime: new Date(now.getTime() + this.windowMs) }
+            logger.error('rate limit store increment failed, applying degraded policy', {
+                err,
+                key: _id,
+                failMode: this.failMode,
+            })
+            return this.degradedResult(key, now)
         }
     }
 
@@ -133,8 +184,8 @@ class MongoRateLimitStore {
 // tests run against a throwaway in-memory Mongo and assert on limiter behaviour within a single
 // process sir — the default memory store is both faster and sufficient there. Production and dev
 // get the shared store.
-const createStore = (prefix) => (
-    process.env.NODE_ENV === 'test' ? undefined : new MongoRateLimitStore(prefix)
+const createStore = (prefix, failMode = 'open') => (
+    process.env.NODE_ENV === 'test' ? undefined : new MongoRateLimitStore(prefix, failMode)
 )
 
-module.exports = { MongoRateLimitStore, createStore }
+module.exports = { MongoRateLimitStore, createStore, DEGRADED_ALLOWANCE }

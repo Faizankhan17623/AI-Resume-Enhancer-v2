@@ -20,26 +20,14 @@ const swaggerDocument = require('./docs/swagger.js')
 
 const connectDB = require('./Installation/mongo')
 const cloud = require('./Installation/Cloudinary')
-const auth = require('./Routes/Auth.js')
-const chat = require('./Routes/Chat.js')
-const payment = require('./Routes/Payment.js')
-const review = require('./Routes/Review.js')
-const admin = require('./Routes/Admin.js')
-const grammarCheck = require('./Routes/GrammarCheck.js')
-const coverLetter = require('./Routes/CoverLetter.js')
-const resume = require('./Routes/Resume.js')
-const builtResume = require('./Routes/BuiltResume.js')
-const jobSearch = require('./Routes/JobSearch.js')
-const learningResources = require('./Routes/LearningResources.js')
-const mockInterview = require('./Routes/MockInterview.js')
-const feedback = require('./Routes/Feedback.js')
-const visitor = require('./Routes/Visitor.js')
-const notification = require('./Routes/Notification.js')
-const application = require('./Routes/Application.js')
-const keywordBank = require('./Routes/KeywordBank.js')
-const testimonial = require('./Routes/Testimonial.js')
-const report = require('./Routes/Report.js')
+// one registry instead of nineteen hand-mounted routers sir — see Routes/index.js. It documents
+// which domain owns which URL space and refuses to start if two routers declare the same
+// method+path, a collision Express would otherwise resolve silently in favour of whichever was
+// mounted first.
+const { buildApiRouter } = require('./Routes')
 const { globalLimiter } = require('./Middlewares/RateLimit.js')
+const logger = require('./utils/logger.js')
+const { requestContext } = require('./Middlewares/RequestContext.js')
 const { startStreakCron } = require('./utils/StreakCron.js')
 const { startAiCostAlertCron } = require('./utils/AiCostAlert.js')
 const { startAccountPurgeCron } = require('./utils/AccountPurgeCron.js')
@@ -95,6 +83,11 @@ app.use(cors({
     credentials: true
 }))
 app.use(cookieParser())
+
+// request id + per-request logger sir — must come before the routes so every log line emitted
+// while handling a request can be tied back to that specific request
+app.use(requestContext)
+
 // 15MB cap sir — matches utils/upload.js's own 10MB Cloudinary check with headroom, and stops
 // express-fileupload from buffering unbounded request bodies into memory on a constrained Render dyno
 app.use(fileUpload({
@@ -106,25 +99,7 @@ app.use(fileUpload({
 // generous global rate limit sir — the tight per-route ones live in the route files
 app.use(globalLimiter)
 
-app.use('/api/v1',auth)
-app.use('/api/v1',chat)
-app.use('/api/v1',payment)
-app.use('/api/v1',review)
-app.use('/api/v1',admin)
-app.use('/api/v1',grammarCheck)
-app.use('/api/v1',coverLetter)
-app.use('/api/v1',resume)
-app.use('/api/v1',builtResume)
-app.use('/api/v1',jobSearch)
-app.use('/api/v1',learningResources)
-app.use('/api/v1',mockInterview)
-app.use('/api/v1',feedback)
-app.use('/api/v1',visitor)
-app.use('/api/v1',notification)
-app.use('/api/v1',application)
-app.use('/api/v1',keywordBank)
-app.use('/api/v1',testimonial)
-app.use('/api/v1',report)
+app.use('/api/v1', buildApiRouter())
 
 // interactive API docs sir — http://localhost:5000/api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
@@ -148,11 +123,20 @@ app.use((req, res) => {
 // for anything that throws outside a try/catch (middleware, a future route, etc.) so the frontend
 // always gets the {success:false, message} shape it parses instead of Express's default HTML page
 app.use((err, req, res, next) => {
-	console.error('Unhandled error:', err);
+	// structured + correlated sir — req.log carries the request id, so this line can be tied to
+	// the exact request that produced it (see Middlewares/RequestContext.js)
+	;(req.log || logger).error('unhandled error', { err });
 	if (res.headersSent) return next(err);
-	res.status(err.status || err.statusCode || 500).json({
+	const status = err.status || err.statusCode || 500;
+	res.status(status).json({
 		success: false,
-		message: err.message || 'Something went wrong. Please try again later.',
+		// never leak an internal error's text to the client on a 5xx sir — those messages can
+		// carry stack details, driver errors or connection strings. Client errors (4xx) are
+		// deliberately raised with a user-safe message, so those still pass through.
+		message: status < 500
+			? (err.message || 'Request could not be processed.')
+			: 'Something went wrong. Please try again later.',
+		requestId: req.id,
 	});
 });
 
@@ -166,7 +150,7 @@ if (process.env.NODE_ENV !== 'test') {
 	startFeatureFlagCron()
 	startAdminDigestCron()
 	app.listen(Port,()=>{
-		console.log(`Running on the port NUmber ${Port}`)
+		logger.info('server listening', { port: Port, env: process.env.NODE_ENV || 'development' })
 	})
 }
 
