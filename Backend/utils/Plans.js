@@ -1,4 +1,5 @@
 const User = require('../Models/User')
+const logger = require('./logger')
 
 // single source of truth for the three plans sir — change prices/limits ONLY here
 // price is in paise because razorpay wants paise (19900 = Rs 199)
@@ -78,8 +79,13 @@ const getUserPlan = async (userId) => {
 
 // spend one AI credit sir — returns { ok, message, plan }
 // used by the ATS review and by creating a new chat
-const consumeCredit = async (userId) => {
-    const user = await User.findById(userId)
+//
+// Accepts an optional mongoose session sir so the credit spend can join the SAME transaction as
+// whatever the credit buys (the Review/Chat document). Without that, a failure after the
+// increment but before the artifact save silently burned a paying user's credit with nothing
+// to show for it. Callers that aren't in a transaction just omit it and behave as before.
+const consumeCredit = async (userId, session) => {
+    const user = await User.findById(userId).session(session)
     if (!user) {
         return { ok: false, message: 'User not found, please log in again' }
     }
@@ -88,7 +94,7 @@ const consumeCredit = async (userId) => {
 
     // unlimited plan sir — still count the usage for stats, never block
     if (plan.credits === null) {
-        await User.findByIdAndUpdate(userId, { $inc: { count: 1 } })
+        await User.findByIdAndUpdate(userId, { $inc: { count: 1 } }, { session })
         return { ok: true, plan: plan.key }
     }
 
@@ -96,7 +102,7 @@ const consumeCredit = async (userId) => {
     const updated = await User.findOneAndUpdate(
         { _id: userId, count: { $lt: plan.credits } },
         { $inc: { count: 1 } },
-        { returnDocument: 'after' }
+        { returnDocument: 'after', session }
     )
 
     if (!updated) {
@@ -113,4 +119,22 @@ const consumeCredit = async (userId) => {
     return { ok: true, plan: plan.key }
 }
 
-module.exports = { PLANS, getEffectivePlan, getUserPlan, consumeCredit }
+// hands a spent credit back sir — for the non-transactional callers (an AI route that already
+// consumed a credit and only then had the upstream Groq call fail). Never drops below zero.
+// Prefer passing a session to consumeCredit where a transaction is available; this is the
+// compensating action for the paths where one isn't.
+const refundCredit = async (userId, session) => {
+    try {
+        await User.findOneAndUpdate(
+            { _id: userId, count: { $gt: 0 } },
+            { $inc: { count: -1 } },
+            { session }
+        )
+    } catch (err) {
+        // a failed refund must never turn into a failed request sir — the user already has
+        // their error; log it so the discrepancy is at least visible
+        logger.error('failed to refund AI credit', { err, userId })
+    }
+}
+
+module.exports = { PLANS, getEffectivePlan, getUserPlan, consumeCredit, refundCredit }

@@ -4,6 +4,8 @@ const RazorpayInstance = require('../utils/Razorpay')
 const Payment = require('../Models/Payment')
 const User = require('../Models/User')
 const { PLANS } = require('../utils/Plans')
+const { withTransaction } = require('../utils/withTransaction')
+const logger = require('../utils/logger')
 
 // the payment session cookie sir — set at order time, demanded back at verify time
 // signed httpOnly cookie, so the browser that STARTED the checkout must be the one that finishes it
@@ -29,31 +31,52 @@ const paymentCookieOptions = {
 // Pulled out so the two paths can never drift apart. Caller is responsible for the
 // idempotency check (skip calling this if the record is already 'paid') and for whatever
 // signature verification proves the payment is real in the first place.
+//
+// Both writes run inside ONE transaction sir — this is the money path, and a crash between
+// "Payment marked paid" and "User upgraded" used to leave a customer charged with no plan,
+// a state nothing in the codebase could detect or repair. Now either both land or neither does.
+//
+// The status:'created' filter also makes activation atomically idempotent: /verify and the
+// Razorpay webhook can race for the same order, and only the one that actually flips the row
+// away from 'created' proceeds to extend the subscription. The loser gets alreadyPaid, so a
+// duplicate event can never stack a second 30 days onto SubscriptionExpires.
 const activatePaidOrder = async (orderId, paymentId, signature) => {
-    const payment = await Payment.findOneAndUpdate(
-        { orderId },
-        {
-            status: 'paid',
-            paymentId,
-            signature,
-        },
-        { returnDocument: 'after' }
-    )
+    return withTransaction(async (session) => {
+        const payment = await Payment.findOneAndUpdate(
+            { orderId, status: { $ne: 'paid' } },
+            {
+                status: 'paid',
+                paymentId,
+                signature,
+            },
+            { returnDocument: 'after', session }
+        )
 
-    if (!payment) return null
+        if (!payment) {
+            // either no such order at all, or another path (verify/webhook) already activated
+            // it sir — distinguish the two so the caller can answer correctly
+            const existing = await Payment.findOne({ orderId }).session(session)
+            if (!existing) return null
+            return { payment: existing, plan: PLANS[existing.plan], expires: existing.updatedAt, alreadyPaid: true }
+        }
 
-    const plan = PLANS[payment.plan]
-    const expires = new Date(Date.now() + plan.validityDays * 24 * 60 * 60 * 1000)
+        const plan = PLANS[payment.plan]
+        const expires = new Date(Date.now() + plan.validityDays * 24 * 60 * 60 * 1000)
 
-    // unlock the plan sir — count goes back to 0 so the new credits start fresh
-    await User.findByIdAndUpdate(payment.user, {
-        Subscription: true,
-        SubType: payment.plan,
-        SubscriptionExpires: expires,
-        count: 0
+        // unlock the plan sir — count goes back to 0 so the new credits start fresh
+        await User.findByIdAndUpdate(
+            payment.user,
+            {
+                Subscription: true,
+                SubType: payment.plan,
+                SubscriptionExpires: expires,
+                count: 0
+            },
+            { session }
+        )
+
+        return { payment, plan, expires, alreadyPaid: false }
     })
-
-    return { payment, plan, expires }
 }
 
 // GET /payment/plans — public list of the three plans for the pricing page sir
@@ -73,8 +96,7 @@ exports.getPlans = (req, res) => {
             plans
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('failed to list plans', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the plans',
@@ -132,8 +154,7 @@ exports.createOrder = async (req, res) => {
             key: process.env.RAZORPAY_KEY_ID
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('failed to create payment order', { err: error, userId: req?.User?.id })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while creating the order',
@@ -232,6 +253,17 @@ exports.verifyPayment = async (req, res) => {
         // the session did its job sir — clear it so it cannot be replayed
         res.clearCookie(PAYMENT_SESSION_COOKIE)
 
+        // the webhook beat us to it between our idempotency check above and the activation sir —
+        // still a success from the user's point of view, just not a second activation
+        if (activation.alreadyPaid) {
+            return res.status(200).json({
+                success: true,
+                message: `Payment already verified, you are on the ${activation.plan.name} plan`,
+                plan: activation.payment.plan,
+                expiresAt: activation.expires,
+            })
+        }
+
         return res.status(200).json({
             success: true,
             message: `Payment successful, you are now on the ${activation.plan.name} plan`,
@@ -239,8 +271,7 @@ exports.verifyPayment = async (req, res) => {
             expiresAt: activation.expires
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('failed to verify payment', { err: error, userId: req?.User?.id })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while verifying the payment',
@@ -263,7 +294,7 @@ exports.paymentWebhook = async (req, res) => {
         const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
         if (!webhookSecret) {
             // not configured sir — fail closed (never trust an unsigned/unverifiable payload)
-            console.log('[paymentWebhook] RAZORPAY_WEBHOOK_SECRET is not set, rejecting webhook call')
+            logger.error('RAZORPAY_WEBHOOK_SECRET is not set, rejecting webhook call')
             return res.status(503).json({ success: false, message: 'Webhook not configured' })
         }
 
@@ -280,7 +311,7 @@ exports.paymentWebhook = async (req, res) => {
             .digest('hex')
 
         if (expectedSignature !== signature) {
-            console.log('[paymentWebhook] signature mismatch, rejecting')
+            logger.warn('payment webhook signature mismatch, rejecting')
             return res.status(400).json({ success: false, message: 'Invalid signature' })
         }
 
@@ -298,7 +329,7 @@ exports.paymentWebhook = async (req, res) => {
         const razorpayPaymentId = paymentEntity?.id
 
         if (!orderId) {
-            console.log('[paymentWebhook] could not find order id in payload, ignoring')
+            logger.warn('payment webhook had no order id in payload, ignoring')
             return res.status(200).json({ success: true, message: 'No order id in payload, ignored' })
         }
 
@@ -307,7 +338,7 @@ exports.paymentWebhook = async (req, res) => {
         // not a second SubscriptionExpires extension
         const existing = await Payment.findOne({ orderId })
         if (!existing) {
-            console.log(`[paymentWebhook] no Payment record for orderId=${orderId}, ignoring`)
+            logger.warn('payment webhook for unknown order, ignoring', { orderId })
             return res.status(200).json({ success: true, message: 'Order not found, ignored' })
         }
 
@@ -317,12 +348,16 @@ exports.paymentWebhook = async (req, res) => {
 
         // signature on the webhook envelope already proves this event came from Razorpay sir —
         // unlike /verify there's no separate per-payment signature to recompute here
-        await activatePaidOrder(orderId, razorpayPaymentId || existing.paymentId, existing.signature)
+        const activation = await activatePaidOrder(orderId, razorpayPaymentId || existing.paymentId, existing.signature)
 
+        if (activation?.alreadyPaid) {
+            return res.status(200).json({ success: true, message: 'Already processed' })
+        }
+
+        logger.info('payment activated via webhook', { orderId, plan: activation?.payment?.plan })
         return res.status(200).json({ success: true, message: 'Payment activated via webhook' })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('payment webhook failed', { err: error })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while processing the payment webhook',
@@ -344,8 +379,7 @@ exports.getPaymentHistory = async (req, res) => {
             payments
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('failed to get payment history', { err: error, userId: req?.User?.id })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the payment history',

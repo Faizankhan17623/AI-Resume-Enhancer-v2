@@ -5,7 +5,8 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx')
 const cloudinary = require('cloudinary').v2
 
 const BuiltResume = require('../Models/BuiltResume')
-const { consumeCredit } = require('../utils/Plans')
+const { consumeCredit, refundCredit } = require('../utils/Plans')
+const logger = require('../utils/logger')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
@@ -720,6 +721,8 @@ exports.generateResume = async (req, res) => {
         })
 
         if (error) {
+            // hand the credit back sir — the user paid for a resume the AI never produced
+            await refundCredit(id)
             return res.status(502).json({ success: false, message: error })
         }
 
@@ -811,6 +814,8 @@ exports.tailorResume = async (req, res) => {
         })
 
         if (error) {
+            // hand the credit back sir — the user paid for a tailored resume that never arrived
+            await refundCredit(id)
             return res.status(502).json({ success: false, message: error })
         }
 

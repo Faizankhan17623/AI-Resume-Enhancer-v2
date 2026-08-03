@@ -5,7 +5,7 @@ const Grok = require('groq-sdk')
 const User = require('../Models/User');
 const Review = require('../Models/Review');
 const Resume = require('../Models/Resume');
-const { consumeCredit } = require('../utils/Plans');
+const { consumeCredit, refundCredit } = require('../utils/Plans');
 const { buildReviewSystemPrompt } = require('../utils/Prompts');
 const { logAi } = require('../utils/AdminLog');
 const { syncKeywordBankFromReview } = require('../utils/KeywordBank');
@@ -14,6 +14,7 @@ const { recordFeatureUse } = require('../utils/FeatureUsage');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
 const { getModelForPlan, applyPlanDelay } = require('../utils/AiModel');
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags');
+const logger = require('../utils/logger');
 
 // timeout + maxRetries pinned explicitly sir — the SDK default retries 429/5xx with backoff
 // and a long default timeout, so a rate-limited or stalled call could silently eat minutes
@@ -98,13 +99,25 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     try {
         Invoking = await callGroq()
     } catch (aiErr) {
-        if (!isJsonValidationFailure(aiErr)) throw aiErr
-        Invoking = await callGroq() // one retry only sir — if it fails again, let it throw for real
+        // the user paid a credit and got NOTHING sir — Groq errored out entirely. Hand the credit
+        // back before surfacing the failure, otherwise every upstream outage quietly bills users
+        // for reviews they never received.
+        if (!isJsonValidationFailure(aiErr)) {
+            await refundCredit(userId)
+            throw aiErr
+        }
+        try {
+            Invoking = await callGroq() // one retry only sir
+        } catch (retryErr) {
+            await refundCredit(userId)
+            throw retryErr
+        }
     }
 
     // pull the model's text, guard against an empty/odd response sir
     let raw = Invoking?.choices?.[0]?.message?.content
     if (!raw) {
+        await refundCredit(userId)
         return res.status(502).json({
             success: false,
             message: 'The AI returned an empty response, please try again',
@@ -123,10 +136,10 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
     try {
         review = JSON.parse(raw)
     } catch (parseErr) {
-        console.log('JSON parse failed:', parseErr.message)
         // truncated sir — raw is derived from the user's resume/JD text (PII), only the first 200
         // chars go to the server log, enough to spot a malformed-JSON pattern without dumping the resume
-        console.log('Raw model output (truncated):', raw?.slice(0, 200))
+        logger.warn('AI review JSON parse failed', { err: parseErr, userId, rawPreview: raw?.slice(0, 200) })
+        await refundCredit(userId)
         return res.status(502).json({
             success: false,
             message: 'The AI response was not in the expected format, please try again',
@@ -135,6 +148,7 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
 
     // basic shape check so the frontend never gets half-data sir
     if (typeof review.atsScore !== 'number') {
+        await refundCredit(userId)
         return res.status(502).json({
             success: false,
             message: 'The AI response was incomplete, please try again',
@@ -157,7 +171,7 @@ const runReview = async (req, res, { userId, resumeText, formattingCheck }) => {
         })
         reviewId = saved._id
     } catch (saveErr) {
-        console.log('review history save failed:', saveErr.message)
+        logger.error('review history save failed', { err: saveErr, userId })
     }
 
     // fire-and-forget sir — a streak failure must never break the review response
@@ -213,7 +227,7 @@ exports.Calling = async (req,res) =>{
         try {
             formattingCheck = await checkAtsFormatting(PDf.data)
         } catch (fmtErr) {
-            console.log('ATS formatting check failed:', fmtErr.message)
+            logger.warn('ATS formatting check failed', { err: fmtErr, userId: id })
         }
 
         return await runReview(req, res, { userId: id, resumeText: result.text, formattingCheck })

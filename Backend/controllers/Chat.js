@@ -10,6 +10,8 @@ const { logAi } = require('../utils/AdminLog')
 const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { AI_MODEL } = require('../utils/AiModel')
+const { withTransaction } = require('../utils/withTransaction')
+const logger = require('../utils/logger')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -39,16 +41,8 @@ exports.createChat = async (req, res) => {
             })
         }
 
-        // plan-aware credit check sir — each new chat costs one credit
-        const spend = await consumeCredit(id)
-
-        if (!spend.ok) {
-            return res.status(403).json({
-                success: false,
-                message: spend.message
-            })
-        }
-
+        // parse the PDF BEFORE spending anything sir — a malformed upload used to burn a credit
+        // on its way to a 400, since the spend happened first and was never handed back
         const parser = new PDFParse({ data: PDf.data })
         const result = await parser.getText()
 
@@ -62,16 +56,35 @@ exports.createChat = async (req, res) => {
         // first 60 chars of the JD make a decent sidebar title sir
         const title = jd.trim().slice(0, 60) || 'New Chat'
 
-        const chat = await Chat.create({
-            user: id,
-            title,
-            resumeText: result.text,
-            jd,
-            messages: []
+        // credit spend + Chat insert + the User.Newchat back-reference are ONE unit of work sir.
+        // Previously a failure between them could either bill a credit for a chat that was never
+        // created, or create a chat the user's own sidebar list never learned about (orphan).
+        const outcome = await withTransaction(async (session) => {
+            const spend = await consumeCredit(id, session)
+            if (!spend.ok) return { denied: spend.message }
+
+            const [chat] = await Chat.create([{
+                user: id,
+                title,
+                resumeText: result.text,
+                jd,
+                messages: []
+            }], { session })
+
+            // keep the user's chat list in sync sir
+            await User.findByIdAndUpdate(id, { $push: { Newchat: chat._id } }, { session })
+
+            return { chat }
         })
 
-        // keep the user's chat list in sync sir
-        await User.findByIdAndUpdate(id, { $push: { Newchat: chat._id } })
+        if (outcome.denied) {
+            return res.status(403).json({
+                success: false,
+                message: outcome.denied
+            })
+        }
+
+        const chat = outcome.chat
 
         return res.status(201).json({
             success: true,
@@ -80,8 +93,7 @@ exports.createChat = async (req, res) => {
             title: chat.title
         })
     } catch (error) {
-        console.log(error)
-        console.log(error.message)
+        logger.error('failed to create chat', { err: error, userId: req?.User?.id })
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while creating the chat',

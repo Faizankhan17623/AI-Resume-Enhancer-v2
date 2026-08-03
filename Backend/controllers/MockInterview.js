@@ -3,7 +3,8 @@ const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
 
 const MockInterview = require('../Models/MockInterview')
-const { consumeCredit, getUserPlan } = require('../utils/Plans')
+const { consumeCredit, refundCredit, getUserPlan } = require('../utils/Plans')
+const logger = require('../utils/logger')
 const { buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { updateStreak } = require('../utils/Streak')
@@ -103,20 +104,21 @@ exports.startMockInterview = async (req, res) => {
             })
         }
 
-        const spend = await consumeCredit(id)
-        if (!spend.ok) {
-            return res.status(403).json({
-                success: false,
-                message: spend.message,
-            })
-        }
-
+        // parse the upload BEFORE spending sir — a bad PDF used to cost a credit on the way to a 400
         const parser = new PDFParse({ data: PDf.data })
         const result = await parser.getText()
         if (!result?.text) {
             return res.status(400).json({
                 success: false,
                 message: 'error in getting the result from the pdf',
+            })
+        }
+
+        const spend = await consumeCredit(id)
+        if (!spend.ok) {
+            return res.status(403).json({
+                success: false,
+                message: spend.message,
             })
         }
 
@@ -130,7 +132,9 @@ exports.startMockInterview = async (req, res) => {
                 { role: 'user', content: 'Ask the first question. Return only the JSON.' },
             ])
         } catch (aiErr) {
-            console.log(aiErr)
+            logger.error('mock interview start failed', { err: aiErr, userId: id })
+            // the interview never started sir — give the credit back
+            await refundCredit(id)
             return res.status(502).json({
                 success: false,
                 message: 'The AI is unavailable right now, please try again',
@@ -139,6 +143,7 @@ exports.startMockInterview = async (req, res) => {
 
         const first = parseJsonReply(Invoking?.choices?.[0]?.message?.content)
         if (!first || !first.question) {
+            await refundCredit(id)
             return res.status(502).json({
                 success: false,
                 message: 'The AI response was not in the expected format, please try again',
