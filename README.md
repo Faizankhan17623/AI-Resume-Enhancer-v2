@@ -235,19 +235,58 @@ npm test
 
 ## Deployment
 
-The API and the worker are **two separate processes** and must be deployed as two services.
+The API and the scheduled jobs are **separate concerns** and must be run separately.
 
 | Service | Start command | Notes |
 |---|---|---|
 | API server | `npm start` | Web service. Serves all HTTP traffic. |
-| Background worker | `npm run worker` | Runs every cron job. No HTTP port. |
+| Scheduled jobs | see below | Two options: a long-lived worker, or a free external scheduler. |
 
-Both use root directory `Backend`, build command `npm install`, and need the **same** environment
-variables (`MONGO_DB_URL`, `JWT_PRIVATE_KEY`, `MAIL_*`, `ADMIN_ALERT_EMAIL`, `NODE_ENV=production`, …).
+Both use root directory `Backend` and build command `npm install`.
 
-Running the worker on more than one instance is safe: a Mongo-backed lease
-(`Backend/utils/jobLease.js`) ensures exactly one instance executes each tick, which also covers
-the overlap window during a rolling deploy.
+### Option A — free (GitHub Actions), recommended
+
+`.github/workflows/scheduled-jobs.yml` runs every job on GitHub's scheduled runners, which are
+free and unlimited for public repositories. Nothing extra to host.
+
+Each run invokes `Backend/jobs/runJob.js <job>`, which executes one job and exits. Add these
+repository secrets under **Settings → Secrets and variables → Actions**:
+
+```
+MONGO_DB_URL        (required)
+MAIL_HOST           (needed for the digest / nudge emails)
+MAIL_USER
+MAIL_PASS
+ADMIN_ALERT_EMAIL   (needed for the AI cost alert)
+FRONTEND_URL
+```
+
+Verify it with **Actions → Scheduled Jobs → Run workflow**, picking a job from the dropdown.
+`subscription-reconcile` is the safest one to test with: it sends no email.
+
+You can also run any job by hand:
+```bash
+cd Backend
+node jobs/runJob.js subscription-reconcile
+```
+
+### Option B — a dedicated worker process
+
+If you would rather have a real long-lived process (Render Background Worker, a VPS, Docker, or a
+system service), run:
+
+```bash
+npm run worker
+```
+
+This is a paid tier on Render. It is the better choice if you later add jobs that must fire at an
+exact time, since GitHub's scheduler is best-effort and can be delayed by several minutes.
+
+**Do not run both at once against the same database** unless you mean to. It is *safe* if you do —
+a Mongo-backed lease (`Backend/utils/jobLease.js`) guarantees only one process executes each tick,
+which also covers the overlap during a rolling deploy — but there is no reason to pay for both.
+
+### Database requirement
 
 **Production requires a MongoDB replica set** (Atlas provides one by default). The payment,
 credit-spend and account-deletion paths write to multiple documents inside a transaction, and the

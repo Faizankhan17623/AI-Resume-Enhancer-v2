@@ -216,4 +216,12 @@ const startStreakCron = () => {
     })
 }
 
-module.exports = { startStreakCron }
+// task functions are exported too sir, so a one-shot runner (scripts/runJob.js, used by the
+// GitHub Actions schedule) can invoke a single job without starting the whole cron process
+module.exports = {
+    startStreakCron,
+    sendWeeklyDigest,
+    sendStreakBreakNudges,
+    sendWinBackNudges,
+    sendMonthlyHealthCheck,
+}

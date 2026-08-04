@@ -31,4 +31,4 @@ const startFeatureFlagCron = () => {
     })
 }
 
-module.exports = { startFeatureFlagCron }
+module.exports = { startFeatureFlagCron, reEnableDueFlags }

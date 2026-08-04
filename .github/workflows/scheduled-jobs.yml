@@ -1,0 +1,120 @@
+# Free replacement for a paid Render Background Worker.
+#
+# The scheduled jobs used to run inside the API server, then moved to Backend/worker.js — a
+# long-lived process, which on Render means a paid Background Worker (~$7/month). This workflow
+# runs the SAME jobs on GitHub's free scheduled runners instead: each entry below wakes a runner,
+# executes one job via Backend/jobs/runJob.js, and exits.
+#
+# Public repositories get unlimited free Actions minutes, so this costs nothing.
+#
+# Two notes on correctness:
+#   - Every job still takes the Mongo lease (Backend/utils/jobLease.js), so this is safe to run
+#     alongside a real worker and a double-trigger is a no-op rather than a duplicate email.
+#   - GitHub's scheduler is best-effort and can be delayed by several minutes under load. Every
+#     job here is either idempotent or time-windowed, so a late run is harmless. Do not use this
+#     for anything that must fire at an exact second.
+#
+# Cron times are UTC. IST is UTC+5:30, so 03:30 UTC = 09:00 IST.
+
+name: Scheduled Jobs
+
+on:
+  schedule:
+    # feature flags re-enable — every 15 minutes.
+    # (worker.js uses */5; GitHub's minimum is 5 but short intervals are throttled in practice,
+    # so 15 is the honest number here. A flag re-enables up to 15 minutes late, which is fine.)
+    - cron: '*/15 * * * *'
+    # hourly: AI cost alert + subscription expiry reconciliation
+    - cron: '0 * * * *'
+    # 09:00 IST daily — streak nudges
+    - cron: '30 3 * * *'
+    # 08:00 IST daily — account purge sweep (worker.js runs this at 03:00)
+    - cron: '30 2 * * *'
+    # 08:00 IST Monday — user weekly digest
+    - cron: '30 2 * * 1'
+    # 09:00 IST Monday — admin weekly digest
+    - cron: '30 3 * * 1'
+    # 08:00 IST on the 1st — monthly resume health check
+    - cron: '30 2 1 * *'
+
+  # lets you trigger any single job by hand from the Actions tab sir, which is also how you
+  # verify the whole setup works without waiting for a schedule
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Job to run'
+        required: true
+        type: choice
+        options:
+          - streak-nudges
+          - weekly-digest
+          - monthly-health-check
+          - ai-cost-alert
+          - account-purge
+          - feature-flag-reenable
+          - admin-weekly-digest
+          - subscription-reconcile
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # a hung job must not burn minutes sir
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Backend
+        run: npm ci --omit=dev
+
+      # Maps the schedule that fired to the job(s) it should run. A manual dispatch overrides it.
+      - name: Decide which jobs to run
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "jobs=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT"
+          else
+            case "${{ github.event.schedule }}" in
+              '*/15 * * * *') echo "jobs=feature-flag-reenable" >> "$GITHUB_OUTPUT" ;;
+              '0 * * * *')    echo "jobs=ai-cost-alert subscription-reconcile" >> "$GITHUB_OUTPUT" ;;
+              '30 3 * * *')   echo "jobs=streak-nudges" >> "$GITHUB_OUTPUT" ;;
+              '30 2 * * *')   echo "jobs=account-purge" >> "$GITHUB_OUTPUT" ;;
+              '30 2 * * 1')   echo "jobs=weekly-digest" >> "$GITHUB_OUTPUT" ;;
+              '30 3 * * 1')   echo "jobs=admin-weekly-digest" >> "$GITHUB_OUTPUT" ;;
+              '30 2 1 * *')   echo "jobs=monthly-health-check" >> "$GITHUB_OUTPUT" ;;
+              *)              echo "jobs=" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Run
+        if: steps.pick.outputs.jobs != ''
+        working-directory: Backend
+        # Only what the JOBS actually use sir. jobs/runJob.js deliberately does not call
+        # checkRequiredEnv (worker.js and index.js do), so it does not demand the OAuth callback
+        # URLs and payment keys a cron job never touches. Verified: it runs under
+        # NODE_ENV=production with MONGO_DB_URL alone.
+        #
+        # MAIL_* are optional but strongly recommended: without them utils/Nodemailer.js logs
+        # "mail not configured, skipping send" and silently sends no email, which would make the
+        # digest and nudge jobs no-ops.
+        env:
+          NODE_ENV: production
+          MONGO_DB_URL: ${{ secrets.MONGO_DB_URL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          for job in ${{ steps.pick.outputs.jobs }}; do
+            echo "::group::$job"
+            node jobs/runJob.js "$job"
+            echo "::endgroup::"
+          done

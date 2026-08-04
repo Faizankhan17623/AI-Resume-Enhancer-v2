@@ -50,4 +50,4 @@ const startAdminDigestCron = () => {
     })
 }
 
-module.exports = { startAdminDigestCron }
+module.exports = { startAdminDigestCron, sendWeeklyAdminDigest }
