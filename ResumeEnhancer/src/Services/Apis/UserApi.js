@@ -21,16 +21,12 @@ export const Logout = {
 export const OAuth = {
     // full-page redirects sir — each button just navigates the browser here
     google: BASE_URL + "/auth/google",
-    facebook: BASE_URL + "/auth/facebook",
     github: BASE_URL + "/auth/github",
-    linkedin: BASE_URL + "/auth/linkedin",
     // OAuthComplete.jsx POSTs to the matching one of these to trade the one-time code for
     // the real token, body-only — keyed by the ?provider= query param on the redirect back
     exchange: {
         google: BASE_URL + "/auth/google/exchange",
-        facebook: BASE_URL + "/auth/facebook/exchange",
         github: BASE_URL + "/auth/github/exchange",
-        linkedin: BASE_URL + "/auth/linkedin/exchange",
     }
 }
 

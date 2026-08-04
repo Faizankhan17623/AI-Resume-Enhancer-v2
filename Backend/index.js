@@ -55,13 +55,6 @@ app.use(helmet({
     },
 }))
 
-// Razorpay's webhook signature is an HMAC over the EXACT raw bytes it sent sir — once
-// express.json() parses and re-serializes a body, that exact byte sequence is gone, so the
-// signature can never be verified afterward. This raw parser is scoped to only this one path
-// and mounted BEFORE express.json() below, so this route gets a Buffer as req.body while
-// every other route is unaffected and still gets the normal parsed JSON object.
-app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }))
-
 app.use(express.json())
 // express.json() leaves req.body undefined (not {}) when a request has no body sir —
 // every controller destructures req.body directly, so a bodyless request would 500 instead of

@@ -36,9 +36,7 @@ const {
     deleteAccount
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
-const { facebookLogin, facebookCallback, exchangeFacebookCode } = require('../controllers/FacebookAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
-const { linkedinLogin, linkedinCallback, exchangeLinkedInCode } = require('../controllers/LinkedInAuth.js')
 // we are going to start the routing from here sir
 
 // aiLimiter because every call here burns a Groq request + a credit sir.
@@ -64,17 +62,9 @@ route.get('/auth/google/callback',authLimiter,googleCallback)
 // code (all the redirect URL ever carries) for the real token, in the response body only
 route.post('/auth/google/exchange',authLimiter,exchangeGoogleCode)
 
-route.get('/auth/facebook',authLimiter,facebookLogin)
-route.get('/auth/facebook/callback',authLimiter,facebookCallback)
-route.post('/auth/facebook/exchange',authLimiter,exchangeFacebookCode)
-
 route.get('/auth/github',authLimiter,githubLogin)
 route.get('/auth/github/callback',authLimiter,githubCallback)
 route.post('/auth/github/exchange',authLimiter,exchangeGitHubCode)
-
-route.get('/auth/linkedin',authLimiter,linkedinLogin)
-route.get('/auth/linkedin/callback',authLimiter,linkedinCallback)
-route.post('/auth/linkedin/exchange',authLimiter,exchangeLinkedInCode)
 
 // authLimiter here too sir — stops the reset-email and reset-token endpoints being brute-forced
 route.post('/forgot-password',authLimiter,validate({ body: forgotPasswordSchema }),forgotPassword)

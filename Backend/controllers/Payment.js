@@ -1,4 +1,3 @@
-const crypto = require('crypto')
 const jwt = require('jsonwebtoken')
 const RazorpayInstance = require('../utils/Razorpay')
 const Payment = require('../Models/Payment')
@@ -275,92 +274,6 @@ exports.verifyPayment = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while verifying the payment',
-        })
-    }
-}
-
-// POST /payment/webhook — server-to-server from Razorpay directly sir, NOT the browser.
-// Covers the gap where a client pays successfully but disconnects (closed tab, network drop,
-// crash) before ever calling /verify — Razorpay still has the charge, but our DB would never
-// learn about it and the user would never get upgraded. Razorpay retries this webhook on
-// failure, so it must be safe to receive the same event more than once (idempotency guard
-// below handles that).
-//
-// Mounted in index.js with express.raw({type:'application/json'}) BEFORE the global
-// express.json() body parser, because HMAC verification below needs the exact raw bytes
-// Razorpay signed — req.body here is a Buffer, not a parsed object.
-exports.paymentWebhook = async (req, res) => {
-    try {
-        const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
-        if (!webhookSecret) {
-            // not configured sir — fail closed (never trust an unsigned/unverifiable payload)
-            logger.error('RAZORPAY_WEBHOOK_SECRET is not set, rejecting webhook call')
-            return res.status(503).json({ success: false, message: 'Webhook not configured' })
-        }
-
-        const signature = req.headers['x-razorpay-signature']
-        if (!signature) {
-            return res.status(400).json({ success: false, message: 'Missing signature header' })
-        }
-
-        // req.body is the raw Buffer here sir (see the express.raw() note above) — the HMAC
-        // must be computed over the exact bytes Razorpay sent, not a re-serialized JSON object
-        const expectedSignature = crypto
-            .createHmac('sha256', webhookSecret)
-            .update(req.body)
-            .digest('hex')
-
-        if (expectedSignature !== signature) {
-            logger.warn('payment webhook signature mismatch, rejecting')
-            return res.status(400).json({ success: false, message: 'Invalid signature' })
-        }
-
-        const event = JSON.parse(req.body.toString('utf8'))
-
-        // only these two events actually confirm money moved sir — everything else
-        // (refund, dispute, etc.) is out of scope for this fix
-        const isCaptured = event.event === 'payment.captured' || event.event === 'order.paid'
-        if (!isCaptured) {
-            return res.status(200).json({ success: true, message: 'Event ignored' })
-        }
-
-        const orderId = event.payload?.payment?.entity?.order_id || event.payload?.order?.entity?.id
-        const paymentEntity = event.payload?.payment?.entity
-        const razorpayPaymentId = paymentEntity?.id
-
-        if (!orderId) {
-            logger.warn('payment webhook had no order id in payload, ignoring')
-            return res.status(200).json({ success: true, message: 'No order id in payload, ignored' })
-        }
-
-        // idempotency guard sir — Razorpay retries webhooks, and /verify may have already
-        // beaten this event to the punch. Either way, a second activation must be a no-op,
-        // not a second SubscriptionExpires extension
-        const existing = await Payment.findOne({ orderId })
-        if (!existing) {
-            logger.warn('payment webhook for unknown order, ignoring', { orderId })
-            return res.status(200).json({ success: true, message: 'Order not found, ignored' })
-        }
-
-        if (existing.status === 'paid') {
-            return res.status(200).json({ success: true, message: 'Already processed' })
-        }
-
-        // signature on the webhook envelope already proves this event came from Razorpay sir —
-        // unlike /verify there's no separate per-payment signature to recompute here
-        const activation = await activatePaidOrder(orderId, razorpayPaymentId || existing.paymentId, existing.signature)
-
-        if (activation?.alreadyPaid) {
-            return res.status(200).json({ success: true, message: 'Already processed' })
-        }
-
-        logger.info('payment activated via webhook', { orderId, plan: activation?.payment?.plan })
-        return res.status(200).json({ success: true, message: 'Payment activated via webhook' })
-    } catch (error) {
-        logger.error('payment webhook failed', { err: error })
-        return res.status(500).json({
-            success: false,
-            message: 'Something went wrong while processing the payment webhook',
         })
     }
 }

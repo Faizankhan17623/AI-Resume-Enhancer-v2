@@ -3,15 +3,16 @@
 // server come up "healthy" and then throw on the first login/AI/DB call that needs it
 //
 // Widened past the original core 3 (Mongo/Groq/JWT) to also cover Razorpay, Cloudinary, and
-// all four OAuth providers sir — these were previously silent-fail at boot and only surfaced
-// as a broken checkout/upload/login click deep into a user's session. Exact var names below
-// are pulled straight from where each is actually read:
-//   Razorpay      -> utils/Razorpay.js, controllers/Payment.js (webhook, fix #4)
+// the remaining OAuth providers sir — these were previously silent-fail at boot and only
+// surfaced as a broken checkout/upload/login click deep into a user's session. Exact var names
+// below are pulled straight from where each is actually read:
+//   Razorpay      -> utils/Razorpay.js
 //   Cloudinary    -> Installation/Cloudinary.js
 //   Google OAuth  -> controllers/GoogleAuth.js
-//   Facebook OAuth-> controllers/FacebookAuth.js
 //   GitHub OAuth  -> controllers/GitHubAuth.js
-//   LinkedIn OAuth-> controllers/LinkedInAuth.js
+//
+// Facebook/LinkedIn OAuth and the Razorpay webhook were removed entirely (never had live UI
+// wired up), so their vars are no longer required here.
 //
 // Deliberately NOT included: MAIL_RELAY_URL / MAIL_RELAY_SECRET — utils/Nodemailer.js already
 // falls back to a "would have sent" log when unset, so that's an accepted soft-fail, not
@@ -23,7 +24,6 @@ const REQUIRED_ENV_VARS = [
 
     'RAZORPAY_KEY_ID',
     'RAZORPAY_KEY_SECRET',
-    'RAZORPAY_WEBHOOK_SECRET',
 
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
@@ -33,17 +33,9 @@ const REQUIRED_ENV_VARS = [
     'GOOGLE_CLIENT_SECRET',
     'GOOGLE_CALLBACK_URL',
 
-    'FACEBOOK_CLIENT_ID',
-    'FACEBOOK_CLIENT_SECRET',
-    'FACEBOOK_CALLBACK_URL',
-
     'GITHUB_CLIENT_ID',
     'GITHUB_CLIENT_SECRET',
     'GITHUB_CALLBACK_URL',
-
-    'LINKEDIN_CLIENT_ID',
-    'LINKEDIN_CLIENT_SECRET',
-    'LINKEDIN_CALLBACK_URL',
 ]
 
 function checkRequiredEnv() {

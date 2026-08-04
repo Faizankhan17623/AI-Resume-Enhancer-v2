@@ -4,7 +4,7 @@ Full feature list (internal reference — not rendered as part of the public REA
 Auth & Account
 - Signup/login with OTP email verification, JWT session cookie
 - Per-account brute-force lockout: 5 failed attempts locks the account for 15 minutes
-- Google and GitHub OAuth login/signup (one-time exchange-code redirect flow, callback URLs point at the live Render backend). Facebook/LinkedIn backend controllers exist but were never actually configured, so their frontend buttons stay hidden behind a `PROVIDER_READY` flag in `oauthProviders.js` rather than being wired live
+- Google and GitHub OAuth login/signup (one-time exchange-code redirect flow, callback URLs point at the live Render backend). Facebook/LinkedIn OAuth was removed (never actually configured/wired live)
 - Profile page: plan, activity counts, editable first/last name, email, and phone number
 - Per-type email notification preferences (streak, win-back, digest, monthly health check)
 - In-app notification bell (unread badge, dropdown, mark read/mark all read) mirroring the email nudges
