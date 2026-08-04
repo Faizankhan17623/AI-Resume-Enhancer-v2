@@ -81,7 +81,7 @@ Platform
 - Cookie consent card (localStorage-remembered, shown once)
 - AI model centralized in Backend/utils/AiModel.js (openai/gpt-oss-120b, overridable via GROQ_MODEL env)
 - Baseline accessibility pass on the feedback modal and notification bell (ARIA roles/labels, Escape-to-close, radiogroup semantics)
-- Backend integration test suite: 85 tests across 11 files (auth, AI review, chat streaming, cover letters, resume library, admin RBAC, notifications, profile edit/export, payments, misc features)
+- Backend integration test suite: 152 tests across 18 files (auth, AI review, chat streaming, cover letters, resume library, admin RBAC, notifications, profile edit/export, payments, subscription expiry reconciliation, rate-limit fail-closed policy, request validation, misc features)
 -->
 
 # AI Resume Enhancer
@@ -104,7 +104,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - **AI Cover Letter Generator** — generate a tailored cover letter from a resume + job description (Pro+ feature), with an automatic genericness check
 - **Job Search** — live web search for matching job postings via Tavily (Pro+ feature)
 - **Learning Resources** — real course/tutorial links (live Tavily search, Mongo-cached by query) for each skill gap in a review's learning roadmap, instead of a plain Google search link (Pro+ feature)
-- **Payments** — subscription/checkout support via Razorpay and Stripe
+- **Payments** — subscription/checkout support via Razorpay
 - **Reviews & Testimonials** — users can leave reviews after using the platform and can frame a shared report for a friend or a recruiter; user-submitted homepage testimonials go through an Admin/Support moderation queue before appearing publicly
 - **Notifications** — an in-app bell (unread badge, mark read) alongside per-type email opt-in/opt-out (streak, win-back, digest, monthly health check)
 - **Account Self-Service** — edit profile fields inline, export your own data as JSON, and delete your account with a 2-day recovery window
@@ -127,25 +127,30 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - Groq SDK for AI-generated resume feedback — model is `openai/gpt-oss-120b`, set once in `Backend/utils/AiModel.js` and overridable via the `GROQ_MODEL` env var
 - pdfkit (PDF) & docx (DOCX) for resume/report file generation
 - Cloudinary for file storage
-- Razorpay & Stripe for payments
-- Helmet, CORS, and rate limiting for security
+- Razorpay for payments
+- Helmet, CORS, and rate limiting for security (limits are stored in MongoDB, so they hold across restarts and multiple instances)
+- Zod request validation on the auth, payment, and admin routes
+- Scheduled jobs run in a **separate worker process** (`npm run worker`), not inside the API server
 
 ## Project Structure
 
 ```
 AI-Resume-Enhancer-v2/
 ├── Backend/              # Express API server
-│   ├── controllers/      # Route handlers
-│   ├── Routes/           # API route definitions
+│   ├── controllers/      # Route handlers (thin: parse, call service, shape response)
+│   ├── services/         # Business logic, independent of HTTP
+│   ├── Routes/           # Route definitions (+ registry that fails on route collisions)
 │   ├── Models/           # Mongoose schemas
-│   ├── Middlewares/      # Auth, rate limiting, etc.
+│   ├── Middlewares/      # Auth, rate limiting, validation, request context
+│   ├── Validation/       # Zod schemas (one definition per rule)
 │   ├── Installation/     # DB & Cloudinary setup
-│   ├── docs/              # OpenAPI/Swagger spec
-│   ├── tests/             # Jest + Supertest integration tests
-│   └── index.js          # Server entry point
+│   ├── docs/             # OpenAPI/Swagger spec
+│   ├── tests/            # Jest + Supertest integration tests
+│   ├── index.js          # API server entry point
+│   └── worker.js         # Background worker entry point (all cron jobs)
 └── ResumeEnhancer/       # React frontend
     └── src/
-        ├── Components/   # UI components (Home, Login, Dashboard incl. Resumes/CoverLetter/JobSearch/Applications/MockInterview, ResumeBuilder/Templates, Admin, etc.)
+        ├── Components/   # UI components (Home, Login, Dashboard, ResumeBuilder, Admin, etc.)
         ├── Services/     # API call definitions
         ├── Slices/       # Redux slices
         └── reducer/      # Redux store setup
@@ -171,7 +176,7 @@ The spec itself is hand-written in `Backend/docs/swagger.js` and mounted in `Bac
 
 ## Testing
 
-The backend has an integration test suite (Jest + Supertest + an in-memory MongoDB instance — no mocked DB): 85 tests across 11 files covering authentication, the AI resume review pipeline, cover letter generation, the resume library, chat streaming, payment verification, admin RBAC (role changes, bans, credit adjustments, self-demotion/self-ban/self-delete protection), notifications, and profile editing/data export. AI-dependent controllers mock the Groq SDK rather than making real API calls.
+The backend has an integration test suite (Jest + Supertest + an in-memory MongoDB instance — no mocked DB): 152 tests across 18 files covering authentication, the AI resume review pipeline, cover letter generation, the resume library, chat streaming, payment verification, admin RBAC (role changes, bans, credit adjustments, self-demotion/self-ban/self-delete protection), notifications, and profile editing/data export. AI-dependent controllers mock the Groq SDK rather than making real API calls.
 
 ```bash
 cd Backend
@@ -183,7 +188,7 @@ npm test
 ### Prerequisites
 - Node.js (v18+)
 - MongoDB instance (local or Atlas)
-- API keys for Cloudinary, Groq, Razorpay/Stripe, and an SMTP provider (for OTP emails)
+- API keys for Cloudinary, Groq, Razorpay, and an SMTP provider (for OTP emails)
 
 ### Setup
 
@@ -216,6 +221,39 @@ npm test
    ```
 
 5. Open the app at `http://localhost:5173`
+
+6. (Optional in dev) Start the background worker
+
+   Scheduled jobs — streak nudges, weekly/admin digests, the account-purge sweep, AI cost
+   alerts, feature-flag re-enable, and subscription expiry reconciliation — run in their own
+   process, **not** inside the API server. Nothing scheduled fires unless this is running:
+
+   ```bash
+   cd Backend
+   npm run worker        # or: npm run dev:worker, for auto-restart
+   ```
+
+## Deployment
+
+The API and the worker are **two separate processes** and must be deployed as two services.
+
+| Service | Start command | Notes |
+|---|---|---|
+| API server | `npm start` | Web service. Serves all HTTP traffic. |
+| Background worker | `npm run worker` | Runs every cron job. No HTTP port. |
+
+Both use root directory `Backend`, build command `npm install`, and need the **same** environment
+variables (`MONGO_DB_URL`, `JWT_PRIVATE_KEY`, `MAIL_*`, `ADMIN_ALERT_EMAIL`, `NODE_ENV=production`, …).
+
+Running the worker on more than one instance is safe: a Mongo-backed lease
+(`Backend/utils/jobLease.js`) ensures exactly one instance executes each tick, which also covers
+the overlap window during a rolling deploy.
+
+**Production requires a MongoDB replica set** (Atlas provides one by default). The payment,
+credit-spend and account-deletion paths write to multiple documents inside a transaction, and the
+app refuses to run those non-atomically rather than risk a charged-but-not-upgraded user. This is
+checked at boot, so a misconfigured deployment fails immediately instead of at a customer's first
+payment. Set `ALLOW_NON_TRANSACTIONAL_WRITES=true` only if you knowingly accept that risk.
 
 ## License
 
