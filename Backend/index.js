@@ -134,10 +134,13 @@ app.use((err, req, res, next) => {
 
 // tests import `app` directly and manage their own DB connection sir — no real listener, no real Mongo
 if (process.env.NODE_ENV !== 'test') {
-	connectDB()
-	cloud()
-	app.listen(Port,()=>{
-		logger.info('server listening', { port: Port, env: process.env.NODE_ENV || 'development' })
+	connectDB().then(() => {
+		cloud()
+		app.listen(Port, () => {
+			// plain text, not the JSON logger sir — this one line is for a human glancing at
+			// Render's deploy log to confirm boot succeeded, not for the aggregator to parse
+			console.log(`Server ready on port ${Port} (${process.env.NODE_ENV || 'development'})`)
+		})
 	})
 }
 

@@ -5,7 +5,6 @@ const { supportsTransactions } = require('../utils/withTransaction')
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_DB_URL)
-        logger.info('MongoDB connected')
 
         // BOOT-TIME check sir, so a misconfigured deployment is caught on deploy rather than on
         // the first customer payment. utils/withTransaction.js refuses non-atomic multi-document
