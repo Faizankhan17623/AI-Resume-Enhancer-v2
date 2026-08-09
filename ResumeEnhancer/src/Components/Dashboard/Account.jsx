@@ -316,6 +316,14 @@ const Account = () => {
               checked={user.notifyHealthCheck !== false}
               onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyHealthCheck: value }, token))}
             />
+            {user.SubType === 'ProMax' && (
+              <Toggle
+                label="Interview practice reminders"
+                hint="A weekly nudge to run a mock interview if you're on a streak but haven't practiced lately"
+                checked={user.notifyInterviewPrep !== false}
+                onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyInterviewPrep: value }, token))}
+              />
+            )}
           </div>
         </div>
 

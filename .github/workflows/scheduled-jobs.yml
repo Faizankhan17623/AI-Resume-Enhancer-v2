@@ -37,6 +37,8 @@ on:
     - cron: '30 3 * * 1'
     # 08:00 IST on the 1st — monthly resume health check
     - cron: '30 2 1 * *'
+    # 13:30 IST Wednesday — interview-prep nudges (matches StreakCron.js's own 08:00 UTC)
+    - cron: '0 8 * * 3'
 
   # lets you trigger any single job by hand from the Actions tab sir, which is also how you
   # verify the whole setup works without waiting for a schedule
@@ -56,6 +58,7 @@ on:
           - admin-weekly-digest
           - subscription-reconcile
           - credit-reconcile
+          - interview-prep-nudges
 
 jobs:
   run:
@@ -91,6 +94,7 @@ jobs:
               '30 2 * * 1')   echo "jobs=weekly-digest" >> "$GITHUB_OUTPUT" ;;
               '30 3 * * 1')   echo "jobs=admin-weekly-digest" >> "$GITHUB_OUTPUT" ;;
               '30 2 1 * *')   echo "jobs=monthly-health-check" >> "$GITHUB_OUTPUT" ;;
+              '0 8 * * 3')    echo "jobs=interview-prep-nudges" >> "$GITHUB_OUTPUT" ;;
               *)              echo "jobs=" >> "$GITHUB_OUTPUT" ;;
             esac
           fi

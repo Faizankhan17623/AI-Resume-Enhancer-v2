@@ -164,6 +164,13 @@ const UserCreation = new mongoose.Schema(
             type: Boolean,
             default: true
         },
+        // interview-practice reminder sir — same opt-out pattern, see StreakCron.js's
+        // sendInterviewPrepNudges: only fires for a user with an active streak who hasn't run
+        // a mock interview in a while, so it reinforces the daily habit rather than being generic
+        notifyInterviewPrep: {
+            type: Boolean,
+            default: true
+        },
         // brute-force lockout sir — on top of the IP rate limiter, this is PER-ACCOUNT so a
         // distributed attack (many IPs, one target account) still gets stopped
         failedLoginAttempts: {

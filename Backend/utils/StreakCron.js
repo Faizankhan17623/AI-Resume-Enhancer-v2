@@ -3,6 +3,7 @@ const logger = require('./logger')
 const User = require('../Models/User')
 const Review = require('../Models/Review')
 const Resume = require('../Models/Resume')
+const MockInterview = require('../Models/MockInterview')
 const mailSender = require('./Nodemailer')
 const { notify } = require('./NotificationLog')
 
@@ -42,6 +43,13 @@ const digestEmailHtml = (name, { count, bestScore, latestScore, improvement }) =
             <li>Change since your first review this week: <strong>${improvement >= 0 ? '+' : ''}${improvement}</strong></li>
         </ul>
         <p>Keep iterating — every review gets you closer to an interview.</p>
+    </div>
+`
+
+const interviewPrepEmailHtml = (name, streak) => `
+    <div style="font-family: sans-serif;">
+        <h2>Keep your interview skills sharp, ${name}</h2>
+        <p>You're on a ${streak}-day streak — nice work. It's been a week since your last mock interview session, though. A quick practice round keeps your answers ready for the real thing.</p>
     </div>
 `
 
@@ -183,6 +191,39 @@ const sendMonthlyHealthCheck = async () => {
     }
 }
 
+// weekly interview-practice nudge sir — ProMax only (MockInterview.js is gated to that plan, see
+// its own comment), and only for users with an ACTIVE streak: this reinforces the daily habit a
+// streak already represents rather than being a generic "come try this feature" ad to someone who
+// isn't engaged right now (that's what sendWinBackNudges above is already for). currentStreak >= 3
+// avoids nudging someone on day 1-2 of a streak who's likely still exploring other features first.
+const sendInterviewPrepNudges = async () => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+    const recentPractice = await MockInterview.distinct('user', { createdAt: { $gte: sevenDaysAgo } })
+    const recentPracticeSet = new Set(recentPractice.map(String))
+
+    const candidates = await User.find({
+        SubType: 'ProMax',
+        Subscription: true,
+        currentStreak: { $gte: 3 },
+        notifyInterviewPrep: true,
+    }).select('email firstName currentStreak')
+
+    for (const user of candidates) {
+        if (recentPracticeSet.has(String(user._id))) continue
+
+        mailSender(user.email, 'Time for a quick interview practice round', interviewPrepEmailHtml(user.firstName, user.currentStreak))
+            .catch((err) => logger.error('interview-prep email failed', { err: err }))
+        notify({
+            user: user._id,
+            type: 'interview-prep',
+            title: 'Time for a quick interview practice round',
+            message: `You're on a ${user.currentStreak}-day streak — keep it up with a mock interview session.`,
+            link: '/Dashboard/Mock-Interview',
+        })
+    }
+}
+
 // registered once from index.js sir. Every job goes through scheduleJob, which takes a
 // cluster-wide lease first — these all send real email, so running once per instance meant
 // users received duplicate nudges on any multi-instance deploy.
@@ -214,6 +255,14 @@ const startStreakCron = () => {
         leaseMs: 10 * 60 * 1000,
         task: sendMonthlyHealthCheck,
     })
+
+    // weekly interview-prep nudge sir — Wednesday 08:00 UTC, spaced away from the Monday digest
+    scheduleJob({
+        name: 'interview-prep-nudges',
+        schedule: '0 8 * * 3',
+        leaseMs: 10 * 60 * 1000,
+        task: sendInterviewPrepNudges,
+    })
 }
 
 // task functions are exported too sir, so a one-shot runner (scripts/runJob.js, used by the
@@ -224,4 +273,5 @@ module.exports = {
     sendStreakBreakNudges,
     sendWinBackNudges,
     sendMonthlyHealthCheck,
+    sendInterviewPrepNudges,
 }

@@ -28,6 +28,7 @@ const {
     sendStreakBreakNudges,
     sendWinBackNudges,
     sendMonthlyHealthCheck,
+    sendInterviewPrepNudges,
 } = require('../utils/StreakCron')
 const { checkAiUsageAndAlert } = require('../utils/AiCostAlert')
 const { purgeExpiredAccounts } = require('../utils/AccountPurgeCron')
@@ -48,6 +49,7 @@ const JOBS = {
     },
     'weekly-digest': { leaseMs: 15 * 60 * 1000, task: sendWeeklyDigest },
     'monthly-health-check': { leaseMs: 15 * 60 * 1000, task: sendMonthlyHealthCheck },
+    'interview-prep-nudges': { leaseMs: 10 * 60 * 1000, task: sendInterviewPrepNudges },
     'ai-cost-alert': { leaseMs: 5 * 60 * 1000, task: checkAiUsageAndAlert },
     'account-purge': { leaseMs: 10 * 60 * 1000, task: purgeExpiredAccounts },
     'feature-flag-reenable': { leaseMs: 2 * 60 * 1000, task: reEnableDueFlags },

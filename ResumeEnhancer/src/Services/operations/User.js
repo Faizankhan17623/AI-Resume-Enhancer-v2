@@ -65,6 +65,7 @@ export function UpdateNotificationPrefs(prefs, token) {
                 notifyWinBack: response.data.notifyWinBack,
                 notifyDigest: response.data.notifyDigest,
                 notifyHealthCheck: response.data.notifyHealthCheck,
+                notifyInterviewPrep: response.data.notifyInterviewPrep,
             }))
         } catch (error) {
             logApiError("Error updating notification preferences", error)

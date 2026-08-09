@@ -1068,7 +1068,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck onboardingCompleted')
+            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted')
 
         if (!user) {
             return res.status(404).json({
@@ -1132,7 +1132,7 @@ exports.getProfile = async (req, res) => {
 exports.updateNotificationPrefs = async (req, res) => {
     try {
         const userId = req.User.id;
-        const { notifyStreak, notifyWinBack, notifyDigest, notifyHealthCheck } = req.body;
+        const { notifyStreak, notifyWinBack, notifyDigest, notifyHealthCheck, notifyInterviewPrep } = req.body;
 
         // only touch the fields the caller actually sent sir, so a partial update never resets the others
         const updates = {};
@@ -1140,6 +1140,7 @@ exports.updateNotificationPrefs = async (req, res) => {
         if (typeof notifyWinBack === 'boolean') updates.notifyWinBack = notifyWinBack;
         if (typeof notifyDigest === 'boolean') updates.notifyDigest = notifyDigest;
         if (typeof notifyHealthCheck === 'boolean') updates.notifyHealthCheck = notifyHealthCheck;
+        if (typeof notifyInterviewPrep === 'boolean') updates.notifyInterviewPrep = notifyInterviewPrep;
 
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({
@@ -1149,7 +1150,7 @@ exports.updateNotificationPrefs = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
-            .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck');
+            .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -1165,6 +1166,7 @@ exports.updateNotificationPrefs = async (req, res) => {
             notifyWinBack: updatedUser.notifyWinBack,
             notifyDigest: updatedUser.notifyDigest,
             notifyHealthCheck: updatedUser.notifyHealthCheck,
+            notifyInterviewPrep: updatedUser.notifyInterviewPrep,
         });
     } catch (error) {
         (req.log || logger).error('update notification prefs failed', { err: error })
