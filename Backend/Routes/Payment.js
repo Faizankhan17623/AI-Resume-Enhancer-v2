@@ -7,7 +7,8 @@ const {
     getPlans,
     createOrder,
     verifyPayment,
-    getPaymentHistory
+    getPaymentHistory,
+    paymentWebhook
 } = require('../controllers/Payment.js')
 
 // everything about money lives here sir. isUser blocks Admin/Support too — buying/holding
@@ -19,5 +20,13 @@ route.get('/payment/plans',getPlans)
 route.post('/payment/create-order',Auth,isUser,validate({ body: createOrderSchema }),createOrder)
 route.post('/payment/verify',Auth,isUser,validate({ body: verifyPaymentSchema }),verifyPayment)
 route.get('/payment/history',Auth,isUser,getPaymentHistory)
+
+// server-to-server from Razorpay sir — no Auth/isUser, Razorpay is not a logged-in user, and
+// deliberately NO validate() either: req.body here is the raw Buffer the signature is computed
+// over, and parsing it would destroy exactly the bytes the HMAC check needs.
+// Trust here comes entirely from the HMAC signature check inside paymentWebhook, not from
+// a session. NOTE: this route needs express.raw() body parsing (the raw bytes Razorpay
+// signed), which is wired up in index.js BEFORE the global express.json() — see there.
+route.post('/payment/webhook', paymentWebhook)
 
 module.exports = route

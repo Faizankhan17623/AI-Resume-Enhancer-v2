@@ -11,12 +11,17 @@
 //   Google OAuth  -> controllers/GoogleAuth.js
 //   GitHub OAuth  -> controllers/GitHubAuth.js
 //
-// Facebook/LinkedIn OAuth and the Razorpay webhook were removed entirely (never had live UI
-// wired up), so their vars are no longer required here.
+// Facebook/LinkedIn OAuth were removed entirely (never had live UI wired up), so their vars
+// are no longer required here.
 //
 // Deliberately NOT included: MAIL_RELAY_URL / MAIL_RELAY_SECRET — utils/Nodemailer.js already
 // falls back to a "would have sent" log when unset, so that's an accepted soft-fail, not
-// something that should block boot.
+// something that should block boot. RAZORPAY_WEBHOOK_SECRET is the same story sir —
+// controllers/Payment.js's paymentWebhook already fails closed with a 503 when it's unset, so
+// an unconfigured webhook degrades to "webhook unavailable, /verify remains the activation
+// path" instead of refusing to boot. Making it hard-required here is what got the whole
+// webhook route deleted once already even though the route itself was never the actual bug —
+// don't repeat that mistake by re-adding it to this list.
 const REQUIRED_ENV_VARS = [
     'MONGO_DB_URL',
     'GROK_API_KEY',
