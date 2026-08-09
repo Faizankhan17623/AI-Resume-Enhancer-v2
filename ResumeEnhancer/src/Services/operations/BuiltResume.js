@@ -5,7 +5,7 @@ import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, restoreVersion, duplicate } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, singleVersion, restoreVersion, duplicate } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
 // color is optional — carried over when the user picked an accent on the dedicated Templates page.
@@ -160,6 +160,29 @@ export function GetBuiltResumeVersions(resumeId, token) {
         } catch (error) {
             logApiError("Error fetching resume versions", error)
             return []
+        }
+    }
+}
+
+// fetches ONE version's full content sir — separate from the list above on purpose (see
+// controllers/BuiltResume.js's getBuiltResumeVersion), only called when the user actually opens
+// the diff view for a specific version, not on every dropdown open
+export function GetBuiltResumeVersion(resumeId, versionId, token) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", `${singleVersion}/${resumeId}/versions/${versionId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data.version
+        } catch (error) {
+            logApiError("Error fetching the resume version", error)
+            toast.error(error?.response?.data?.message || "Could not load this version")
+            return null
         }
     }
 }

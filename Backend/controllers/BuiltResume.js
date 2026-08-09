@@ -309,6 +309,51 @@ exports.getBuiltResumeVersions = async (req, res) => {
     }
 }
 
+// GET /built-resumes/:resumeId/versions/:versionId — one saved snapshot's FULL content sir, for
+// the diff view. Separate from the list endpoint above on purpose: the list is fetched once per
+// dropdown-open and stays cheap (no bodies), this is fetched only when the user actually picks a
+// version to compare, so opening the history dropdown never pulls N full snapshots for nothing.
+exports.getBuiltResumeVersion = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId, versionId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId) || !mongoose.isValidObjectId(versionId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume or version id',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id }).select('versions')
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        const version = resume.versions.id(versionId)
+        if (!version) {
+            return res.status(404).json({
+                success: false,
+                message: 'Version not found',
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            version,
+        })
+    } catch (error) {
+        (req.log || logger).error('get built resume version failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the resume version',
+        })
+    }
+}
+
 // POST /built-resumes/:resumeId/versions/:versionId/restore — roll the CONTENT fields back to a
 // saved snapshot sir. Snapshots the CURRENT state first (same 15-min-gated rule as a normal save)
 // so restoring is itself undoable, then overwrites content fields only — template/color/photo

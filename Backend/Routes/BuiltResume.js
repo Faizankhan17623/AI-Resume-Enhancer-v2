@@ -15,6 +15,7 @@ const {
     uploadBuiltResumePhoto,
     removeBuiltResumePhoto,
     getBuiltResumeVersions,
+    getBuiltResumeVersion,
     restoreBuiltResumeVersion,
     duplicateBuiltResume,
 } = require('../controllers/BuiltResume.js')
@@ -38,6 +39,7 @@ route.get('/built-resumes/:resumeId/docx', Auth, isUser, downloadBuiltResumeDocx
 route.post('/built-resumes/:resumeId/photo', Auth, isUser, uploadBuiltResumePhoto)
 route.delete('/built-resumes/:resumeId/photo', Auth, isUser, removeBuiltResumePhoto)
 route.get('/built-resumes/:resumeId/versions', Auth, isUser, getBuiltResumeVersions)
+route.get('/built-resumes/:resumeId/versions/:versionId', Auth, isUser, getBuiltResumeVersion)
 route.post('/built-resumes/:resumeId/versions/:versionId/restore', Auth, isUser, restoreBuiltResumeVersion)
 route.post('/built-resumes/:resumeId/duplicate', Auth, isUser, duplicateBuiltResume)
 

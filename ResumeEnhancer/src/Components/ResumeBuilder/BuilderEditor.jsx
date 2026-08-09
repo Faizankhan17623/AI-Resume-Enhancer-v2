@@ -4,14 +4,15 @@ import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
-import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto, GetBuiltResumeVersions, RestoreBuiltResumeVersion } from '../../Services/operations/BuiltResume'
+import VersionDiffModal from './VersionDiffModal'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto, GetBuiltResumeVersions, GetBuiltResumeVersion, RestoreBuiltResumeVersion } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
@@ -45,6 +46,8 @@ const BuilderEditor = () => {
   const [versions, setVersions] = useState([])
   const [versionsLoading, setVersionsLoading] = useState(false)
   const [restoringId, setRestoringId] = useState(null)
+  const [diffVersion, setDiffVersion] = useState(null)
+  const [diffLoading, setDiffLoading] = useState(false)
 
   useEffect(() => {
     dispatch(GetBuiltResume(resumeId, token))
@@ -144,7 +147,19 @@ const BuilderEditor = () => {
     setRestoringId(versionId)
     const ok = await dispatch(RestoreBuiltResumeVersion(resumeId, versionId, token))
     setRestoringId(null)
-    if (ok) setVersionsOpen(false)
+    if (ok) {
+      setVersionsOpen(false)
+      setDiffVersion(null)
+    }
+  }
+
+  // opens the diff modal sir — fetches this ONE version's full content (the list dropdown only
+  // ever carried title+savedAt), then compares it against whatever's currently in the editor
+  const handleCompareVersion = async (versionId) => {
+    setDiffLoading(true)
+    const full = await dispatch(GetBuiltResumeVersion(resumeId, versionId, token))
+    setDiffLoading(false)
+    if (full) setDiffVersion(full)
   }
 
   // template swap sir — same data, different renderer. Saves immediately (not debounced like
@@ -334,13 +349,23 @@ const BuilderEditor = () => {
                               <p className="text-sm text-richblack-5 truncate">{v.title || 'Untitled resume'}</p>
                               <p className="text-xs text-richblack-400">{new Date(v.savedAt).toLocaleString()}</p>
                             </div>
-                            <button
-                              onClick={() => handleRestoreVersion(v._id)}
-                              disabled={restoringId === v._id}
-                              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-yellow-50 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                            >
-                              <FaUndo className="text-[10px]" /> {restoringId === v._id ? 'Restoring...' : 'Restore'}
-                            </button>
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleCompareVersion(v._id)}
+                                disabled={diffLoading}
+                                title="Compare with what's currently open"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer disabled:opacity-50"
+                              >
+                                <FaExchangeAlt className="text-[10px]" /> Compare
+                              </button>
+                              <button
+                                onClick={() => handleRestoreVersion(v._id)}
+                                disabled={restoringId === v._id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-yellow-50 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer disabled:opacity-50"
+                              >
+                                <FaUndo className="text-[10px]" /> {restoringId === v._id ? 'Restoring...' : 'Restore'}
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -660,6 +685,15 @@ const BuilderEditor = () => {
           </div>
         </div>
       </PageTransition>
+
+      <VersionDiffModal
+        open={!!diffVersion}
+        onClose={() => setDiffVersion(null)}
+        version={diffVersion}
+        current={current}
+        onRestore={() => diffVersion && handleRestoreVersion(diffVersion._id)}
+        restoring={restoringId === diffVersion?._id}
+      />
     </DashboardLayout>
   )
 }
