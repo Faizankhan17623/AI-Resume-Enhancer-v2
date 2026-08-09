@@ -8,7 +8,7 @@ import IconBtn from '../extra/IconBtn'
 import { gsap, SplitText, prefersReducedMotion } from '../../utils/gsap'
 
 const Banner = () => {
-  const { token } = useSelector((state) => state.auth)
+  const { isLoggedIn } = useSelector((state) => state.auth)
   const rootRef = useRef(null)
 
   useGSAP(() => {
@@ -77,8 +77,8 @@ const Banner = () => {
         </p>
 
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Link data-hero-cta to={token ? "/Dashboard/New-Review" : "/Signup"}>
-            <IconBtn text={token ? "Analyze my resume" : "Start free — 5 reviews"} customClasses="text-base px-7 py-3.5 shadow-lg shadow-yellow-900/20 hover:shadow-xl hover:shadow-yellow-900/30 hover:-translate-y-0.5">
+          <Link data-hero-cta to={isLoggedIn ? "/Dashboard/New-Review" : "/Signup"}>
+            <IconBtn text={isLoggedIn ? "Analyze my resume" : "Start free — 5 reviews"} customClasses="text-base px-7 py-3.5 shadow-lg shadow-yellow-900/20 hover:shadow-xl hover:shadow-yellow-900/30 hover:-translate-y-0.5">
               <FaArrowRight />
             </IconBtn>
           </Link>

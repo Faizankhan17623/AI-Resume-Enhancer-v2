@@ -30,7 +30,7 @@ const toolsMenu = [
 const NavDropdown = ({ label, items, active }) => {
   const [open, setOpen] = useState(false)
   const closeTimer = useRef(null)
-  const { token } = useSelector((state) => state.auth)
+  const { isLoggedIn } = useSelector((state) => state.auth)
 
   const openNow = () => {
     clearTimeout(closeTimer.current)
@@ -67,7 +67,7 @@ const NavDropdown = ({ label, items, active }) => {
                 return (
                   <Link
                     key={item.name}
-                    to={token ? item.path : '/Login'}
+                    to={isLoggedIn ? item.path : '/Login'}
                     className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-richblack-700/60 transition-colors duration-150"
                   >
                     <div className="w-8 h-8 shrink-0 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100">
@@ -96,7 +96,7 @@ const NavSearch = () => {
   const inputRef = useRef(null)
   const wrapperRef = useRef(null)
   const navigate = useNavigate()
-  const { token } = useSelector((state) => state.auth)
+  const { isLoggedIn } = useSelector((state) => state.auth)
 
   useEffect(() => {
     if (!open) return
@@ -118,7 +118,7 @@ const NavSearch = () => {
   const submit = (e) => {
     e.preventDefault()
     setOpen(false)
-    navigate(token ? '/Dashboard/Job-Search' : '/Login', { state: { query } })
+    navigate(isLoggedIn ? '/Dashboard/Job-Search' : '/Login', { state: { query } })
   }
 
   return (
@@ -238,7 +238,7 @@ const ProfileMenu = () => {
 }
 
 const Navbar = () => {
-  const { token, user } = useSelector((state) => state.auth)
+  const { isLoggedIn } = useSelector((state) => state.auth)
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
 
@@ -284,7 +284,7 @@ const Navbar = () => {
           >
             {theme === 'dark' ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
           </button>
-          {token === null ? (
+          {!isLoggedIn ? (
             <>
               <Link to="/Login">
                 <button className="whitespace-nowrap px-3 sm:px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer">

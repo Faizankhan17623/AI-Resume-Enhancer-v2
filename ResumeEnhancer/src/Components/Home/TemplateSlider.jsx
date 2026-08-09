@@ -29,7 +29,7 @@ const TemplateCard = ({ name, Component, linkTo }) => (
 
 const TemplateSlider = () => {
   const trackRef = useRef(null)
-  const { token } = useSelector((state) => state.auth)
+  const { isLoggedIn } = useSelector((state) => state.auth)
   const scope = useGsapReveal({ y: 16 })
 
   const scrollBy = (dir) => {
@@ -38,7 +38,7 @@ const TemplateSlider = () => {
 
   // logged-in users land straight in the builder picker with this template preselected via the mode already
   // open there; logged-out users go sign up first, same pattern as the rest of the landing page CTAs
-  const linkTo = token ? '/Dashboard/Build-Resume' : '/Signup'
+  const linkTo = isLoggedIn ? '/Dashboard/Build-Resume' : '/Signup'
 
   return (
     <div ref={scope} className="max-w-7xl mx-auto px-6 py-20">

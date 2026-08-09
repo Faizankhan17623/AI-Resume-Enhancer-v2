@@ -53,7 +53,7 @@ const Pricing = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { plans, loading } = useSelector((state) => state.payment)
-  const { token, user } = useSelector((state) => state.auth)
+  const { token, user, isLoggedIn } = useSelector((state) => state.auth)
   // tracks which plan's buy button is mid-flight sir — keyed by plan.key so only the
   // clicked card's button disables/spins, not every "Get X" button on the page
   const [buyingPlan, setBuyingPlan] = useState(null)
@@ -64,8 +64,11 @@ const Pricing = () => {
   }, [])
 
   const handleBuy = async (planKey) => {
-    // not logged in sir — the purchase needs an account first
-    if (!token) {
+    // not logged in sir — the purchase needs an account first. isLoggedIn, not token: token is
+    // deliberately memory-only (see Slices/authSlice.js) and is null right after a page reload
+    // even for a genuinely logged-in user — the httpOnly cookie is what actually authenticates
+    // the /payment/create-order call BuyPlan makes below, token is just a header fallback.
+    if (!isLoggedIn) {
       navigate("/Login")
       return
     }
@@ -133,7 +136,7 @@ const Pricing = () => {
               const isProMax = plan.key === 'ProMax'
               // plan tiers are a User-only concept sir — an Admin/Support account has no
               // real plan, never mark any tier as "current" for them
-              const isCurrent = token && user?.role === 'User' && (user?.SubType || 'Basic') === plan.key
+              const isCurrent = isLoggedIn && user?.role === 'User' && (user?.SubType || 'Basic') === plan.key
               const meta = PLAN_META[plan.key] || {}
 
               return (
@@ -216,10 +219,10 @@ const Pricing = () => {
                       </button>
                     ) : plan.priceInRupees === 0 ? (
                       <button
-                        onClick={() => navigate(token ? "/Dashboard" : "/Signup")}
+                        onClick={() => navigate(isLoggedIn ? "/Dashboard" : "/Signup")}
                         className="w-full py-2.5 text-sm font-semibold rounded-full text-richblack-100 border border-richblack-600 hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
                       >
-                        {token ? "Included free" : "Start free"}
+                        {isLoggedIn ? "Included free" : "Start free"}
                       </button>
                     ) : (
                       <IconBtn
