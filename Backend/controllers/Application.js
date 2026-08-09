@@ -233,20 +233,37 @@ exports.deleteApplication = async (req, res) => {
     }
 }
 
-// GET /applications/analytics — Pro Max only sir, correlates the ATS score of the review
-// actually attached to each application against real outcomes. Only applications with a
-// `review` link are included — there is no reliable way to auto-infer that link (Review has
-// no ref back to the resume it scored), so this view is only as complete as what the user has
-// explicitly tagged, and the frontend should say so rather than imply full coverage.
+// GET /applications/analytics sir — available to every plan, but the depth differs:
+//   Basic/Pro: one aggregate number (overall interview/offer rate across ALL applications) —
+//              a real, useful stat that costs nothing to compute and doubles as a teaser for
+//              the paid feature below
+//   ProMax:    the full breakdown, correlating the ATS score of the review actually attached to
+//              each application against real outcomes. Only applications with a `review` link
+//              are included here — there is no reliable way to auto-infer that link (Review has
+//              no ref back to the resume it scored), so THIS view is only as complete as what
+//              the user has explicitly tagged, and the frontend should say so rather than imply
+//              full coverage. The Basic/Pro number above has no such gap since it needs no link.
 exports.getApplicationAnalytics = async (req, res) => {
     try {
         const id = req?.User.id
 
         const plan = await getUserPlan(id)
-        if (!plan || plan.key !== 'ProMax') {
-            return res.status(403).json({
-                success: false,
-                message: 'Outcome analytics are a Pro Max feature, please upgrade your plan',
+        const isProMax = plan?.key === 'ProMax'
+
+        // Basic/Pro teaser sir: one real, useful number (overall interview/offer rate across ALL
+        // applications, no review-link required) instead of a plain upgrade ad with zero data.
+        // The deeper "which ATS score bucket actually converts" breakdown below stays ProMax-only —
+        // that's the paid insight, this is just enough to show the feature is worth paying for.
+        if (!isProMax) {
+            const totalCount = await Application.countDocuments({ user: id })
+            const interviewsOrOffers = await Application.countDocuments({ user: id, status: { $in: ['Interview', 'Offer'] } })
+            const overallRate = totalCount > 0 ? Math.round((interviewsOrOffers / totalCount) * 100) : 0
+
+            return res.status(200).json({
+                success: true,
+                isProMax: false,
+                totalCount,
+                overallRate,
             })
         }
 
@@ -290,6 +307,7 @@ exports.getApplicationAnalytics = async (req, res) => {
 
         return res.status(200).json({
             success: true,
+            isProMax: true,
             results,
             linkedCount,
             totalCount,

@@ -194,25 +194,41 @@ const ApplicationCard = ({ app, onEdit, onDelete, onDragStart }) => (
   </motion.div>
 )
 
-// ---------- outcome-linked analytics sir — Pro Max only, score bucket -> interview rate ----------
+// ---------- outcome-linked analytics sir ----------
+// Every plan gets a real number now sir — Basic/Pro see their own overall interview/offer rate
+// (Application.js's getApplicationAnalytics computes this for free, no review-link needed), and
+// that number doubles as the teaser for what Pro Max adds: the SAME rate broken down by which
+// ATS score bucket the linked resume actually scored, so the user can see which score range
+// converts instead of just their one blended number.
 const OutcomeAnalytics = () => {
   const dispatch = useDispatch()
-  const { token, user } = useSelector((state) => state.auth)
+  const { token } = useSelector((state) => state.auth)
   const { analytics, analyticsLoading } = useSelector((state) => state.application)
-  const isProMax = user?.SubType === 'ProMax'
 
   useEffect(() => {
-    if (isProMax) dispatch(GetApplicationAnalytics(token))
+    dispatch(GetApplicationAnalytics(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!isProMax) {
+  if (analyticsLoading || !analytics) return null
+
+  // Basic/Pro teaser sir — one real stat plus the upgrade prompt, no fake/blurred data
+  if (!analytics.isProMax) {
+    if (analytics.totalCount === 0) return null
     return (
-      <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-8 mb-6 flex items-center gap-4">
-        <FaCrown className="text-2xl text-yellow-50 shrink-0" />
-        <div className="flex-1">
-          <p className="text-richblack-100 font-semibold text-sm">See which resume score actually gets interviews</p>
-          <p className="text-richblack-400 text-xs mt-0.5">Outcome analytics are a Pro Max feature — upgrade to see how your ATS score correlates with real interview outcomes.</p>
+      <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="shrink-0 w-16 h-16 rounded-full bg-richblack-900 border border-richblack-700 flex items-center justify-center">
+            <span className="font-display text-xl text-richblack-5">{analytics.overallRate}%</span>
+          </div>
+          <div>
+            <p className="text-richblack-100 font-semibold text-sm">
+              {analytics.overallRate}% of your {analytics.totalCount} application{analytics.totalCount === 1 ? '' : 's'} led to an interview or offer
+            </p>
+            <p className="text-richblack-400 text-xs mt-0.5 flex items-center gap-1.5">
+              <FaCrown className="text-yellow-50 shrink-0" /> Pro Max breaks this down by ATS score, so you can see exactly which score range gets results.
+            </p>
+          </div>
         </div>
         <Link to="/Pricing" className="shrink-0">
           <IconBtn text="View plans" customClasses="text-sm" />
@@ -220,8 +236,6 @@ const OutcomeAnalytics = () => {
       </div>
     )
   }
-
-  if (analyticsLoading || !analytics) return null
 
   if (analytics.linkedCount === 0) {
     return (
