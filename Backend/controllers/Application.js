@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 const logger = require('../utils/logger')
 const Application = require('../Models/Application')
 const Review = require('../Models/Review')
+const Resume = require('../Models/Resume')
+const BuiltResume = require('../Models/BuiltResume')
 const { getUserPlan } = require('../utils/Plans')
 
 const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
@@ -26,11 +28,26 @@ exports.createApplication = async (req, res) => {
             })
         }
 
-        if (resume && !mongoose.isValidObjectId(resume)) {
-            return res.status(400).json({ success: false, message: 'Invalid resume id' })
+        if (resume) {
+            if (!mongoose.isValidObjectId(resume)) {
+                return res.status(400).json({ success: false, message: 'Invalid resume id' })
+            }
+            // must be one of THIS user's own resumes sir — same ownership check as review below,
+            // which resume/builtResume were missing (only their ObjectId FORMAT was validated,
+            // never that the id actually belongs to the caller)
+            const ownedResume = await Resume.exists({ _id: resume, user: id })
+            if (!ownedResume) {
+                return res.status(400).json({ success: false, message: 'Resume not found' })
+            }
         }
-        if (builtResume && !mongoose.isValidObjectId(builtResume)) {
-            return res.status(400).json({ success: false, message: 'Invalid built resume id' })
+        if (builtResume) {
+            if (!mongoose.isValidObjectId(builtResume)) {
+                return res.status(400).json({ success: false, message: 'Invalid built resume id' })
+            }
+            const ownedBuiltResume = await BuiltResume.exists({ _id: builtResume, user: id })
+            if (!ownedBuiltResume) {
+                return res.status(400).json({ success: false, message: 'Built resume not found' })
+            }
         }
         if (review) {
             if (!mongoose.isValidObjectId(review)) {
@@ -130,14 +147,26 @@ exports.updateApplication = async (req, res) => {
         if (typeof notes === 'string') application.notes = notes.trim().slice(0, 2000)
         if (appliedDate) application.appliedDate = appliedDate
         if (resume !== undefined) {
-            if (resume && !mongoose.isValidObjectId(resume)) {
-                return res.status(400).json({ success: false, message: 'Invalid resume id' })
+            if (resume) {
+                if (!mongoose.isValidObjectId(resume)) {
+                    return res.status(400).json({ success: false, message: 'Invalid resume id' })
+                }
+                const ownedResume = await Resume.exists({ _id: resume, user: id })
+                if (!ownedResume) {
+                    return res.status(400).json({ success: false, message: 'Resume not found' })
+                }
             }
             application.resume = resume || undefined
         }
         if (builtResume !== undefined) {
-            if (builtResume && !mongoose.isValidObjectId(builtResume)) {
-                return res.status(400).json({ success: false, message: 'Invalid built resume id' })
+            if (builtResume) {
+                if (!mongoose.isValidObjectId(builtResume)) {
+                    return res.status(400).json({ success: false, message: 'Invalid built resume id' })
+                }
+                const ownedBuiltResume = await BuiltResume.exists({ _id: builtResume, user: id })
+                if (!ownedBuiltResume) {
+                    return res.status(400).json({ success: false, message: 'Built resume not found' })
+                }
             }
             application.builtResume = builtResume || undefined
         }

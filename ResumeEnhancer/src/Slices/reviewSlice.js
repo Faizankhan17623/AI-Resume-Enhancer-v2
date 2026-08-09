@@ -45,7 +45,13 @@ const reviewSlice = createSlice({
             if ('shareId' in value.payload) {
                 state.shareId = value.payload.shareId ?? null
             }
-            state.shareAudience = value.payload.shareAudience ?? 'friend'
+            // same reasoning as shareId above sir — GetSingleReview's dispatch used to omit this
+            // field entirely, which fell through to the unconditional 'friend' default below and
+            // silently overwrote a saved 'recruiter'/other audience back to 'friend' on every
+            // page load, even though the backend still had the real value stored
+            if ('shareAudience' in value.payload) {
+                state.shareAudience = value.payload.shareAudience ?? 'friend'
+            }
         },
         setAllReviews(state, value) {
             state.allReviews = value.payload

@@ -5,6 +5,7 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx')
 const cloudinary = require('cloudinary').v2
 
 const BuiltResume = require('../Models/BuiltResume')
+const CreditSpend = require('../Models/CreditSpend')
 const { consumeCredit, refundCredit } = require('../utils/Plans')
 const logger = require('../utils/logger')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
@@ -715,6 +716,14 @@ exports.generateResume = async (req, res) => {
             })
         }
 
+        // write-ahead marker sir — see Models/CreditSpend.js. A crash during the multi-second
+        // Groq call below would otherwise strand the spent credit with no resume and no refund;
+        // CreditReconcileCron.js sweeps and refunds anything still pending here after a crash.
+        const ledgerEntry = await CreditSpend.create({ user: id, kind: 'resume-generate' })
+        const resolveSpend = () => CreditSpend.deleteOne({ _id: ledgerEntry._id }).catch((err) =>
+            (req.log || logger).error('failed to resolve credit-spend ledger entry', { err, userId: id, ledgerEntryId: ledgerEntry._id })
+        )
+
         const userContent = `=== CANDIDATE'S OWN DESCRIPTION OF THEIR BACKGROUND ===\n${rawInfo}\n\n${
             targetRole ? `=== TARGET ROLE ===\n${targetRole}\n\n` : ''
         }Return only the JSON resume.`
@@ -730,6 +739,7 @@ exports.generateResume = async (req, res) => {
         if (error) {
             // hand the credit back sir — the user paid for a resume the AI never produced
             await refundCredit(id)
+            await resolveSpend()
             return res.status(502).json({ success: false, message: error })
         }
 
@@ -747,6 +757,7 @@ exports.generateResume = async (req, res) => {
             certifications: data.certifications || [],
         })
 
+        await resolveSpend()
 
         return res.status(201).json({
             success: true,
@@ -807,6 +818,12 @@ exports.tailorResume = async (req, res) => {
             })
         }
 
+        // write-ahead marker sir — see generateResume above and Models/CreditSpend.js
+        const ledgerEntry = await CreditSpend.create({ user: id, kind: 'resume-tailor' })
+        const resolveSpend = () => CreditSpend.deleteOne({ _id: ledgerEntry._id }).catch((err) =>
+            (req.log || logger).error('failed to resolve credit-spend ledger entry', { err, userId: id, ledgerEntryId: ledgerEntry._id })
+        )
+
         const userContent = `=== JOB DESCRIPTION ===\n${jd}\n\n=== CANDIDATE'S EXISTING RESUME ===\n${result.text}\n\nReturn only the JSON resume.`
 
         const { data, error } = await runBuilderAi({
@@ -820,6 +837,7 @@ exports.tailorResume = async (req, res) => {
         if (error) {
             // hand the credit back sir — the user paid for a tailored resume that never arrived
             await refundCredit(id)
+            await resolveSpend()
             return res.status(502).json({ success: false, message: error })
         }
 
@@ -837,6 +855,7 @@ exports.tailorResume = async (req, res) => {
             certifications: data.certifications || [],
         })
 
+        await resolveSpend()
 
         return res.status(201).json({
             success: true,

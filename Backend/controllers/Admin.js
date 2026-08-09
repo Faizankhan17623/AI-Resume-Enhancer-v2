@@ -671,7 +671,7 @@ exports.impersonateUser = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('firstName lastName email role')
+        const user = await User.findById(userId).select('firstName lastName email role tokenVersion')
 
         if (!user) {
             return res.status(404).json({
@@ -680,12 +680,20 @@ exports.impersonateUser = async (req, res) => {
             })
         }
 
-        // same payload shape as the login token sir, plus the impersonatedBy marker — expires in 15 minutes
+        // same payload shape as the login token sir (see utils/session.js's signSessionToken),
+        // plus the impersonatedBy marker — expires in 15 minutes.
+        //
+        // tv (tokenVersion) MUST be included sir — Auth.js rejects any token whose tv doesn't
+        // match the live user record, and defaults a missing tv to 0. Omitting it here meant
+        // impersonation instantly failed with "Your session has ended" for any user who had
+        // EVER logged out, changed their password, or been through account recovery (all of
+        // which bump tokenVersion past 0) — i.e. almost anyone a support ticket would be about.
         const token = jwt.sign(
             {
                 id: user._id,
                 firstName: user.firstName,
                 lastName: user.lastName,
+                tv: user.tokenVersion || 0,
                 impersonatedBy: adminId,
             },
             process.env.JWT_PRIVATE_KEY,

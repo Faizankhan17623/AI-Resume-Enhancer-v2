@@ -17,6 +17,7 @@
 const Grok = require('groq-sdk')
 
 const Review = require('../Models/Review')
+const CreditSpend = require('../Models/CreditSpend')
 const { consumeCredit, refundCredit } = require('../utils/Plans')
 const { buildReviewSystemPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
@@ -82,6 +83,14 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         return { ok: false, status: 403, message: spend.message }
     }
 
+    // write-ahead marker sir — see Models/CreditSpend.js. Resolved (deleted) on every path below,
+    // whether that's a refund or a successful save; CreditReconcileCron.js sweeps and refunds
+    // anything still sitting here after a crash orphans it.
+    const ledgerEntry = await CreditSpend.create({ user: userId, kind: 'review' })
+    const resolveSpend = () => CreditSpend.deleteOne({ _id: ledgerEntry._id }).catch((err) =>
+        logger.error('failed to resolve credit-spend ledger entry', { err, userId, ledgerEntryId: ledgerEntry._id })
+    )
+
     // plan-aware system prompt sir — Basic gets the core review, Pro adds keyword/section
     // analysis, ProMax gets the full deep report
     const messages = [
@@ -119,12 +128,14 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         // otherwise every upstream outage quietly bills users for reviews they never received
         if (!isJsonValidationFailure(aiErr)) {
             await refundCredit(userId)
+            await resolveSpend()
             throw aiErr
         }
         try {
             completion = await callGroq() // one retry only sir
         } catch (retryErr) {
             await refundCredit(userId)
+            await resolveSpend()
             throw retryErr
         }
     }
@@ -132,6 +143,7 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
     let raw = completion?.choices?.[0]?.message?.content
     if (!raw) {
         await refundCredit(userId)
+        await resolveSpend()
         return { ok: false, status: 502, message: 'The AI returned an empty response, please try again' }
     }
 
@@ -148,11 +160,13 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         // the resume itself
         logger.warn('AI review JSON parse failed', { err: parseErr, userId, rawPreview: raw?.slice(0, 200) })
         await refundCredit(userId)
+        await resolveSpend()
         return { ok: false, status: 502, message: 'The AI response was not in the expected format, please try again' }
     }
 
     if (typeof review.atsScore !== 'number') {
         await refundCredit(userId)
+        await resolveSpend()
         return { ok: false, status: 502, message: 'The AI response was incomplete, please try again' }
     }
 
@@ -174,6 +188,10 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
     } catch (saveErr) {
         logger.error('review history save failed', { err: saveErr, userId })
     }
+
+    // the review reached the user either way sir (it's in the response below) — the credit is
+    // legitimately kept even if the history save above failed, so resolve, don't refund
+    await resolveSpend()
 
     // fire-and-forget sir — a streak failure must never break the review response
     updateStreak(userId)

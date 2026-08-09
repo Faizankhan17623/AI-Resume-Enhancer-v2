@@ -35,9 +35,12 @@ const AI_LIMIT_BY_PLAN = { Basic: 10, Pro: 20, ProMax: 30 }
 // order) is what actually rejects bad auth, not this.
 const resolveAiPlanKey = async (req) => {
     try {
+        // cookie first, then the Authorization header sir — NOT req.body.token. Auth.js's own
+        // extractToken deliberately dropped body-token as a source (a JSON-body credential widens
+        // CSRF exposure and leaks into logs, and nothing in the frontend ever sends it that way);
+        // reading it here for rate-limit bucketing alone would quietly reopen that exact exposure.
         const token =
             req.cookies?.token ||
-            req.body?.token ||
             req.header('Authorization')?.replace('Bearer ', '')
         if (!token) return 'Basic'
 
@@ -100,9 +103,9 @@ const aiLimiter = rateLimit({
         const plan = await resolveAiPlanKey(req)
         // stash the resolved plan sir so `max` below doesn't re-decode the same token/DB call twice
         res.locals.aiPlanKey = plan
+        // same source order as resolveAiPlanKey above sir — no req.body.token, see the comment there
         const token =
             req.cookies?.token ||
-            req.body?.token ||
             req.header('Authorization')?.replace('Bearer ', '')
         // ipKeyGenerator(req.ip) (not raw req.ip alone) sir — express-rate-limit requires it for
         // the IPv6 fallback path, otherwise it throws ERR_ERL_KEY_GEN_IPV6 (varying IPv6 suffixes

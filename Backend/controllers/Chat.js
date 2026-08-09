@@ -9,7 +9,7 @@ const { buildChatSystemPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
-const { AI_MODEL } = require('../utils/AiModel')
+const { getModelForPlan } = require('../utils/AiModel')
 const { withTransaction } = require('../utils/withTransaction')
 const logger = require('../utils/logger')
 
@@ -146,6 +146,9 @@ exports.sendMessage = async (req, res) => {
         // plan-aware system prompt sir — Basic coaches light, Pro rewrites deep, ProMax is the full career coach
         // it also carries the resume + JD so the user never re-uploads
         const contextWindow = plan?.contextWindow || CONTEXT_WINDOW
+        // plan-aware model sir — was hardcoded to AI_MODEL (ProMax's model) here, so every
+        // Basic/Pro user silently got ProMax's model and cost profile on every chat message
+        const model = getModelForPlan(plan?.key)
         const Messages = [
             {
                 role: 'system',
@@ -180,7 +183,7 @@ exports.sendMessage = async (req, res) => {
         try {
             const stream = await grok.chat.completions.create({
                 messages: Messages,
-                "model": AI_MODEL,
+                "model": model,
                 "temperature": 0.5,
                 stream: true,
             })
@@ -235,10 +238,10 @@ exports.sendMessage = async (req, res) => {
             }
 
             raw = raw.trim()
-            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: AI_MODEL, usage, latencyMs: Date.now() - t0, success: true })
+            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model, usage, latencyMs: Date.now() - t0, success: true })
         } catch (aiErr) {
             streamErr = aiErr
-            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+            logAi({ user: id, type: 'chat', plan: plan?.key || 'Basic', model, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
         }
 
         // not case sir — the stream broke or produced nothing, don't persist a half-written reply

@@ -8,7 +8,7 @@ const { getUserPlan } = require('../utils/Plans')
 const { buildCoverLetterPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
-const { AI_MODEL } = require('../utils/AiModel')
+const { getModelForPlan } = require('../utils/AiModel')
 const { detectGenericness } = require('../utils/GenericPhraseDetector')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
 
@@ -76,17 +76,21 @@ exports.generateCoverLetter = async (req, res) => {
             },
         ]
 
+        // plan-aware model sir — was hardcoded to AI_MODEL (ProMax's model), so a Pro user
+        // silently got ProMax's model and cost profile on every cover letter
+        const model = getModelForPlan(plan.key)
+
         const t0 = Date.now()
         let Invoking
         try {
             Invoking = await grok.chat.completions.create({
                 messages: Messages,
-                model: AI_MODEL,
+                model,
                 temperature: 0.4,
             })
-            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: AI_MODEL, usage: Invoking.usage, latencyMs: Date.now() - t0, success: true })
+            logAi({ user: id, type: 'cover-letter', plan: plan.key, model, usage: Invoking.usage, latencyMs: Date.now() - t0, success: true })
         } catch (aiErr) {
-            logAi({ user: id, type: 'cover-letter', plan: plan.key, model: AI_MODEL, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
+            logAi({ user: id, type: 'cover-letter', plan: plan.key, model, latencyMs: Date.now() - t0, success: false, error: aiErr.message })
             throw aiErr
         }
 

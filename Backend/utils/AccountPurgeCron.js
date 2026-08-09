@@ -3,6 +3,7 @@ const Chat = require('../Models/Chat')
 const Review = require('../Models/Review')
 const { logSystemAction } = require('./AdminLog')
 const { scheduleJob } = require('./scheduler')
+const { withTransaction } = require('./withTransaction')
 const logger = require('./logger')
 
 // permanently deletes accounts whose 2-day recovery window (see deleteAccount/loginUser in
@@ -22,11 +23,14 @@ const purgeExpiredAccounts = async () => {
 
         if (Date.now() <= deletionDate.getTime()) continue
 
-        await User.findByIdAndDelete(user._id)
-        await Promise.all([
-            Chat.deleteMany({ user: user._id }),
-            Review.deleteMany({ user: user._id }),
-        ])
+        // one transaction sir — deleting the User doc before its Chat/Review docs meant a crash
+        // in between permanently orphaned them: the purge query only finds users that STILL
+        // EXIST, so once the User doc was gone nothing would ever revisit those records again.
+        await withTransaction(async (session) => {
+            await Chat.deleteMany({ user: user._id }).session(session)
+            await Review.deleteMany({ user: user._id }).session(session)
+            await User.findByIdAndDelete(user._id).session(session)
+        })
         logger.info('purged expired account', { email: user.email })
         logSystemAction('ACCOUNT_PURGED', { email: user.email }, { scheduledFor: user.BufferTiming })
     }

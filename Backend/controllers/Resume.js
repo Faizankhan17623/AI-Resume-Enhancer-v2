@@ -124,6 +124,18 @@ exports.updateResume = async (req, res) => {
         if (isDefault === true) {
             await Resume.updateMany({ user: id, _id: { $ne: resume._id } }, { isDefault: false })
             resume.isDefault = true
+        } else if (isDefault === false && resume.isDefault) {
+            // explicitly unsetting the CURRENT default sir — the frontend never sends this today
+            // (Resumes.jsx only ever calls SetDefaultResume to turn one ON), but this endpoint is
+            // general PATCH surface, not UI-only, so it must not silently leave the user with zero
+            // default resumes. Same promotion logic as deleteResume below: hand the default to the
+            // next most recent OTHER resume, if one exists.
+            resume.isDefault = false
+            const next = await Resume.findOne({ user: id, _id: { $ne: resume._id } }).sort({ createdAt: -1 })
+            if (next) {
+                next.isDefault = true
+                await next.save()
+            }
         }
 
         await resume.save()

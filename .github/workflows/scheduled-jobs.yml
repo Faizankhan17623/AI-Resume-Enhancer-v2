@@ -20,9 +20,10 @@ name: Scheduled Jobs
 
 on:
   schedule:
-    # feature flags re-enable — every 15 minutes.
+    # feature flags re-enable + orphaned AI credit refunds — every 15 minutes.
     # (worker.js uses */5; GitHub's minimum is 5 but short intervals are throttled in practice,
-    # so 15 is the honest number here. A flag re-enables up to 15 minutes late, which is fine.)
+    # so 15 is the honest number here. A flag re-enables up to 15 minutes late, which is fine,
+    # and credit-reconcile's own 10-minute grace window already has slack built in for this.)
     - cron: '*/15 * * * *'
     # hourly: AI cost alert + subscription expiry reconciliation
     - cron: '0 * * * *'
@@ -54,6 +55,7 @@ on:
           - feature-flag-reenable
           - admin-weekly-digest
           - subscription-reconcile
+          - credit-reconcile
 
 jobs:
   run:
@@ -82,7 +84,7 @@ jobs:
             echo "jobs=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT"
           else
             case "${{ github.event.schedule }}" in
-              '*/15 * * * *') echo "jobs=feature-flag-reenable" >> "$GITHUB_OUTPUT" ;;
+              '*/15 * * * *') echo "jobs=feature-flag-reenable credit-reconcile" >> "$GITHUB_OUTPUT" ;;
               '0 * * * *')    echo "jobs=ai-cost-alert subscription-reconcile" >> "$GITHUB_OUTPUT" ;;
               '30 3 * * *')   echo "jobs=streak-nudges" >> "$GITHUB_OUTPUT" ;;
               '30 2 * * *')   echo "jobs=account-purge" >> "$GITHUB_OUTPUT" ;;

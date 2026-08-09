@@ -955,11 +955,21 @@ exports.deleteAccount = async (req, res) => {
         const yy = String(deletionDate.getFullYear()).slice(-2);
         const bufferTiming = `${dd}/${mm}/${yy}`;
 
-        // suspend the account into the buffer instead of deleting it now sir
+        // suspend the account into the buffer instead of deleting it now sir. tokenVersion is
+        // bumped here too — every OTHER state-changing auth event (logout, password change,
+        // password reset) already revokes existing tokens the same way, and scheduling your own
+        // account for deletion is exactly that kind of event. Without this, a token issued before
+        // this call keeps validating for the rest of its 7-day life (Auth.js only rejects it via
+        // the separate Buffer/isBanned checks, which a still-open second tab would hit, but if the
+        // account is later recovered by logging back in, that old token would become fully valid
+        // again with no re-authentication ever required).
         await User.findByIdAndUpdate(userId, {
             Buffer: true,
             BufferTiming: bufferTiming,
+            $inc: { tokenVersion: 1 },
         });
+
+        res.setHeader('Set-Cookie', buildClearAuthCookie())
 
         // email the user that the account is scheduled for deletion sir
         try {

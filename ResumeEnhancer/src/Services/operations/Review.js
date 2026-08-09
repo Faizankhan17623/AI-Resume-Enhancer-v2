@@ -171,7 +171,8 @@ export function GetSingleReview(reviewId, token) {
             dispatch(setFormattingCheck(response.data.review.formattingCheck))
             dispatch(setShareState({
                 isPublic: response.data.review.isPublic,
-                shareId: response.data.review.shareId
+                shareId: response.data.review.shareId,
+                shareAudience: response.data.review.shareAudience
             }))
         } catch (error) {
             logApiError("Error fetching the review", error)

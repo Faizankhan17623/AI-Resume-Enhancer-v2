@@ -1,6 +1,7 @@
 const { scheduleJob } = require('./scheduler')
 const logger = require('./logger')
 const AiLog = require('../Models/AiLog')
+const AuditLog = require('../Models/AuditLog')
 const mailSender = require('./Nodemailer')
 const { logSystemAction } = require('./AdminLog')
 
@@ -9,9 +10,20 @@ const { logSystemAction } = require('./AdminLog')
 const DAILY_TOKEN_ALERT_THRESHOLD = 2_000_000
 const ERROR_RATE_ALERT_THRESHOLD = 5 // percent
 
-// only fires once every COOLDOWN_MS sir, so a sustained spike doesn't spam an email every hour
+// only fires once every COOLDOWN_MS sir, so a sustained spike doesn't spam an email every hour.
+//
+// Read from AuditLog, NOT an in-memory variable sir — jobs/runJob.js (the free GitHub Actions
+// alternative to a long-lived worker) spawns a FRESH process for every single run, so a
+// module-level variable resets to 0 every time and the cooldown does nothing under that
+// deployment path: sustained high usage would email the admin on every run instead of once per
+// COOLDOWN_MS. logSystemAction already writes an AI_COST_ALERT AuditLog entry every time this
+// fires, timestamped — that record already IS the durable "when did we last alert" the cooldown
+// needs, so this reads it back instead of inventing a second persisted value to keep in sync.
 const COOLDOWN_MS = 6 * 60 * 60 * 1000
-let lastAlertSentAt = 0
+const getLastAlertSentAt = async () => {
+    const last = await AuditLog.findOne({ action: 'AI_COST_ALERT' }).sort({ createdAt: -1 }).select('createdAt')
+    return last ? last.createdAt.getTime() : 0
+}
 
 const alertEmailHtml = ({ calls, tokens, errorRate, failures }) => `
     <div style="font-family: sans-serif;">
@@ -56,11 +68,12 @@ const checkAiUsageAndAlert = async () => {
     const overErrorRate = stats.errorRate > ERROR_RATE_ALERT_THRESHOLD
     if (!overTokens && !overErrorRate) return
 
+    const lastAlertSentAt = await getLastAlertSentAt()
     if (Date.now() - lastAlertSentAt < COOLDOWN_MS) return
 
-    lastAlertSentAt = Date.now()
     // logged in-app regardless of email delivery sir, so the alert is visible on the dashboard
-    // even if ADMIN_ALERT_EMAIL is unset or the send fails
+    // even if ADMIN_ALERT_EMAIL is unset or the send fails — this write is also what the NEXT
+    // run's cooldown check reads back via getLastAlertSentAt above
     logSystemAction('AI_COST_ALERT', {}, stats)
 
     if (!process.env.ADMIN_ALERT_EMAIL) {

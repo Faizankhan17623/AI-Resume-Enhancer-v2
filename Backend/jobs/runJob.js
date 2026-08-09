@@ -34,6 +34,7 @@ const { purgeExpiredAccounts } = require('../utils/AccountPurgeCron')
 const { reEnableDueFlags } = require('../utils/FeatureFlagCron')
 const { sendWeeklyAdminDigest } = require('../utils/AdminDigestCron')
 const { reconcileExpiredSubscriptions } = require('../utils/SubscriptionReconcileCron')
+const { reconcileOrphanedCreditSpends } = require('../utils/CreditReconcileCron')
 
 // the same jobs worker.js schedules sir. `leaseMs` must comfortably exceed the job's realistic
 // runtime while staying well under its interval.
@@ -52,6 +53,7 @@ const JOBS = {
     'feature-flag-reenable': { leaseMs: 2 * 60 * 1000, task: reEnableDueFlags },
     'admin-weekly-digest': { leaseMs: 15 * 60 * 1000, task: sendWeeklyAdminDigest },
     'subscription-reconcile': { leaseMs: 5 * 60 * 1000, task: reconcileExpiredSubscriptions },
+    'credit-reconcile': { leaseMs: 5 * 60 * 1000, task: reconcileOrphanedCreditSpends },
 }
 
 const main = async () => {
