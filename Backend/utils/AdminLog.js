@@ -19,10 +19,12 @@ const logAction = (actorId, action, target, details = {}) => {
 
 // record a cron/system-fired event sir — no human actor, so isSystem carries that instead
 // logSystemAction('ACCOUNT_PURGED', { email: user.email }, { deletionDate })
+// logSystemAction('CREDIT_RECONCILED', { _id: userId }, { kind, spentAt })
 const logSystemAction = (action, target = {}, details = {}) => {
     AuditLog.create({
         isSystem: true,
         action,
+        targetUser: target?._id,
         targetEmail: target?.email,
         details,
     }).catch((err) => logger.error('system audit log failed', { err: err }))

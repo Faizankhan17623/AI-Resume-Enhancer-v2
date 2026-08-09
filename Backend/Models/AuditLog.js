@@ -35,6 +35,7 @@ const auditLogSchema = new mongoose.Schema(
                 'SETTING_CHANGE',
                 'ACCOUNT_PURGED',
                 'AI_COST_ALERT',
+                'CREDIT_RECONCILED',
                 'FEATURE_AUTO_REENABLE',
                 'ACCOUNT_LOCKOUT',
                 'TESTIMONIAL_APPROVE',

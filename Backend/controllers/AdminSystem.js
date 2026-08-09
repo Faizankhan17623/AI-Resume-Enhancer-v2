@@ -10,6 +10,7 @@ const AiLog = require('../Models/AiLog')
 const AuditLog = require('../Models/AuditLog')
 const LoginLog = require('../Models/LoginLog')
 const VisitorLog = require('../Models/VisitorLog')
+const CreditSpend = require('../Models/CreditSpend')
 const { REQUIRED_ENV_VARS } = require('../utils/checkRequiredEnv')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
@@ -506,6 +507,58 @@ exports.getDeletions = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the deletion stats',
+        })
+    }
+}
+
+// GET /admin/reconciliation — visibility into the credit-spend safety net sir
+// (Models/CreditSpend.js + utils/CreditReconcileCron.js): every AI credit spend writes a
+// short-lived ledger entry right after consumeCredit succeeds, resolved the moment the AI call
+// either produces a saved artifact or is refunded. Anything still "pending" past the cron's
+// 10-minute grace window means the process crashed mid-request — this is where an admin sees
+// that a customer was refunded (or SHOULD have been, if currently pending) without ever having
+// to be told about it by a support ticket.
+exports.getReconciliation = async (req, res) => {
+    try {
+        const [pending, recentRefunds, refundedLast30Days] = await Promise.all([
+            // still inside the grace window sir — not necessarily orphaned yet, just spent and
+            // waiting on its artifact; only entries older than ~10 minutes are true crash orphans
+            CreditSpend.find({})
+                .populate('user', 'firstName lastName email')
+                .sort({ createdAt: 1 })
+                .limit(50),
+            // last 20 auto-refund events sir, newest first
+            AuditLog.find({ action: 'CREDIT_RECONCILED' })
+                .populate('targetUser', 'firstName lastName email')
+                .sort({ createdAt: -1 })
+                .limit(20),
+            AuditLog.countDocuments({
+                action: 'CREDIT_RECONCILED',
+                createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+            }),
+        ])
+
+        const graceMs = 10 * 60 * 1000
+        const now = Date.now()
+        const withOrphanFlag = pending.map((entry) => ({
+            ...entry.toObject(),
+            isOrphaned: now - entry.createdAt.getTime() > graceMs,
+        }))
+
+        return res.status(200).json({
+            success: true,
+            reconciliation: {
+                pendingCount: pending.length,
+                pending: withOrphanFlag,
+                refundedLast30Days,
+                recentRefunds,
+            }
+        })
+    } catch (error) {
+        (req.log || logger).error('get reconciliation failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the reconciliation stats',
         })
     }
 }

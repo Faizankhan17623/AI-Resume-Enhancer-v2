@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -85,7 +85,7 @@ const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, health, deletions, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, health, deletions, reconciliation, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
@@ -93,6 +93,7 @@ const Overview = () => {
     dispatch(GetAiStats(token))
     dispatch(GetHealth(token))
     dispatch(GetDeletions(token))
+    dispatch(GetReconciliation(token))
     dispatch(GetSecurity(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -358,6 +359,43 @@ const Overview = () => {
                       {deletions.recentPurges.slice(0, 5).map((log) => (
                         <div key={log._id} className="flex items-center justify-between text-xs">
                           <span className="text-richblack-100 truncate">{log.targetEmail}</span>
+                          <span className="text-richblack-400 shrink-0 ml-2">{new Date(log.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-richblack-400">Loading...</p>
+            )}
+          </div>
+
+          {/* Credit reconciliation sir — visibility into the AI-credit-spend safety net
+              (Models/CreditSpend.js + CreditReconcileCron.js): a crash between spending a
+              credit and saving the review/resume it paid for used to strand that credit with
+              no refund and no way for an admin to even know it happened */}
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaCoins className="text-caribgreen-100" /> Credit Reconciliation</h2>
+            {reconciliation ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={`font-display text-2xl ${reconciliation.pending?.some(p => p.isOrphaned) ? 'text-pink-200' : 'text-richblack-5'}`}>{reconciliation.pendingCount}</p>
+                    <p className="text-xs text-richblack-400">in-flight AI calls</p>
+                  </div>
+                  <div>
+                    <p className="font-display text-2xl text-richblack-5">{reconciliation.refundedLast30Days}</p>
+                    <p className="text-xs text-richblack-400">auto-refunded — 30 days</p>
+                  </div>
+                </div>
+                {reconciliation.recentRefunds?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-richblack-400 mb-2">Recently auto-refunded</p>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {reconciliation.recentRefunds.slice(0, 5).map((log) => (
+                        <div key={log._id} className="flex items-center justify-between text-xs">
+                          <span className="text-richblack-100 truncate">{log.targetUser?.email || 'unknown user'} · {log.details?.kind}</span>
                           <span className="text-richblack-400 shrink-0 ml-2">{new Date(log.createdAt).toLocaleDateString()}</span>
                         </div>
                       ))}

@@ -20,6 +20,7 @@
 const CreditSpend = require('../Models/CreditSpend')
 const { refundCredit } = require('./Plans')
 const { scheduleJob } = require('./scheduler')
+const { logSystemAction } = require('./AdminLog')
 const logger = require('./logger')
 
 // 10 minutes sir — Groq's client is configured for a 30s timeout with 1 retry (worst case ~60s),
@@ -40,6 +41,11 @@ const reconcileOrphanedCreditSpends = async () => {
             kind: entry.kind,
             spentAt: entry.createdAt,
         })
+        // AuditLog entry sir — same pattern as ACCOUNT_PURGED/AI_COST_ALERT, and what
+        // AdminSystem.js's getCreditReconciliation reads back for the admin dashboard.
+        // targetUser (not just targetEmail) so the dashboard can populate the user's current
+        // name/email rather than freezing a snapshot at refund time.
+        logSystemAction('CREDIT_RECONCILED', { _id: entry.user }, { kind: entry.kind, spentAt: entry.createdAt })
     }
 
     if (orphaned.length > 0) {

@@ -3,11 +3,11 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, health, auditlogs, traffic, deletions, security, search: searchUrl } = AdminStats
+const { dashboardstats, aistats, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -89,6 +89,24 @@ export function GetDeletions(token) {
             dispatch(setDeletions(response.data.deletions))
         } catch (error) {
             logApiError("Error fetching the deletion stats", error)
+        }
+    }
+}
+
+export function GetReconciliation(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", reconciliation, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setReconciliation(response.data.reconciliation))
+        } catch (error) {
+            logApiError("Error fetching the reconciliation stats", error)
         }
     }
 }
