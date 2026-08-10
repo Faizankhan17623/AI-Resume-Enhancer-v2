@@ -13,6 +13,9 @@ function AdminRoute({ children }) {
     if (user?.role === 'Support') {
         return <Navigate to="/Support" />
     }
+    if (user?.role === 'Recruiter') {
+        return <Navigate to="/Recruiter" />
+    }
     if (user?.role !== 'Admin') {
         return <Navigate to="/Dashboard" />
     }

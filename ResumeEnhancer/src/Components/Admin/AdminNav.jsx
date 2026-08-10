@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn, FaSlidersH, FaSearch, FaSpinner, FaCommentDots, FaBug } from 'react-icons/fa'
+import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaBullhorn, FaSlidersH, FaSearch, FaSpinner, FaCommentDots, FaBug, FaUserTie } from 'react-icons/fa'
 import { GlobalSearch } from '../../Services/operations/Admin'
 
 // two entirely separate tab sets sir — Admin gets /Admin/*, Support gets its OWN /Support/*
-// pages. Support never sees Audit Log or Settings at all (those backend routes are
-// isAdmin-gated), not just a hidden tab on a shared page.
+// pages. Support never sees Audit Log, Settings, or Recruiter Applications (those backend
+// routes are isAdmin-gated) — promoting someone to Recruiter is the same class of judgment
+// call as any other role change, Admin-only, not just a hidden tab on a shared page.
 const adminTabs = [
   { name: 'Overview', path: '/Admin', icon: <FaChartPie /> },
   { name: 'Users', path: '/Admin/Users', icon: <FaUsers /> },
@@ -16,6 +17,7 @@ const adminTabs = [
   { name: 'Announcements', path: '/Admin/Announcements', icon: <FaBullhorn /> },
   { name: 'Testimonials', path: '/Admin/Testimonials', icon: <FaCommentDots /> },
   { name: 'Reports', path: '/Admin/Reports', icon: <FaBug /> },
+  { name: 'Recruiter Applications', path: '/Admin/Recruiter-Applications', icon: <FaUserTie /> },
   { name: 'Settings', path: '/Admin/Settings', icon: <FaSlidersH /> },
 ]
 

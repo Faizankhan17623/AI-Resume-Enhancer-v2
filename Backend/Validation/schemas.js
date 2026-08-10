@@ -151,7 +151,7 @@ const verifyPaymentSchema = z.object({
 // ones most worth constraining
 // ---------------------------------------------------------------------------
 
-const roleSchema = z.enum(['User', 'Support', 'Admin'], { error: 'Invalid role' })
+const roleSchema = z.enum(['User', 'Support', 'Admin', 'Recruiter'], { error: 'Invalid role' })
 
 const updateUserRoleSchema = z.object({ role: roleSchema })
 
@@ -194,6 +194,120 @@ const updateUserPlanSchema = z.object({
 
 const userIdParamSchema = z.object({ userId: objectId })
 
+// ---------------------------------------------------------------------------
+// recruiter proctored tests sir
+// ---------------------------------------------------------------------------
+
+const testQuestionSchema = z.object({
+    prompt: z.string({ error: 'Question prompt is required' }).trim().min(1, 'Question prompt is required').max(2000),
+    type: z.enum(['mcq', 'text'], { error: 'Question type must be mcq or text' }),
+    options: z.array(z.string().trim().max(300)).max(10).optional(),
+    correctAnswer: z.string().trim().max(300).optional(),
+    marks: z.coerce.number({ error: 'Marks are required' }).int().min(1, 'Marks must be at least 1').max(1000),
+}).refine(
+    (q) => q.type !== 'mcq' || (q.options && q.options.length >= 2),
+    { message: 'An mcq question needs at least 2 options', path: ['options'] }
+)
+
+// question marks must sum to EXACTLY totalMarks sir — this is the schema-level half of the
+// check; publishTest in controllers/Test.js re-checks the same rule as the hard gate, since
+// updateTestSchema's fields are all optional and a partial patch might not carry both
+// questions and totalMarks together for this refine to catch
+const marksSumToTotal = (data) => {
+    if (!data.questions || data.totalMarks === undefined) return true
+    return data.questions.reduce((sum, q) => sum + q.marks, 0) === data.totalMarks
+}
+const marksSumIssue = { message: 'Question marks must add up to exactly the total marks', path: ['totalMarks'] }
+
+const createTestSchema = z.object({
+    job: objectId,
+    title: z.string({ error: 'Title is required' }).trim().min(1, 'Title is required').max(150),
+    description: z.string().trim().max(2000).optional(),
+    questions: z.array(testQuestionSchema, { error: 'At least one question is required' }).min(1, 'At least one question is required').max(100),
+    totalMarks: z.coerce.number({ error: 'Total marks are required' }).int().min(1),
+    timeLimitMinutes: z.coerce.number().int().min(1).max(180),
+    maxViolations: z.coerce.number().int().min(1).max(20).optional(),
+}).refine(marksSumToTotal, marksSumIssue)
+
+// same shape as create sir, but every field optional — a recruiter can patch just the title.
+// `job` is deliberately NOT patchable — a test's job is set once at creation and never moves.
+const updateTestSchema = z.object({
+    title: z.string().trim().min(1).max(150).optional(),
+    description: z.string().trim().max(2000).optional(),
+    questions: z.array(testQuestionSchema).min(1).max(100).optional(),
+    totalMarks: z.coerce.number().int().min(1).optional(),
+    timeLimitMinutes: z.coerce.number().int().min(1).max(180).optional(),
+    maxViolations: z.coerce.number().int().min(1).max(20).optional(),
+}).refine(marksSumToTotal, marksSumIssue)
+
+const submitAnswersSchema = z.object({
+    answers: z.array(
+        z.object({
+            questionId: objectId,
+            answer: z.string().trim().max(5000).optional(),
+        })
+    ),
+})
+
+const inviteCodeParamSchema = z.object({ inviteCode: z.string().trim().min(1, 'Invite code is required') })
+
+const testIdParamSchema = z.object({ testId: objectId })
+
+const attemptIdParamSchema = z.object({ attemptId: objectId })
+
+// ---------------------------------------------------------------------------
+// job postings sir
+// ---------------------------------------------------------------------------
+
+const employmentType = z.enum(['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote'], { error: 'Invalid employment type' })
+
+const createJobSchema = z.object({
+    companyName: z.string({ error: 'Company name is required' }).trim().min(1, 'Company name is required').max(150),
+    title: z.string({ error: 'Title is required' }).trim().min(1, 'Title is required').max(150),
+    description: z.string({ error: 'Description is required' }).trim().min(1, 'Description is required').max(5000),
+    location: z.string().trim().max(150).optional(),
+    employmentType: employmentType.optional(),
+    skills: z.array(z.string().trim().max(60)).max(30).optional(),
+})
+
+const updateJobSchema = z.object({
+    companyName: z.string().trim().min(1).max(150).optional(),
+    title: z.string().trim().min(1).max(150).optional(),
+    description: z.string().trim().min(1).max(5000).optional(),
+    location: z.string().trim().max(150).optional(),
+    employmentType: employmentType.optional(),
+    skills: z.array(z.string().trim().max(60)).max(30).optional(),
+})
+
+const jobIdParamSchema = z.object({ jobId: objectId })
+
+const applyToJobSchema = z.object({
+    resume: objectId.optional(),
+    builtResume: objectId.optional(),
+})
+
+// ---------------------------------------------------------------------------
+// recruiter self-signup application sir — see User.recruiterApplication
+// ---------------------------------------------------------------------------
+
+const companySize = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], { error: 'Please select your company size' })
+
+// every field here is required sir — the Admin's approval judgment call (see
+// approveRecruiterApplication) depends on having company name, website, size, location, and
+// hiring needs up front, not a half-filled request
+const recruiterApplicationSchema = z.object({
+    companyName: z.string({ error: 'Company name is required' }).trim().min(1, 'Company name is required').max(150),
+    companyWebsite: z.string({ error: 'Company website is required' }).trim().min(1, 'Company website is required').max(300)
+        .refine((v) => /^https?:\/\/.+\..+/i.test(v), 'Please enter a valid website URL (e.g. https://example.com)'),
+    companySize,
+    location: z.string({ error: 'Location is required' }).trim().min(1, 'Location is required').max(150),
+    hiringNeeds: z.string({ error: 'Please tell us your hiring needs' }).trim().min(1, 'Please tell us your hiring needs').max(2000),
+})
+
+const rejectRecruiterApplicationSchema = z.object({
+    reason: z.string().trim().max(500).optional(),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -230,4 +344,22 @@ module.exports = {
     adjustCreditsSchema,
     updateUserPlanSchema,
     userIdParamSchema,
+
+    // recruiter proctored tests
+    createTestSchema,
+    updateTestSchema,
+    submitAnswersSchema,
+    inviteCodeParamSchema,
+    testIdParamSchema,
+    attemptIdParamSchema,
+
+    // job postings
+    createJobSchema,
+    updateJobSchema,
+    jobIdParamSchema,
+    applyToJobSchema,
+
+    // recruiter self-signup application
+    recruiterApplicationSchema,
+    rejectRecruiterApplicationSchema,
 }

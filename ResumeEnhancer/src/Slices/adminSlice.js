@@ -24,6 +24,7 @@ const initialState = {
     settings: [],
     testimonials: [],
     reports: [],
+    recruiterApplications: [],
     loading: false
 };
 
@@ -91,6 +92,9 @@ const adminSlice = createSlice({
         setReports(state, value) {
             state.reports = value.payload
         },
+        setRecruiterApplications(state, value) {
+            state.recruiterApplications = value.payload
+        },
         setLoading(state, value) {
             state.loading = value.payload
         }
@@ -99,6 +103,6 @@ const adminSlice = createSlice({
 
 export const {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } = adminSlice.actions
 export default adminSlice.reducer

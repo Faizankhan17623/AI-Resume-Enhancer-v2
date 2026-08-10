@@ -1,0 +1,301 @@
+import toast from "react-hot-toast";
+import { apiConnector } from '../apiConnector.js'
+import { logApiError } from '../logApiError.js'
+import { JobData } from '../Apis/JobApi.js'
+import {
+    setMyJobs,
+    setCurrentJob,
+    setJobApplicants,
+    setPublicJobs,
+    setCurrentPublicJob,
+    setMyApplications,
+    setLoading,
+} from '../../Slices/jobSlice.js'
+
+const {
+    createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, getJobApplicants,
+    inviteApplicantToTest, listPublicJobs, getPublicJob, applyToJob, listMyApplications,
+} = JobData
+
+// ---------------------------------------------------------------------------
+// recruiter-side sir
+// ---------------------------------------------------------------------------
+
+export function CreateJob(jobPayload, token, navigate) {
+    return async () => {
+        const toastId = toast.loading("Creating the job...")
+        try {
+            const response = await apiConnector("POST", createJob, jobPayload, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job created")
+            if (navigate) navigate(`/Recruiter/Jobs/${response.data.job._id}`)
+            return response.data.job
+        } catch (error) {
+            logApiError("Error creating the job", error)
+            toast.error(error?.response?.data?.message || "Could not create the job")
+            return null
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function GetMyJobs(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", listMyJobs, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setMyJobs(response.data.jobs))
+        } catch (error) {
+            logApiError("Error fetching your jobs", error)
+            toast.error(error?.response?.data?.message || "Could not load your jobs")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function GetJob(jobId, token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", `${getJob}/${jobId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setCurrentJob(response.data.job))
+        } catch (error) {
+            logApiError("Error fetching the job", error)
+            toast.error(error?.response?.data?.message || "Could not load the job")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function UpdateJob(jobId, jobPayload, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Saving...")
+        try {
+            const response = await apiConnector("PATCH", `${updateJob}/${jobId}`, jobPayload, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job updated")
+            dispatch(setCurrentJob(response.data.job))
+        } catch (error) {
+            logApiError("Error updating the job", error)
+            toast.error(error?.response?.data?.message || "Could not update the job")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function PublishJob(jobId, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Publishing...")
+        try {
+            const response = await apiConnector("POST", `${publishJob}/${jobId}/publish`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job published — candidates can now find and apply to it")
+            dispatch(setCurrentJob(response.data.job))
+            return true
+        } catch (error) {
+            logApiError("Error publishing the job", error)
+            toast.error(error?.response?.data?.message || "Could not publish the job")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function CloseJob(jobId, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Closing the job...")
+        try {
+            const response = await apiConnector("POST", `${closeJob}/${jobId}/close`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job closed")
+            dispatch(setCurrentJob(response.data.job))
+        } catch (error) {
+            logApiError("Error closing the job", error)
+            toast.error(error?.response?.data?.message || "Could not close the job")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function GetJobApplicants(jobId, token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", `${getJobApplicants}/${jobId}/applicants`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setJobApplicants(response.data.applicants))
+        } catch (error) {
+            logApiError("Error fetching applicants", error)
+            toast.error(error?.response?.data?.message || "Could not load the applicants")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function InviteApplicantToTest(applicationId, jobId, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Inviting...")
+        try {
+            const response = await apiConnector("POST", `${inviteApplicantToTest}/${applicationId}/invite`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Candidate invited to take the test")
+            dispatch(GetJobApplicants(jobId, token))
+        } catch (error) {
+            logApiError("Error inviting the candidate", error)
+            toast.error(error?.response?.data?.message || "Could not invite the candidate")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// public sir — no auth required
+// ---------------------------------------------------------------------------
+
+export function GetPublicJobs(params = {}) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", listPublicJobs, null, {}, params)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setPublicJobs({ jobs: response.data.jobs, pagination: response.data.pagination }))
+        } catch (error) {
+            logApiError("Error fetching jobs", error)
+            toast.error(error?.response?.data?.message || "Could not load jobs")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function GetPublicJob(jobId) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", `${getPublicJob}/${jobId}`)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setCurrentPublicJob(response.data.job))
+        } catch (error) {
+            logApiError("Error fetching the job", error)
+            toast.error(error?.response?.data?.message || "Could not load the job")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// candidate-side sir
+// ---------------------------------------------------------------------------
+
+export function ApplyToJob(jobId, token, applyPayload = {}) {
+    return async () => {
+        const toastId = toast.loading("Applying...")
+        try {
+            const response = await apiConnector("POST", `${applyToJob}/${jobId}/apply`, applyPayload, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Application submitted")
+            return true
+        } catch (error) {
+            logApiError("Error applying to the job", error)
+            toast.error(error?.response?.data?.message || "Could not apply to the job")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function GetMyApplications(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", listMyApplications, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setMyApplications(response.data.applications))
+        } catch (error) {
+            logApiError("Error fetching your applications", error)
+            toast.error(error?.response?.data?.message || "Could not load your applications")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}

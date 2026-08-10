@@ -13,6 +13,9 @@ function SupportRoute({ children }) {
     if (user?.role === 'Admin') {
         return <Navigate to="/Admin" />
     }
+    if (user?.role === 'Recruiter') {
+        return <Navigate to="/Recruiter" />
+    }
     if (user?.role !== 'Support') {
         return <Navigate to="/Dashboard" />
     }

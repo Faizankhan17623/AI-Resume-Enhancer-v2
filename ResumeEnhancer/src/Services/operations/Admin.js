@@ -3,9 +3,9 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
@@ -14,6 +14,7 @@ const { createannouncement, allannouncements, toggleannouncement, deleteannounce
 const { getsettings, updatesetting } = AdminSettings
 const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
 const { allreports, updatereport, deletereport } = AdminReports
+const { list: recruiterApplicationsUrl, approve: approveRecruiterUrl, reject: rejectRecruiterUrl } = AdminRecruiterApplications
 
 // ---------- overview sir ----------
 
@@ -598,6 +599,76 @@ export function DeleteReport(reportId, token, type = "", statusFilter = "") {
         } catch (error) {
             logApiError("Error deleting the report", error)
             toast.error(error?.response?.data?.message || "Could not delete")
+        }
+    }
+}
+
+// ---------- recruiter self-signup approval queue sir ----------
+
+export function GetRecruiterApplications(token, status = "pending") {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", recruiterApplicationsUrl, null, {
+                Authorization: `Bearer ${token}`
+            }, { status })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setRecruiterApplications(response.data.applicants))
+        } catch (error) {
+            logApiError("Error fetching recruiter applications", error)
+            toast.error(error?.response?.data?.message || "Could not load recruiter applications")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function ApproveRecruiterApplication(userId, token, statusFilter = "pending") {
+    return async (dispatch) => {
+        const toastId = toast.loading("Approving...")
+        try {
+            const response = await apiConnector("POST", `${approveRecruiterUrl}/${userId}/approve`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetRecruiterApplications(token, statusFilter))
+        } catch (error) {
+            logApiError("Error approving recruiter application", error)
+            toast.error(error?.response?.data?.message || "Could not approve the application")
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+export function RejectRecruiterApplication(userId, reason, token, statusFilter = "pending") {
+    return async (dispatch) => {
+        const toastId = toast.loading("Rejecting...")
+        try {
+            const response = await apiConnector("POST", `${rejectRecruiterUrl}/${userId}/reject`, { reason }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetRecruiterApplications(token, statusFilter))
+        } catch (error) {
+            logApiError("Error rejecting recruiter application", error)
+            toast.error(error?.response?.data?.message || "Could not reject the application")
+        } finally {
+            toast.dismiss(toastId)
         }
     }
 }

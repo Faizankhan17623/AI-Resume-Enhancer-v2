@@ -3,13 +3,14 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted, setProfileUserFields } from '../../Slices/profileSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
-import { Profile, Password } from '../Apis/UserApi.js'
+import { Profile, Password, RecruiterApplication } from '../Apis/UserApi.js'
 
 const {
     getprofile, updatenotifications, completeonboarding,
     updatefirstname, updatelastname, updateemail, updatenumber, exportdata
 } = Profile
 const { changepassword } = Password
+const { apply: applyForRecruiterUrl } = RecruiterApplication
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -149,6 +150,34 @@ export const UpdateFirstName = (firstName, token) => updateProfileField(updatefi
 export const UpdateLastName = (lastName, token) => updateProfileField(updatelastname, { lastName }, token, "last name")
 export const UpdateEmail = (email, token) => updateProfileField(updateemail, { email }, token, "email")
 export const UpdateNumber = (number, token) => updateProfileField(updatenumber, { number }, token, "phone number")
+
+// self-signup request to become a Recruiter sir — role stays 'User' until an Admin approves
+// it (see Admin/RecruiterApplications.jsx). Reuses the same profile-merge action as the other
+// account-field edits, since recruiterApplication is just another field on the profile's user.
+export function ApplyForRecruiter(payload, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Submitting your application...")
+        try {
+            const response = await apiConnector("POST", applyForRecruiterUrl, payload, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setProfileUserFields({ recruiterApplication: response.data.recruiterApplication }))
+            toast.success(response.data.message)
+            return true
+        } catch (error) {
+            logApiError("Error submitting recruiter application", error)
+            toast.error(error?.response?.data?.message || "Could not submit your application")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
 
 // GDPR-style self-service data export sir — downloads the response as a JSON file client-side,
 // no separate download endpoint needed since the data is small (one user's own records)

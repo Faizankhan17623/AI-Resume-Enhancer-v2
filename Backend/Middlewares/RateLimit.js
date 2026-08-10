@@ -184,4 +184,16 @@ const testimonialLimiter = rateLimit({
     store: createStore('testimonial', 'closed'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter }
+// a candidate's browser posts one violation (with a snapshot image) per look-away event sir —
+// a handful per minute is normal, anything more is either a bug in the polling loop or abuse
+const violationLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many violation reports in a short time, please slow down'),
+    // fail CLOSED sir — each request uploads an image to Cloudinary, real cost per call.
+    store: createStore('test-violation', 'closed'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter, violationLimiter }

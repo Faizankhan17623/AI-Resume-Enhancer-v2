@@ -43,6 +43,7 @@ const auditLogSchema = new mongoose.Schema(
                 'TESTIMONIAL_DELETE',
                 'REPORT_STATUS_CHANGE',
                 'REPORT_DELETE',
+                'RECRUITER_APPLICATION_REVIEW',
             ],
             index: true,
         },

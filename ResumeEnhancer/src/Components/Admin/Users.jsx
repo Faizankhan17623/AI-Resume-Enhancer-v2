@@ -31,6 +31,7 @@ const ROLE_FILTER_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'User', label: 'Users' },
   { value: 'Support', label: 'Support' },
+  { value: 'Recruiter', label: 'Recruiter' },
 ]
 
 const Users = () => {
@@ -278,6 +279,12 @@ const Users = () => {
               Move to Support
             </button>
             <button
+              onClick={() => handleBulkRoleChange('Recruiter')}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-700/20 text-yellow-25 border border-yellow-700 hover:bg-yellow-700/30 transition-colors duration-200 cursor-pointer"
+            >
+              Move to Recruiter
+            </button>
+            <button
               onClick={() => handleBulkRoleChange('User')}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer"
             >
@@ -342,6 +349,7 @@ const Users = () => {
                       >
                         <option value="User">User</option>
                         <option value="Support">Support</option>
+                        <option value="Recruiter">Recruiter</option>
                       </select>
                     </div>
                     <div>
@@ -448,6 +456,7 @@ const Users = () => {
                         >
                           <option value="User">User</option>
                           <option value="Support">Support</option>
+                          <option value="Recruiter">Recruiter</option>
                         </select>
                       </td>
                       <td className="p-4">

@@ -272,6 +272,14 @@ const Navbar = () => {
           >
             Pricing
           </Link>
+          <Link
+            to="/For-Recruiters"
+            className={`text-sm font-medium transition-colors duration-200 ${
+              location.pathname === '/For-Recruiters' ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+            }`}
+          >
+            For Recruiters
+          </Link>
         </div>
 
         {/* Right Side - Auth Area */}

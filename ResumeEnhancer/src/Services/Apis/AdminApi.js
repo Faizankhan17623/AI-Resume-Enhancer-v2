@@ -54,6 +54,12 @@ export const Testimonials = {
     approved: BASE_URL + "/testimonials/approved"
 }
 
+export const AdminRecruiterApplications = {
+    list: BASE_URL + "/admin/recruiter-applications",
+    approve: BASE_URL + "/admin/recruiter-applications",   // + /:userId/approve
+    reject: BASE_URL + "/admin/recruiter-applications"     // + /:userId/reject
+}
+
 export const AdminReports = {
     allreports: BASE_URL + "/admin/reports",
     updatereport: BASE_URL + "/admin/reports",   // + /:reportId

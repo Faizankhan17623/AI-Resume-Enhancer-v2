@@ -824,13 +824,20 @@ exports.resetPassword = async (req, res) => {
       })
     }
 
-    // not case sir — new password can't be the same as the current one
-    const SameAsOld = await bcrypt.compare(newPassword, userDetails.password)
-    if (SameAsOld) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password cannot be the same as your current password',
-      })
+    // an OAuth account's stored hash is the shared internal placeholder sir (see
+    // services/oauth.js's OAUTH_DEFAULT_PASSWORD), never something the user actually knows or
+    // typed — comparing against it here would either false-positive-block a real password that
+    // coincidentally isn't the placeholder's opposite, or just be meaningless noise either way.
+    // Only a 'local' account (or one already converted by a prior reset) has a real password
+    // worth diffing against.
+    if (userDetails.provider === 'local') {
+      const SameAsOld = await bcrypt.compare(newPassword, userDetails.password)
+      if (SameAsOld) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password cannot be the same as your current password',
+        })
+      }
     }
 
       const encryptedPassword = await bcrypt.hash(newPassword, 10)
@@ -839,10 +846,19 @@ exports.resetPassword = async (req, res) => {
     // reason someone resets a password is that it may be compromised; leaving already-issued
     // JWTs valid for their remaining 7 days meant an attacker who had a token kept full access
     // straight through the reset. Bumping the version invalidates all of them at once.
+    //
+    // provider -> 'local' sir: this is what actually unlocks email+password login for an account
+    // that signed up via Google/GitHub/etc. Completing this reset (proving control of the inbox
+    // behind the account's email) is the same proof-of-ownership loginUser normally gets from a
+    // correct password, so it's the right moment to enable the second sign-in method. The OAuth
+    // button keeps working too — services/oauth.js's account-linking logic (a 'local' account
+    // matched by provider email) is exactly what makes both paths resolve to the same account
+    // going forward, without needing providerId touched here at all.
     await User.findOneAndUpdate(
       { resetPasswordToken: token },
       {
         password: encryptedPassword,
+        provider: 'local',
         resetPasswordToken: null,
         resetPasswordExpires: null,
         token: null,
@@ -1068,7 +1084,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted')
+            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted recruiterApplication')
 
         if (!user) {
             return res.status(404).json({
@@ -1207,3 +1223,56 @@ exports.completeOnboarding = async (req, res) => {
         });
     }
 };
+
+// ============================================================
+// APPLY FOR RECRUITER ACCESS — self-signup, pending Admin approval sir
+// ============================================================
+// POST /recruiter-applications — body: { companyName, companyWebsite, companySize, location,
+// hiringNeeds }, all required. Only a plain 'User' can apply (isUser-gated route); role stays
+// 'User' until an Admin approves it (see
+// controllers/Admin.js's approveRecruiterApplication, which is what actually flips the role).
+exports.applyForRecruiter = async (req, res) => {
+    try {
+        const userId = req.User.id
+        const { companyName, companyWebsite, companySize, location, hiringNeeds } = req.body
+
+        const user = await User.findById(userId).select('recruiterApplication role')
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        // already a pending request sir — block resubmission rather than silently overwriting
+        // it, so an Admin reviewing the queue isn't looking at stale details mid-edit
+        if (user.recruiterApplication?.status === 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'You already have a recruiter application under review',
+            })
+        }
+
+        user.recruiterApplication = {
+            companyName,
+            companyWebsite,
+            companySize,
+            location,
+            hiringNeeds,
+            status: 'pending',
+            reviewedBy: undefined,
+            reviewedAt: undefined,
+            rejectionReason: undefined,
+        }
+        await user.save()
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your recruiter application has been submitted for review',
+            recruiterApplication: user.recruiterApplication,
+        })
+    } catch (error) {
+        (req.log || logger).error('apply for recruiter failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while submitting your application',
+        })
+    }
+}

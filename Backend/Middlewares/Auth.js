@@ -121,17 +121,33 @@ exports.isSupport = (req, res, next) => {
     next()
 }
 
-// product-feature gate sir — the mirror of isAdmin/isSupport, for the OTHER direction.
+// recruiter gate sir — mirrors isAdmin/isSupport exactly. Recruiter is its own isolated role
+// (see Models/User.js), so this is the ONLY gate that lets it through; isUser below already
+// excludes it same as it excludes Admin/Support
+exports.isRecruiter = (req, res, next) => {
+    if (req?.User?.role !== 'Recruiter') {
+        return res.status(403).json({
+            success: false,
+            message: 'This route is for recruiters only',
+        })
+    }
+    next()
+}
+
+// product-feature gate sir — the mirror of isAdmin/isSupport/isRecruiter, for the OTHER direction.
 // Every role is strictly isolated to its own dashboard (frontend: PrivateRoute/AdminRoute/
-// SupportRoute); this is the server-side enforcement so an Admin/Support token can't just
-// call the User-facing product APIs (AI review, chat, resume builder, etc) directly,
-// bypassing the frontend guard entirely. Account-management routes (profile, password,
+// SupportRoute/RecruiterRoute); this is the server-side enforcement so an Admin/Support/Recruiter
+// token can't just call the User-facing product APIs (AI review, chat, resume builder, etc)
+// directly, bypassing the frontend guard entirely. Account-management routes (profile, password,
 // delete-account, notifications) are NOT behind this — every role still manages its own account.
+// NOTE: candidates taking a recruiter's test are still plain 'User' accounts, so test-attempt
+// routes in Routes/Test.js intentionally use isUser too — this gate doesn't need to know about
+// tests at all.
 exports.isUser = (req, res, next) => {
     if (req?.User?.role !== 'User') {
         return res.status(403).json({
             success: false,
-            message: 'Admin and Support accounts cannot use this feature — sign in with a normal user account instead',
+            message: 'Admin, Support and Recruiter accounts cannot use this feature — sign in with a normal user account instead',
         })
     }
     next()

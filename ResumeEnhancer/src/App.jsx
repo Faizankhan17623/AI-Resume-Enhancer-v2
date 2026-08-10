@@ -14,6 +14,7 @@ import OpenRoute from './Hooks/OpenRoute'
 import PrivateRoute from './Hooks/PrivateRoute'
 import AdminRoute from './Hooks/AdminRoute'
 import SupportRoute from './Hooks/SupportRoute'
+import RecruiterRoute from './Hooks/RecruiterRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 import CookieConsent from './Components/extra/CookieConsent'
@@ -53,6 +54,19 @@ const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
+const RecruiterJobList = lazy(() => import('./Components/Recruiter/JobList'))
+const RecruiterJobBuilder = lazy(() => import('./Components/Recruiter/JobBuilder'))
+const RecruiterJobDetail = lazy(() => import('./Components/Recruiter/JobDetailRecruiter'))
+const RecruiterTestBuilder = lazy(() => import('./Components/Recruiter/TestBuilder'))
+const RecruiterJobApplicantsList = lazy(() => import('./Components/Recruiter/JobApplicantsList'))
+const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/AttemptDetail'))
+const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
+const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
+const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
+const JobDetail = lazy(() => import('./Components/Jobs/JobDetail'))
+const MyApplications = lazy(() => import('./Components/Dashboard/MyApplications'))
+const ForRecruiters = lazy(() => import('./Components/Home/ForRecruiters'))
+const AdminRecruiterApplications = lazy(() => import('./Components/Admin/RecruiterApplications'))
 
 const PageLoader = () => (
   <div className="min-h-screen bg-richblack-900 flex items-center justify-center">
@@ -150,6 +164,11 @@ function App() {
             <Route path="/Pricing" element={<Pricing />} />
             <Route path="/Shared/:shareId" element={<SharedReport />} />
             <Route path="/oauth/complete" element={<OAuthComplete />} />
+            {/* public job board sir — deliberately NOT /Dashboard/Job-Search, that's the
+                unrelated private Tavily web-search feature. Anyone can browse without logging in. */}
+            <Route path="/Jobs" element={<JobBoard />} />
+            <Route path="/Jobs/:jobId" element={<JobDetail />} />
+            <Route path="/For-Recruiters" element={<ForRecruiters />} />
 
             {/* Only for the logged-OUT sir */}
             <Route path="/Signup" element={<OpenRoute><Join /></OpenRoute>} />
@@ -178,6 +197,26 @@ function App() {
             <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
             <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
             <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
+            {/* candidate's own real job-board applications sir — distinct from
+                /Dashboard/Applications (the pre-existing personal Kanban tracker) */}
+            <Route path="/Dashboard/My-Applications" element={<PrivateRoute><MyApplications /></PrivateRoute>} />
+
+            {/* candidate-facing proctored test flow sir — plain 'User' accounts only, same
+                PrivateRoute as every other Dashboard feature. Not under /Dashboard/* itself since
+                the test runner intentionally does NOT use DashboardLayout (no sidebar/nav —
+                nothing should distract from or let the candidate navigate away mid-test). */}
+            <Route path="/Test/:inviteCode" element={<PrivateRoute><ProctoredTestConsent /></PrivateRoute>} />
+            <Route path="/Test/:inviteCode/run" element={<PrivateRoute><ProctoredTestRunner /></PrivateRoute>} />
+
+            {/* Recruiter-only sir — strictly, see RecruiterRoute.jsx. A candidate ('User') hitting
+                any of these gets redirected to their own Dashboard instead of being let through.
+                Jobs are the top-level view now — a Test lives inside a Job, reached from it. */}
+            <Route path="/Recruiter" element={<RecruiterRoute><RecruiterJobList /></RecruiterRoute>} />
+            <Route path="/Recruiter/New" element={<RecruiterRoute><RecruiterJobBuilder /></RecruiterRoute>} />
+            <Route path="/Recruiter/Jobs/:jobId" element={<RecruiterRoute><RecruiterJobDetail /></RecruiterRoute>} />
+            <Route path="/Recruiter/Jobs/:jobId/Test" element={<RecruiterRoute><RecruiterTestBuilder /></RecruiterRoute>} />
+            <Route path="/Recruiter/Jobs/:jobId/applicants" element={<RecruiterRoute><RecruiterJobApplicantsList /></RecruiterRoute>} />
+            <Route path="/Recruiter/Attempts/:attemptId" element={<RecruiterRoute><RecruiterAttemptDetail /></RecruiterRoute>} />
 
             {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
                 these gets redirected to their OWN dashboard at /Support, never let through. */}
@@ -188,6 +227,7 @@ function App() {
             <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
             <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
             <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+            <Route path="/Admin/Recruiter-Applications" element={<AdminRoute><AdminRecruiterApplications /></AdminRoute>} />
             <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
             {/* Support-only sir — strictly, see SupportRoute.jsx. An Admin hitting any of these

@@ -1,10 +1,10 @@
 import { useSelector } from "react-redux"
 import { Navigate } from "react-router"
 
-// User-only sir — strict isolation, same rule as AdminRoute/SupportRoute. An Admin or
-// Support account can never use the product's own Dashboard pages (reviews, chat, builder,
-// etc), only their own management dashboard. They're redirected to it here instead of
-// being let through.
+// User-only sir — strict isolation, same rule as AdminRoute/SupportRoute/RecruiterRoute. An
+// Admin, Support, or Recruiter account can never use the product's own Dashboard pages (reviews,
+// chat, builder, etc), only their own management dashboard. They're redirected to it here instead
+// of being let through.
 //
 // Gated on isLoggedIn rather than the token sir: the token now lives only in memory (see
 // Slices/authSlice.js) so it is null after any page reload, while the httpOnly session cookie
@@ -22,6 +22,9 @@ function PrivateRoute({ children }) {
     }
     if (user?.role === 'Support') {
         return <Navigate to="/Support" />
+    }
+    if (user?.role === 'Recruiter') {
+        return <Navigate to="/Recruiter" />
     }
     return children
 }

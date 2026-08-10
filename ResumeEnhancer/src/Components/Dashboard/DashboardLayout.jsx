@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
@@ -42,6 +42,7 @@ const navSections = [
       { name: 'Job Search', path: '/Dashboard/Job-Search', icon: FaSearch },
       { name: 'Mock Interview', path: '/Dashboard/Mock-Interview', icon: FaMicrophoneAlt, matchPrefix: '/Dashboard/Mock-Interview' },
       { name: 'Applications', path: '/Dashboard/Applications', icon: FaBriefcase },
+      { name: 'My Job Applications', path: '/Dashboard/My-Applications', icon: FaClipboardCheck },
     ],
   },
   {

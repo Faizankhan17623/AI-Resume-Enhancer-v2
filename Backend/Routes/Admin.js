@@ -10,6 +10,7 @@ const {
     bulkBanSchema,
     adjustCreditsSchema,
     updateUserPlanSchema,
+    rejectRecruiterApplicationSchema,
 } = require('../Validation/schemas.js')
 const {
     getDashboardStats,
@@ -25,7 +26,10 @@ const {
     impersonateUser,
     getUserReviews,
     getUserChats,
-    getChatDetail
+    getChatDetail,
+    getRecruiterApplications,
+    approveRecruiterApplication,
+    rejectRecruiterApplication
 } = require('../controllers/Admin.js')
 const {
     getPayments,
@@ -78,6 +82,11 @@ route.get('/admin/announcements', Auth, isSupport, adminReadLimiter, getAnnounce
 // ---------- admin-only sir ----------
 route.patch('/admin/users/bulk-role', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkUpdateRoleSchema }), bulkUpdateUserRole)
 route.patch('/admin/users/:userId/role', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserRoleSchema }), updateUserRole)
+// recruiter self-signup approval queue sir — Admin-only, NOT isSupport: promoting someone to
+// Recruiter is the same class of judgment call as any other role change above
+route.get('/admin/recruiter-applications', Auth, isAdmin, adminReadLimiter, getRecruiterApplications)
+route.post('/admin/recruiter-applications/:userId/approve', Auth, isAdmin, adminWriteLimiter, approveRecruiterApplication)
+route.post('/admin/recruiter-applications/:userId/reject', Auth, isAdmin, adminWriteLimiter, validate({ body: rejectRecruiterApplicationSchema }), rejectRecruiterApplication)
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserPlanSchema }), updateUserPlan)
 route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkBanSchema }), bulkBanUsers)
 route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, validate({ body: banUserSchema }), banUser)

@@ -16,6 +16,7 @@ const {
     updateEmailSchema,
     updateNumberSchema,
     notificationPrefsSchema,
+    recruiterApplicationSchema,
 } = require('../Validation/schemas.js')
 const {
     createUser,
@@ -33,7 +34,8 @@ const {
     updateEmail,
     updateNumber,
     exportMyData,
-    deleteAccount
+    deleteAccount,
+    applyForRecruiter
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -82,6 +84,10 @@ route.patch('/profile/first-name',Auth,validate({ body: updateFirstNameSchema })
 route.patch('/profile/last-name',Auth,validate({ body: updateLastNameSchema }),updateLastName)
 route.patch('/profile/email',Auth,validate({ body: updateEmailSchema }),updateEmail)
 route.patch('/profile/number',Auth,validate({ body: updateNumberSchema }),updateNumber)
+
+// self-signup for Recruiter access sir — isUser blocks Admin/Support/existing-Recruiter
+// accounts from "applying" for a role they already have or aren't eligible for
+route.post('/recruiter-applications',Auth,isUser,validate({ body: recruiterApplicationSchema }),applyForRecruiter)
 
 // GDPR-style self-service data dump sir, separate from delete-account
 route.get('/profile/export',Auth,exportMyData)

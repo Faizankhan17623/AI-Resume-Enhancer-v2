@@ -27,6 +27,7 @@ const DashboardHome = () => {
 
   const activity = profile?.activity
   const onboardingCompleted = profile?.user?.onboardingCompleted
+  const recruiterApplication = profile?.user?.recruiterApplication
 
   const onboardingSteps = [
     { label: 'Run your first AI resume review', done: (activity?.reviewCount ?? 0) > 0, to: '/Dashboard/New-Review' },
@@ -69,6 +70,24 @@ const DashboardHome = () => {
       </Helmet>
 
       <PageTransition className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6">
+
+        {/* recruiter self-signup status sir — only shows while an application is pending or
+            was rejected; approved ones already flip the account to role: 'Recruiter', which
+            sends them to /Recruiter instead of this dashboard entirely (see PrivateRoute.jsx) */}
+        {recruiterApplication?.status && recruiterApplication.status !== 'approved' && (
+          <div className={`rounded-xl border p-4 text-sm ${
+            recruiterApplication.status === 'pending'
+              ? 'bg-yellow-700/10 border-yellow-700 text-yellow-25'
+              : 'bg-pink-700/10 border-pink-700 text-pink-100'
+          }`}>
+            {recruiterApplication.status === 'pending'
+              ? "Your recruiter application is under review — you'll get access once an admin approves it."
+              : `Your recruiter application wasn't approved${recruiterApplication.rejectionReason ? `: ${recruiterApplication.rejectionReason}` : '.'} `}
+            {recruiterApplication.status === 'rejected' && (
+              <Link to="/For-Recruiters" className="underline font-semibold">Apply again</Link>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-richblack-300">

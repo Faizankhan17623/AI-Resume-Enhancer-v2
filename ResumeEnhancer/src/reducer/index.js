@@ -13,6 +13,9 @@ import notificationReducer from '../Slices/notificationSlice'
 import applicationReducer from '../Slices/applicationSlice'
 import keywordBankReducer from '../Slices/keywordBankSlice'
 import mockInterviewReducer from '../Slices/mockInterviewSlice'
+import testReducer from '../Slices/testSlice'
+import testAttemptReducer from '../Slices/testAttemptSlice'
+import jobReducer from '../Slices/jobSlice'
 
 const rootReduers = combineReducers({
     auth: authReducer,
@@ -29,6 +32,9 @@ const rootReduers = combineReducers({
     application: applicationReducer,
     keywordBank: keywordBankReducer,
     mockInterview: mockInterviewReducer,
+    test: testReducer,
+    testAttempt: testAttemptReducer,
+    job: jobReducer,
 })
 
 

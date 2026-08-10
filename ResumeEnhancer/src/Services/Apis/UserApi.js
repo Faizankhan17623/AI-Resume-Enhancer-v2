@@ -51,6 +51,10 @@ export const Profile = {
     exportdata: BASE_URL + "/profile/export"
 }
 
+export const RecruiterApplication = {
+    apply: BASE_URL + "/recruiter-applications"
+}
+
 export const Notifications = {
     list: BASE_URL + "/notifications",
     unreadcount: BASE_URL + "/notifications/unread-count",

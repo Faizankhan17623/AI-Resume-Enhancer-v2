@@ -22,7 +22,7 @@ const express = require('express')
 // domain -> router sir. The `owns` field documents the URL space each domain is responsible for;
 // it's what the collision check reports against, and it's the answer to "which file serves this?"
 const domains = [
-    { name: 'auth', owns: ['/Createuser', '/Login', '/Logout', '/Send-otp', '/auth/*', '/profile/*', '/forgot-password', '/reset-password', '/change-password', '/delete-account', '/response'], router: require('./Auth.js') },
+    { name: 'auth', owns: ['/Createuser', '/Login', '/Logout', '/Send-otp', '/auth/*', '/profile/*', '/forgot-password', '/reset-password', '/change-password', '/delete-account', '/response', '/recruiter-applications'], router: require('./Auth.js') },
     { name: 'chat', owns: ['/chat'], router: require('./Chat.js') },
     { name: 'payment', owns: ['/payment'], router: require('./Payment.js') },
     { name: 'review', owns: ['/reviews', '/public/reviews', '/streak', '/leaderboard'], router: require('./Review.js') },
@@ -39,6 +39,8 @@ const domains = [
     { name: 'notification', owns: ['/notifications'], router: require('./Notification.js') },
     { name: 'application', owns: ['/applications'], router: require('./Application.js') },
     { name: 'keywordBank', owns: ['/keyword-bank'], router: require('./KeywordBank.js') },
+    { name: 'test', owns: ['/tests', '/test-attempts'], router: require('./Test.js') },
+    { name: 'job', owns: ['/jobs', '/public/jobs', '/job-applications'], router: require('./Job.js') },
     // NOTE sir: testimonial and report each also define '/admin/*' routes of their own. That's
     // intentional (the moderation endpoints live beside the feature they moderate) and the
     // collision check below proves they don't overlap with Admin.js's paths.

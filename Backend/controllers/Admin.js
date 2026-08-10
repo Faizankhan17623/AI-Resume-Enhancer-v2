@@ -135,8 +135,8 @@ exports.getUsers = async (req, res) => {
         const search = (req.query.search || '').trim()
         const role = (req.query.role || '').trim()
 
-        // Admins never show up here regardless of filter; role param can narrow to 'User' or 'Support' only.
-        const filter = ['User', 'Support'].includes(role) ? { role } : { role: { $ne: 'Admin' } }
+        // Admins never show up here regardless of filter; role param can narrow to 'User', 'Support', or 'Recruiter'.
+        const filter = ['User', 'Support', 'Recruiter'].includes(role) ? { role } : { role: { $ne: 'Admin' } }
         if (search) {
             const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             filter.$or = [
@@ -230,7 +230,7 @@ exports.getUserDetail = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/:userId/role — promote/demote sir, body: { role: 'User' | 'Support' }
+// PATCH /admin/users/:userId/role — promote/demote sir, body: { role: 'User' | 'Support' | 'Recruiter' }
 // Admin is deliberately NOT settable here — granting/removing Admin access is a manual,
 // out-of-band operation, never something reachable from this UI.
 exports.updateUserRole = async (req, res) => {
@@ -246,10 +246,10 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
-        if (!['User', 'Support'].includes(role)) {
+        if (!['User', 'Support', 'Recruiter'].includes(role)) {
             return res.status(400).json({
                 success: false,
-                message: "Role must be 'User' or 'Support'",
+                message: "Role must be 'User', 'Support', or 'Recruiter'",
             })
         }
 
@@ -271,8 +271,9 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
-        // this endpoint can only move someone between User and Support sir — an existing
-        // Admin's role is off-limits here entirely, same reasoning as the self-demote guard above
+        // this endpoint can only move someone between User, Support, and Recruiter sir — an
+        // existing Admin's role is off-limits here entirely, same reasoning as the self-demote
+        // guard above
         if (user.role === 'Admin') {
             return res.status(400).json({
                 success: false,
@@ -287,9 +288,10 @@ exports.updateUserRole = async (req, res) => {
         logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role })
         await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
 
+        const roleLabel = { Support: 'a Support member', Recruiter: 'a Recruiter', User: 'a normal User' }
         return res.status(200).json({
             success: true,
-            message: `${user.email} is now ${role === 'Support' ? 'a Support member' : 'a normal User'}`,
+            message: `${user.email} is now ${roleLabel[role] || role}`,
             user
         })
     } catch (error) {
@@ -301,9 +303,10 @@ exports.updateUserRole = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/bulk-role — move several accounts between User and Support at once sir,
-// body: { userIds: [...], role: 'User' | 'Support' }. Same rules as the single-user version:
-// can't touch yourself, can't touch an existing Admin — those ids are skipped, not a hard failure.
+// PATCH /admin/users/bulk-role — move several accounts between User, Support, and Recruiter at
+// once sir, body: { userIds: [...], role: 'User' | 'Support' | 'Recruiter' }. Same rules as the
+// single-user version: can't touch yourself, can't touch an existing Admin — those ids are
+// skipped, not a hard failure.
 exports.bulkUpdateUserRole = async (req, res) => {
     try {
         const adminId = req?.User.id
@@ -323,10 +326,10 @@ exports.bulkUpdateUserRole = async (req, res) => {
             })
         }
 
-        if (!['User', 'Support'].includes(role)) {
+        if (!['User', 'Support', 'Recruiter'].includes(role)) {
             return res.status(400).json({
                 success: false,
-                message: "Role must be 'User' or 'Support'",
+                message: "Role must be 'User', 'Support', or 'Recruiter'",
             })
         }
 
@@ -360,6 +363,128 @@ exports.bulkUpdateUserRole = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the roles',
+        })
+    }
+}
+
+// GET /admin/recruiter-applications — the approval queue sir, pending first
+exports.getRecruiterApplications = async (req, res) => {
+    try {
+        const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : 'pending'
+
+        const applicants = await User.find({ 'recruiterApplication.status': status })
+            .select('firstName lastName email role recruiterApplication createdAt')
+            .sort({ 'recruiterApplication.reviewedAt': -1, createdAt: -1 })
+
+        return res.status(200).json({ success: true, applicants })
+    } catch (error) {
+        (req.log || logger).error('get recruiter applications failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting recruiter applications',
+        })
+    }
+}
+
+// POST /admin/recruiter-applications/:userId/approve sir — the only place a self-signup
+// actually becomes a real Recruiter. Reuses the exact same role-flip as updateUserRole above,
+// triggered by an approval decision instead of a manual dropdown pick.
+exports.approveRecruiterApplication = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userId } = req.params
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user id' })
+        }
+
+        const user = await User.findById(userId).select('firstName lastName email role recruiterApplication')
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        if (user.recruiterApplication?.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'This user has no pending recruiter application',
+            })
+        }
+
+        const oldRole = user.role
+        user.role = 'Recruiter'
+        user.recruiterApplication.status = 'approved'
+        user.recruiterApplication.reviewedBy = adminId
+        user.recruiterApplication.reviewedAt = new Date()
+        user.recruiterApplication.rejectionReason = undefined
+        await user.save()
+
+        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', user, {
+            decision: 'approved',
+            companyName: user.recruiterApplication.companyName,
+            roleChange: { from: oldRole, to: 'Recruiter' },
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: `${user.email} is now a Recruiter`,
+            user,
+        })
+    } catch (error) {
+        (req.log || logger).error('approve recruiter application failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while approving the application',
+        })
+    }
+}
+
+// POST /admin/recruiter-applications/:userId/reject sir — body: { reason? }. Role stays
+// 'User'; the applicant can see the rejection reason on their own account and, since
+// applyForRecruiter only blocks resubmission while status is 'pending', can apply again later.
+exports.rejectRecruiterApplication = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userId } = req.params
+        const { reason } = req.body
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user id' })
+        }
+
+        const user = await User.findById(userId).select('firstName lastName email role recruiterApplication')
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        if (user.recruiterApplication?.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'This user has no pending recruiter application',
+            })
+        }
+
+        user.recruiterApplication.status = 'rejected'
+        user.recruiterApplication.reviewedBy = adminId
+        user.recruiterApplication.reviewedAt = new Date()
+        user.recruiterApplication.rejectionReason = reason || ''
+        await user.save()
+
+        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', user, {
+            decision: 'rejected',
+            companyName: user.recruiterApplication.companyName,
+            reason: reason || '',
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: `${user.email}'s recruiter application was rejected`,
+            user,
+        })
+    } catch (error) {
+        (req.log || logger).error('reject recruiter application failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while rejecting the application',
         })
     }
 }

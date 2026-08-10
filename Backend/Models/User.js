@@ -104,10 +104,12 @@ const UserCreation = new mongoose.Schema(
             type:mongoose.Schema.ObjectId,
             ref:"Chat"
         }],
-        // RBAC sir — User is normal, Support can view/help but not destroy, Admin can do everything
+        // RBAC sir — User is normal, Support can view/help but not destroy, Admin can do everything,
+        // Recruiter owns proctored tests (see Models/Test.js, Models/TestAttempt.js) and is
+        // otherwise isolated from both the admin tools and the candidate-facing product features
         role:{
             type:String,
-            enum:['User','Support','Admin'],
+            enum:['User','Support','Admin','Recruiter'],
             default:'User'
         },
         // moderation sir — a banned user is blocked by the Auth middleware everywhere, instantly
@@ -198,6 +200,24 @@ const UserCreation = new mongoose.Schema(
         feedbackSubmitted: {
             type: Boolean,
             default: false
+        },
+        // self-signup request to become a Recruiter sir — role stays 'User' until an Admin
+        // approves it (see controllers/Admin.js's approveRecruiterApplication). Approval is
+        // what actually flips `role` to 'Recruiter', reusing the exact same mechanism as a
+        // manual role-change from the Admin dashboard, just triggered by this instead.
+        recruiterApplication: {
+            companyName: { type: String, trim: true, maxlength: 150 },
+            companyWebsite: { type: String, trim: true, maxlength: 300 },
+            // total headcount sir, a coarse bucket rather than an exact number — good enough
+            // for the Admin's manual company-legitimacy judgment call, no need for precision
+            companySize: { type: String, enum: ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'] },
+            location: { type: String, trim: true, maxlength: 150 },
+            // what they're hiring for sir — was "pitch", renamed to match what it actually asks
+            hiringNeeds: { type: String, trim: true, maxlength: 2000 },
+            status: { type: String, enum: ['pending', 'approved', 'rejected'] },
+            reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
+            reviewedAt: { type: Date },
+            rejectionReason: { type: String, trim: true, maxlength: 500 },
         }
     }, { timestamps: true }
 )
