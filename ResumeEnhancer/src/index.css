@@ -112,12 +112,18 @@
     --color-richblack-100: #564E42;
     --color-richblack-200: #706A5C;
     --color-richblack-300: #8B93A0;
-    --color-richblack-400: #A79D8A;
-    --color-richblack-500: #C9BFA9;
-    --color-richblack-600: #E6DDD0;
-    --color-richblack-700: #F1ECE3;
+    --color-richblack-400: #948B79;
+    /* 500-800 sir — real contrast fix: these used to sit within ~3% lightness of each other
+       (600 #E6DDD0 / 700 #F1ECE3 / 800 #FFFFFF on a #FAF7F2 page) so an input's border was
+       nearly invisible against its own fill and the page behind it. Widened the ramp so a
+       bordered input/card actually reads as a distinct surface in light mode, matching the
+       clear card-vs-page separation dark mode already had.
+    */
+    --color-richblack-500: #BFB39D;
+    --color-richblack-600: #C7BBA3;
+    --color-richblack-700: #E4DBC9;
     --color-richblack-800: #FFFFFF;
-    --color-richblack-900: #FAF7F2;
+    --color-richblack-900: #F5F0E6;
 }
 
 .dark {
