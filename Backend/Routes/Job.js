@@ -1,6 +1,6 @@
 const express = require('express')
 const route = express.Router()
-const { Auth, isRecruiter, isUser } = require('../Middlewares/Auth.js')
+const { Auth, isRecruiter, isApprovedRecruiter, isUser } = require('../Middlewares/Auth.js')
 const { validate } = require('../Middlewares/Validate.js')
 const {
     createJobSchema,
@@ -28,14 +28,16 @@ const {
 // route ORDER matters here sir: '/jobs/mine' and '/jobs/public/:jobId' must be declared before
 // '/jobs/:jobId', otherwise Express would match 'mine'/'public' as a :jobId value first.
 
-// recruiter management
-route.post('/jobs', Auth, isRecruiter, validate({ body: createJobSchema }), createJob)
-route.get('/jobs/mine', Auth, isRecruiter, listMyJobs)
-route.get('/jobs/:jobId/applicants', Auth, isRecruiter, getJobApplicants)
-route.post('/jobs/:jobId/publish', Auth, isRecruiter, publishJob)
-route.post('/jobs/:jobId/close', Auth, isRecruiter, closeJob)
-route.patch('/jobs/:jobId', Auth, isRecruiter, validate({ body: updateJobSchema }), updateJob)
-route.get('/jobs/:jobId', Auth, isRecruiter, getJob)
+// recruiter management sir — isApprovedRecruiter chained right after isRecruiter on every one
+// of these: isRecruiter confirms the role, isApprovedRecruiter confirms an Admin has actually
+// cleared them (see Middlewares/Auth.js). A locked (pending/rejected) Recruiter 403s here.
+route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createJobSchema }), createJob)
+route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
+route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
+route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publishJob)
+route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)
+route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateJobSchema }), updateJob)
+route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, getJob)
 
 // public — no auth required
 route.get('/public/jobs', listPublicJobs)
@@ -44,6 +46,6 @@ route.get('/public/jobs/:jobId', getPublicJob)
 // candidate side
 route.post('/jobs/:jobId/apply', Auth, isUser, validate({ body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
-route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, inviteApplicantToTest)
+route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
 
 module.exports = route

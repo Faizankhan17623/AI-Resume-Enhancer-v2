@@ -2,10 +2,11 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaExclamationTriangle, FaPaperPlane } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { GetJobApplicants, InviteApplicantToTest } from '../../Services/operations/Job'
 
 const statusBadge = {
@@ -33,6 +34,7 @@ const JobApplicantsList = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { jobApplicants, loading } = useSelector((state) => state.job)
+  const { isLocked } = useRecruiterLock()
 
   useEffect(() => {
     dispatch(GetJobApplicants(jobId, token))
@@ -81,13 +83,16 @@ const JobApplicantsList = () => {
                     {statusLabel[app.status] || app.status}
                   </span>
                   {app.status === 'applied' && (
-                    <IconBtn
-                      text="Invite to test"
-                      onclick={() => handleInvite(app._id)}
-                      customClasses="text-xs px-3 py-2"
-                    >
-                      <FaPaperPlane className="text-[10px]" />
-                    </IconBtn>
+                    <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                      <IconBtn
+                        text="Invite to test"
+                        onclick={() => handleInvite(app._id)}
+                        customClasses="text-xs px-3 py-2"
+                        disabled={isLocked}
+                      >
+                        {isLocked ? <FaLock className="text-[10px]" /> : <FaPaperPlane className="text-[10px]" />}
+                      </IconBtn>
+                    </span>
                   )}
                   {app.testAttempt && ['invited_to_test', 'completed_test'].includes(app.status) && (
                     <Link

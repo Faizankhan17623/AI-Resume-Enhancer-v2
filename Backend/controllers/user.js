@@ -22,6 +22,9 @@ exports.createUser = async (req, res) => {
     try {
 
         const { firstName, lastName, email, password, number ,Code,otp} = req.body ;
+        // recruiter fast-track signup sir — see Validation/schemas.js's createUserSchema for the
+        // conditional-required rules on these five when accountType is 'Recruiter'
+        const { accountType, companyName, companyWebsite, companySize, location, hiringNeeds } = req.body
 
         // not case sir
         if (!firstName || !lastName || !email || !password || !number || !Code || !otp) {
@@ -104,6 +107,13 @@ exports.createUser = async (req, res) => {
             });
         }
 
+        // recruiter fast-track sir — role is set to 'Recruiter' right here at signup, no
+        // separate promotion step. The account is NOT trusted yet though: recruiterApplication
+        // starts 'pending', and isApprovedRecruiter (Middlewares/Auth.js) blocks every
+        // recruiter write action until an Admin approves it via Admin/RecruiterApplications.jsx
+        // — same review queue the post-hoc /For-Recruiters flow already uses.
+        const isRecruiterSignup = accountType === 'Recruiter'
+
         const Creation = await User.create({
             firstName: firstName,
             lastName: lastName,
@@ -111,7 +121,18 @@ exports.createUser = async (req, res) => {
             password: hashing,
             number: number,
             CountryCode: Code,
-            Verified: false
+            Verified: false,
+            ...(isRecruiterSignup ? {
+                role: 'Recruiter',
+                recruiterApplication: {
+                    companyName,
+                    companyWebsite,
+                    companySize,
+                    location,
+                    hiringNeeds,
+                    status: 'pending',
+                },
+            } : {}),
         })
 
         return res.status(201).json({
@@ -122,6 +143,7 @@ exports.createUser = async (req, res) => {
             user: {
                 _id: Creation._id,
                 firstName: Creation.firstName,
+                role: Creation.role,
                 lastName: Creation.lastName,
                 email: Creation.email,
             },

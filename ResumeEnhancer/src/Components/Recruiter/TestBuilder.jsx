@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaLock } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateTest } from '../../Services/operations/Test'
 
 const emptyQuestion = () => ({ prompt: '', type: 'mcq', options: ['', ''], correctAnswer: '', marks: 10 })
@@ -24,6 +25,7 @@ const TestBuilder = () => {
   const [maxViolations, setMaxViolations] = useState(4)
   const [questions, setQuestions] = useState([emptyQuestion()])
   const [submitting, setSubmitting] = useState(false)
+  const { isLocked } = useRecruiterLock()
 
   const marksSum = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0)
   const marksMatch = marksSum === Number(totalMarks)
@@ -54,6 +56,7 @@ const TestBuilder = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isLocked) return toast.error("Your recruiter account is pending admin approval")
     if (!title.trim()) return toast.error("Please give the test a title")
     if (!questions.length) return toast.error("Add at least one question")
 
@@ -249,10 +252,15 @@ const TestBuilder = () => {
           </button>
         </div>
 
+        {isLocked && (
+          <p className="flex items-center gap-2 text-xs text-yellow-25">
+            <FaLock /> Locked until an admin approves your recruiter account
+          </p>
+        )}
         <IconBtn
           type="submit"
           text={submitting ? "Creating..." : "Create test"}
-          disabled={submitting || !marksMatch}
+          disabled={submitting || !marksMatch || isLocked}
           customClasses="w-full justify-center"
         />
       </form>

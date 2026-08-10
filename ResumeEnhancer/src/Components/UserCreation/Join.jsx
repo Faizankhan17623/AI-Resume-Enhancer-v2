@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { FaUser, FaBriefcase } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
@@ -17,15 +19,24 @@ const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-6
 const labelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
 const errorClass = "mt-1 text-xs text-pink-200"
 
+// same list the backend's companySize enum accepts sir (Validation/schemas.js) and the same
+// one already used on the post-hoc /For-Recruiters form (Home/ForRecruiters.jsx)
+const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']
+
 const Join = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm()
+  const [accountType, setAccountType] = useState('User')
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { loading } = useSelector((state) => state.auth)
 
   const onSubmit = (data) => {
-    // park the form data sir — the OTP screen finishes the creation with it
-    dispatch(setSignupData(data))
+    // park the form data sir — the OTP screen finishes the creation with it. accountType and
+    // (when Recruiter) the company fields ride along in `data` untouched — CreateTheUser
+    // (Services/operations/Auth.js) just spreads signupData with no field allowlist, and the
+    // backend's createUserSchema conditionally requires the company fields only when
+    // accountType is 'Recruiter' (see Validation/schemas.js).
+    dispatch(setSignupData({ ...data, accountType }))
     dispatch(SendTheOtp(data.email, navigate))
   }
 
@@ -53,6 +64,41 @@ const Join = () => {
 
           {/* Form Container */}
           <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md space-y-4">
+
+            {/* Account type sir — picking Recruiter grants role: 'Recruiter' immediately on
+                signup, but the account stays LOCKED (every recruiter action blocked) until an
+                Admin approves it — see Backend/Middlewares/Auth.js's isApprovedRecruiter */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAccountType('User')}
+                className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold transition-colors duration-200 cursor-pointer ${
+                  accountType === 'User'
+                    ? 'border-yellow-50 bg-yellow-900/10 text-richblack-5'
+                    : 'border-richblack-600 text-richblack-300 hover:border-richblack-400'
+                }`}
+              >
+                <FaUser className={accountType === 'User' ? 'text-yellow-50' : ''} />
+                Create as User
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('Recruiter')}
+                className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold transition-colors duration-200 cursor-pointer ${
+                  accountType === 'Recruiter'
+                    ? 'border-yellow-50 bg-yellow-900/10 text-richblack-5'
+                    : 'border-richblack-600 text-richblack-300 hover:border-richblack-400'
+                }`}
+              >
+                <FaBriefcase className={accountType === 'Recruiter' ? 'text-yellow-50' : ''} />
+                Create as Recruiter
+              </button>
+            </div>
+            {accountType === 'Recruiter' && (
+              <p className="text-xs text-yellow-25 -mt-2">
+                Your account will be created right away, but locked until an admin reviews your company details.
+              </p>
+            )}
 
             {/* Name Row */}
             <div className="flex gap-4">
@@ -155,6 +201,73 @@ const Join = () => {
                 {errors.confirmpassword && <p className={errorClass}>{errors.confirmpassword.message}</p>}
               </div>
             </div>
+
+            {/* Recruiter-only company fields sir — all required, mirrors the same field set/
+                validation already built for the post-hoc /For-Recruiters form
+                (Home/ForRecruiters.jsx) and the backend's createUserSchema refines */}
+            {accountType === 'Recruiter' && (
+              <div className="space-y-4 rounded-xl border border-richblack-700 bg-richblack-800/60 p-4">
+                <div>
+                  <label className={labelClass}>Company name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Acme Corp"
+                    className={inputClass}
+                    {...register("companyName", { required: "Company name is required" })}
+                  />
+                  {errors.companyName && <p className={errorClass}>{errors.companyName.message}</p>}
+                </div>
+                <div>
+                  <label className={labelClass}>Company website</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    className={inputClass}
+                    {...register("companyWebsite", {
+                      required: "Company website is required",
+                      pattern: { value: /^https?:\/\/.+\..+/i, message: "Enter a valid website URL (e.g. https://example.com)" }
+                    })}
+                  />
+                  {errors.companyWebsite && <p className={errorClass}>{errors.companyWebsite.message}</p>}
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-1/2">
+                    <label className={labelClass}>Company size</label>
+                    <select
+                      defaultValue=""
+                      className={`${inputClass} cursor-pointer appearance-none`}
+                      {...register("companySize", { required: "Please select your company size" })}
+                    >
+                      <option value="" disabled className="bg-richblack-800 text-richblack-5">Select size</option>
+                      {COMPANY_SIZES.map((size) => (
+                        <option key={size} value={size} className="bg-richblack-800 text-richblack-5">{size} employees</option>
+                      ))}
+                    </select>
+                    {errors.companySize && <p className={errorClass}>{errors.companySize.message}</p>}
+                  </div>
+                  <div className="w-1/2">
+                    <label className={labelClass}>Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bengaluru, India"
+                      className={inputClass}
+                      {...register("location", { required: "Location is required" })}
+                    />
+                    {errors.location && <p className={errorClass}>{errors.location.message}</p>}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Hiring needs</label>
+                  <textarea
+                    rows={3}
+                    placeholder="What roles are you hiring for?"
+                    className={`${inputClass} resize-none`}
+                    {...register("hiringNeeds", { required: "Please tell us your hiring needs" })}
+                  />
+                  {errors.hiringNeeds && <p className={errorClass}>{errors.hiringNeeds.message}</p>}
+                </div>
+              </div>
+            )}
 
             <IconBtn
               type="submit"

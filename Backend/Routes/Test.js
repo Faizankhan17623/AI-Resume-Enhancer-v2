@@ -1,6 +1,6 @@
 const express = require('express')
 const route = express.Router()
-const { Auth, isRecruiter, isUser } = require('../Middlewares/Auth.js')
+const { Auth, isRecruiter, isApprovedRecruiter, isUser } = require('../Middlewares/Auth.js')
 const { violationLimiter } = require('../Middlewares/RateLimit.js')
 const { validate } = require('../Middlewares/Validate.js')
 const {
@@ -25,14 +25,16 @@ const {
 // candidate-attempt routes are isUser only (candidates are plain 'User' accounts), same strict
 // role isolation as every other domain (see Middlewares/Auth.js)
 
-// recruiter management
-route.post('/tests', Auth, isRecruiter, validate({ body: createTestSchema }), createTest)
-route.get('/tests', Auth, isRecruiter, listMyTests)
-route.get('/tests/:testId', Auth, isRecruiter, getTest)
-route.patch('/tests/:testId', Auth, isRecruiter, validate({ body: updateTestSchema }), updateTest)
-route.post('/tests/:testId/publish', Auth, isRecruiter, publishTest)
-route.get('/tests/:testId/attempts', Auth, isRecruiter, getTestAttempts)
-route.get('/test-attempts/:attemptId', Auth, isRecruiter, getAttemptDetail)
+// recruiter management sir — isApprovedRecruiter chained right after isRecruiter on every one
+// of these: isRecruiter confirms the role, isApprovedRecruiter confirms an Admin has actually
+// cleared them (see Middlewares/Auth.js). A locked (pending/rejected) Recruiter 403s here.
+route.post('/tests', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createTestSchema }), createTest)
+route.get('/tests', Auth, isRecruiter, isApprovedRecruiter, listMyTests)
+route.get('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, getTest)
+route.patch('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateTestSchema }), updateTest)
+route.post('/tests/:testId/publish', Auth, isRecruiter, isApprovedRecruiter, publishTest)
+route.get('/tests/:testId/attempts', Auth, isRecruiter, isApprovedRecruiter, getTestAttempts)
+route.get('/test-attempts/:attemptId', Auth, isRecruiter, isApprovedRecruiter, getAttemptDetail)
 
 // candidate attempt flow
 route.post('/test-attempts/start/:inviteCode', Auth, isUser, startAttempt)

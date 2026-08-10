@@ -386,9 +386,14 @@ exports.getRecruiterApplications = async (req, res) => {
     }
 }
 
-// POST /admin/recruiter-applications/:userId/approve sir — the only place a self-signup
-// actually becomes a real Recruiter. Reuses the exact same role-flip as updateUserRole above,
-// triggered by an approval decision instead of a manual dropdown pick.
+// POST /admin/recruiter-applications/:userId/approve sir — two paths land here:
+//   1. post-hoc (/For-Recruiters): a 'User' applied, this flips role to 'Recruiter' for the
+//      first time — same role-flip as updateUserRole above, triggered by approval instead of
+//      a manual dropdown pick.
+//   2. direct signup (createUser's accountType: 'Recruiter'): role is ALREADY 'Recruiter', this
+//      just clears the lock (recruiterApplication.status -> 'approved') — `user.role =
+//      'Recruiter'` below is a no-op reassignment in this case, deliberately not special-cased,
+//      it's naturally idempotent either way.
 exports.approveRecruiterApplication = async (req, res) => {
     try {
         const adminId = req?.User.id
@@ -438,9 +443,14 @@ exports.approveRecruiterApplication = async (req, res) => {
     }
 }
 
-// POST /admin/recruiter-applications/:userId/reject sir — body: { reason? }. Role stays
-// 'User'; the applicant can see the rejection reason on their own account and, since
-// applyForRecruiter only blocks resubmission while status is 'pending', can apply again later.
+// POST /admin/recruiter-applications/:userId/reject sir — body: { reason? }. This function
+// never touches `role`, which is intentional and correct for BOTH signup paths: a post-hoc
+// applicant stays 'User' (unchanged, always was), a direct-signup Recruiter stays 'Recruiter'
+// but permanently locked (isApprovedRecruiter keeps blocking every action) — rejection does not
+// demote them, since the role was never the thing being granted here. The applicant can see the
+// rejection reason on their own account; applyForRecruiter (the post-hoc form) only blocks
+// resubmission while status is 'pending', so a 'User' can re-apply later. A rejected
+// direct-signup Recruiter has no re-apply UI today — they'd need a human to intervene.
 exports.rejectRecruiterApplication = async (req, res) => {
     try {
         const adminId = req?.User.id

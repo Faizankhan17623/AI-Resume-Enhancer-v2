@@ -40,8 +40,9 @@ exports.Auth = async (req, res, next) => {
         }
 
         // load the live account state sir — role and ban status must be FRESH from the DB,
-        // never trusted from a token that could be days old
-        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer tokenVersion')
+        // never trusted from a token that could be days old. recruiterApplication.status is
+        // what isApprovedRecruiter (below) checks, loaded here so that gate needs no extra query.
+        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer tokenVersion recruiterApplication')
 
         if (!user) {
             return res.status(401).json({
@@ -84,6 +85,9 @@ exports.Auth = async (req, res, next) => {
         // attach the decoded payload + the fresh role so the next handlers can use req.User sir
         req.User = decoded
         req.User.role = user.role
+        // fresh too sir — an Admin approving/rejecting mid-session must take effect on the
+        // very next request, same "always live, never from the token" rule as role above
+        req.User.recruiterApplication = user.recruiterApplication
 
         // hand off to the next middleware / controller sir
         next()
@@ -129,6 +133,29 @@ exports.isRecruiter = (req, res, next) => {
         return res.status(403).json({
             success: false,
             message: 'This route is for recruiters only',
+        })
+    }
+    next()
+}
+
+// approval gate sir — chained AFTER isRecruiter on every recruiter write/management route
+// (Routes/Job.js, Routes/Test.js). isRecruiter only confirms the role; this confirms an Admin
+// has actually cleared them. A direct-signup Recruiter (see controllers/user.js's createUser)
+// starts 'pending' and is fully locked out of every action until approved. A Recruiter promoted
+// the old way (Admin's manual role dropdown) has NO recruiterApplication at all — undefined is
+// treated as already-approved so that existing path isn't retroactively locked out. A rejected
+// application stays locked forever (role is never demoted back to 'User' on rejection, see
+// controllers/Admin.js's rejectRecruiterApplication) until a human manually intervenes.
+exports.isApprovedRecruiter = (req, res, next) => {
+    const status = req?.User?.recruiterApplication?.status
+    if (status && status !== 'approved') {
+        return res.status(403).json({
+            success: false,
+            locked: true,
+            approvalStatus: status,
+            message: status === 'rejected'
+                ? 'Your recruiter application was not approved, please contact support'
+                : 'Your recruiter account is pending admin approval before you can do this',
         })
     }
     next()

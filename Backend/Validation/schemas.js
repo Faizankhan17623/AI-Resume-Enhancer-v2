@@ -54,6 +54,10 @@ const otp = z
 
 const planKey = z.enum(['Basic', 'Pro', 'ProMax'], { error: 'Please pick a valid plan' })
 
+// shared by createUserSchema (recruiter signup) and recruiterApplicationSchema (the post-hoc
+// /For-Recruiters flow) sir — one definition, same options either way
+const companySize = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], { error: 'Please select your company size' })
+
 // pagination sir — coerced, bounded, and defaulted in one place instead of a parseInt in each
 // controller. The upper bound matters: an unbounded `limit` is an easy way to pull the entire
 // collection in one request.
@@ -74,6 +78,12 @@ const withPasswordConfirmation = (schema, passwordField, confirmField) =>
 // auth sir
 // ---------------------------------------------------------------------------
 
+// accountType picks the signup path sir — 'User' is the default/normal path, 'Recruiter'
+// additionally requires the same five company fields recruiterApplicationSchema asks for
+// later in the post-hoc /For-Recruiters flow. Choosing Recruiter here sets role: 'Recruiter'
+// immediately (see controllers/user.js's createUser) but the account stays LOCKED — every
+// recruiter write action is blocked until an Admin approves (see isApprovedRecruiter in
+// Middlewares/Auth.js) — so this is a fast-track signup, not a trust shortcut.
 const createUserSchema = z.object({
     firstName: name('First name'),
     lastName: name('Last name'),
@@ -82,7 +92,28 @@ const createUserSchema = z.object({
     number: phoneNumber,
     Code: z.string({ error: 'Country code is required' }).trim().min(1, 'Country code is required'),
     otp,
-})
+    accountType: z.enum(['User', 'Recruiter']).default('User'),
+    companyName: z.string().trim().max(150).optional(),
+    companyWebsite: z.string().trim().max(300).optional(),
+    companySize: companySize.optional(),
+    location: z.string().trim().max(150).optional(),
+    hiringNeeds: z.string().trim().max(2000).optional(),
+}).refine(
+    (data) => data.accountType !== 'Recruiter' || !!data.companyName?.trim(),
+    { message: 'Company name is required', path: ['companyName'] }
+).refine(
+    (data) => data.accountType !== 'Recruiter' || (!!data.companyWebsite?.trim() && /^https?:\/\/.+\..+/i.test(data.companyWebsite.trim())),
+    { message: 'Please enter a valid company website (e.g. https://example.com)', path: ['companyWebsite'] }
+).refine(
+    (data) => data.accountType !== 'Recruiter' || !!data.companySize,
+    { message: 'Please select your company size', path: ['companySize'] }
+).refine(
+    (data) => data.accountType !== 'Recruiter' || !!data.location?.trim(),
+    { message: 'Location is required', path: ['location'] }
+).refine(
+    (data) => data.accountType !== 'Recruiter' || !!data.hiringNeeds?.trim(),
+    { message: 'Please tell us your hiring needs', path: ['hiringNeeds'] }
+)
 
 const loginSchema = z.object({
     email,
@@ -289,8 +320,6 @@ const applyToJobSchema = z.object({
 // ---------------------------------------------------------------------------
 // recruiter self-signup application sir — see User.recruiterApplication
 // ---------------------------------------------------------------------------
-
-const companySize = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], { error: 'Please select your company size' })
 
 // every field here is required sir — the Admin's approval judgment call (see
 // approveRecruiterApplication) depends on having company name, website, size, location, and

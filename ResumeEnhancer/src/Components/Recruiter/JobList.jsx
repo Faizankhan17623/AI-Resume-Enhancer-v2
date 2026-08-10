@@ -2,10 +2,11 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaPlus, FaUsers } from 'react-icons/fa'
+import { FaPlus, FaUsers, FaLock } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { GetMyJobs } from '../../Services/operations/Job'
 
 const statusBadge = {
@@ -20,6 +21,7 @@ const JobList = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { myJobs, loading } = useSelector((state) => state.job)
+  const { isLocked } = useRecruiterLock()
 
   useEffect(() => {
     dispatch(GetMyJobs(token))
@@ -34,9 +36,15 @@ const JobList = () => {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-xl text-richblack-5">My Jobs</h1>
-        <Link to="/Recruiter/New">
-          <IconBtn text="New Job"><FaPlus /></IconBtn>
-        </Link>
+        {isLocked ? (
+          <span title="Locked until an admin approves your recruiter account">
+            <IconBtn text="New Job" disabled><FaLock /></IconBtn>
+          </span>
+        ) : (
+          <Link to="/Recruiter/New">
+            <IconBtn text="New Job"><FaPlus /></IconBtn>
+          </Link>
+        )}
       </div>
 
       {loading ? (
@@ -45,9 +53,15 @@ const JobList = () => {
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
           <p className="text-richblack-100 mb-2 font-semibold">No jobs yet</p>
           <p className="text-richblack-300 text-sm mb-6">Post a job, attach a proctored test, and start screening candidates.</p>
-          <Link to="/Recruiter/New" className="inline-block">
-            <IconBtn text="Post your first job"><FaPlus /></IconBtn>
-          </Link>
+          {isLocked ? (
+            <span title="Locked until an admin approves your recruiter account" className="inline-block">
+              <IconBtn text="Post your first job" disabled><FaLock /></IconBtn>
+            </span>
+          ) : (
+            <Link to="/Recruiter/New" className="inline-block">
+              <IconBtn text="Post your first job"><FaPlus /></IconBtn>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

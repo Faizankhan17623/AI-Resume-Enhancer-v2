@@ -96,6 +96,13 @@ const publicUser = (user) => ({
     email: user.email,
     role: user.role,
     SubType: getEffectivePlan(user).key,
+    // only meaningful for a Recruiter sir — lets the frontend render the locked-dashboard state
+    // (RecruiterLayout.jsx) right after login with no extra /profile call. Undefined for a
+    // Recruiter promoted the old manual-Admin-dropdown way (no recruiterApplication at all) —
+    // isApprovedRecruiter (Middlewares/Auth.js) treats that the same as already-approved.
+    recruiterApprovalStatus: user.role === 'Recruiter'
+        ? (user.recruiterApplication?.status || 'approved')
+        : undefined,
 })
 
 module.exports = {

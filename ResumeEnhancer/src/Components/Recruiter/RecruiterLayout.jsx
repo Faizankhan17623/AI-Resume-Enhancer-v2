@@ -2,9 +2,11 @@ import { useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiLogOut } from 'react-icons/fi'
+import { FaLock } from 'react-icons/fa'
 import RecruiterNav from './RecruiterNav'
 import PageTransition from '../extra/PageTransition'
 import useTheme from '../../Hooks/useTheme'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { LogoutUser } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
 
@@ -15,6 +17,7 @@ const RecruiterLayout = ({ children }) => {
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
   const { theme, toggleTheme } = useTheme()
+  const { isLocked, approvalStatus } = useRecruiterLock()
 
   return (
     <div className="min-h-screen w-full bg-richblack-900">
@@ -48,6 +51,18 @@ const RecruiterLayout = ({ children }) => {
           </div>
         </div>
       </div>
+      {isLocked && (
+        <div className={`px-6 py-3 flex items-center gap-2.5 text-sm border-b ${
+          approvalStatus === 'rejected'
+            ? 'bg-pink-700/10 border-pink-700 text-pink-100'
+            : 'bg-yellow-700/10 border-yellow-700 text-yellow-25'
+        }`}>
+          <FaLock className="shrink-0" />
+          {approvalStatus === 'rejected'
+            ? "Your recruiter application wasn't approved — every action is locked. Contact support to appeal."
+            : 'Your recruiter account is pending admin approval — you can look around, but posting jobs and every other action is locked until then.'}
+        </div>
+      )}
       <RecruiterNav />
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
         {children}

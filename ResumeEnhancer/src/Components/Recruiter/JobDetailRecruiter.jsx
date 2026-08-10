@@ -3,10 +3,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaUsers, FaCopy, FaCheckCircle, FaPlus } from 'react-icons/fa'
+import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { GetJob, PublishJob, CloseJob } from '../../Services/operations/Job'
 
 const statusBadge = {
@@ -24,6 +25,7 @@ const JobDetailRecruiter = () => {
   const { token } = useSelector((state) => state.auth)
   const { currentJob: job, loading } = useSelector((state) => state.job)
   const [copied, setCopied] = useState(false)
+  const { isLocked } = useRecruiterLock()
 
   useEffect(() => {
     dispatch(GetJob(jobId, token))
@@ -74,12 +76,16 @@ const JobDetailRecruiter = () => {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {job.status === 'draft' && (
-                <IconBtn
-                  text="Publish"
-                  onclick={handlePublish}
-                  customClasses="text-sm px-4 py-2"
-                  disabled={!job.test}
-                />
+                <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                  <IconBtn
+                    text="Publish"
+                    onclick={handlePublish}
+                    customClasses="text-sm px-4 py-2"
+                    disabled={!job.test || isLocked}
+                  >
+                    {isLocked && <FaLock />}
+                  </IconBtn>
+                </span>
               )}
               {job.status === 'published' && (
                 <>
@@ -92,9 +98,11 @@ const JobDetailRecruiter = () => {
                   </button>
                   <button
                     onClick={handleClose}
-                    className="px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer"
+                    disabled={isLocked}
+                    title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Close job
+                    {isLocked && <FaLock className="text-[10px]" />} Close job
                   </button>
                 </>
               )}
@@ -126,13 +134,16 @@ const JobDetailRecruiter = () => {
           ) : (
             <div>
               <p className="text-sm text-richblack-300 mb-4">No test attached yet.</p>
-              <IconBtn
-                text="Attach a test"
-                onclick={() => navigate(`/Recruiter/Jobs/${jobId}/Test`)}
-                customClasses="text-sm px-4 py-2"
-              >
-                <FaPlus />
-              </IconBtn>
+              <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                <IconBtn
+                  text="Attach a test"
+                  onclick={() => navigate(`/Recruiter/Jobs/${jobId}/Test`)}
+                  customClasses="text-sm px-4 py-2"
+                  disabled={isLocked}
+                >
+                  {isLocked ? <FaLock /> : <FaPlus />}
+                </IconBtn>
+              </span>
             </div>
           )}
         </div>

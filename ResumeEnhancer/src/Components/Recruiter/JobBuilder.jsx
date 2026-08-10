@@ -3,8 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import { FaLock } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
+import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateJob } from '../../Services/operations/Job'
 
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
@@ -20,9 +22,11 @@ const JobBuilder = () => {
   const [employmentType, setEmploymentType] = useState('Full-time')
   const [skillsInput, setSkillsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const { isLocked } = useRecruiterLock()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isLocked) return toast.error("Your recruiter account is pending admin approval")
     if (!companyName.trim()) return toast.error("Please enter your company name")
     if (!title.trim()) return toast.error("Please give the job a title")
     if (!description.trim()) return toast.error("Please add a job description")
@@ -119,7 +123,12 @@ const JobBuilder = () => {
           published until a test is attached.
         </p>
 
-        <IconBtn type="submit" text={submitting ? "Creating..." : "Create job"} disabled={submitting} customClasses="w-full justify-center" />
+        {isLocked && (
+          <p className="flex items-center gap-2 text-xs text-yellow-25">
+            <FaLock /> Locked until an admin approves your recruiter account
+          </p>
+        )}
+        <IconBtn type="submit" text={submitting ? "Creating..." : "Create job"} disabled={submitting || isLocked} customClasses="w-full justify-center" />
       </form>
     </RecruiterLayout>
   )
