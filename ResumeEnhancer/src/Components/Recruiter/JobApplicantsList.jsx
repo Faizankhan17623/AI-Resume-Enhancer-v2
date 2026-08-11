@@ -69,6 +69,11 @@ const JobApplicantsList = () => {
                     {app.candidate ? `${app.candidate.firstName} ${app.candidate.lastName}` : 'Deleted candidate'}
                   </p>
                   <p className="text-xs text-richblack-400 truncate">{app.candidate?.email}</p>
+                  {(app.resume || app.builtResume) && (
+                    <p className="text-xs text-richblack-500 truncate mt-0.5">
+                      Applied with: {app.resume?.label || app.resume?.originalFilename || app.builtResume?.title}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   {app.testAttempt?.violationCount > 0 && (

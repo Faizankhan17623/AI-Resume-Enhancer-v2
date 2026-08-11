@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 
 const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
+const Resume = require('../Models/Resume')
+const BuiltResume = require('../Models/BuiltResume')
 const logger = require('../utils/logger')
 
 // ---------------------------------------------------------------------------
@@ -207,6 +209,8 @@ exports.getJobApplicants = async (req, res) => {
         const applicants = await JobApplication.find({ job: jobId })
             .populate('candidate', 'firstName lastName email')
             .populate('testAttempt', 'status score violationCount')
+            .populate('resume', 'label originalFilename')
+            .populate('builtResume', 'title')
             .sort({ createdAt: -1 })
 
         return res.status(200).json({ success: true, applicants })
@@ -363,6 +367,27 @@ exports.applyToJob = async (req, res) => {
         const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        // ownership check sir — a candidate could otherwise attach someone else's saved
+        // resume/built-resume to their application just by guessing its ObjectId
+        if (resume) {
+            if (!mongoose.isValidObjectId(resume)) {
+                return res.status(400).json({ success: false, message: 'Invalid resume id' })
+            }
+            const owns = await Resume.exists({ _id: resume, user: candidateId })
+            if (!owns) {
+                return res.status(403).json({ success: false, message: 'That resume does not belong to you' })
+            }
+        }
+        if (builtResume) {
+            if (!mongoose.isValidObjectId(builtResume)) {
+                return res.status(400).json({ success: false, message: 'Invalid built resume id' })
+            }
+            const owns = await BuiltResume.exists({ _id: builtResume, user: candidateId })
+            if (!owns) {
+                return res.status(403).json({ success: false, message: 'That resume does not belong to you' })
+            }
         }
 
         let application
