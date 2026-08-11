@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
@@ -8,6 +8,7 @@ import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateJob } from '../../Services/operations/Job'
+import { GetProfile } from '../../Services/operations/User'
 
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
 
@@ -15,7 +16,8 @@ const JobBuilder = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const [companyName, setCompanyName] = useState('')
+  const { profile } = useSelector((state) => state.profile)
+  const [companyNameOverride, setCompanyNameOverride] = useState(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
@@ -23,6 +25,16 @@ const JobBuilder = () => {
   const [skillsInput, setSkillsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const { isLocked } = useRecruiterLock()
+
+  useEffect(() => {
+    dispatch(GetProfile(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // defaults the job's company name to what the recruiter gave at signup/approval sir —
+  // only while the recruiter hasn't typed their own value, so it doesn't clobber an edit
+  const recruiterCompanyName = profile?.user?.recruiterApplication?.companyName || ''
+  const companyName = companyNameOverride ?? recruiterCompanyName
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -60,10 +72,15 @@ const JobBuilder = () => {
             <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Company name</label>
             <input
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => setCompanyNameOverride(e.target.value)}
               placeholder="e.g. Acme Corp"
               className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
             />
+            {recruiterCompanyName && (
+              <p className="text-[11px] text-richblack-400 mt-1.5">
+                Defaults to your account's company name — edit it if this job is for a different brand.
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Job title</label>
