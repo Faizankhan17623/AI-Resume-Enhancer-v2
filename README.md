@@ -72,6 +72,14 @@ Admin Dashboard (role-gated: Admin/Support)
 Onboarding
 - Dashboard "Get started" checklist for new users, derived from real activity (first review, first saved resume, first chat, first cover letter), dismissible and never reappears once done
 
+Recruiter Job Board & Proctored Testing
+- Direct recruiter signup, locked pending Admin approval before any recruiter action (posting jobs, viewing applicants, inviting to tests) is allowed
+- Recruiter job postings: draft/published/closed lifecycle, company/title/description/location/employment type/skills, optional attached screening test
+- Public job board (no login required to browse) with search/location/employment-type filters; candidates sign in only at apply time
+- Candidates apply with a saved resume from their Resume Library (ownership-verified server-side), tracked in a "My Applications" dashboard page with per-application status (applied/invited to test/completed test/rejected/hired)
+- Recruiters review applicants per job, see which resume was submitted, and invite a candidate to take the job's proctored test
+- TF.js-based proctored test runner: face-landmark detection for tab-switch/away-from-camera violation tracking during timed tests, with a violation count and score surfaced on the recruiter's attempt review
+
 Platform
 - Cloud file storage via Cloudinary
 - Helmet, CORS, rate limiting (IP + account-level + dedicated limiters for PDF-parsing and admin routes)
@@ -101,6 +109,8 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - **Structured Mock Interview** (ProMax) — one AI-generated question at a time grounded in the resume + JD, scored 1-10 with feedback and a stronger sample answer; sessions are saved with full history
 - **Application Tracker** — a Kanban board (Applied/Interview/Offer/Rejected) for job applications, with optional linking to the ATS review it was sent with and outcome-linked analytics (interview/offer rate bucketed by ATS score)
 - **Onboarding Checklist** — a dashboard "Get started" progress card for new users that tracks real activity and dismisses itself for good once complete
+- **Recruiter Job Board** — Admin-approved recruiters post jobs (draft/published/closed) with an optional proctored screening test attached; candidates browse the public board, apply with a resume from their Resume Library, and track application status from a dedicated dashboard page; recruiters review applicants and invite them to test
+- **Proctored Screening Tests** — a TF.js face-landmark-detection test runner that tracks tab-switch and away-from-camera violations during a timed test, with the violation count and score surfaced to the recruiter reviewing the attempt
 - **AI Cover Letter Generator** — generate a tailored cover letter from a resume + job description (Pro+ feature), with an automatic genericness check
 - **Job Search** — live web search for matching job postings via Tavily (Pro+ feature)
 - **Learning Resources** — real course/tutorial links (live Tavily search, Mongo-cached by query) for each skill gap in a review's learning roadmap, instead of a plain Google search link (Pro+ feature)
@@ -119,6 +129,7 @@ A full-stack web application that helps users improve their resumes using AI-pow
 - React Router for routing
 - Tailwind CSS for styling
 - Axios for API calls
+- TensorFlow.js (`@tensorflow-models/face-landmarks-detection`) for in-browser proctored-test violation detection
 
 **Backend**
 - Node.js + Express
