@@ -59,6 +59,7 @@ const RecruiterJobBuilder = lazy(() => import('./Components/Recruiter/JobBuilder
 const RecruiterJobDetail = lazy(() => import('./Components/Recruiter/JobDetailRecruiter'))
 const RecruiterTestBuilder = lazy(() => import('./Components/Recruiter/TestBuilder'))
 const RecruiterJobApplicantsList = lazy(() => import('./Components/Recruiter/JobApplicantsList'))
+const RecruiterJobAnalytics = lazy(() => import('./Components/Recruiter/JobAnalytics'))
 const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/AttemptDetail'))
 const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
 const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
@@ -216,6 +217,7 @@ function App() {
             <Route path="/Recruiter/Jobs/:jobId" element={<RecruiterRoute><RecruiterJobDetail /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/Test" element={<RecruiterRoute><RecruiterTestBuilder /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/applicants" element={<RecruiterRoute><RecruiterJobApplicantsList /></RecruiterRoute>} />
+            <Route path="/Recruiter/Jobs/:jobId/analytics" element={<RecruiterRoute><RecruiterJobAnalytics /></RecruiterRoute>} />
             <Route path="/Recruiter/Attempts/:attemptId" element={<RecruiterRoute><RecruiterAttemptDetail /></RecruiterRoute>} />
 
             {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of

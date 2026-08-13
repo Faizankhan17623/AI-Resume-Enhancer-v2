@@ -6,6 +6,8 @@ import {
     setMyJobs,
     setCurrentJob,
     setJobApplicants,
+    setJobAnalytics,
+    patchJobApplicant,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
@@ -14,7 +16,8 @@ import {
 
 const {
     createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, getJobApplicants,
-    inviteApplicantToTest, listPublicJobs, getPublicJob, applyToJob, listMyApplications,
+    getJobAnalytics, inviteApplicantToTest, setApplicationOutcome, listPublicJobs, getPublicJob,
+    applyToJob, listMyApplications,
 } = JobData
 
 // ---------------------------------------------------------------------------
@@ -179,6 +182,53 @@ export function GetJobApplicants(jobId, token) {
             toast.error(error?.response?.data?.message || "Could not load the applicants")
         } finally {
             dispatch(setLoading(false))
+        }
+    }
+}
+
+export function GetJobAnalytics(jobId, token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", `${getJobAnalytics}/${jobId}/analytics`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setJobAnalytics(response.data.analytics))
+        } catch (error) {
+            logApiError("Error fetching job analytics", error)
+            toast.error(error?.response?.data?.message || "Could not load the job's analytics")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+export function SetApplicationOutcome(applicationId, status, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading(status === 'hired' ? "Marking as hired..." : "Rejecting...")
+        try {
+            const response = await apiConnector("PATCH", `${setApplicationOutcome}/${applicationId}/status`, { status }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(status === 'hired' ? "Candidate marked as hired" : "Candidate rejected")
+            dispatch(patchJobApplicant({ applicationId, status }))
+            return true
+        } catch (error) {
+            logApiError("Error updating the application", error)
+            toast.error(error?.response?.data?.message || "Could not update the application")
+            return false
+        } finally {
+            toast.dismiss(toastId)
         }
     }
 }

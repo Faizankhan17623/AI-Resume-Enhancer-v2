@@ -11,7 +11,9 @@ export const JobData = {
     publishJob: BASE_URL + "/jobs",          // + /:jobId/publish
     closeJob: BASE_URL + "/jobs",            // + /:jobId/close
     getJobApplicants: BASE_URL + "/jobs",    // + /:jobId/applicants
+    getJobAnalytics: BASE_URL + "/jobs",     // + /:jobId/analytics
     inviteApplicantToTest: BASE_URL + "/job-applications", // + /:applicationId/invite
+    setApplicationOutcome: BASE_URL + "/job-applications", // + /:applicationId/status
 
     // public
     listPublicJobs: BASE_URL + "/public/jobs",

@@ -53,6 +53,13 @@ const jobSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'Test',
         },
+        // incremented on every getPublicJob fetch sir — a simple hit counter, not a unique-visitor
+        // count (no session/cookie dedup), same "good enough for a funnel, not analytics-grade"
+        // tradeoff as VisitorLog.js makes elsewhere for site-wide traffic
+        views: {
+            type: Number,
+            default: 0,
+        },
     },
     { timestamps: true }
 )

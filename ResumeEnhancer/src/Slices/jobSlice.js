@@ -7,6 +7,7 @@ const initialState = {
     myJobs: [],
     currentJob: null,
     jobApplicants: [],
+    jobAnalytics: null,
 
     // public board sir
     publicJobs: [],
@@ -32,6 +33,16 @@ const jobSlice = createSlice({
         setJobApplicants(state, value) {
             state.jobApplicants = value.payload
         },
+        setJobAnalytics(state, value) {
+            state.jobAnalytics = value.payload
+        },
+        // Hire/Reject updates the one row in place sir — same pattern as an optimistic-ish
+        // local patch after a successful PATCH, no full refetch needed
+        patchJobApplicant(state, value) {
+            const { applicationId, status } = value.payload
+            const app = state.jobApplicants.find((a) => a._id === applicationId)
+            if (app) app.status = status
+        },
         setPublicJobs(state, value) {
             state.publicJobs = value.payload.jobs
             state.publicJobsPagination = value.payload.pagination
@@ -52,6 +63,8 @@ export const {
     setMyJobs,
     setCurrentJob,
     setJobApplicants,
+    setJobAnalytics,
+    patchJobApplicant,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,

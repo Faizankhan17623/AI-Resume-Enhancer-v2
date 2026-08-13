@@ -2,12 +2,12 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaExclamationTriangle, FaPaperPlane, FaLock } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
-import { GetJobApplicants, InviteApplicantToTest } from '../../Services/operations/Job'
+import { GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome } from '../../Services/operations/Job'
 
 const statusBadge = {
   applied: 'bg-richblack-700 text-richblack-200 border-richblack-600',
@@ -43,6 +43,10 @@ const JobApplicantsList = () => {
 
   const handleInvite = (applicationId) => {
     dispatch(InviteApplicantToTest(applicationId, jobId, token))
+  }
+
+  const handleOutcome = (applicationId, status) => {
+    dispatch(SetApplicationOutcome(applicationId, status, token))
   }
 
   return (
@@ -106,6 +110,24 @@ const JobApplicantsList = () => {
                     >
                       View attempt
                     </Link>
+                  )}
+                  {app.status === 'completed_test' && (
+                    <span className="flex items-center gap-2" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                      <button
+                        onClick={() => handleOutcome(app._id, 'hired')}
+                        disabled={isLocked}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-caribgreen-700 text-caribgreen-100 text-xs font-semibold hover:bg-caribgreen-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FaCheck className="text-[10px]" /> Hire
+                      </button>
+                      <button
+                        onClick={() => handleOutcome(app._id, 'rejected')}
+                        disabled={isLocked}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FaTimes className="text-[10px]" /> Reject
+                      </button>
+                    </span>
                   )}
                 </div>
               </div>

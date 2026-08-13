@@ -4,6 +4,8 @@ const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
 const Resume = require('../Models/Resume')
 const BuiltResume = require('../Models/BuiltResume')
+const Test = require('../Models/Test')
+const TestAttempt = require('../Models/TestAttempt')
 const logger = require('../utils/logger')
 
 // ---------------------------------------------------------------------------
@@ -223,6 +225,91 @@ exports.getJobApplicants = async (req, res) => {
     }
 }
 
+// GET /jobs/:jobId/analytics sir — the funnel: views -> applications -> invited -> test
+// completed -> hired/rejected, plus test-performance stats. One aggregation pass per
+// collection, same Promise.all-of-independent-queries shape as Admin.js's getDashboardStats.
+exports.getJobAnalytics = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { jobId } = req.params
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('views test createdAt')
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        const [statusCounts, testStats] = await Promise.all([
+            JobApplication.aggregate([
+                { $match: { job: job._id } },
+                { $group: { _id: '$status', count: { $sum: 1 } } },
+            ]),
+            job.test
+                ? TestAttempt.aggregate([
+                    { $match: { test: job.test } },
+                    {
+                        $group: {
+                            _id: null,
+                            totalAttempts: { $sum: 1 },
+                            completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+                            terminatedViolations: { $sum: { $cond: [{ $eq: ['$status', 'terminated_violations'] }, 1, 0] } },
+                            terminatedTimeout: { $sum: { $cond: [{ $eq: ['$status', 'terminated_timeout'] }, 1, 0] } },
+                            avgScore: { $avg: '$score' },
+                            avgViolations: { $avg: '$violationCount' },
+                        },
+                    },
+                ])
+                : Promise.resolve([]),
+        ])
+
+        const countFor = (status) => statusCounts.find((s) => s._id === status)?.count || 0
+        const totalApplications = statusCounts.reduce((sum, s) => sum + s.count, 0)
+        // every non-'applied' status implies the candidate was invited at some point sir —
+        // cheaper than a second query, and status only ever moves forward, never back
+        const invited = totalApplications - countFor('applied')
+        const completedTest = countFor('completed_test') + countFor('hired') + countFor('rejected')
+        const stats = testStats[0]
+
+        return res.status(200).json({
+            success: true,
+            analytics: {
+                funnel: {
+                    views: job.views,
+                    applications: totalApplications,
+                    invitedToTest: invited,
+                    completedTest,
+                    hired: countFor('hired'),
+                    rejected: countFor('rejected'),
+                },
+                rates: {
+                    // percent of viewers who applied sir — 0 rather than NaN/Infinity when views is 0
+                    viewToApplyRate: job.views ? Number(((totalApplications / job.views) * 100).toFixed(1)) : 0,
+                    applyToInviteRate: totalApplications ? Number(((invited / totalApplications) * 100).toFixed(1)) : 0,
+                    testCompletionRate: stats?.totalAttempts ? Number(((stats.completed / stats.totalAttempts) * 100).toFixed(1)) : 0,
+                    hireRate: totalApplications ? Number(((countFor('hired') / totalApplications) * 100).toFixed(1)) : 0,
+                },
+                test: job.test ? {
+                    totalAttempts: stats?.totalAttempts || 0,
+                    completed: stats?.completed || 0,
+                    terminatedViolations: stats?.terminatedViolations || 0,
+                    terminatedTimeout: stats?.terminatedTimeout || 0,
+                    avgScore: stats?.avgScore != null ? Math.round(stats.avgScore) : null,
+                    avgViolations: stats?.avgViolations != null ? Number(stats.avgViolations.toFixed(1)) : 0,
+                } : null,
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get job analytics failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the job analytics',
+        })
+    }
+}
+
 // POST /job-applications/:applicationId/invite sir — the gate that actually lets this ONE
 // candidate call Test.js's startAttempt for this job's test
 exports.inviteApplicantToTest = async (req, res) => {
@@ -266,6 +353,59 @@ exports.inviteApplicantToTest = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while inviting the candidate',
+        })
+    }
+}
+
+// PATCH /job-applications/:applicationId/status sir — the recruiter recording an outcome.
+// Only reachable from 'completed_test': hiring/rejecting someone who hasn't finished the
+// screening step yet isn't a status this app's funnel supports, same "the test is the gate"
+// philosophy as inviteApplicantToTest above.
+exports.setApplicationOutcome = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { applicationId } = req.params
+        const { status } = req.body
+
+        if (!mongoose.isValidObjectId(applicationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid application id' })
+        }
+        if (!['hired', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Status must be hired or rejected' })
+        }
+
+        const application = await JobApplication.findById(applicationId).populate('job')
+        if (!application || !application.job) {
+            return res.status(404).json({ success: false, message: 'Application not found' })
+        }
+
+        if (!application.job.recruiter.equals(recruiterId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have access to this application',
+            })
+        }
+
+        if (application.status !== 'completed_test') {
+            return res.status(400).json({
+                success: false,
+                message: 'This candidate has not completed the test yet',
+            })
+        }
+
+        application.status = status
+        await application.save()
+
+        return res.status(200).json({
+            success: true,
+            message: status === 'hired' ? 'Candidate marked as hired' : 'Candidate rejected',
+            application,
+        })
+    } catch (error) {
+        (req.log || logger).error('set application outcome failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the application',
         })
     }
 }
@@ -332,7 +472,14 @@ exports.getPublicJob = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid job id' })
         }
 
-        const job = await Job.findOne({ _id: jobId, status: 'published' })
+        // $inc in the same query that gates on status:'published' sir — a closed/draft job
+        // (404s below) never bumps the counter, and this is a single atomic write, not a
+        // read-then-write race
+        const job = await Job.findOneAndUpdate(
+            { _id: jobId, status: 'published' },
+            { $inc: { views: 1 } },
+            { new: true }
+        )
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }

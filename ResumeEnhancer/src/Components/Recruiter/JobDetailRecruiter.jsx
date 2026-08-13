@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock } from 'react-icons/fa'
+import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -111,6 +111,12 @@ const JobDetailRecruiter = () => {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
               >
                 <FaUsers /> Applicants
+              </Link>
+              <Link
+                to={`/Recruiter/Jobs/${jobId}/analytics`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+              >
+                <FaChartBar /> Analytics
               </Link>
             </div>
           </div>

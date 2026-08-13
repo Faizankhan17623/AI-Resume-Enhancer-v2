@@ -6,6 +6,7 @@ const {
     createJobSchema,
     updateJobSchema,
     applyToJobSchema,
+    setApplicationOutcomeSchema,
 } = require('../Validation/schemas.js')
 const {
     createJob,
@@ -15,7 +16,9 @@ const {
     publishJob,
     closeJob,
     getJobApplicants,
+    getJobAnalytics,
     inviteApplicantToTest,
+    setApplicationOutcome,
     listPublicJobs,
     getPublicJob,
     applyToJob,
@@ -34,6 +37,7 @@ const {
 route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createJobSchema }), createJob)
 route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
 route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
+route.get('/jobs/:jobId/analytics', Auth, isRecruiter, isApprovedRecruiter, getJobAnalytics)
 route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publishJob)
 route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)
 route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateJobSchema }), updateJob)
@@ -47,5 +51,6 @@ route.get('/public/jobs/:jobId', getPublicJob)
 route.post('/jobs/:jobId/apply', Auth, isUser, validate({ body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
+route.patch('/job-applications/:applicationId/status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: setApplicationOutcomeSchema }), setApplicationOutcome)
 
 module.exports = route

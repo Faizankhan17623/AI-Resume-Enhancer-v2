@@ -317,6 +317,10 @@ const applyToJobSchema = z.object({
     builtResume: objectId.optional(),
 })
 
+const setApplicationOutcomeSchema = z.object({
+    status: z.enum(['hired', 'rejected'], { error: 'Status must be hired or rejected' }),
+})
+
 // ---------------------------------------------------------------------------
 // recruiter self-signup application sir — see User.recruiterApplication
 // ---------------------------------------------------------------------------
@@ -387,6 +391,7 @@ module.exports = {
     updateJobSchema,
     jobIdParamSchema,
     applyToJobSchema,
+    setApplicationOutcomeSchema,
 
     // recruiter self-signup application
     recruiterApplicationSchema,
