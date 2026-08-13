@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
@@ -124,6 +124,11 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
   </>
 )
 
+const SIDEBAR_MIN = 200
+const SIDEBAR_MAX = 380
+const SIDEBAR_DEFAULT = 240 // matches the old fixed w-60
+const SIDEBAR_STORAGE_KEY = 'resumify:sidebarWidth'
+
 const DashboardLayout = ({ title, children }) => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -133,15 +138,63 @@ const DashboardLayout = ({ title, children }) => {
   const { theme, toggleTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // desktop sidebar width sir — drag the right edge to resize, remembered per-browser
+  // (a layout preference, not app data, so localStorage is the right scope — no backend round-trip)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = Number(localStorage.getItem(SIDEBAR_STORAGE_KEY))
+    return stored >= SIDEBAR_MIN && stored <= SIDEBAR_MAX ? stored : SIDEBAR_DEFAULT
+  })
+  const [resizing, setResizing] = useState(false)
+  const resizeStateRef = useRef({ startX: 0, startWidth: SIDEBAR_DEFAULT })
+
+  const handleResizeStart = useCallback((e) => {
+    resizeStateRef.current = { startX: e.clientX, startWidth: sidebarWidth }
+    setResizing(true)
+  }, [sidebarWidth])
+
+  useEffect(() => {
+    if (!resizing) return
+
+    const handleMouseMove = (e) => {
+      const { startX, startWidth } = resizeStateRef.current
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + (e.clientX - startX)))
+      setSidebarWidth(next)
+    }
+    const handleMouseUp = () => setResizing(false)
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [resizing])
+
+  useEffect(() => {
+    if (!resizing) localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarWidth))
+  }, [resizing, sidebarWidth])
+
   // same initial + name-based color as the home page header sir (utils/avatar.js) — was
   // previously its own separate two-letter/flat-yellow implementation, which is why the two
   // headers used to look different
 
   return (
-    <div className="fixed inset-0 flex bg-richblack-900 overflow-hidden">
-      {/* Desktop sidebar sir */}
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4">
+    <div className={`fixed inset-0 flex bg-richblack-900 overflow-hidden ${resizing ? 'select-none cursor-col-resize' : ''}`}>
+      {/* Desktop sidebar sir — width is user-resizable via the drag handle on its right edge */}
+      <aside
+        style={{ width: sidebarWidth }}
+        className="hidden lg:flex shrink-0 flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4 relative"
+      >
         <SidebarContent pathname={location.pathname} user={user} streak={streak} />
+        <div
+          onMouseDown={handleResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          className="hidden lg:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize group z-10"
+        >
+          <div className={`h-full w-px mx-auto transition-colors duration-150 ${resizing ? 'bg-yellow-50' : 'bg-transparent group-hover:bg-yellow-50/60'}`} />
+        </div>
       </aside>
 
       {/* Mobile slide-over sir — hidden by default, hamburger-triggered */}
