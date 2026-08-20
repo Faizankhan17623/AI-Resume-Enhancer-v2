@@ -53,7 +53,7 @@ const KeywordBank = () => {
         {loading ? (
           <Loading text="Loading your keyword bank..." />
         ) : items.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaKey className="text-3xl text-richblack-400 mx-auto mb-4" />
             <p className="text-richblack-200 mb-2">No keywords tracked yet.</p>
             <p className="text-richblack-400 text-sm">Run an AI review and every keyword it flags will show up here automatically.</p>

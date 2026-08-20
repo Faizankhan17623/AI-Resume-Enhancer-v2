@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
@@ -168,6 +168,11 @@ const TurnCard = ({ turn, isCurrent, onSubmitAnswer, scoring }) => {
   )
 }
 
+const LIST_MIN = 240
+const LIST_MAX = 420
+const LIST_DEFAULT = 288 // matches the old fixed w-72
+const LIST_STORAGE_KEY = 'resumify:mockInterviewListWidth'
+
 const MockInterview = () => {
   const { sessionId } = useParams()
   const [showModal, setShowModal] = useState(false)
@@ -177,6 +182,40 @@ const MockInterview = () => {
   const { allSessions, currentSession, loading, scoring } = useSelector((state) => state.mockInterview)
 
   const isProMax = user?.SubType === 'ProMax'
+
+  // session-list pane width sir — drag the right edge to resize, same pattern as the main
+  // dashboard sidebar in DashboardLayout.jsx (own localStorage key, this is a distinct pane)
+  const [listWidth, setListWidth] = useState(() => {
+    const stored = Number(localStorage.getItem(LIST_STORAGE_KEY))
+    return stored >= LIST_MIN && stored <= LIST_MAX ? stored : LIST_DEFAULT
+  })
+  const [resizing, setResizing] = useState(false)
+  const resizeStateRef = useRef({ startX: 0, startWidth: LIST_DEFAULT })
+
+  const handleResizeStart = useCallback((e) => {
+    resizeStateRef.current = { startX: e.clientX, startWidth: listWidth }
+    setResizing(true)
+  }, [listWidth])
+
+  useEffect(() => {
+    if (!resizing) return
+    const handleMouseMove = (e) => {
+      const { startX, startWidth } = resizeStateRef.current
+      const next = Math.min(LIST_MAX, Math.max(LIST_MIN, startWidth + (e.clientX - startX)))
+      setListWidth(next)
+    }
+    const handleMouseUp = () => setResizing(false)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [resizing])
+
+  useEffect(() => {
+    if (!resizing) localStorage.setItem(LIST_STORAGE_KEY, String(listWidth))
+  }, [resizing, listWidth])
 
   useEffect(() => {
     if (isProMax) dispatch(GetAllMockInterviews(token))
@@ -221,7 +260,7 @@ const MockInterview = () => {
           <title>Mock Interview | Resumify</title>
         </Helmet>
         <div className="h-full max-w-2xl mx-auto px-4 py-16">
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Mock interviews are a Pro Max feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade to Pro Max for scored, structured mock interviews tailored to your resume and target job.</p>
@@ -240,46 +279,65 @@ const MockInterview = () => {
         <title>Mock Interview | Resumify</title>
       </Helmet>
 
-      <div className="h-full max-w-7xl mx-auto w-full flex min-h-0">
+      <div className={`h-full max-w-7xl mx-auto w-full flex min-h-0 ${resizing ? 'select-none cursor-col-resize' : ''}`}>
 
         {/* Left - session list sidebar sir */}
-        <div className="w-72 shrink-0 border-r border-richblack-700 flex flex-col">
-          <div className="p-4">
-            <IconBtn text="New Interview" onclick={() => setShowModal(true)} customClasses="w-full justify-center text-sm">
-              <FaPlus />
-            </IconBtn>
-          </div>
-          <div className="flex-1 overflow-y-auto thin-scrollbar px-3 pb-4 space-y-1">
-            {allSessions.length === 0 ? (
-              <p className="text-xs text-richblack-400 text-center mt-8 px-4">No sessions yet sir — start one and practice for the real thing.</p>
-            ) : (
-              allSessions.map((session) => (
-                <div
-                  key={session._id}
-                  className={`group flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors duration-200 ${
-                    session._id === sessionId ? 'bg-richblack-700 text-richblack-5' : 'text-richblack-200 hover:bg-richblack-800'
-                  }`}
-                >
-                  <Link to={`/Dashboard/Mock-Interview/${session._id}`} className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{session.role}</p>
-                    <p className="text-[11px] text-richblack-400">{session.status === 'completed' ? 'Completed' : 'In progress'}</p>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(session._id)}
-                    className="opacity-0 group-hover:opacity-100 text-richblack-400 hover:text-pink-200 transition-all duration-200 cursor-pointer ml-2"
+        <div style={{ width: listWidth }} className="shrink-0 border-r border-richblack-700 flex flex-col relative">
+          {allSessions.length === 0 ? (
+            // nothing to list yet sir — one centered block (button + message) filling the pane,
+            // instead of the button pinned at top with the message floating below it
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+              <IconBtn text="New Interview" onclick={() => setShowModal(true)} customClasses="text-sm">
+                <FaPlus />
+              </IconBtn>
+              <p className="text-xs text-richblack-400">No sessions yet sir — start one and practice for the real thing.</p>
+            </div>
+          ) : (
+            <>
+              <div className="p-4">
+                <IconBtn text="New Interview" onclick={() => setShowModal(true)} customClasses="w-full justify-center text-sm">
+                  <FaPlus />
+                </IconBtn>
+              </div>
+              <div className="flex-1 overflow-y-auto thin-scrollbar px-3 pb-4 space-y-1">
+                {allSessions.map((session) => (
+                  <div
+                    key={session._id}
+                    className={`group flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors duration-200 ${
+                      session._id === sessionId ? 'bg-richblack-700 text-richblack-5' : 'text-richblack-200 hover:bg-richblack-800'
+                    }`}
                   >
-                    <FaTrash className="text-xs" />
-                  </button>
-                </div>
-              ))
-            )}
+                    <Link to={`/Dashboard/Mock-Interview/${session._id}`} className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{session.role}</p>
+                      <p className="text-[11px] text-richblack-400">{session.status === 'completed' ? 'Completed' : 'In progress'}</p>
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(session._id)}
+                      className="opacity-0 group-hover:opacity-100 text-richblack-400 hover:text-pink-200 transition-all duration-200 cursor-pointer ml-2"
+                    >
+                      <FaTrash className="text-xs" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {/* drag handle sir — same resize pattern as the main dashboard sidebar */}
+          <div
+            onMouseDown={handleResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize session list"
+            className="absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize group z-10"
+          >
+            <div className={`h-full w-px mx-auto transition-colors duration-150 ${resizing ? 'bg-yellow-50' : 'bg-transparent group-hover:bg-yellow-50/60'}`} />
           </div>
         </div>
 
         {/* Right - the session sir */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto thin-scrollbar">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto thin-scrollbar">
           {!sessionId ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 min-h-0">
               <div className="w-16 h-16 rounded-full bg-yellow-900/15 flex items-center justify-center">
                 <FaComments className="text-2xl text-yellow-50" />
               </div>

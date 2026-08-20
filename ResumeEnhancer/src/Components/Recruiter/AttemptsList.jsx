@@ -43,7 +43,7 @@ const AttemptsList = () => {
       {loading ? (
         <Loading text="Loading attempts..." />
       ) : testAttempts.length === 0 ? (
-        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
           <p className="text-richblack-300 text-sm">No candidates have started this test yet.</p>
         </div>
       ) : (

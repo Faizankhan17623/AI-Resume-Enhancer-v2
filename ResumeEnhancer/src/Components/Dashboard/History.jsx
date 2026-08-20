@@ -43,7 +43,7 @@ const History = () => {
         {loading ? (
           <Loading text="Loading your history..." />
         ) : allReviews.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200 mb-6">No reviews yet sir — your first honest ATS score is waiting.</p>
             <Link to="/Dashboard/New-Review" className="inline-block">
               <IconBtn text="Run my first review" />

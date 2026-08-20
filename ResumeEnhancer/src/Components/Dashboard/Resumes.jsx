@@ -170,7 +170,7 @@ const Resumes = () => {
         {loading ? (
           <Loading text="Loading your resumes..." />
         ) : resumes.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaFilePdf className="text-3xl text-richblack-400 mx-auto mb-4" />
             <p className="text-richblack-200 mb-2">No saved resumes yet.</p>
             <p className="text-richblack-400 text-sm mb-6">Upload one here, or save it directly from a new review.</p>

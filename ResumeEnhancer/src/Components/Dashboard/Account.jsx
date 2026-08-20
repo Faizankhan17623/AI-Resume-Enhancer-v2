@@ -336,29 +336,33 @@ const Account = () => {
             <FaEdit className="text-yellow-50 text-base" /> Edit Profile
           </h2>
           <p className="text-xs text-richblack-400 mb-2">Click the pencil next to a field to update it.</p>
-          <div className="divide-y divide-richblack-700 max-w-md">
-            <EditableField
-              label="First name"
-              value={user.firstName}
-              onSave={(v) => dispatch(UpdateFirstName(v, token))}
-            />
-            <EditableField
-              label="Last name"
-              value={user.lastName}
-              onSave={(v) => dispatch(UpdateLastName(v, token))}
-            />
-            <EditableField
-              label="Email"
-              value={user.email}
-              type="email"
-              onSave={(v) => dispatch(UpdateEmail(v, token))}
-            />
-            <EditableField
-              label="Phone number"
-              value={user.number}
-              type="tel"
-              onSave={(v) => dispatch(UpdateNumber(v, token))}
-            />
+          <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+            <div className="divide-y divide-richblack-700">
+              <EditableField
+                label="First name"
+                value={user.firstName}
+                onSave={(v) => dispatch(UpdateFirstName(v, token))}
+              />
+              <EditableField
+                label="Last name"
+                value={user.lastName}
+                onSave={(v) => dispatch(UpdateLastName(v, token))}
+              />
+            </div>
+            <div className="divide-y divide-richblack-700">
+              <EditableField
+                label="Email"
+                value={user.email}
+                type="email"
+                onSave={(v) => dispatch(UpdateEmail(v, token))}
+              />
+              <EditableField
+                label="Phone number"
+                value={user.number}
+                type="tel"
+                onSave={(v) => dispatch(UpdateNumber(v, token))}
+              />
+            </div>
           </div>
         </div>
 
@@ -377,7 +381,7 @@ const Account = () => {
             </p>
           )}
 
-          <form onSubmit={handlePasswordSubmit(onChangePassword)} className="max-w-md space-y-4">
+          <form onSubmit={handlePasswordSubmit(onChangePassword)} className="max-w-md mx-auto space-y-4">
             <div>
               <label className={passwordLabelClass}>Current Password</label>
               <PasswordInput
@@ -465,32 +469,36 @@ const Account = () => {
         </div>
 
         {/* Export my data sir — GDPR-style self-service dump, distinct from account deletion */}
-        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
-          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
-            <FaDownload className="text-yellow-50 text-base" /> Export My Data
-          </h2>
-          <p className="text-xs text-richblack-400 mb-4">
-            Download a copy of your reviews, chats, cover letters, resumes, and payment history as a JSON file.
-          </p>
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+              <FaDownload className="text-yellow-50 text-base" /> Export My Data
+            </h2>
+            <p className="text-xs text-richblack-400">
+              Download a copy of your reviews, chats, cover letters, resumes, and payment history as a JSON file.
+            </p>
+          </div>
           <button
             onClick={() => dispatch(ExportMyData(token))}
-            className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            className="shrink-0 px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
           >
             Download my data
           </button>
         </div>
 
         {/* Danger zone sir — suspends immediately, permanently deletes after a 2-day recovery window */}
-        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 border border-pink-700/40">
-          <h2 className="font-display text-lg text-pink-100 mb-1 flex items-center gap-2">
-            <FaTrash className="text-base" /> Delete Account
-          </h2>
-          <p className="text-xs text-richblack-400 mb-4">
-            This suspends your account right away. It's permanently deleted after 2 days — log back in before then to recover it.
-          </p>
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 border border-pink-700/40 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg text-pink-100 mb-1 flex items-center gap-2">
+              <FaTrash className="text-base" /> Delete Account
+            </h2>
+            <p className="text-xs text-richblack-400">
+              This suspends your account right away. It's permanently deleted after 2 days — log back in before then to recover it.
+            </p>
+          </div>
           <button
             onClick={handleDeleteAccount}
-            className="px-4 py-2.5 text-sm font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 transition-all duration-200 cursor-pointer"
+            className="shrink-0 px-4 py-2.5 text-sm font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 transition-all duration-200 cursor-pointer"
           >
             Delete my account
           </button>

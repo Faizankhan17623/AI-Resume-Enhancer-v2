@@ -115,7 +115,7 @@ const Pricing = () => {
           <Loading text="Loading the plans..." />
         ) : plans.length === 0 ? (
           // never a silent blank space sir — if the fetch fails the user sees why
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200">Could not load the plans — is the server awake?</p>
             <button
               onClick={() => dispatch(GetAllPlans())}

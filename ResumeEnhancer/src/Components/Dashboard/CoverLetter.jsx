@@ -80,7 +80,7 @@ const CoverLetter = () => {
       <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
       <AnimatePresence mode="wait">
         {isBasic ? (
-          <motion.div key="upsell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <motion.div key="upsell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Cover letters are a Pro feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade your plan to generate a tailored cover letter from your resume and a job description.</p>

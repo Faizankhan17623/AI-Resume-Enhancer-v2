@@ -87,7 +87,7 @@ const ShareTestimonialCard = () => {
           )}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
+        <form onSubmit={handleSubmit} className="space-y-3 max-w-md mx-auto">
           <input
             type="text"
             value={role}

@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes, FaSwatchbook } from 'react-icons/fa'
+import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes, FaSwatchbook, FaArrowLeft } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
@@ -27,6 +27,11 @@ const BuildResumePicker = () => {
   const incomingTemplate = searchParams.get('template')
   const incomingColor = searchParams.get('color')
 
+  // step sir — 'choose' shows only the three mode buttons, centered, nothing else. Picking one
+  // moves to that mode's own screen (template grid + whatever inputs that mode needs). Arriving
+  // with a template already picked on /Dashboard/Templates just pre-fills selectedTemplate below —
+  // it does NOT skip this choice, the user still picks blank/generate/tailor every time.
+  const [step, setStep] = useState('choose')
   const [mode, setMode] = useState('blank')
   const [selectedTemplate, setSelectedTemplate] = useState(incomingTemplate)
   const [selectedColor, setSelectedColor] = useState(incomingColor || null)
@@ -40,6 +45,21 @@ const BuildResumePicker = () => {
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { generating } = useSelector((state) => state.builtResume)
+
+  // a template already picked on /Dashboard/Templates sir — every mode below skips its own
+  // template grid when this is set, and 'blank' skips straight past its whole detail screen
+  // since picking a template WAS its entire job (see handlePickTemplate below).
+  const hasIncomingTemplate = !!incomingTemplate
+
+  const handleChooseMode = (modeId) => {
+    setMode(modeId)
+    if (modeId === 'blank' && hasIncomingTemplate) {
+      dispatch(CreateBuiltResume(incomingTemplate, token, navigate, incomingColor))
+      setStep('creating')
+      return
+    }
+    setStep(modeId)
+  }
 
   const handleFile = (file) => {
     if (!file) return
@@ -89,6 +109,57 @@ const BuildResumePicker = () => {
     dispatch(TailorResume(pdfFile, jd.trim(), selectedTemplate, token, navigate, selectedColor))
   }
 
+  if (step === 'choose') {
+    return (
+      <DashboardLayout title="Build a resume">
+        <Helmet>
+          <title>Build Resume | Resumify</title>
+        </Helmet>
+        <PageTransition className="h-full flex items-center justify-center px-4 lg:px-6">
+          <div className="w-full max-w-4xl">
+            <div className="text-center mb-8">
+              <h1 className="font-display font-bold text-2xl text-richblack-5">Build a resume</h1>
+              <p className="text-sm text-richblack-400 mt-1">How do you want to start?</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {MODES.map((m) => {
+                const Icon = m.icon
+                return (
+                  <motion.button
+                    key={m.id}
+                    onClick={() => handleChooseMode(m.id)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="text-left rounded-2xl p-5 border transition-colors duration-200 cursor-pointer bg-richblack-800 border-richblack-700 hover:border-warm-200 hover:shadow-[0_0_30px_-14px_rgba(232,131,79,0.4)]"
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-richblack-700 text-richblack-300">
+                      <Icon />
+                    </div>
+                    <p className="font-semibold text-richblack-5 text-sm">{m.label}</p>
+                    <p className="text-xs text-richblack-400 mt-1 leading-relaxed">{m.desc}</p>
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+        </PageTransition>
+      </DashboardLayout>
+    )
+  }
+
+  if (step === 'creating') {
+    return (
+      <DashboardLayout title="Build a resume">
+        <Helmet>
+          <title>Build Resume | Resumify</title>
+        </Helmet>
+        <div className="h-full flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-yellow-50 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout title="Build a resume">
       <Helmet>
@@ -97,32 +168,12 @@ const BuildResumePicker = () => {
 
       <PageTransition className="h-full overflow-y-auto max-w-6xl mx-auto px-4 lg:px-6 py-8">
 
-        {/* Mode switch sir */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-          {MODES.map((m) => {
-            const Icon = m.icon
-            const active = mode === m.id
-            return (
-              <motion.button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                className={`text-left rounded-2xl p-5 border transition-colors duration-200 cursor-pointer ${
-                  active
-                    ? 'bg-richblack-800 border-warm-200 shadow-[0_0_30px_-14px_rgba(232,131,79,0.4)]'
-                    : 'bg-richblack-800 border-richblack-700 hover:border-richblack-500'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${active ? 'bg-warm-200 text-richblack-900' : 'bg-richblack-700 text-richblack-300'}`}>
-                  <Icon />
-                </div>
-                <p className="font-semibold text-richblack-5 text-sm">{m.label}</p>
-                <p className="text-xs text-richblack-400 mt-1 leading-relaxed">{m.desc}</p>
-              </motion.button>
-            )
-          })}
-        </div>
+        <button
+          onClick={() => setStep('choose')}
+          className="flex items-center gap-2 text-xs font-semibold text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer mb-6"
+        >
+          <FaArrowLeft className="text-[10px]" /> Back
+        </button>
 
         {/* generate/tailor inputs sir — shown above the template grid, since both need a template picked at the end */}
         <AnimatePresence>
@@ -132,7 +183,7 @@ const BuildResumePicker = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-8 overflow-hidden"
+            className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 md:p-8 mb-8 overflow-hidden"
           >
             <label className="text-sm font-semibold text-richblack-100 mb-2 block">Tell the AI about yourself</label>
             <textarea
@@ -142,13 +193,33 @@ const BuildResumePicker = () => {
               rows={6}
               className="w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
             />
-            <label className="text-sm font-semibold text-richblack-100 mt-4 mb-2 block">Target role (optional)</label>
+            {/* target role sir — the headline field of this mode, per the inspiration:
+                everything else is background, this is what actually steers the draft */}
+            <label className="text-sm font-semibold text-richblack-100 mt-5 mb-2 block">Which role are you targeting?</label>
             <input
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
               placeholder="e.g. Frontend Developer"
-              className="w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+              className="w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-3 text-richblack-5 text-base font-medium placeholder:text-richblack-400 placeholder:font-normal focus:outline-none focus:border-yellow-50 transition-colors duration-200"
             />
+            {!hasIncomingTemplate && (
+              <p className="text-xs text-richblack-400 mt-3">Pick a template below, then let the AI do the rest.</p>
+            )}
+            {hasIncomingTemplate && (
+              <div className="flex justify-end mt-6">
+                <motion.button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  whileHover={generating ? undefined : { scale: 1.02 }}
+                  whileTap={generating ? undefined : { scale: 0.97 }}
+                  className="flex items-center gap-2.5 px-8 py-3.5 rounded-full font-bold text-richblack-900 bg-yellow-50 shadow-[0_0_35px_-8px_rgba(255,214,10,0.6)] hover:shadow-[0_0_45px_-6px_rgba(255,214,10,0.8)] hover:brightness-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <FaMagic className={generating ? 'animate-pulse' : ''} />
+                  {generating ? 'Drafting...' : 'Let AI do the rest'}
+                </motion.button>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -195,56 +266,62 @@ const BuildResumePicker = () => {
         )}
         </AnimatePresence>
 
-        {/* Template grid sir — always shown, since every mode ends in "which template renders this data".
-            The dedicated /Dashboard/Templates gallery is the fuller browsing experience with color swatches;
-            arriving from there pre-selects a template (+ color) here via query params. */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-richblack-100">
-            {mode === 'blank' ? 'Pick a template to start' : 'Pick a template for the result'}
-            {selectedColor && (
-              <span className="ml-2 inline-flex items-center gap-1.5 text-xs font-normal text-richblack-400">
-                accent <span style={{ backgroundColor: selectedColor }} className="w-3 h-3 rounded-full inline-block border border-richblack-600" />
-              </span>
-            )}
-          </p>
-          <Link to="/Dashboard/Templates" className="flex items-center gap-1.5 text-xs font-semibold text-yellow-50 hover:opacity-80">
-            <FaSwatchbook className="text-[10px]" /> Browse all templates
-          </Link>
-        </div>
-        <motion.div layout variants={staggerContainer(0.04)} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-          {TEMPLATE_REGISTRY.map((t) => (
-            <motion.button
-              key={t.id}
-              layout
-              variants={fadeUp}
-              whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handlePickTemplate(t.id)}
-              className={`group text-left rounded-xl overflow-hidden border transition-colors duration-200 cursor-pointer ${
-                selectedTemplate === t.id ? 'border-warm-200 ring-2 ring-warm-200/40' : 'border-richblack-700 hover:border-richblack-500'
-              }`}
-            >
-              <div className="relative aspect-[3/4] bg-richblack-5 overflow-hidden">
-                <div className="w-full h-full origin-top-left scale-[0.27] pointer-events-none">
-                  <t.Component data={selectedColor ? { ...SAMPLE_RESUME_DATA, color: selectedColor } : SAMPLE_RESUME_DATA} />
-                </div>
-                {/* hover overlay sir — "Use this template" on hover, mirrors the home page slider's cards */}
-                <div className="absolute inset-0 bg-richblack-900/0 group-hover:bg-richblack-900/55 transition-colors duration-300 flex items-center justify-center">
-                  <span className="opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-full bg-yellow-50 text-richblack-900 shadow-lg">
-                    <FaMagic className="text-[10px]" /> Use this template
+        {/* Template grid sir — only when no template was already picked on /Dashboard/Templates.
+            That page's whole job was "pick a look"; if the user already did that, re-showing this
+            grid would just make them pick again. Every mode below respects the same rule. */}
+        {!hasIncomingTemplate && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-richblack-100">
+                {mode === 'blank' ? 'Pick a template to start' : 'Pick a template for the result'}
+                {selectedColor && (
+                  <span className="ml-2 inline-flex items-center gap-1.5 text-xs font-normal text-richblack-400">
+                    accent <span style={{ backgroundColor: selectedColor }} className="w-3 h-3 rounded-full inline-block border border-richblack-600" />
                   </span>
-                </div>
-              </div>
-              <div className="bg-richblack-800 px-3 py-2.5">
-                <p className="text-sm font-semibold text-richblack-5">{t.name}</p>
-                <p className="text-[11px] text-richblack-400 mt-0.5 line-clamp-1">{t.description}</p>
-              </div>
-            </motion.button>
-          ))}
-        </motion.div>
+                )}
+              </p>
+              <Link to="/Dashboard/Templates" className="flex items-center gap-1.5 text-xs font-semibold text-yellow-50 hover:opacity-80">
+                <FaSwatchbook className="text-[10px]" /> Browse all templates
+              </Link>
+            </div>
+            <motion.div layout variants={staggerContainer(0.04)} initial="hidden" animate="show" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              {TEMPLATE_REGISTRY.map((t) => (
+                <motion.button
+                  key={t.id}
+                  layout
+                  variants={fadeUp}
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handlePickTemplate(t.id)}
+                  className={`group text-left rounded-xl overflow-hidden border transition-colors duration-200 cursor-pointer ${
+                    selectedTemplate === t.id ? 'border-warm-200 ring-2 ring-warm-200/40' : 'border-richblack-700 hover:border-richblack-500'
+                  }`}
+                >
+                  <div className="relative aspect-[3/4] bg-richblack-5 overflow-hidden">
+                    <div className="w-full h-full origin-top-left scale-[0.27] pointer-events-none">
+                      <t.Component data={selectedColor ? { ...SAMPLE_RESUME_DATA, color: selectedColor } : SAMPLE_RESUME_DATA} />
+                    </div>
+                    {/* hover overlay sir — "Use this template" on hover, mirrors the home page slider's cards */}
+                    <div className="absolute inset-0 bg-richblack-900/0 group-hover:bg-richblack-900/55 transition-colors duration-300 flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-full bg-yellow-50 text-richblack-900 shadow-lg">
+                        <FaMagic className="text-[10px]" /> Use this template
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-richblack-800 px-3 py-2.5">
+                    <p className="text-sm font-semibold text-richblack-5">{t.name}</p>
+                    <p className="text-[11px] text-richblack-400 mt-0.5 line-clamp-1">{t.description}</p>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          </>
+        )}
 
-        {/* Confirm button for generate/tailor sir — blank mode already navigates on template click */}
-        {mode === 'generate' && (
+        {/* Confirm button for generate/tailor sir — blank mode already navigates on template click.
+            When a template's already picked, 'generate' shows its own glowing CTA up in the form
+            instead (see above) so this only needs to cover the "still need to pick one" case. */}
+        {mode === 'generate' && !hasIncomingTemplate && (
           <div className="flex justify-end mt-8">
             <IconBtn
               text={generating ? "Drafting..." : "Generate my resume"}

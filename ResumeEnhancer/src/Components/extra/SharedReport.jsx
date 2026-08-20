@@ -58,7 +58,7 @@ const SharedReport = () => {
         {loading ? (
           <Loading text="Loading shared report..." />
         ) : notFound ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200 mb-6">This shared report was not found or is no longer public.</p>
             <Link to="/" className="text-yellow-50 hover:underline text-sm font-semibold">Go home</Link>
           </div>

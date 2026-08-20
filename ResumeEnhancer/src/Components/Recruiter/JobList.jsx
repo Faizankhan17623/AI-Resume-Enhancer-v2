@@ -50,7 +50,7 @@ const JobList = () => {
       {loading ? (
         <Loading text="Loading your jobs..." />
       ) : myJobs.length === 0 ? (
-        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
           <p className="text-richblack-100 mb-2 font-semibold">No jobs yet</p>
           <p className="text-richblack-300 text-sm mb-6">Post a job, attach a proctored test, and start screening candidates.</p>
           {isLocked ? (

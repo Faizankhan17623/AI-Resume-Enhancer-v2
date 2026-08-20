@@ -335,7 +335,7 @@ const Applications = () => {
         {loading ? (
           <Loading text="Loading your applications..." />
         ) : applications.length === 0 ? (
-          <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaBriefcase className="text-3xl text-richblack-400 mx-auto mb-4" />
             <p className="text-richblack-200 mb-2">No applications tracked yet.</p>
             <p className="text-richblack-400 text-sm mb-6">Add the roles you've applied to and watch them move through the pipeline.</p>

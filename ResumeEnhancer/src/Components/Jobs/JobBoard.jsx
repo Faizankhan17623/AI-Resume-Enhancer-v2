@@ -94,7 +94,7 @@ const JobBoard = () => {
         {loading ? (
           <Loading text="Loading jobs..." />
         ) : publicJobs.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200">No jobs match your search right now.</p>
           </div>
         ) : (

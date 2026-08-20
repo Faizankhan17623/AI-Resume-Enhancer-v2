@@ -46,7 +46,7 @@ const MyApplications = () => {
         {loading ? (
           <Loading text="Loading your applications..." />
         ) : myApplications.length === 0 ? (
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-100 mb-2 font-semibold">No applications yet</p>
             <p className="text-richblack-300 text-sm mb-6">Browse the job board and apply to roles that match your resume.</p>
             <Link to="/Jobs" className="inline-block px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200">

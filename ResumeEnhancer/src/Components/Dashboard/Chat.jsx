@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
@@ -112,6 +112,11 @@ const Message = ({ role, content }) => (
   </motion.div>
 )
 
+const LIST_MIN = 240
+const LIST_MAX = 420
+const LIST_DEFAULT = 288 // matches the old fixed w-72
+const LIST_STORAGE_KEY = 'resumify:chatListWidth'
+
 const Chat = () => {
   const { chatId } = useParams()
   const [message, setMessage] = useState('')
@@ -122,6 +127,40 @@ const Chat = () => {
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { allChats, currentChat, loading, replying, streamingReply } = useSelector((state) => state.chat)
+
+  // chat-list pane width sir — drag the right edge to resize, same pattern as the main
+  // dashboard sidebar in DashboardLayout.jsx (own localStorage key, this is a distinct pane)
+  const [listWidth, setListWidth] = useState(() => {
+    const stored = Number(localStorage.getItem(LIST_STORAGE_KEY))
+    return stored >= LIST_MIN && stored <= LIST_MAX ? stored : LIST_DEFAULT
+  })
+  const [resizing, setResizing] = useState(false)
+  const resizeStateRef = useRef({ startX: 0, startWidth: LIST_DEFAULT })
+
+  const handleResizeStart = useCallback((e) => {
+    resizeStateRef.current = { startX: e.clientX, startWidth: listWidth }
+    setResizing(true)
+  }, [listWidth])
+
+  useEffect(() => {
+    if (!resizing) return
+    const handleMouseMove = (e) => {
+      const { startX, startWidth } = resizeStateRef.current
+      const next = Math.min(LIST_MAX, Math.max(LIST_MIN, startWidth + (e.clientX - startX)))
+      setListWidth(next)
+    }
+    const handleMouseUp = () => setResizing(false)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [resizing])
+
+  useEffect(() => {
+    if (!resizing) localStorage.setItem(LIST_STORAGE_KEY, String(listWidth))
+  }, [resizing, listWidth])
 
   // client-side filter by title sir — the chat list is a user's own small set, no backend
   // search endpoint needed for this
@@ -179,59 +218,78 @@ const Chat = () => {
         <title>AI Coach | Resumify</title>
       </Helmet>
 
-      <div className="h-full max-w-7xl mx-auto w-full flex min-h-0">
+      <div className={`h-full max-w-7xl mx-auto w-full flex min-h-0 ${resizing ? 'select-none cursor-col-resize' : ''}`}>
 
         {/* Left - chat list sidebar sir */}
-        <div className="w-72 shrink-0 border-r border-richblack-700 flex flex-col">
-          <div className="p-4 space-y-3">
-            <IconBtn text="New Chat" onclick={() => setShowModal(true)} customClasses="w-full justify-center text-sm">
-              <FaPlus />
-            </IconBtn>
-            {allChats.length > 0 && (
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-richblack-400" />
-                <input
-                  value={chatSearch}
-                  onChange={(e) => setChatSearch(e.target.value)}
-                  placeholder="Search chats..."
-                  className="w-full rounded-lg bg-richblack-900 border border-richblack-600 pl-8 pr-3 py-2 text-xs text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-                />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 overflow-y-auto thin-scrollbar px-3 pb-4 space-y-1">
-            {allChats.length === 0 ? (
-              <p className="text-xs text-richblack-400 text-center mt-8 px-4">No chats yet sir — start one and coach your resume.</p>
-            ) : visibleChats.length === 0 ? (
-              <p className="text-xs text-richblack-400 text-center mt-8 px-4">No chats match "{chatSearch}"</p>
-            ) : (
-              visibleChats.map((chat) => (
-                <div
-                  key={chat._id}
-                  className={`group flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors duration-200 ${
-                    chat._id === chatId ? 'bg-richblack-700 text-richblack-5' : 'text-richblack-200 hover:bg-richblack-800'
-                  }`}
-                >
-                  <Link to={`/Dashboard/Chat/${chat._id}`} className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{chat.title}</p>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(chat._id)}
-                    className="opacity-0 group-hover:opacity-100 text-richblack-400 hover:text-pink-200 transition-all duration-200 cursor-pointer ml-2"
-                  >
-                    <FaTrash className="text-xs" />
-                  </button>
+        <div style={{ width: listWidth }} className="shrink-0 border-r border-richblack-700 flex flex-col relative">
+          {allChats.length === 0 ? (
+            // nothing to list yet sir — one centered block (button + message) filling the pane,
+            // instead of the button pinned at top with the message floating below it
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+              <IconBtn text="New Chat" onclick={() => setShowModal(true)} customClasses="text-sm">
+                <FaPlus />
+              </IconBtn>
+              <p className="text-xs text-richblack-400">No chats yet sir — start one and coach your resume.</p>
+            </div>
+          ) : (
+            <>
+              <div className="p-4 space-y-3">
+                <IconBtn text="New Chat" onclick={() => setShowModal(true)} customClasses="w-full justify-center text-sm">
+                  <FaPlus />
+                </IconBtn>
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-richblack-400" />
+                  <input
+                    value={chatSearch}
+                    onChange={(e) => setChatSearch(e.target.value)}
+                    placeholder="Search chats..."
+                    className="w-full rounded-lg bg-richblack-900 border border-richblack-600 pl-8 pr-3 py-2 text-xs text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                  />
                 </div>
-              ))
-            )}
+              </div>
+              <div className="flex-1 overflow-y-auto thin-scrollbar px-3 pb-4 space-y-1">
+                {visibleChats.length === 0 ? (
+                  <p className="text-xs text-richblack-400 text-center mt-8 px-4">No chats match "{chatSearch}"</p>
+                ) : (
+                  visibleChats.map((chat) => (
+                    <div
+                      key={chat._id}
+                      className={`group flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors duration-200 ${
+                        chat._id === chatId ? 'bg-richblack-700 text-richblack-5' : 'text-richblack-200 hover:bg-richblack-800'
+                      }`}
+                    >
+                      <Link to={`/Dashboard/Chat/${chat._id}`} className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{chat.title}</p>
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(chat._id)}
+                        className="opacity-0 group-hover:opacity-100 text-richblack-400 hover:text-pink-200 transition-all duration-200 cursor-pointer ml-2"
+                      >
+                        <FaTrash className="text-xs" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+          {/* drag handle sir — same resize pattern as the main dashboard sidebar */}
+          <div
+            onMouseDown={handleResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize chat list"
+            className="absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize group z-10"
+          >
+            <div className={`h-full w-px mx-auto transition-colors duration-150 ${resizing ? 'bg-yellow-50' : 'bg-transparent group-hover:bg-yellow-50/60'}`} />
           </div>
         </div>
 
         {/* Right - the thread sir */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {!chatId ? (
             // no chat open — the empty landing sir
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 min-h-0">
               <div className="w-16 h-16 rounded-full bg-yellow-900/15 flex items-center justify-center">
                 <FaComments className="text-2xl text-yellow-50" />
               </div>
