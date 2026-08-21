@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaBriefcase, FaShieldAlt, FaChartLine, FaCheckCircle, FaClock, FaUserPlus, FaBolt, FaUsers, FaFileContract, FaPenNib, FaUserCheck, FaClipboardList, FaHandshake, FaBalanceScale, FaEye, FaHeart } from 'react-icons/fa'
 import Navbar from './Navbar'
@@ -78,8 +78,24 @@ const ForRecruiters = () => {
   const [location, setLocation] = useState('')
   const [hiringNeeds, setHiringNeeds] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [applyLoading, setApplyLoading] = useState(false)
+  const [showApplyForm, setShowApplyForm] = useState(false)
+  const applySectionRef = useRef(null)
 
   const existingApplication = user?.recruiterApplication
+
+  // "Apply below" reveal sir — scroll to the section first, then run a brief loader
+  // before the actual form animates in, so it reads as something being fetched/prepared
+  // rather than a plain accordion toggle.
+  const handleApplyClick = () => {
+    applySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (showApplyForm) return
+    setApplyLoading(true)
+    setTimeout(() => {
+      setApplyLoading(false)
+      setShowApplyForm(true)
+    }, 2000)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -147,34 +163,6 @@ const ForRecruiters = () => {
         transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 max-w-5xl mx-auto px-6 py-16 w-full"
       >
-        {/* the fork sir — new account vs. upgrade an existing one, so the form below reads as
-            "step 2 of the upgrade path" rather than a mystery lead-gen form */}
-        <motion.div
-          variants={staggerContainer(0.1)}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-16"
-        >
-          {PATHS.map((path) => (
-            <motion.div key={path.title} variants={fadeUp} className="rounded-2xl bg-richblack-800 border border-richblack-700 p-7 flex flex-col">
-              <div className="w-11 h-11 rounded-full bg-yellow-900/15 flex items-center justify-center mb-4">
-                <path.icon className="text-yellow-50" />
-              </div>
-              <h3 className="text-richblack-5 font-semibold text-lg mb-1.5">{path.title}</h3>
-              <p className="text-sm text-richblack-300 mb-5 flex-1">{path.desc}</p>
-              {path.anchor ? (
-                <a href="#apply" className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
-                  {path.cta}
-                </a>
-              ) : (
-                <Link to={path.to} className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200">
-                  {path.cta}
-                </Link>
-              )}
-            </motion.div>
-          ))}
-        </motion.div>
-
         <motion.div
           variants={staggerContainer(0.1)}
           initial="hidden"
@@ -275,110 +263,165 @@ const ForRecruiters = () => {
           </motion.div>
         </div>
 
-        <div id="apply" className="text-center mb-6 scroll-mt-24">
-          <h2 className="font-display text-2xl text-richblack-5">Apply for recruiter access</h2>
-          <p className="text-sm text-richblack-300 mt-1.5 max-w-md mx-auto">
-            This upgrades your existing Resumify login to a Recruiter account — you'll keep signing in exactly as you do now.
-          </p>
-        </div>
-        <div className="max-w-lg mx-auto rounded-2xl bg-richblack-800 border border-richblack-700 p-8">
-          {isLoggedIn && user?.role === 'Recruiter' ? (
-            <div className="text-center">
-              <FaCheckCircle className="text-3xl text-caribgreen-100 mx-auto mb-3" />
-              <p className="text-richblack-5 font-semibold mb-4">You're already a Recruiter</p>
-              <IconBtn text="Go to your dashboard" onclick={() => navigate('/Recruiter')} customClasses="w-full justify-center" />
-            </div>
-          ) : isLoggedIn && existingApplication?.status && existingApplication.status !== 'rejected' ? (
-            <div className={`rounded-xl border p-5 text-center ${statusCopy[existingApplication.status]?.tone}`}>
-              <div className="flex items-center justify-center gap-2 mb-2 font-semibold">
-                <FaClock /> {statusCopy[existingApplication.status]?.title}
+        {/* the fork sir — new account vs. upgrade an existing one, now placed right after the
+            principles section. "Apply below" no longer jumps straight to a form — it scrolls
+            here, runs a brief loader, then reveals the form below in an animated way */}
+        <motion.div
+          variants={staggerContainer(0.1)}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.3 }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-16"
+        >
+          {PATHS.map((path) => (
+            <motion.div key={path.title} variants={fadeUp} className="rounded-2xl bg-richblack-800 border border-richblack-700 p-7 flex flex-col">
+              <div className="w-11 h-11 rounded-full bg-yellow-900/15 flex items-center justify-center mb-4">
+                <path.icon className="text-yellow-50" />
               </div>
-              <p className="text-sm opacity-90">{statusCopy[existingApplication.status]?.body}</p>
-            </div>
-          ) : (
-            <>
-              {!isLoggedIn && (
-                <div className="rounded-lg border border-blue-700 bg-blue-700/10 p-3 mb-5 text-xs text-blue-25">
-                  You'll need to log in first — this form adds recruiting access to your existing account, it doesn't create a new one.
-                </div>
+              <h3 className="text-richblack-5 font-semibold text-lg mb-1.5">{path.title}</h3>
+              <p className="text-sm text-richblack-300 mb-5 flex-1">{path.desc}</p>
+              {path.anchor ? (
+                <button type="button" onClick={handleApplyClick} className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
+                  {path.cta}
+                </button>
+              ) : (
+                <Link to={path.to} className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200">
+                  {path.cta}
+                </Link>
               )}
-              <p className="text-sm text-richblack-300 mb-6">
-                We verify each request based on company name and brand — approval isn't automatic.
-              </p>
+            </motion.div>
+          ))}
+        </motion.div>
 
-              {isLoggedIn && existingApplication?.status === 'rejected' && (
-                <div className="rounded-lg border border-pink-700 bg-pink-700/10 p-3 mb-5 text-xs text-pink-100">
-                  Your previous application wasn't approved{existingApplication.rejectionReason ? `: ${existingApplication.rejectionReason}` : '.'} You can apply again below.
+        <div id="apply" ref={applySectionRef} className="scroll-mt-24">
+          <AnimatePresence mode="wait">
+            {applyLoading ? (
+              <motion.div
+                key="loader"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-lg mx-auto rounded-2xl bg-richblack-800 border border-richblack-700 p-8 flex flex-col items-center justify-center gap-4 min-h-[220px]"
+              >
+                <span className="w-10 h-10 rounded-full border-2 border-richblack-600 border-t-yellow-50 animate-spin" />
+                <p className="text-sm text-richblack-300">Preparing your application form…</p>
+              </motion.div>
+            ) : showApplyForm ? (
+              <motion.div
+                key="content"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className="text-center mb-6">
+                  <h2 className="font-display text-2xl text-richblack-5">Apply for recruiter access</h2>
+                  <p className="text-sm text-richblack-300 mt-1.5 max-w-md mx-auto">
+                    This upgrades your existing Resumify login to a Recruiter account — you'll keep signing in exactly as you do now.
+                  </p>
                 </div>
-              )}
+                <div className="max-w-lg mx-auto rounded-2xl bg-richblack-800 border border-richblack-700 p-8">
+                  {isLoggedIn && user?.role === 'Recruiter' ? (
+                    <div className="text-center">
+                      <FaCheckCircle className="text-3xl text-caribgreen-100 mx-auto mb-3" />
+                      <p className="text-richblack-5 font-semibold mb-4">You're already a Recruiter</p>
+                      <IconBtn text="Go to your dashboard" onclick={() => navigate('/Recruiter')} customClasses="w-full justify-center" />
+                    </div>
+                  ) : isLoggedIn && existingApplication?.status && existingApplication.status !== 'rejected' ? (
+                    <div className={`rounded-xl border p-5 text-center ${statusCopy[existingApplication.status]?.tone}`}>
+                      <div className="flex items-center justify-center gap-2 mb-2 font-semibold">
+                        <FaClock /> {statusCopy[existingApplication.status]?.title}
+                      </div>
+                      <p className="text-sm opacity-90">{statusCopy[existingApplication.status]?.body}</p>
+                    </div>
+                  ) : (
+                    <>
+                      {!isLoggedIn && (
+                        <div className="rounded-lg border border-blue-700 bg-blue-700/10 p-3 mb-5 text-xs text-blue-25">
+                          You'll need to log in first — this form adds recruiting access to your existing account, it doesn't create a new one.
+                        </div>
+                      )}
+                      <p className="text-sm text-richblack-300 mb-6">
+                        We verify each request based on company name and brand — approval isn't automatic.
+                      </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <RequiredLabel>Company name</RequiredLabel>
-                  <input
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Corp"
-                    required
-                    className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-                  />
+                      {isLoggedIn && existingApplication?.status === 'rejected' && (
+                        <div className="rounded-lg border border-pink-700 bg-pink-700/10 p-3 mb-5 text-xs text-pink-100">
+                          Your previous application wasn't approved{existingApplication.rejectionReason ? `: ${existingApplication.rejectionReason}` : '.'} You can apply again below.
+                        </div>
+                      )}
+
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                          <RequiredLabel>Company name</RequiredLabel>
+                          <input
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="e.g. Acme Corp"
+                            required
+                            className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                          />
+                        </div>
+                        <div>
+                          <RequiredLabel>Company website</RequiredLabel>
+                          <input
+                            value={companyWebsite}
+                            onChange={(e) => setCompanyWebsite(e.target.value)}
+                            placeholder="https://..."
+                            required
+                            className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <RequiredLabel>Company size</RequiredLabel>
+                            <select
+                              value={companySize}
+                              onChange={(e) => setCompanySize(e.target.value)}
+                              required
+                              className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                            >
+                              <option value="" disabled>Select size</option>
+                              {COMPANY_SIZES.map((size) => (
+                                <option key={size} value={size}>{size} employees</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <RequiredLabel>Location</RequiredLabel>
+                            <input
+                              value={location}
+                              onChange={(e) => setLocation(e.target.value)}
+                              placeholder="e.g. Bengaluru, India"
+                              required
+                              className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <RequiredLabel>Hiring needs</RequiredLabel>
+                          <textarea
+                            value={hiringNeeds}
+                            onChange={(e) => setHiringNeeds(e.target.value)}
+                            rows={4}
+                            placeholder="What roles are you hiring for?"
+                            required
+                            className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
+                          />
+                        </div>
+                        <IconBtn
+                          type="submit"
+                          text={submitting ? "Submitting..." : (isLoggedIn ? "Submit application" : "Log in to apply")}
+                          disabled={submitting}
+                          customClasses="w-full justify-center"
+                        />
+                      </form>
+                    </>
+                  )}
                 </div>
-                <div>
-                  <RequiredLabel>Company website</RequiredLabel>
-                  <input
-                    value={companyWebsite}
-                    onChange={(e) => setCompanyWebsite(e.target.value)}
-                    placeholder="https://..."
-                    required
-                    className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <RequiredLabel>Company size</RequiredLabel>
-                    <select
-                      value={companySize}
-                      onChange={(e) => setCompanySize(e.target.value)}
-                      required
-                      className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-                    >
-                      <option value="" disabled>Select size</option>
-                      {COMPANY_SIZES.map((size) => (
-                        <option key={size} value={size}>{size} employees</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <RequiredLabel>Location</RequiredLabel>
-                    <input
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. Bengaluru, India"
-                      required
-                      className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <RequiredLabel>Hiring needs</RequiredLabel>
-                  <textarea
-                    value={hiringNeeds}
-                    onChange={(e) => setHiringNeeds(e.target.value)}
-                    rows={4}
-                    placeholder="What roles are you hiring for?"
-                    required
-                    className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
-                  />
-                </div>
-                <IconBtn
-                  type="submit"
-                  text={submitting ? "Submitting..." : (isLoggedIn ? "Submit application" : "Log in to apply")}
-                  disabled={submitting}
-                  customClasses="w-full justify-center"
-                />
-              </form>
-            </>
-          )}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </motion.div>
 
