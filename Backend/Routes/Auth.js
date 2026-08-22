@@ -17,6 +17,7 @@ const {
     updateNumberSchema,
     notificationPrefsSchema,
     recruiterApplicationSchema,
+    appealSuspensionSchema,
 } = require('../Validation/schemas.js')
 const {
     createUser,
@@ -35,7 +36,8 @@ const {
     updateNumber,
     exportMyData,
     deleteAccount,
-    applyForRecruiter
+    applyForRecruiter,
+    submitSuspensionAppeal
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -88,6 +90,10 @@ route.patch('/profile/number',Auth,validate({ body: updateNumberSchema }),update
 // self-signup for Recruiter access sir — isUser blocks Admin/Support/existing-Recruiter
 // accounts from "applying" for a role they already have or aren't eligible for
 route.post('/recruiter-applications',Auth,isUser,validate({ body: recruiterApplicationSchema }),applyForRecruiter)
+
+// the one route a banned account can still reach sir — Auth.js explicitly exempts this exact
+// path from its ban block (see BAN_CHECK_EXEMPT_PATHS), everything else stays fully locked
+route.post('/appeal-suspension',Auth,authLimiter,validate({ body: appealSuspensionSchema }),submitSuspensionAppeal)
 
 // GDPR-style self-service data dump sir, separate from delete-account
 route.get('/profile/export',Auth,exportMyData)

@@ -325,11 +325,21 @@ const Users = () => {
                       </button>
                     </div>
                     {row.isBanned ? (
-                      <span
-                        title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
-                        className="shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
-                      >
-                        BANNED
+                      <span className="shrink-0 flex flex-col items-end gap-1">
+                        <span
+                          title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
+                          className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
+                        >
+                          BANNED
+                        </span>
+                        {row.suspensionAppeal?.status === 'pending' && (
+                          <span
+                            title={row.suspensionAppeal.message}
+                            className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-yellow-700/20 text-yellow-25 border border-yellow-700 cursor-help"
+                          >
+                            APPEALED
+                          </span>
+                        )}
                       </span>
                     ) : row.Verified ? (
                       <span className="shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700">ACTIVE</span>
@@ -477,11 +487,21 @@ const Users = () => {
                       <td className="p-4 font-mono text-richblack-100">{row.count}</td>
                       <td className="p-4">
                         {row.isBanned ? (
-                          <span
-                            title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
-                            className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
-                          >
-                            BANNED
+                          <span className="flex flex-col items-start gap-1">
+                            <span
+                              title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
+                              className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
+                            >
+                              BANNED
+                            </span>
+                            {row.suspensionAppeal?.status === 'pending' && (
+                              <span
+                                title={row.suspensionAppeal.message}
+                                className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-yellow-700/20 text-yellow-25 border border-yellow-700 cursor-help"
+                              >
+                                APPEALED
+                              </span>
+                            )}
                           </span>
                         ) : row.Verified ? (
                           <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-25 border border-caribgreen-700">ACTIVE</span>

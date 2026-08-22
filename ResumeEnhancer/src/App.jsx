@@ -45,6 +45,7 @@ const CoverLetter = lazy(() => import('./Components/Dashboard/CoverLetter'))
 const JobSearch = lazy(() => import('./Components/Dashboard/JobSearch'))
 const MockInterview = lazy(() => import('./Components/Dashboard/MockInterview'))
 const Account = lazy(() => import('./Components/Dashboard/Account'))
+const Suspended = lazy(() => import('./Components/Dashboard/Suspended'))
 const AdminOverview = lazy(() => import('./Components/Admin/Overview'))
 const AdminUsers = lazy(() => import('./Components/Admin/Users'))
 const AdminPayments = lazy(() => import('./Components/Admin/Payments'))
@@ -198,6 +199,7 @@ function App() {
             <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
             <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
             <Route path="/Dashboard/Account" element={<PrivateRoute><Account /></PrivateRoute>} />
+            <Route path="/Dashboard/Suspended" element={<PrivateRoute><Suspended /></PrivateRoute>} />
             {/* candidate's own real job-board applications sir — distinct from
                 /Dashboard/Applications (the pre-existing personal Kanban tracker) */}
             <Route path="/Dashboard/My-Applications" element={<PrivateRoute><MyApplications /></PrivateRoute>} />

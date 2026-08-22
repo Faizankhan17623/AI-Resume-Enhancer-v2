@@ -121,6 +121,19 @@ const UserCreation = new mongoose.Schema(
             type:String,
             trim:true
         },
+        // the banned user's own response to an Admin sir — the ONLY way a banned account can ever
+        // reach an Admin, since every other route is blocked the instant isBanned is true (see
+        // Auth.js's ban check and its one exemption, POST /appeal-suspension). Same shape as
+        // recruiterApplication below: user-submitted message + status, admin-set review fields.
+        // Cleared entirely on unban (Admin.js's banUser) so a stale appeal never lingers into a
+        // future, unrelated suspension.
+        suspensionAppeal: {
+            message: { type: String, trim: true, maxlength: 2000 },
+            status: { type: String, enum: ['pending', 'reviewed'] },
+            submittedAt: { type: Date },
+            reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
+            reviewedAt: { type: Date },
+        },
         Subscription:{
             type:Boolean,
             default:false

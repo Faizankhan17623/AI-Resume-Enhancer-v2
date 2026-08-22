@@ -341,6 +341,14 @@ const rejectRecruiterApplicationSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
+// ---------------------------------------------------------------------------
+// suspension appeal sir — see User.suspensionAppeal
+// ---------------------------------------------------------------------------
+const appealSuspensionSchema = z.object({
+    message: z.string({ error: 'Please explain why your account should be un-suspended' }).trim()
+        .min(1, 'Please explain why your account should be un-suspended').max(2000),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -396,4 +404,7 @@ module.exports = {
     // recruiter self-signup application
     recruiterApplicationSchema,
     rejectRecruiterApplicationSchema,
+
+    // suspension appeal
+    appealSuspensionSchema,
 }

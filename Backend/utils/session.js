@@ -103,6 +103,12 @@ const publicUser = (user) => ({
     recruiterApprovalStatus: user.role === 'Recruiter'
         ? (user.recruiterApplication?.status || 'approved')
         : undefined,
+    // same reasoning as recruiterApprovalStatus above sir — lets the frontend render the
+    // locked-dashboard state (PrivateRoute + DashboardLayout's sidebar) right after login,
+    // with no extra /profile call needed just to find out the account is suspended
+    isBanned: user.isBanned || false,
+    banReason: user.isBanned ? user.banReason : undefined,
+    suspensionAppealStatus: user.isBanned ? (user.suspensionAppeal?.status || undefined) : undefined,
 })
 
 module.exports = {

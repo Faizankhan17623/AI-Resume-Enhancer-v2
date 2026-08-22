@@ -98,6 +98,14 @@ const UserDetailModal = ({ userId, onClose }) => {
                       {user.isBanned ? `Banned${user.banReason ? ` — ${user.banReason}` : ''}` : (user.Verified ? 'Active' : 'Unverified')}
                     </p>
                   </div>
+                  {user.isBanned && user.suspensionAppeal?.message && (
+                    <div className="rounded-lg bg-yellow-700/10 border border-yellow-700 px-3 py-2 col-span-2">
+                      <p className="text-[10px] text-yellow-25 mb-1 font-semibold">
+                        {user.suspensionAppeal.status === 'pending' ? "User's appeal (pending review)" : "User's appeal"}
+                      </p>
+                      <p className="text-sm text-richblack-5">{user.suspensionAppeal.message}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-5">

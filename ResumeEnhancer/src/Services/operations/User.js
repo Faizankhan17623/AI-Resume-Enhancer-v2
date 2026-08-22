@@ -3,7 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted, setProfileUserFields } from '../../Slices/profileSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
-import { Profile, Password, RecruiterApplication } from '../Apis/UserApi.js'
+import { Profile, Password, RecruiterApplication, SuspensionAppeal } from '../Apis/UserApi.js'
 
 const {
     getprofile, updatenotifications, completeonboarding,
@@ -11,6 +11,7 @@ const {
 } = Profile
 const { changepassword } = Password
 const { apply: applyForRecruiterUrl } = RecruiterApplication
+const { submit: appealSuspensionUrl } = SuspensionAppeal
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -172,6 +173,37 @@ export function ApplyForRecruiter(payload, token) {
         } catch (error) {
             logApiError("Error submitting recruiter application", error)
             toast.error(error?.response?.data?.message || "Could not submit your application")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// the one thing a banned account can still do sir — everything else is 403'd by the backend's
+// Auth middleware, this one route is explicitly exempt (see Backend/Middlewares/Auth.js).
+// Merges suspensionAppealStatus into the cached auth user directly, same object shape
+// publicUser() sends at login, so DashboardLayout's sidebar lock picks the change up at once
+// with no extra /profile round-trip (which a banned user couldn't reach anyway).
+export function SubmitSuspensionAppeal(message, token) {
+    return async (dispatch, getState) => {
+        const toastId = toast.loading("Sending your appeal...")
+        try {
+            const response = await apiConnector("POST", appealSuspensionUrl, { message }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            const currentUser = getState().auth.user
+            dispatch(setUser({ ...currentUser, suspensionAppealStatus: response.data.suspensionAppeal?.status }))
+            toast.success(response.data.message)
+            return true
+        } catch (error) {
+            logApiError("Error submitting suspension appeal", error)
+            toast.error(error?.response?.data?.message || "Could not submit your appeal")
             return false
         } finally {
             toast.dismiss(toastId)

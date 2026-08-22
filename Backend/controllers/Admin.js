@@ -148,7 +148,7 @@ exports.getUsers = async (req, res) => {
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('firstName lastName email role isBanned banReason Verified Subscription SubType SubscriptionExpires count createdAt provider')
+                .select('firstName lastName email role isBanned banReason suspensionAppeal Verified Subscription SubType SubscriptionExpires count createdAt provider')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),
@@ -701,7 +701,7 @@ exports.banUser = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason')
+        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason suspensionAppeal')
 
         if (!user) {
             return res.status(404).json({
@@ -720,6 +720,10 @@ exports.banUser = async (req, res) => {
 
         user.isBanned = banned
         user.banReason = banned ? (reason || '').trim() : undefined
+        // a fresh ban starts with no appeal sir, and un-banning clears any appeal entirely —
+        // otherwise a stale appeal from THIS suspension would linger and confuse a future,
+        // unrelated one
+        user.suspensionAppeal = undefined
         await user.save()
 
         logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: user.banReason })

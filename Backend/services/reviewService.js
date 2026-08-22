@@ -61,6 +61,12 @@ const isJsonValidationFailure = (err) => err?.error?.error?.code === 'json_valid
  * The credit is spent before the AI call and refunded on every path where the user gets nothing
  * back, which is the invariant worth protecting here: nobody is billed for a review they never
  * received.
+ *
+ * formattingCheck may be a plain value (CallingFromSavedResume, reading it straight off a saved
+ * Review) OR a Promise (Calling, which is still mid-pdfjs-parse when this is called) sir — `await`
+ * on a non-Promise just resolves immediately, so both callers work unchanged. It's deliberately
+ * NOT awaited until after the Groq call below: that's what lets the pdfjs structural scan and the
+ * Groq call genuinely overlap instead of running back to back.
  */
 const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => {
     if (!(await isFeatureEnabled('feature.review'))) {
@@ -146,6 +152,12 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         await resolveSpend()
         return { ok: false, status: 502, message: 'The AI returned an empty response, please try again' }
     }
+
+    // NOW resolve formattingCheck sir — by this point the Groq call above has already finished,
+    // so a Promise passed in here has had that entire duration to settle in the background. This
+    // is the one spot in the whole function that actually needs the value (Review.create below
+    // + the final return), so this is as late as it can be awaited.
+    formattingCheck = await formattingCheck
 
     // strip the model's <think> reasoning block (qwen) and any stray ```json fences sir
     if (raw.includes('</think>')) raw = raw.split('</think>').pop()

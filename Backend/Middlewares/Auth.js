@@ -16,6 +16,13 @@ const extractToken = (req) =>
 
 module.exports.extractToken = extractToken
 
+// the ONE route a banned user must still be able to reach sir — submitting an appeal is the
+// only way they can ever get un-banned, so it's the one exception to "banned users are blocked
+// everywhere, instantly" below. Same exemption-list shape as apiConnector.js's
+// SESSION_CHECK_EXEMPT_PATHS on the frontend.
+const BAN_CHECK_EXEMPT_PATHS = ['/appeal-suspension']
+const isBanCheckExempt = (req) => BAN_CHECK_EXEMPT_PATHS.some((path) => req.path?.includes(path))
+
 exports.Auth = async (req, res, next) => {
     try {
         const token = extractToken(req)
@@ -62,10 +69,12 @@ exports.Auth = async (req, res, next) => {
             })
         }
 
-        // banned users are blocked everywhere, instantly sir
-        if (user.isBanned) {
+        // banned users are blocked everywhere, instantly sir — except the one exempt path above,
+        // which is how they get to actually appeal the ban in the first place
+        if (user.isBanned && !isBanCheckExempt(req)) {
             return res.status(403).json({
                 success: false,
+                banned: true,
                 message: user.banReason
                     ? `Your account has been suspended: ${user.banReason}`
                     : 'Your account has been suspended, please contact support',

@@ -1298,3 +1298,66 @@ exports.applyForRecruiter = async (req, res) => {
         })
     }
 }
+
+// ============================================================
+// APPEAL A SUSPENSION — the one thing a banned account can still do sir
+// ============================================================
+// POST /appeal-suspension — body: { message }. Auth-gated same as every other route, but
+// Auth.js explicitly exempts this exact path from its ban block, so a banned user can still
+// reach it (they still need a valid, non-revoked session — this isn't open to the public).
+exports.submitSuspensionAppeal = async (req, res) => {
+    try {
+        const userId = req.User.id
+        const { message } = req.body
+
+        if (!message || !message.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please explain why your account should be un-suspended',
+            })
+        }
+
+        const user = await User.findById(userId).select('isBanned banReason suspensionAppeal')
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        // not case sir — nothing to appeal, this route only makes sense for a banned account
+        if (!user.isBanned) {
+            return res.status(400).json({
+                success: false,
+                message: 'Your account is not currently suspended',
+            })
+        }
+
+        // one open appeal at a time sir, same "block resubmission" rule as applyForRecruiter —
+        // an Admin reviewing the queue shouldn't see the message change out from under them
+        if (user.suspensionAppeal?.status === 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Your appeal is already under review',
+            })
+        }
+
+        user.suspensionAppeal = {
+            message: message.trim(),
+            status: 'pending',
+            submittedAt: new Date(),
+            reviewedBy: undefined,
+            reviewedAt: undefined,
+        }
+        await user.save()
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your appeal has been sent to the admin team for review',
+            suspensionAppeal: user.suspensionAppeal,
+        })
+    } catch (error) {
+        (req.log || logger).error('appeal suspension failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while submitting your appeal',
+        })
+    }
+}

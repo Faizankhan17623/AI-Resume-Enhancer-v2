@@ -53,20 +53,24 @@ exports.Calling = async (req, res) => {
             });
         }
 
-        // structural ATS parse-safety scan sir — runs on the raw PDF bytes, separate from the
-        // Groq call, so it never eats a credit or blocks the review if it fails
-        let formattingCheck = null
-        try {
-            formattingCheck = await checkAtsFormatting(PDf.data)
-        } catch (fmtErr) {
+        // structural ATS parse-safety scan sir — runs on the raw PDF bytes, entirely independent
+        // of the Groq call (runReview never reads formattingCheck, it only stores it alongside
+        // the AI result). Previously this was awaited to completion BEFORE runReview was even
+        // called, so every request paid the full pdfjs parse time and the full Groq call time
+        // back to back. Handing runReview the PROMISE instead of the resolved value lets it kick
+        // off the Groq call immediately and only await formatting once the AI response is back —
+        // the two genuinely run concurrently now, so the wait is whichever is slower, not their
+        // sum. Still never eats a credit or blocks the review if it fails.
+        const formattingCheckPromise = checkAtsFormatting(PDf.data).catch((fmtErr) => {
             logger.warn('ATS formatting check failed', { err: fmtErr, userId: id })
-        }
+            return null
+        })
 
         return send(res, await runReview({
             userId: id,
             resumeText: result.text,
             jd: req.body.jd,
-            formattingCheck,
+            formattingCheck: formattingCheckPromise,
         }))
     } catch (error) {
         (req.log || logger).error('calling failed', { err: error })

@@ -55,6 +55,10 @@ export const RecruiterApplication = {
     apply: BASE_URL + "/recruiter-applications"
 }
 
+export const SuspensionAppeal = {
+    submit: BASE_URL + "/appeal-suspension"
+}
+
 export const Notifications = {
     list: BASE_URL + "/notifications",
     unreadcount: BASE_URL + "/notifications/unread-count",
