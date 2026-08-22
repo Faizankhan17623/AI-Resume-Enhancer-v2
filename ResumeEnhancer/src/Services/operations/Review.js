@@ -20,8 +20,9 @@ const { leaderboard, weeklyReviews, streaks } = LeaderboardApi
 // FormData because the backend reads req.files.PDf
 export function CreateReview(pdfFile, jd, token, navigate) {
     return async (dispatch) => {
+        // no loading toast here sir — NewReview.jsx already renders a full centered <Loading>
+        // while setLoading(true) is on, so a toast on top of it was a second, redundant spinner
         dispatch(setLoading(true))
-        const toastId = toast.loading("Analyzing your resume — this takes a few seconds...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -49,7 +50,6 @@ export function CreateReview(pdfFile, jd, token, navigate) {
             toast.error(message)
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -57,8 +57,8 @@ export function CreateReview(pdfFile, jd, token, navigate) {
 // same as CreateReview sir, but re-scores a previously saved resume — no PDF re-upload needed
 export function CreateReviewFromResume(resumeId, jd, token, navigate) {
     return async (dispatch) => {
+        // no loading toast here either sir, same reason as CreateReview above
         dispatch(setLoading(true))
-        const toastId = toast.loading("Analyzing your resume — this takes a few seconds...")
         try {
             const response = await apiConnector("POST", `${reviewFromResume}/${resumeId}`, { jd }, {
                 Authorization: `Bearer ${token}`
@@ -82,7 +82,6 @@ export function CreateReviewFromResume(resumeId, jd, token, navigate) {
             toast.error(message)
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
