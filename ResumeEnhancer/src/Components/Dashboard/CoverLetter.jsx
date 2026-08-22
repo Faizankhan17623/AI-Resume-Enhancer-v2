@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
@@ -25,6 +25,7 @@ const CoverLetter = () => {
   const [jd, setJd] = useState('')
   const [dragging, setDragging] = useState(false)
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { token, user } = useSelector((state) => state.auth)
   const { content, generating, genericCheck } = useSelector((state) => state.coverLetter)
 
@@ -71,6 +72,14 @@ const CoverLetter = () => {
     setJd('')
   }
 
+  // there was no way off this result view before sir — "Write another" only reset the form,
+  // it never actually left the page. This clears state the same way startOver does, then
+  // navigates back to the dashboard so the user isn't stuck here.
+  const closeResult = () => {
+    startOver()
+    navigate('/Dashboard')
+  }
+
   return (
     <DashboardLayout title="Cover letter generator">
       <Helmet>
@@ -113,20 +122,36 @@ const CoverLetter = () => {
             <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 md:p-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-lg text-richblack-5">Your cover letter</h2>
-                <button
-                  onClick={() => copyText(content)}
-                  className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer"
-                  title="Copy"
-                >
-                  <FaCopy />
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => copyText(content)}
+                    className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer"
+                    title="Copy"
+                  >
+                    <FaCopy />
+                  </button>
+                  <button
+                    onClick={closeResult}
+                    className="text-richblack-300 hover:text-pink-200 transition-colors duration-200 cursor-pointer"
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
               </div>
               <p className="text-sm text-richblack-100 leading-relaxed whitespace-pre-wrap">{content}</p>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeResult}
+                className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+              >
+                Close
+              </button>
               <button
                 onClick={startOver}
-                className="px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+                className="px-4 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer"
               >
                 Write another
               </button>
