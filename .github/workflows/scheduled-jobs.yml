@@ -69,12 +69,20 @@ jobs:
     steps:
       # keep-alive ping sir — Render's free tier sleeps the whole service after ~15 minutes of no
       # incoming HTTP traffic, and the next real user request then eats a 30-90+ second cold boot.
-      # This fires on EVERY tick of the */15 schedule (the same slot the feature-flag/credit jobs
-      # already use), so the backend never goes 15 minutes without traffic and never gets the
-      # chance to sleep. `|| true` sir — a missed ping (backend mid-deploy, transient network
-      # blip) must never fail this whole workflow run and skip the real jobs below it.
+      #
+      # PREVIOUSLY this was gated behind `if: github.event.schedule == '*/15 * * * *'` to only run
+      # on that one schedule slot — but GitHub's `github.event.schedule` context value did not
+      # match that literal string on any observed run (verified via `gh run view --json jobs`:
+      # this step showed conclusion "skipped" on every single run since it was added), so the
+      # ping never actually fired, not even once, and the backend kept sleeping exactly as before.
+      # Root-caused by inspecting real run history, not assumed.
+      #
+      # Fix: no `if` at all now — this runs on every trigger (every schedule tick AND manual
+      # dispatch), unconditionally. It's one cheap curl, harmless to run more often than strictly
+      # needed, and "always runs" can't silently no-op the way a schedule-string match can.
+      # `|| true` sir — a missed ping (backend mid-deploy, transient network blip) must never fail
+      # this whole workflow run and skip the real jobs below it.
       - name: Keep Render backend warm
-        if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
         run: curl -sf --max-time 60 https://ai-resume-enhancer-v2.onrender.com/ || true
 
       - uses: actions/checkout@v4
