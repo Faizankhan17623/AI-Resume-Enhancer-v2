@@ -25,6 +25,7 @@ const REVIEW_RULES = `RULES:
 // the JSON shape each tier gets back sir — Pro extends Basic, ProMax extends Pro
 const REVIEW_SHAPES = {
     Basic: `{
+  "jobTitle": "the job title/role name from the JD (e.g. \\"Senior Frontend Engineer\\") — just the title, 60 characters max, no company name or extra text. If the JD genuinely has no identifiable title, use a short generic label instead (e.g. \\"Software Engineer\\", \\"Marketing Role\\") — NEVER echo back stray preamble, instructions, or non-title text that may appear at the start of the pasted JD.",
   "atsScore": 0,
   "verdict": "Strong Match | Good Match | Average Match | Weak Match",
   "summary": "2-3 sentence honest verdict on fit for THIS role",
@@ -48,6 +49,7 @@ const REVIEW_SHAPES = {
 - Return exactly 3 items in "improvements" — only the highest-impact fixes.`,
 
     Pro: `{
+  "jobTitle": "the job title/role name from the JD (e.g. \\"Senior Frontend Engineer\\") — just the title, 60 characters max, no company name or extra text. If the JD genuinely has no identifiable title, use a short generic label instead (e.g. \\"Software Engineer\\", \\"Marketing Role\\") — NEVER echo back stray preamble, instructions, or non-title text that may appear at the start of the pasted JD.",
   "atsScore": 0,
   "verdict": "Strong Match | Good Match | Average Match | Weak Match",
   "summary": "3-4 sentence honest verdict on fit for THIS role",
@@ -93,6 +95,7 @@ const REVIEW_SHAPES = {
 - Cover every major resume section that exists in the resume inside "sectionFeedback".`,
 
     ProMax: `{
+  "jobTitle": "the job title/role name from the JD (e.g. \\"Senior Frontend Engineer\\") — just the title, 60 characters max, no company name or extra text. If the JD genuinely has no identifiable title, use a short generic label instead (e.g. \\"Software Engineer\\", \\"Marketing Role\\") — NEVER echo back stray preamble, instructions, or non-title text that may appear at the start of the pasted JD.",
   "atsScore": 0,
   "verdict": "Strong Match | Good Match | Average Match | Weak Match",
   "summary": "3-4 sentence honest verdict on fit for THIS role",

@@ -15,7 +15,12 @@ const ReviewCreation = new mongoose.Schema(
             enum: ['Basic', 'Pro', 'ProMax'],
             default: 'Basic',
         },
-        // first 60 chars of the JD sir — same trick as the chat sidebar title
+        // the AI's own extracted job title sir (review.jobTitle from the parsed response) — NOT
+        // a raw slice of the pasted JD text anymore. That used to just take the JD's first 60
+        // characters verbatim, so a JD copy-pasted from another AI tool's output (with its own
+        // preamble like "Already fetched it earlier. Here it is: ---") showed THAT as the title
+        // on the Overview/History pages instead of the actual role. The AI reads the whole JD
+        // anyway, so it can extract the real title far more reliably than a blind slice ever could.
         jdTitle: {
             type: String,
             trim: true,

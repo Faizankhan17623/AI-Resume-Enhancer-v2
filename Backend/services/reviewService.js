@@ -182,6 +182,13 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         return { ok: false, status: 502, message: 'The AI response was incomplete, please try again' }
     }
 
+    // the AI's own extracted title sir — see Models/Review.js for why this replaced a raw slice
+    // of the pasted JD text. Still falls back to that slice if the model ever omits jobTitle or
+    // returns something unusable (blank, not a string), so a saved review is never left titleless.
+    const jobTitle = (typeof review.jobTitle === 'string' && review.jobTitle.trim())
+        ? review.jobTitle.trim().slice(0, 60)
+        : jd.trim().slice(0, 60)
+
     // save the review for history + the score-progress graph sir. A save failure must never eat a
     // review the user already paid a credit for, so it only logs.
     let reviewId = null
@@ -189,7 +196,7 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
         const saved = await Review.create({
             user: userId,
             plan: spend.plan,
-            jdTitle: jd.trim().slice(0, 60),
+            jdTitle: jobTitle,
             atsScore: review.atsScore,
             verdict: review.verdict,
             scoreBreakdown: review.scoreBreakdown,
