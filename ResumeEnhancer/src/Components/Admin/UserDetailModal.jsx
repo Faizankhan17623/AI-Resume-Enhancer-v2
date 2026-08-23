@@ -49,7 +49,7 @@ const UserDetailModal = ({ userId, onClose }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 10 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed z-[61] inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-[92%] max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-700 p-6 shadow-2xl shadow-richblack-900/50"
+            className="fixed z-[61] inset-x-0 top-1/2 -translate-y-1/2 mx-auto w-[92%] max-w-lg max-h-[85vh] overflow-y-auto thin-scrollbar rounded-2xl bg-richblack-800 border border-richblack-700 p-6 shadow-2xl shadow-richblack-900/50"
           >
             <button
               onClick={onClose}

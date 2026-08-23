@@ -200,40 +200,40 @@ body {
     color: var(--color-richblack-5);
 }
 
-/* thin styled scrollbar for the chat thread sir */
-.thin-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-.thin-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-richblack-800);
-}
-.thin-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-richblack-600);
-    border-radius: 9999px;
-}
-
-/* the dashboard sidebar's own scroll sir — thinner than .thin-scrollbar above and with a
-   TRANSPARENT track (not a filled one), so it reads as a barely-there hairline rather than a
-   visible bar, and disappears entirely against the sidebar's own background when not hovered.
-   Firefox has no ::-webkit-scrollbar pseudo-elements at all, so scrollbar-width/scrollbar-color
-   are the only way to thin it there — both rules are needed, one covers each browser family. */
+/* every boxed in-page scroll area (chat thread, sidebar nav, mock interview transcript, job
+   applications list, template slider, notification dropdown...) shares this ONE scrollbar look
+   sir — same hairline sizing everywhere, not a per-page choice. .thin-scrollbar used to be its
+   own separate, thicker (6px, filled-track) style; merged into .hairline-scrollbar so every
+   existing .thin-scrollbar usage picks up the same thinner, near-invisible treatment
+   automatically, with no per-file changes needed. Keep BOTH class names as selectors here (some
+   files use one name, some the other) rather than renaming every usage — they are the same rule.
+   Transparent by default, fades in a thin 3px line only on hover; disappears entirely against
+   its own background otherwise. Firefox has no ::-webkit-scrollbar pseudo-elements at all, so
+   scrollbar-width/scrollbar-color are the only way to thin it there — both rules are needed, one
+   covers each browser family. */
+.thin-scrollbar,
 .hairline-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
 }
+.thin-scrollbar:hover,
 .hairline-scrollbar:hover {
     scrollbar-color: var(--color-richblack-600) transparent;
 }
+.thin-scrollbar::-webkit-scrollbar,
 .hairline-scrollbar::-webkit-scrollbar {
     width: 3px;
 }
+.thin-scrollbar::-webkit-scrollbar-track,
 .hairline-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
+.thin-scrollbar::-webkit-scrollbar-thumb,
 .hairline-scrollbar::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 9999px;
 }
+.thin-scrollbar:hover::-webkit-scrollbar-thumb,
 .hairline-scrollbar:hover::-webkit-scrollbar-thumb {
     background: var(--color-richblack-600);
 }

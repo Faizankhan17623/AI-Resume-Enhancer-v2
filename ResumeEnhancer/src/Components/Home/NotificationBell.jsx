@@ -107,7 +107,7 @@ const NotificationBell = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full right-0 mt-3 w-80 max-h-[28rem] overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl z-50"
+            className="absolute top-full right-0 mt-3 w-80 max-h-[28rem] overflow-y-auto thin-scrollbar rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl z-50"
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-richblack-700">
               <p className="text-sm font-semibold text-richblack-5">Notifications</p>

@@ -83,7 +83,7 @@ const VersionDiffModal = ({ open, onClose, version, current, onRestore, restorin
             animate="show"
             exit="exit"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6"
+            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto thin-scrollbar rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6"
           >
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-display text-lg text-richblack-5">Compare with current</h3>
