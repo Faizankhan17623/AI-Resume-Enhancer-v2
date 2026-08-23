@@ -42,10 +42,13 @@ const ReviewCreation = new mongoose.Schema(
         // structural ATS parse-safety check sir — separate from the AI's subjective "formatting"
         // score above, this is a deterministic scan (pdfjs) for things that break real ATS parsers:
         // multi-column layout, embedded images, missing text layer, non-standard fonts
+        // NOTE sir — see Models/Resume.js's formattingCheck for the full explanation. `type:
+        // { type: String }` disambiguates Mongoose's array-shorthand collision with our own
+        // `type` field name; without it every non-empty formattingCheck failed to save.
         formattingCheck: {
             score: Number,
             issues: [{
-                type: String,
+                type: { type: String },
                 severity: { type: String, enum: ['high', 'medium', 'low'] },
                 message: String,
             }],

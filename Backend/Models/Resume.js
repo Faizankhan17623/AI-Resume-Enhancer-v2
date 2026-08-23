@@ -34,8 +34,18 @@ const resumeSchema = new mongoose.Schema(
         // every review that uses this saved resume without re-scanning the PDF each time
         formattingCheck: {
             score: Number,
+            // NOTE sir — `type: String` directly inside this array's object was ambiguous: a key
+            // literally named `type` at an object's first level is Mongoose's own shorthand
+            // syntax marker ("this whole array is of type String"), so Mongoose silently
+            // interpreted the ENTIRE issue object as a plain string instead of a subdocument —
+            // severity/message were dropped from the real schema. Every non-empty formattingCheck
+            // (any resume that actually triggered an issue: multi-column, no text layer, etc.)
+            // then failed to save with a CastError, and the failure was only ever logged, never
+            // surfaced. Wrapping `type: { type: String }` is Mongoose's documented escape hatch
+            // for this exact collision — it disambiguates without changing the issue object's
+            // shape (atsFormatCheck.js still emits { type, severity, message } unchanged).
             issues: [{
-                type: String,
+                type: { type: String },
                 severity: { type: String, enum: ['high', 'medium', 'low'] },
                 message: String,
             }],
