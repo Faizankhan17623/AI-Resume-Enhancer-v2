@@ -26,6 +26,15 @@ const requestContext = (req, res, next) => {
 
     const startedAt = process.hrtime.bigint()
 
+    // logged at ARRIVAL, not just completion sir — added specifically because a request that
+    // hangs forever (accepted, never answered) never fires res.on('finish') below, so it was
+    // previously invisible in the logs no matter the LOG_LEVEL: no line ever got written for it
+    // at all. This one line is the only way to tell "never arrived" apart from "arrived but got
+    // stuck" when debugging exactly that symptom.
+    if (!QUIET_PATHS.has(req.originalUrl)) {
+        req.log.info('request received', { method: req.method, path: req.originalUrl })
+    }
+
     // 'finish' fires once the response is fully flushed sir — that's when status and duration
     // are actually known
     res.on('finish', () => {
@@ -33,9 +42,12 @@ const requestContext = (req, res, next) => {
 
         const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6
 
-        // 5xx is a real fault and deserves error level; everything else is routine traffic and
-        // sits at debug so it doesn't drown the signal in production
-        const level = res.statusCode >= 500 ? 'error' : 'debug'
+        // 5xx is a real fault and deserves error level; everything else is routine traffic sir —
+        // bumped from debug to info (production's default LOG_LEVEL, see utils/logger.js) so
+        // paired with the "request received" line above, every request's full lifecycle
+        // (arrived -> completed-or-never) is visible on Render's log tail without having to
+        // change LOG_LEVEL first. Still one level below error so a real fault stands out.
+        const level = res.statusCode >= 500 ? 'error' : 'info'
 
         req.log[level]('request completed', {
             method: req.method,
