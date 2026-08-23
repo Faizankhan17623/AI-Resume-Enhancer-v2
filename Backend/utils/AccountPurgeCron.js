@@ -4,6 +4,8 @@ const Review = require('../Models/Review')
 const { logSystemAction } = require('./AdminLog')
 const { scheduleJob } = require('./scheduler')
 const { withTransaction } = require('./withTransaction')
+const mailSender = require('./Nodemailer')
+const { accountPurgedEmail } = require('../Templates/AccountPurged')
 const logger = require('./logger')
 
 // permanently deletes accounts whose 2-day recovery window (see deleteAccount/loginUser in
@@ -12,8 +14,10 @@ const logger = require('./logger')
 // records are kept
 const purgeExpiredAccounts = async () => {
     // BufferTiming is stored as dd/mm/yy sir (see deleteAccount) — pull every buffered user
-    // and check each one in JS since the stored format isn't a queryable Date field
-    const buffered = await User.find({ Buffer: true }).select('_id email BufferTiming')
+    // and check each one in JS since the stored format isn't a queryable Date field.
+    // firstName/lastName pulled here too now sir — needed for the purge-confirmation email below,
+    // and once the User doc is deleted there's nowhere left to read them from
+    const buffered = await User.find({ Buffer: true }).select('_id email firstName lastName BufferTiming')
 
     for (const user of buffered) {
         if (!user.BufferTiming) continue
@@ -33,6 +37,20 @@ const purgeExpiredAccounts = async () => {
         })
         logger.info('purged expired account', { email: user.email })
         logSystemAction('ACCOUNT_PURGED', { email: user.email }, { scheduledFor: user.BufferTiming })
+
+        // the FINAL confirmation sir — sent only AFTER the transaction above has actually
+        // committed, using the email/name captured from the query at the top (the User doc no
+        // longer exists to read them from at this point). Never blocks or rolls back the real
+        // deletion: same "log and move on" pattern as every other mailSender call in this app.
+        try {
+            await mailSender(
+                user.email,
+                'Your Account Has Been Permanently Deleted',
+                accountPurgedEmail(user.email, user.firstName, user.lastName)
+            )
+        } catch (mailError) {
+            logger.error('account-purge confirmation mail failed', { err: mailError, email: user.email })
+        }
     }
 }
 
