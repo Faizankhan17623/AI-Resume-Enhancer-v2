@@ -109,8 +109,11 @@ const Banner = () => {
           ))}
         </div>
 
-        {/* Resume + score mockup sir, kept as a supporting visual under the fold */}
-        <div data-hero-mockup className="relative mt-4 max-w-sm mx-auto">
+        {/* Resume + score mockup sir, kept as a supporting visual under the fold. mt-16 (not mt-4)
+            sir — the card also lifts on hover (hover:-translate-y-1.5, see below), and mt-4 left
+            so little clearance from the callout row above that hovering the card pushed it up
+            into the callouts' text, overlapping them */}
+        <div data-hero-mockup className="relative mt-16 max-w-sm mx-auto">
           <div className="rounded-2xl bg-richblack-5 border border-richblack-700 p-7 shadow-2xl text-left transition-transform duration-500 hover:-translate-y-1.5 hover:rotate-0 rotate-[-1deg]">
             <div className="flex items-center gap-3 pb-4 border-b-2 border-richblack-900/10">
               <div className="w-12 h-12 rounded-full bg-warm-200 shrink-0 flex items-center justify-center text-richblack-900 font-bold text-sm">
