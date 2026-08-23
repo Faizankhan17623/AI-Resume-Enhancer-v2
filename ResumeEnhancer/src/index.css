@@ -211,3 +211,29 @@ body {
     background: var(--color-richblack-600);
     border-radius: 9999px;
 }
+
+/* the dashboard sidebar's own scroll sir — thinner than .thin-scrollbar above and with a
+   TRANSPARENT track (not a filled one), so it reads as a barely-there hairline rather than a
+   visible bar, and disappears entirely against the sidebar's own background when not hovered.
+   Firefox has no ::-webkit-scrollbar pseudo-elements at all, so scrollbar-width/scrollbar-color
+   are the only way to thin it there — both rules are needed, one covers each browser family. */
+.hairline-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+.hairline-scrollbar:hover {
+    scrollbar-color: var(--color-richblack-600) transparent;
+}
+.hairline-scrollbar::-webkit-scrollbar {
+    width: 3px;
+}
+.hairline-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.hairline-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+}
+.hairline-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: var(--color-richblack-600);
+}

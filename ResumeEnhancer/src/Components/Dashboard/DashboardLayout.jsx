@@ -69,7 +69,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
       </span>
     </Link>
 
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 pr-0.5">
+    <div className="flex-1 min-h-0 overflow-y-auto hairline-scrollbar flex flex-col gap-4 pr-0.5">
       {/* banned sir — the ENTIRE normal nav is replaced by this one locked item. Every other
           Dashboard route redirects to Suspended anyway (PrivateRoute), so linking to them here
           would just be a dead end; better to make the lock visible instead of pretending
