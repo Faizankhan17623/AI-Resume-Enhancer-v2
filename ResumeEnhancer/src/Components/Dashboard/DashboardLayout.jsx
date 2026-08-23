@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
-import { FiSun, FiMoon, FiMenu, FiX } from 'react-icons/fi'
+import { FiSun, FiMoon, FiMenu, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
@@ -143,6 +143,7 @@ const SIDEBAR_MIN = 200
 const SIDEBAR_MAX = 380
 const SIDEBAR_DEFAULT = 240 // matches the old fixed w-60
 const SIDEBAR_STORAGE_KEY = 'resumify:sidebarWidth'
+const SIDEBAR_COLLAPSED_KEY = 'resumify:sidebarCollapsed'
 
 const DashboardLayout = ({ title, children }) => {
   const location = useLocation()
@@ -161,6 +162,13 @@ const DashboardLayout = ({ title, children }) => {
   })
   const [resizing, setResizing] = useState(false)
   const resizeStateRef = useRef({ startX: 0, startWidth: SIDEBAR_DEFAULT })
+
+  // fully hide/show the desktop sidebar sir — separate from the width above (that's HOW wide it
+  // is when open, this is whether it's open at all). Same localStorage-persisted pattern.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true')
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed))
+  }, [sidebarCollapsed])
 
   const handleResizeStart = useCallback((e) => {
     resizeStateRef.current = { startX: e.clientX, startWidth: sidebarWidth }
@@ -195,22 +203,44 @@ const DashboardLayout = ({ title, children }) => {
 
   return (
     <div className={`fixed inset-0 flex bg-richblack-900 overflow-hidden ${resizing ? 'select-none cursor-col-resize' : ''}`}>
-      {/* Desktop sidebar sir — width is user-resizable via the drag handle on its right edge */}
-      <aside
-        style={{ width: sidebarWidth }}
-        className="hidden lg:flex shrink-0 flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4 relative"
+      {/* Desktop sidebar sir — width is user-resizable via the drag handle on its right edge,
+          and the whole thing can be fully collapsed via the toggle button pinned to its edge.
+          overflow-hidden on the wrapper (not SidebarContent itself) so its content doesn't
+          reflow/wrap mid-collapse-animation — it just gets clipped as the width animates to 0. */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        transition={resizing ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden lg:block shrink-0 relative overflow-hidden"
       >
-        <SidebarContent pathname={location.pathname} user={user} streak={streak} />
         <div
-          onMouseDown={handleResizeStart}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          className="hidden lg:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize group z-10"
+          style={{ width: sidebarWidth }}
+          className="h-full flex flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4"
         >
-          <div className={`h-full w-px mx-auto transition-colors duration-150 ${resizing ? 'bg-yellow-50' : 'bg-transparent group-hover:bg-yellow-50/60'}`} />
+          <SidebarContent pathname={location.pathname} user={user} streak={streak} />
         </div>
-      </aside>
+        {!sidebarCollapsed && (
+          <div
+            onMouseDown={handleResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            className="hidden lg:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize group z-10"
+          >
+            <div className={`h-full w-px mx-auto transition-colors duration-150 ${resizing ? 'bg-yellow-50' : 'bg-transparent group-hover:bg-yellow-50/60'}`} />
+          </div>
+        )}
+      </motion.aside>
+
+      {/* collapse/expand toggle sir — pinned to the sidebar's right edge so it stays reachable
+          whether the sidebar is open or fully hidden, same idea as VS Code/Notion's rail toggle */}
+      <button
+        onClick={() => setSidebarCollapsed((v) => !v)}
+        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="hidden lg:flex absolute top-1/2 -translate-y-1/2 z-20 w-5 h-10 items-center justify-center rounded-r-lg bg-richblack-800 border border-l-0 border-richblack-700 text-richblack-300 hover:text-richblack-5 hover:bg-richblack-700 cursor-pointer"
+        style={{ left: sidebarCollapsed ? 0 : sidebarWidth, transition: resizing ? 'none' : 'left 0.25s cubic-bezier(0.16,1,0.3,1), color 0.2s, background-color 0.2s' }}
+      >
+        {sidebarCollapsed ? <FiChevronRight className="text-xs" /> : <FiChevronLeft className="text-xs" />}
+      </button>
 
       {/* Mobile slide-over sir — hidden by default, hamburger-triggered */}
       <AnimatePresence>
