@@ -77,8 +77,27 @@ app.use((req, res, next) => {
 const allowedOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
     : (process.env.NODE_ENV === 'production' ? [] : true)
+
+// Vercel gives every deploy of THIS project its own throwaway URL sir
+// (ai-resume-enhancer-v2-<hash>-faizan-khans-projects-6a6ea604.vercel.app), on top of the one
+// stable production domain in allowedOrigins above. A user landing on one of those (a leftover
+// tab from a deploy output, a shared preview link) got hard CORS-blocked because that exact
+// origin was never in the allowlist — this regex accepts any deployment URL for this specific
+// Vercel project/team, not just the one pinned production alias. Scoped tight to this project's
+// own slug + team id so it can't be satisfied by an unrelated vercel.app site.
+const VERCEL_PROJECT_ORIGIN = /^https:\/\/ai-resume-enhancer-v2(-[a-z0-9]+)?-faizan-khans-projects-6a6ea604\.vercel\.app$/
+
+const isAllowedOrigin = (origin, callback) => {
+    if (!origin) return callback(null, true) // same-origin / non-browser clients send no Origin header
+    if (allowedOrigins === true) return callback(null, true)
+    if (Array.isArray(allowedOrigins) && (allowedOrigins.includes(origin) || VERCEL_PROJECT_ORIGIN.test(origin))) {
+        return callback(null, true)
+    }
+    return callback(null, false)
+}
+
 app.use(cors({
-    origin: allowedOrigins,
+    origin: isAllowedOrigin,
     credentials: true
 }))
 app.use(cookieParser())
