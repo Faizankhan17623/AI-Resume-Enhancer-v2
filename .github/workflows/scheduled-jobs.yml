@@ -67,6 +67,16 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # keep-alive ping sir — Render's free tier sleeps the whole service after ~15 minutes of no
+      # incoming HTTP traffic, and the next real user request then eats a 30-90+ second cold boot.
+      # This fires on EVERY tick of the */15 schedule (the same slot the feature-flag/credit jobs
+      # already use), so the backend never goes 15 minutes without traffic and never gets the
+      # chance to sleep. `|| true` sir — a missed ping (backend mid-deploy, transient network
+      # blip) must never fail this whole workflow run and skip the real jobs below it.
+      - name: Keep Render backend warm
+        if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+        run: curl -sf --max-time 60 https://ai-resume-enhancer-v2.onrender.com/ || true
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
