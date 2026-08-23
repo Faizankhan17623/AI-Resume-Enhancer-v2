@@ -185,6 +185,21 @@ body {
     animation: marquee 28s linear infinite;
 }
 
+/* SweetAlert2 form inputs sir — swalDark (Admin/Users.jsx etc) only styles the modal chrome
+   (background/text/buttons), it never touches an `input: 'select'`/`input: 'text'` field's own
+   element, which SweetAlert2 renders with browser-default styling: a plain WHITE background with
+   dark text, clashing hard against the dark modal around it. Applied via Swal's `customClass:
+   { input: 'swal-dark-select' }` on any Swal.fire call that uses an input. */
+.swal-dark-select {
+    background-color: var(--color-richblack-900) !important;
+    color: var(--color-richblack-5) !important;
+    border: 1px solid var(--color-richblack-600) !important;
+}
+.swal-dark-select option {
+    background-color: var(--color-richblack-900);
+    color: var(--color-richblack-5);
+}
+
 /* thin styled scrollbar for the chat thread sir */
 .thin-scrollbar::-webkit-scrollbar {
     width: 6px;

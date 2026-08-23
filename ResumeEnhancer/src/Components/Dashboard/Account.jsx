@@ -161,6 +161,7 @@ const Account = () => {
       icon: 'warning',
       input: 'text',
       inputPlaceholder: 'delete my account',
+      customClass: { input: 'swal-dark-select' },
       inputValidator: (value) => {
         if ((value || '').trim().toLowerCase() !== 'delete my account') {
           return 'Please type "delete my account" exactly to confirm'

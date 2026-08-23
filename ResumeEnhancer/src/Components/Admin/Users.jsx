@@ -101,6 +101,7 @@ const Users = () => {
         title: `Suspend ${selected.length} account${selected.length === 1 ? '' : 's'}?`,
         input: 'text',
         inputPlaceholder: 'Reason for the ban',
+        customClass: { input: 'swal-dark-select' },
         showCancelButton: true,
         confirmButtonText: 'Suspend all',
         confirmButtonColor: '#C1443C',
@@ -156,6 +157,7 @@ const Users = () => {
       title: `Suspend ${target.email}?`,
       input: 'text',
       inputPlaceholder: 'Reason for the ban',
+      customClass: { input: 'swal-dark-select' },
       showCancelButton: true,
       confirmButtonText: 'Suspend',
       confirmButtonColor: '#C1443C',
@@ -173,6 +175,7 @@ const Users = () => {
       input: 'select',
       inputOptions: { Basic: 'Basic', Pro: 'Pro', ProMax: 'Pro Max' },
       inputValue: target.SubType || 'Basic',
+      customClass: { input: 'swal-dark-select' },
       showCancelButton: true,
       confirmButtonText: 'Set plan',
     })

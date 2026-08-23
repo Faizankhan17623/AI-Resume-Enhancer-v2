@@ -55,6 +55,7 @@ const RecruiterApplications = () => {
       title: `Reject ${applicant.email}'s application?`,
       input: 'text',
       inputPlaceholder: 'Reason (optional, shown to the applicant)',
+      customClass: { input: 'swal-dark-select' },
       showCancelButton: true,
       confirmButtonText: 'Reject',
       confirmButtonColor: '#C1443C',
