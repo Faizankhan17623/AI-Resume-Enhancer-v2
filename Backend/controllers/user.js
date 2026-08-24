@@ -213,26 +213,38 @@ const grantReferralBonus = async (referredUser, referrerId) => {
     const grantCredits = bothAreUsers && underCap
 
     if (grantCredits) {
-        // count can never go below zero sir — same clamp Admin.js's adjustCredits uses. A raw
-        // $inc could take it negative, which the Account page's credits-used progress bar
-        // (creditsUsed / creditsLimit) would render as a negative-width bar.
-        await User.findByIdAndUpdate(referredUser._id, { count: Math.max(0, claimed.count - REFERRAL_BONUS_CREDITS) })
+        // count can never go below zero sir — same clamp Admin.js's adjustCredits uses, done as
+        // an aggregation-pipeline update so the read-and-clamp happens atomically IN the write
+        // rather than a separate read (claimed.count) followed by a plain overwrite. The referred
+        // account is already race-safe via the referralBonusGranted flip above (only one caller
+        // ever reaches this line for a given account), but this form is used here too for
+        // consistency with the referrer's update just below, which genuinely needs it.
+        await User.updateOne(
+            { _id: referredUser._id },
+            [{ $set: { count: { $max: [0, { $subtract: ['$count', REFERRAL_BONUS_CREDITS] }] } } }]
+        )
     }
 
     // referralCount (the dashboard's "X of 10 used" cap display) only climbs for the credit-
     // earning case sir — a Recruiter referral doesn't consume any of the cap since it never
     // costs anything to grant
-    let updatedReferrerCount = referrer.count
     if (grantCredits) {
-        const updatedReferrer = await User.findOneAndUpdate(
+        // sir — found live via security review: this used to read referrer.count once, compute
+        // count - REFERRAL_BONUS_CREDITS in application code, then overwrite it with a plain
+        // findByIdAndUpdate. Two people referred by the same User logging in within milliseconds
+        // of each other could both read the same starting count and each write back the SAME
+        // decremented value, silently dropping one of the two bonus credits. The fix does the
+        // cap check, the referralCount bump, AND the count decrement in ONE atomic
+        // aggregation-pipeline update — no separate read of the pre-update value at all.
+        await User.updateOne(
             { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
-            { $inc: { referralCount: 1 } },
-            { new: true }
-        ).select('count')
-        if (updatedReferrer) {
-            updatedReferrerCount = Math.max(0, updatedReferrer.count - REFERRAL_BONUS_CREDITS)
-            await User.findByIdAndUpdate(referrerId, { count: updatedReferrerCount })
-        }
+            [{
+                $set: {
+                    referralCount: { $add: ['$referralCount', 1] },
+                    count: { $max: [0, { $subtract: ['$count', REFERRAL_BONUS_CREDITS] }] },
+                },
+            }]
+        )
     }
 
     const grantedAt = new Date()

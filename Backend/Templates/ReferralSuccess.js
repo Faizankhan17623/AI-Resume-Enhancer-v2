@@ -1,7 +1,17 @@
+const { escapeHtml } = require('../utils/escapeHtml')
+
 // sent to the REFERRER once, right when their invite pays out (see controllers/user.js's
 // grantReferralBonus) sir — bonusCredits is 0 for a Recruiter referrer (see ReferralLog.js), the
 // copy below adapts so it never claims credits that weren't actually granted.
+//
+// referrerName/referredName are escaped sir — both ultimately come from a User's firstName/
+// lastName, which Zod only length-checks (Validation/schemas.js), never strips HTML from. An
+// unauthenticated signup with an HTML/link payload as their name would otherwise land unescaped
+// in this email, sent to a THIRD PARTY (their referrer) from a real support@ address — found
+// live during a security review, this is the fix.
 exports.referralSuccessTemplate = (referrerName, referredName, bonusCredits, grantedAt) => {
+  referrerName = escapeHtml(referrerName)
+  referredName = escapeHtml(referredName)
   const grantedDate = new Date(grantedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   const bonusLine = bonusCredits > 0
     ? `<strong style="color:#F9FAFB;">${bonusCredits} bonus AI credits</strong> were added to your account on <strong style="color:#F9FAFB;">${grantedDate}</strong>.`

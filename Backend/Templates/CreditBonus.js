@@ -1,7 +1,18 @@
+const { escapeHtml } = require('../utils/escapeHtml')
+
 // sent when an admin grants bonus credits sir — controllers/Admin.js's adjustCredits (single
 // user, negative delta only) and grantCreditsToAll (broadcast). Deliberately does NOT fire for a
 // positive delta (a charge/correction, not a gift) — see the isBonus check at each call site.
+//
+// name/reason are escaped sir — name is the recipient's own firstName (Zod only length-checks
+// it, never strips HTML), and reason is free-text an admin/support staffer types into the
+// dialog. Neither was HTML-escaped before reaching this template: a compromised or careless
+// Support account could inject arbitrary HTML/links into an email sent to one user, or — via the
+// grantCreditsToAll broadcast — to every User account in a single call. Found live during a
+// security review, this is the fix.
 exports.creditBonusTemplate = (name, credits, reason) => {
+  name = escapeHtml(name)
+  reason = escapeHtml(reason)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
