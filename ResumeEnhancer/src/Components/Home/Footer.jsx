@@ -56,7 +56,7 @@ const Footer = () => {
       </svg>
 
       <div data-reveal className="max-w-7xl mx-auto px-6 pt-16 pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-10">
 
           {/* Brand + socials sir */}
           <div className="col-span-2 md:col-span-2 flex flex-col gap-4">
