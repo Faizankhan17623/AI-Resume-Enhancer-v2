@@ -8,7 +8,7 @@ import {
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
-const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, deleteuser } = AdminUsers
+const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
@@ -227,8 +227,33 @@ export const UpdateUserRole = (userId, role, token, page, search, roleFilter) =>
 export const UpdateUserPlan = (userId, plan, token, page, search, roleFilter) =>
     userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, "Updating the plan...", roleFilter)
 
-export const AdjustCredits = (userId, delta, token, page, search, roleFilter) =>
-    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { delta }, token, page, search, "Adjusting the credits...", roleFilter)
+export const AdjustCredits = (userId, delta, reason, token, page, search, roleFilter) =>
+    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { delta, ...(reason ? { reason } : {}) }, token, page, search, "Adjusting the credits...", roleFilter)
+
+// broadcast bonus sir — not a userAction() call like the others: it doesn't target a single row,
+// so there's no page/search/roleFilter to refetch against automatically. Caller (Users.jsx)
+// dispatches this directly and refetches its own list afterward.
+export const GrantCreditsToAll = (credits, reason, token) => async (dispatch) => {
+    const toastId = toast.loading('Granting bonus credits to everyone...')
+    try {
+        const response = await apiConnector("POST", grantcreditsall, { credits, ...(reason ? { reason } : {}) }, {
+            Authorization: `Bearer ${token}`
+        })
+
+        if (!response.data.success) {
+            throw new Error(response.data.message)
+        }
+
+        dispatch(GetUsers(token, 1, '', ''))
+        return response.data.message
+    } catch (error) {
+        logApiError("Grant credits to all failed", error)
+        toast.error(error?.response?.data?.message || "The bulk grant failed")
+        return null
+    } finally {
+        toast.dismiss(toastId)
+    }
+}
 
 export const BanUser = (userId, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...", roleFilter)

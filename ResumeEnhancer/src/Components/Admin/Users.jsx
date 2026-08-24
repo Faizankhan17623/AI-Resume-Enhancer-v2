@@ -3,12 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
-import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload } from 'react-icons/fa'
+import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift } from 'react-icons/fa'
+import toast from 'react-hot-toast'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import { getProviderMeta } from '../../utils/authProvider'
 import UserDetailModal from './UserDetailModal'
@@ -133,18 +134,61 @@ const Users = () => {
     setSelected([])
   }
 
-  // ask for the credit delta sir — negative refunds, positive charges
+  // ask for the credit delta sir — negative refunds/bonuses (which email the user), positive charges (silent)
   const handleCredits = async (target) => {
     const { value } = await Swal.fire({
       ...swalDark,
       title: 'Adjust credits',
-      text: `${target.email} has used ${target.count} credits. Negative refunds (e.g. -1), positive charges.`,
-      input: 'number',
-      inputPlaceholder: '-1',
+      html: `
+        <p style="font-size:13px;color:#B8B0A0;margin-bottom:10px;">${target.email} has used ${target.count} credits. Negative grants a bonus (emails the user), positive charges.</p>
+        <input id="swal-delta" type="number" placeholder="-1" class="swal2-input" style="margin:0 0 8px;">
+        <input id="swal-reason" type="text" placeholder="Reason (optional, shown in the bonus email)" class="swal2-input" style="margin:0;">
+      `,
       showCancelButton: true,
+      focusConfirm: false,
+      preConfirm: () => ({
+        delta: parseInt(document.getElementById('swal-delta').value),
+        reason: document.getElementById('swal-reason').value,
+      }),
     })
-    const delta = parseInt(value)
-    if (delta) dispatch(AdjustCredits(target._id, delta, token, page, search, roleFilter))
+    if (value?.delta) dispatch(AdjustCredits(target._id, value.delta, value.reason, token, page, search, roleFilter))
+  }
+
+  // broadcast a bonus to every User account sir — the strongest confirm dialog in this file,
+  // matches the blast radius (every user gets an email + a credit change in one shot)
+  const handleGrantCreditsToAll = async () => {
+    const { value } = await Swal.fire({
+      ...swalDark,
+      title: 'Grant bonus credits to ALL users',
+      html: `
+        <p style="font-size:13px;color:#B8B0A0;margin-bottom:10px;">Every User account gets this many bonus credits, and an email notifying them. This cannot be undone.</p>
+        <input id="swal-credits" type="number" min="1" placeholder="5" class="swal2-input" style="margin:0 0 8px;">
+        <input id="swal-reason" type="text" placeholder="Reason (optional, shown in the email)" class="swal2-input" style="margin:0;">
+      `,
+      showCancelButton: true,
+      focusConfirm: false,
+      confirmButtonText: 'Grant to everyone',
+      confirmButtonColor: '#C1443C',
+      preConfirm: () => ({
+        credits: parseInt(document.getElementById('swal-credits').value),
+        reason: document.getElementById('swal-reason').value,
+      }),
+    })
+    if (!value?.credits || value.credits <= 0) return
+
+    const confirm = await Swal.fire({
+      ...swalDark,
+      title: `Really grant ${value.credits} credits to every user?`,
+      text: 'This is your last chance to cancel.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, grant it',
+      confirmButtonColor: '#C1443C',
+    })
+    if (!confirm.isConfirmed) return
+
+    const result = await dispatch(GrantCreditsToAll(value.credits, value.reason, token))
+    if (result) toast.success(result)
   }
 
   const handleBan = async (target) => {
@@ -257,6 +301,15 @@ const Users = () => {
           >
             <FaFileDownload /> Export CSV
           </button>
+          {isAdmin && (
+            <button
+              onClick={handleGrantCreditsToAll}
+              title="Grant bonus credits to every User account, with an email notification"
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-caribgreen-25 border border-caribgreen-700 rounded-lg hover:bg-caribgreen-700/20 transition-all duration-200 cursor-pointer"
+            >
+              <FaGift /> Grant bonus to all
+            </button>
+          )}
         </div>
 
         {/* Bulk action bar sir — Admin only, only shows once something's selected */}

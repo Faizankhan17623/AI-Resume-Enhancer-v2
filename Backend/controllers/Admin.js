@@ -10,6 +10,7 @@ const { PLANS, getEffectivePlan } = require('../utils/Plans')
 const { logAction } = require('../utils/AdminLog')
 const mailSender = require('../utils/Nodemailer.js')
 const { supportPromotionTemplate } = require('../Templates/supportPromotionTemplate.js')
+const { creditBonusTemplate } = require('../Templates/CreditBonus.js')
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
@@ -744,13 +745,16 @@ exports.banUser = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/:userId/credits — support tool sir, body: { delta }
-// delta is applied to the USED count: { delta: -1 } refunds one credit, { delta: 2 } charges two
+// PATCH /admin/users/:userId/credits — support tool sir, body: { delta, reason? }
+// delta is applied to the USED count: { delta: -1 } refunds one credit, { delta: 2 } charges two.
+// A negative delta is treated as a BONUS and emails the user sir — a positive one is a charge/
+// correction, never a gift, so it stays silent same as before.
 exports.adjustCredits = async (req, res) => {
     try {
         const actorId = req?.User.id
         const { userId } = req.params
         const delta = Number(req.body.delta)
+        const reason = (req.body.reason || '').trim()
 
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({
@@ -782,6 +786,14 @@ exports.adjustCredits = async (req, res) => {
 
         logAction(actorId, 'CREDIT_ADJUST', user, { delta, from: oldCount, to: user.count })
 
+        if (delta < 0) {
+            mailSender(
+                user.email,
+                "You've Received Bonus Credits",
+                creditBonusTemplate(user.firstName, Math.abs(delta), reason)
+            ).catch((err) => logger.error('credit bonus email failed', { err, userId: user._id }))
+        }
+
         return res.status(200).json({
             success: true,
             message: `${user.email}: used credits went ${oldCount} → ${user.count}`,
@@ -792,6 +804,62 @@ exports.adjustCredits = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while adjusting the credits',
+        })
+    }
+}
+
+// POST /admin/users/grant-credits-all — broadcast bonus credits to every User account sir,
+// body: { credits, reason? }. Admin-only (not isSupport, unlike the single-user adjustCredits
+// above) — same reasoning as bulk-ban/bulk-role: a mistake here touches every account at once,
+// not one, so it gets the stricter gate every other bulk action in this file already uses.
+//
+// Scoped to role:'User' only sir — Admin/Support/Recruiter accounts don't spend AI review
+// credits (same reasoning as the referral program's Recruiter skip in controllers/user.js), so
+// broadcasting a credit bonus to them would be a silent no-op that still spams them an email.
+exports.grantCreditsToAll = async (req, res) => {
+    try {
+        const actorId = req?.User.id
+        const credits = Number(req.body.credits)
+        const reason = (req.body.reason || '').trim()
+
+        if (!Number.isInteger(credits) || credits <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "'credits' must be a positive integer",
+            })
+        }
+
+        // same "count can never go below zero" clamp as adjustCredits sir, done in the DB with
+        // an aggregation pipeline update so updateMany can express Math.max in one write instead
+        // of loading every user into memory first
+        const result = await User.updateMany(
+            { role: 'User' },
+            [{ $set: { count: { $max: [0, { $subtract: ['$count', credits] }] } } }]
+        )
+
+        logAction(actorId, 'CREDIT_BONUS_BROADCAST', {}, { credits, reason, matched: result.matchedCount })
+
+        // fire-and-forget per-user emails sir, same pattern as the cron digest/streak/win-back
+        // mailers in utils/StreakCron.js — this can be thousands of sends, so the response below
+        // doesn't wait on any of them
+        const recipients = await User.find({ role: 'User' }).select('firstName email')
+        for (const user of recipients) {
+            mailSender(
+                user.email,
+                "You've Received Bonus Credits",
+                creditBonusTemplate(user.firstName, credits, reason)
+            ).catch((err) => logger.error('credit bonus broadcast email failed', { err, userId: user._id }))
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${result.matchedCount} user${result.matchedCount === 1 ? '' : 's'} granted ${credits} bonus credit${credits === 1 ? '' : 's'} each`,
+        })
+    } catch (error) {
+        (req.log || logger).error('grant credits to all failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while granting the bonus credits',
         })
     }
 }

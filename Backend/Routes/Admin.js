@@ -9,6 +9,7 @@ const {
     banUserSchema,
     bulkBanSchema,
     adjustCreditsSchema,
+    grantCreditsToAllSchema,
     updateUserPlanSchema,
     rejectRecruiterApplicationSchema,
 } = require('../Validation/schemas.js')
@@ -23,6 +24,7 @@ const {
     banUser,
     bulkBanUsers,
     adjustCredits,
+    grantCreditsToAll,
     impersonateUser,
     getUserReviews,
     getUserChats,
@@ -91,6 +93,9 @@ route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, valid
 route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkBanSchema }), bulkBanUsers)
 route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, validate({ body: banUserSchema }), banUser)
 route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter, impersonateUser)
+// broadcast bonus credits to every User account sir — Admin-only like every other bulk action
+// above, and registered as a literal path so it never collides with the :userId param routes
+route.post('/admin/users/grant-credits-all', Auth, isAdmin, adminWriteLimiter, validate({ body: grantCreditsToAllSchema }), grantCreditsToAll)
 route.delete('/admin/users/:userId', Auth, isAdmin, adminWriteLimiter, deleteUser)
 route.get('/admin/audit', Auth, isAdmin, adminReadLimiter, getAuditLogs)
 route.get('/admin/settings', Auth, isAdmin, adminReadLimiter, getSettings)

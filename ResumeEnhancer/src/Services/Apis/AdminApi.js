@@ -22,6 +22,7 @@ export const AdminUsers = {
     banuser: BASE_URL + "/admin/users",           // + /:userId/ban
     bulkbanusers: BASE_URL + "/admin/users/bulk-ban",
     adjustcredits: BASE_URL + "/admin/users",     // + /:userId/credits
+    grantcreditsall: BASE_URL + "/admin/users/grant-credits-all",
     impersonate: BASE_URL + "/admin/users",       // + /:userId/impersonate
     deleteuser: BASE_URL + "/admin/users"         // + /:userId
 }

@@ -222,6 +222,18 @@ const adjustCreditsSchema = z.object({
         .int("'delta' must be a non-zero integer (negative refunds credits)")
         .refine((n) => n !== 0, "'delta' must be a non-zero integer (negative refunds credits)")
         .refine((n) => Math.abs(n) <= 100000, 'That adjustment is too large'),
+    reason: z.string().trim().max(300).optional(),
+})
+
+// broadcast bonus sir — POSITIVE only (a broadcast is always a gift, never a mass charge), same
+// upper bound reasoning as adjustCreditsSchema
+const grantCreditsToAllSchema = z.object({
+    credits: z.coerce
+        .number()
+        .int("'credits' must be a positive integer")
+        .positive("'credits' must be a positive integer")
+        .max(100000, 'That amount is too large'),
+    reason: z.string().trim().max(300).optional(),
 })
 
 const updateUserPlanSchema = z.object({
@@ -388,6 +400,7 @@ module.exports = {
     banUserSchema,
     bulkBanSchema,
     adjustCreditsSchema,
+    grantCreditsToAllSchema,
     updateUserPlanSchema,
     userIdParamSchema,
 
