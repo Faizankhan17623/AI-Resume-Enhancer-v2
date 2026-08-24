@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt, FaShareAlt, FaCopy, FaCrown } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -12,8 +12,13 @@ import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import { TEMPLATE_REGISTRY, getTemplateById } from './Templates/templateRegistry'
 import VersionDiffModal from './VersionDiffModal'
-import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto, GetBuiltResumeVersions, GetBuiltResumeVersion, RestoreBuiltResumeVersion } from '../../Services/operations/BuiltResume'
+import { GetBuiltResume, SaveBuiltResume, ReviewBuiltResume, DownloadBuiltResumeDocx, UploadBuiltResumePhoto, RemoveBuiltResumePhoto, GetBuiltResumeVersions, GetBuiltResumeVersion, RestoreBuiltResumeVersion, TogglePortfolioShare } from '../../Services/operations/BuiltResume'
 import { patchCurrentResume } from '../../Slices/builtResumeSlice'
+
+const copyText = (text) => {
+  navigator.clipboard.writeText(text)
+  toast.success("Copied to clipboard")
+}
 
 const emptyExperience = () => ({ company: '', role: '', location: '', startDate: '', endDate: '', current: false, bullets: [''] })
 const emptyEducation = () => ({ school: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' })
@@ -32,9 +37,11 @@ const BuilderEditor = () => {
   const { resumeId } = useParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { token } = useSelector((state) => state.auth)
+  const { token, user } = useSelector((state) => state.auth)
   const { current, loading, saving } = useSelector((state) => state.builtResume)
   const { loading: reviewLoading } = useSelector((state) => state.review)
+  const isBasic = !user?.SubType || user.SubType === 'Basic'
+  const portfolioUrl = current?.shareId ? `${window.location.origin}/Portfolio/${current.shareId}` : null
   const printRef = useRef(null)
   const saveTimer = useRef(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
@@ -225,6 +232,16 @@ const BuilderEditor = () => {
     DownloadBuiltResumeDocx(resumeId, current.title, token)
   }
 
+  // Pro/ProMax only sir — Basic gets the upgrade nudge instead of the actual toggle call,
+  // matching the isBasic gate CoverLetter.jsx/JobSearch.jsx already use for their own Pro features
+  const handleShareClick = () => {
+    if (isBasic) {
+      toast.error("Public portfolio links are a Pro feature, please upgrade your plan")
+      return
+    }
+    dispatch(TogglePortfolioShare(resumeId, token))
+  }
+
   const handleScore = async () => {
     if (!scoreJd.trim()) return
     // save first sir — the score should reflect what's actually in the editor right now, not a stale autosave
@@ -261,7 +278,8 @@ const BuilderEditor = () => {
       `}</style>
 
       <PageTransition className="h-full overflow-y-auto px-4 lg:px-6 py-6">
-        <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
+        <div className="mb-6 print:hidden">
+        <div className="flex items-center justify-between gap-3">
           <input
             value={current.title || ''}
             onChange={(e) => patch({ title: e.target.value })}
@@ -397,7 +415,30 @@ const BuilderEditor = () => {
             >
               <FaFileWord /> Download DOCX
             </button>
+            <button
+              onClick={handleShareClick}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            >
+              {isBasic ? <FaCrown className="text-yellow-50" /> : <FaShareAlt className={current?.isPublic ? "text-yellow-50" : undefined} />}
+              {current?.isPublic ? 'Unshare portfolio' : 'Share as portfolio'}
+            </button>
           </div>
+        </div>
+          {current?.isPublic && portfolioUrl && (
+            <div className="mt-4 max-w-md">
+              <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
+                <p className="text-xs text-richblack-200 truncate flex-1">{portfolioUrl}</p>
+                <button
+                  onClick={() => copyText(portfolioUrl)}
+                  className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+                  title="Copy link"
+                >
+                  <FaCopy className="text-sm" />
+                </button>
+              </div>
+              <p className="text-xs text-richblack-400 mt-1.5">Anyone with this link can view this resume as a public portfolio page.</p>
+            </div>
+          )}
         </div>
 
         {/* score modal sir — needs a JD before it can send this resume through the AI Review pipeline */}

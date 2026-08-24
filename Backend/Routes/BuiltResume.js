@@ -18,6 +18,8 @@ const {
     getBuiltResumeVersion,
     restoreBuiltResumeVersion,
     duplicateBuiltResume,
+    togglePortfolioShare,
+    getPublicPortfolio,
 } = require('../controllers/BuiltResume.js')
 
 // the template-based resume builder sir — structured data a template component renders,
@@ -42,5 +44,9 @@ route.get('/built-resumes/:resumeId/versions', Auth, isUser, getBuiltResumeVersi
 route.get('/built-resumes/:resumeId/versions/:versionId', Auth, isUser, getBuiltResumeVersion)
 route.post('/built-resumes/:resumeId/versions/:versionId/restore', Auth, isUser, restoreBuiltResumeVersion)
 route.post('/built-resumes/:resumeId/duplicate', Auth, isUser, duplicateBuiltResume)
+route.post('/built-resumes/:resumeId/portfolio-share', Auth, isUser, togglePortfolioShare)
+
+// public portfolio page sir — NO Auth, this is the whole point, must stay behind shareId + isPublic only
+route.get('/public/built-resumes/:shareId', getPublicPortfolio)
 
 module.exports = route

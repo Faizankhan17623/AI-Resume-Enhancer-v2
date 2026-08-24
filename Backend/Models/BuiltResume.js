@@ -102,6 +102,19 @@ const builtResumeSchema = new mongoose.Schema(
         // between snapshots) in the controller so continuous autosave-while-typing doesn't
         // spam near-duplicate versions. See controllers/BuiltResume.js maybeSnapshotVersion.
         versions: [versionSchema],
+        // public portfolio link sir — same shape as Review's shareId/isPublic (Models/Review.js),
+        // sparse so the unique index ignores the (many) resumes never shared. Pro/ProMax only,
+        // gated in the controller, not here.
+        shareId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            index: true,
+        },
+        isPublic: {
+            type: Boolean,
+            default: false,
+        },
     }, { timestamps: true }
 )
 

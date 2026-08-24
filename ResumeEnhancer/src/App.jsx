@@ -55,6 +55,7 @@ const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
+const SharedPortfolio = lazy(() => import('./Components/extra/SharedPortfolio'))
 const RecruiterJobList = lazy(() => import('./Components/Recruiter/JobList'))
 const RecruiterJobBuilder = lazy(() => import('./Components/Recruiter/JobBuilder'))
 const RecruiterJobDetail = lazy(() => import('./Components/Recruiter/JobDetailRecruiter'))
@@ -165,6 +166,7 @@ function App() {
             <Route path="/" element={<Homelayout />} />
             <Route path="/Pricing" element={<Pricing />} />
             <Route path="/Shared/:shareId" element={<SharedReport />} />
+            <Route path="/Portfolio/:shareId" element={<SharedPortfolio />} />
             <Route path="/oauth/complete" element={<OAuthComplete />} />
             {/* public job board sir — deliberately NOT /Dashboard/Job-Search, that's the
                 unrelated private Tavily web-search feature. Anyone can browse without logging in. */}

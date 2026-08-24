@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const crypto = require('crypto')
 const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
 const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx')
@@ -6,7 +7,7 @@ const cloudinary = require('cloudinary').v2
 
 const BuiltResume = require('../Models/BuiltResume')
 const CreditSpend = require('../Models/CreditSpend')
-const { consumeCredit, refundCredit } = require('../utils/Plans')
+const { consumeCredit, refundCredit, getUserPlan } = require('../utils/Plans')
 const logger = require('../utils/logger')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
@@ -914,6 +915,94 @@ exports.tailorResume = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while tailoring the resume',
+        })
+    }
+}
+
+// ---------- SHAREABLE PUBLIC PORTFOLIO ----------
+// same shareId/isPublic pattern as Review.js's toggleShare/getPublicReview sir — a stable,
+// unguessable link that can be turned on/off without ever changing once minted. Pro/ProMax only:
+// gated here rather than at the route so the check runs after Auth has loaded the live plan,
+// same as every other plan-gated feature (CoverLetter.js, JobSearch.js, LearningResources.js).
+
+// POST /built-resumes/:resumeId/portfolio-share — toggle a built resume's public portfolio link sir
+exports.togglePortfolioShare = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { resumeId } = req.params
+
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
+
+        const plan = await getUserPlan(id)
+        if (!plan || plan.key === 'Basic') {
+            return res.status(403).json({
+                success: false,
+                message: 'Public portfolio links are a Pro feature, please upgrade your plan',
+            })
+        }
+
+        const resume = await BuiltResume.findOne({ _id: resumeId, user: id })
+
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'Resume not found',
+            })
+        }
+
+        // flip it sir — turning share back on re-uses the same shareId if one already exists,
+        // so a link someone already has never breaks just from toggling off and back on
+        resume.isPublic = !resume.isPublic
+        if (resume.isPublic && !resume.shareId) {
+            resume.shareId = crypto.randomBytes(9).toString('base64url')
+        }
+        await resume.save()
+
+        return res.status(200).json({
+            success: true,
+            isPublic: resume.isPublic,
+            shareId: resume.isPublic ? resume.shareId : undefined,
+        })
+    } catch (error) {
+        (req.log || logger).error('toggle portfolio share failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the portfolio link',
+        })
+    }
+}
+
+// GET /public/built-resumes/:shareId — public portfolio page sir, NO auth
+// same safe-subset reasoning as Review.js's getPublicReview: only what a template needs to
+// render is returned, never user/_id/timestamps/versions
+exports.getPublicPortfolio = async (req, res) => {
+    try {
+        const { shareId } = req.params
+
+        const resume = await BuiltResume.findOne({ shareId, isPublic: true })
+            .select('templateId title personalInfo summary experience education skills projects certifications photoUrl color')
+
+        if (!resume) {
+            return res.status(404).json({
+                success: false,
+                message: 'This portfolio was not found or is no longer public',
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            resume,
+        })
+    } catch (error) {
+        (req.log || logger).error('get public portfolio failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the portfolio',
         })
     }
 }

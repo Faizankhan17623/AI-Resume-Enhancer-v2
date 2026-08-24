@@ -15,4 +15,6 @@ export const BuiltResumeData = {
     singleVersion: BASE_URL + "/built-resumes",   // + /:resumeId/versions/:versionId
     restoreVersion: BASE_URL + "/built-resumes",  // + /:resumeId/versions/:versionId/restore
     duplicate: BASE_URL + "/built-resumes",       // + /:resumeId/duplicate
+    portfolioShare: BASE_URL + "/built-resumes",  // + /:resumeId/portfolio-share
+    publicPortfolio: BASE_URL + "/public/built-resumes", // + /:shareId — no auth
 }

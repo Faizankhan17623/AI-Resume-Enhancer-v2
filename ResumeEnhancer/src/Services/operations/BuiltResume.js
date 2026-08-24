@@ -5,7 +5,7 @@ import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
-const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, singleVersion, restoreVersion, duplicate } = BuiltResumeData
+const { create, all, single, update, remove, generate, tailor, review, downloadDocx, photo, versions, singleVersion, restoreVersion, duplicate, portfolioShare, publicPortfolio } = BuiltResumeData
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
 // color is optional — carried over when the user picked an accent on the dedicated Templates page.
@@ -347,6 +347,47 @@ export function RemoveBuiltResumePhoto(resumeId, token) {
         } catch (error) {
             logApiError("Error removing the photo", error)
             toast.error(error?.response?.data?.message || "Could not remove the photo")
+        }
+    }
+}
+
+// flips a built resume's public portfolio link on/off sir — same pattern as Review's ToggleShare.
+// Pro/ProMax only, the 403 from a Basic account surfaces via the toast below same as any other
+// plan-gated action.
+export function TogglePortfolioShare(resumeId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("POST", `${portfolioShare}/${resumeId}/portfolio-share`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(patchCurrentResume({ isPublic: response.data.isPublic, shareId: response.data.shareId }))
+            toast.success(response.data.isPublic ? "Portfolio link created" : "Portfolio link turned off")
+        } catch (error) {
+            logApiError("Error toggling the portfolio link", error)
+            toast.error(error?.response?.data?.message || "Could not update the portfolio link")
+        }
+    }
+}
+
+// public portfolio page sir — no auth, no token needed
+export function GetPublicPortfolio(shareId) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", `${publicPortfolio}/${shareId}`)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data.resume
+        } catch (error) {
+            logApiError("Error fetching the shared portfolio", error)
+            return null
         }
     }
 }
