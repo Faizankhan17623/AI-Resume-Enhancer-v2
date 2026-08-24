@@ -1435,6 +1435,16 @@ exports.getReferralStats = async (req, res) => {
         const id = req.User.id
         const user = await User.findById(id).select('referralCode referralCount')
 
+        // backfill sir — the pre('save') hook in Models/User.js only mints a code for a BRAND
+        // NEW document (isNew), so every account created before this feature shipped has no
+        // referralCode and would otherwise show a broken /Signup?ref=undefined link forever.
+        // Minting it here, on first-ever request, self-heals every existing account with no
+        // migration script needed.
+        if (!user.referralCode) {
+            user.referralCode = crypto.randomBytes(4).toString('hex')
+            await user.save()
+        }
+
         return res.status(200).json({
             success: true,
             referralCode: user.referralCode,
