@@ -46,6 +46,7 @@ const BuilderEditor = () => {
   const saveTimer = useRef(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [scoreModalOpen, setScoreModalOpen] = useState(false)
   const [scoreJd, setScoreJd] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -245,8 +246,10 @@ const BuilderEditor = () => {
     setShareModalOpen(true)
   }
 
-  const handleToggleShareInModal = () => {
-    dispatch(TogglePortfolioShare(resumeId, token))
+  const handleToggleShareInModal = async () => {
+    setSharing(true)
+    await dispatch(TogglePortfolioShare(resumeId, token))
+    setSharing(false)
   }
 
   const handleScore = async () => {
@@ -464,7 +467,8 @@ const BuilderEditor = () => {
                   </div>
                   <button
                     onClick={handleToggleShareInModal}
-                    className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-pink-200 border border-pink-700/40 rounded-full hover:bg-pink-700/10 transition-all duration-200 cursor-pointer"
+                    disabled={sharing}
+                    className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-pink-200 border border-pink-700/40 rounded-full hover:bg-pink-700/10 transition-all duration-200 cursor-pointer disabled:opacity-50"
                   >
                     Turn off sharing
                   </button>
@@ -475,11 +479,25 @@ const BuilderEditor = () => {
                   <IconBtn
                     text="Create portfolio link"
                     onclick={handleToggleShareInModal}
+                    disabled={sharing}
                     customClasses="text-sm w-full justify-center"
                   />
                 </>
               )}
             </motion.div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+
+        {/* sharing loader sir — full-screen, centered, sits above the share modal itself
+            (higher z-index) while the create/turn-off request is in flight */}
+        <AnimatePresence>
+        {sharing && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/60 backdrop-blur-sm print:hidden"
+          >
+            <Loading text="Updating share link..." />
           </motion.div>
         )}
         </AnimatePresence>
