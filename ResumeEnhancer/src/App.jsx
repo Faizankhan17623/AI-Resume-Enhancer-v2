@@ -66,6 +66,7 @@ const RecruiterTestBuilder = lazy(() => import('./Components/Recruiter/TestBuild
 const RecruiterJobApplicantsList = lazy(() => import('./Components/Recruiter/JobApplicantsList'))
 const RecruiterJobAnalytics = lazy(() => import('./Components/Recruiter/JobAnalytics'))
 const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/AttemptDetail'))
+const RecruiterAccount = lazy(() => import('./Components/Recruiter/RecruiterAccount'))
 const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
 const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
 const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
@@ -229,6 +230,7 @@ function App() {
             <Route path="/Recruiter/Jobs/:jobId/applicants" element={<RecruiterRoute><RecruiterJobApplicantsList /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/analytics" element={<RecruiterRoute><RecruiterJobAnalytics /></RecruiterRoute>} />
             <Route path="/Recruiter/Attempts/:attemptId" element={<RecruiterRoute><RecruiterAttemptDetail /></RecruiterRoute>} />
+            <Route path="/Recruiter/Account" element={<RecruiterRoute><RecruiterAccount /></RecruiterRoute>} />
 
             {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
                 these gets redirected to their OWN dashboard at /Support, never let through. */}

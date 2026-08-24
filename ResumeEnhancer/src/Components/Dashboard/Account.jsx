@@ -134,16 +134,15 @@ const EditableField = ({ label, value, onSave, type = 'text' }) => {
   )
 }
 
-// invite-a-friend card sir — visible to both User and Recruiter accounts (a Recruiter can invite
-// people and see who they've brought in on the dashboard below), but the CREDIT bonus is
-// User-only — Recruiters don't spend AI review credits, so there's nothing meaningful to bonus
-// (see controllers/user.js's grantReferralBonus for the matching backend-side skip). Fetches its
-// own data independently rather than riding GetProfile, since it's a small, occasionally-viewed
+// invite-a-friend card sir — User-only. A Recruiter equivalent lives at its OWN reachable page,
+// Recruiter/RecruiterAccount.jsx (/Recruiter/Account) — this component briefly also tried to
+// render for Recruiter accounts here, but PrivateRoute.jsx redirects every Recruiter away from
+// /Dashboard/Account before this page ever mounts, so that branch was dead code. Fetches its own
+// data independently rather than riding GetProfile, since it's a small, occasionally-viewed
 // panel, not something the rest of the app needs on every profile load.
-const ReferralCard = ({ token, userRole }) => {
+const ReferralCard = ({ token }) => {
   const [stats, setStats] = useState(null)
   const [dashboardOpen, setDashboardOpen] = useState(false)
-  const isUser = userRole === 'User'
 
   useEffect(() => {
     GetReferralStats(token)().then(setStats)
@@ -153,7 +152,7 @@ const ReferralCard = ({ token, userRole }) => {
   if (!stats) return null
 
   const referralUrl = `${window.location.origin}/Signup?ref=${stats.referralCode}`
-  const capped = isUser && stats.referralCount >= stats.maxReferrals
+  const capped = stats.referralCount >= stats.maxReferrals
 
   return (
     <>
@@ -162,9 +161,7 @@ const ReferralCard = ({ token, userRole }) => {
           <FaUserFriends className="text-yellow-50 text-base" /> Invite Friends
         </h2>
         <p className="text-xs text-richblack-400 mb-4">
-          {isUser
-            ? `Share your link — you and your friend each get ${stats.bonusCredits} bonus AI credits once they sign up and log in.`
-            : 'Share your link to invite people to Resumify. Track everyone you\'ve brought in on your referral dashboard.'}
+          Share your link — you and your friend each get {stats.bonusCredits} bonus AI credits once they sign up and log in.
         </p>
         <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
           <p className="text-xs text-richblack-200 truncate flex-1">{referralUrl}</p>
@@ -181,9 +178,8 @@ const ReferralCard = ({ token, userRole }) => {
         </div>
         <div className="flex items-center justify-between mt-3">
           <p className="text-xs text-richblack-400">
-            {isUser
-              ? `${stats.referralCount} of ${stats.maxReferrals} referrals used${capped ? " — you've reached the limit for bonus credits" : ''}`
-              : `${stats.referralCount} referral${stats.referralCount === 1 ? '' : 's'} so far`}
+            {stats.referralCount} of {stats.maxReferrals} referrals used
+            {capped && " — you've reached the limit for bonus credits"}
           </p>
           <button
             onClick={() => setDashboardOpen(true)}
@@ -394,9 +390,9 @@ const Account = () => {
           </div>
         </div>
 
-        {/* Invite friends sir — visible to User AND Recruiter (Admin/Support have no referral
-            use case), the credit bonus itself stays User-only inside ReferralCard/the backend */}
-        {(user.role === 'User' || user.role === 'Recruiter') && <ReferralCard token={token} userRole={user.role} />}
+        {/* Invite friends sir — User-only here. A Recruiter has their own reachable equivalent
+            at /Recruiter/Account (this page is never reached by a Recruiter, see PrivateRoute) */}
+        {user.role === 'User' && <ReferralCard token={token} />}
 
         {/* Share a homepage testimonial sir — User-only, mirrors isUser on the backend */}
         {user.role === 'User' && <ShareTestimonialCard />}
