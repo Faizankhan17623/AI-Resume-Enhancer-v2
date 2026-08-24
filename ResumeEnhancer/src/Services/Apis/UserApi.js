@@ -65,3 +65,7 @@ export const Notifications = {
     readall: BASE_URL + "/notifications/read-all",
     markread: BASE_URL + "/notifications"   // + /:notificationId/read
 }
+
+export const Referral = {
+    stats: BASE_URL + "/referral/stats"
+}

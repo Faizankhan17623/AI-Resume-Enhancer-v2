@@ -115,6 +115,14 @@ const builtResumeSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // denormalized count of unique viewers sir — kept in sync in getPublicPortfolio, only
+        // bumped when a PortfolioView row is actually newly created (see Models/PortfolioView.js),
+        // so a refresh from the same viewer never inflates it. Cheaper than counting rows on
+        // every builder page load.
+        viewCount: {
+            type: Number,
+            default: 0,
+        },
     }, { timestamps: true }
 )
 

@@ -37,7 +37,8 @@ const {
     exportMyData,
     deleteAccount,
     applyForRecruiter,
-    submitSuspensionAppeal
+    submitSuspensionAppeal,
+    getReferralStats
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -97,5 +98,8 @@ route.post('/appeal-suspension',Auth,authLimiter,validate({ body: appealSuspensi
 
 // GDPR-style self-service data dump sir, separate from delete-account
 route.get('/profile/export',Auth,exportMyData)
+
+// the Account page's "Invite friends" card sir
+route.get('/referral/stats',Auth,getReferralStats)
 
 module.exports = route

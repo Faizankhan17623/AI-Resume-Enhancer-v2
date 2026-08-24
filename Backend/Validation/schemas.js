@@ -98,6 +98,11 @@ const createUserSchema = z.object({
     companySize: companySize.optional(),
     location: z.string().trim().max(150).optional(),
     hiringNeeds: z.string().trim().max(2000).optional(),
+    // whoever's referral link brought this signup here sir — optional, purely additive, never
+    // required. Validated as a plausible code shape only; whether it actually matches an existing
+    // user is checked in the controller (a bad/unknown code is just silently ignored there, not
+    // a signup-blocking error, so a stale or mistyped link never breaks someone's signup).
+    referralCode: z.string().trim().max(20).optional(),
 }).refine(
     (data) => data.accountType !== 'Recruiter' || !!data.companyName?.trim(),
     { message: 'Company name is required', path: ['companyName'] }

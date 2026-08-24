@@ -218,6 +218,33 @@ const UserCreation = new mongoose.Schema(
         // approves it (see controllers/Admin.js's approveRecruiterApplication). Approval is
         // what actually flips `role` to 'Recruiter', reusing the exact same mechanism as a
         // manual role-change from the Admin dashboard, just triggered by this instead.
+        // referral program sir — every user gets a stable personal code, generated once at
+        // creation (see the pre-save hook below). referredBy is set only at signup, from the
+        // ?ref= code carried through createUser (see controllers/user.js), and never changes
+        // after that — it's a record of who brought this person in, not a live relationship.
+        referralCode: {
+            type: String,
+            unique: true,
+            sparse: true,
+            index: true,
+        },
+        referredBy: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'User',
+        },
+        // true once the referral bonus has actually been paid out to BOTH sides sir — guards
+        // against paying twice if loginUser's Verified-flip logic is ever hit more than once for
+        // the same account (see controllers/user.js's loginUser)
+        referralBonusGranted: {
+            type: Boolean,
+            default: false,
+        },
+        // how many successful (bonus-granted) referrals this user has made sir — capped in the
+        // controller, this field is just the running count the cap checks against
+        referralCount: {
+            type: Number,
+            default: 0,
+        },
         recruiterApplication: {
             companyName: { type: String, trim: true, maxlength: 150 },
             companyWebsite: { type: String, trim: true, maxlength: 300 },
@@ -235,5 +262,13 @@ const UserCreation = new mongoose.Schema(
     }, { timestamps: true }
 )
 
+// mints a stable referral code once, at creation, sir — never on every save. crypto is required
+// lazily here since this is the only place in the model that needs it.
+UserCreation.pre('save', function (next) {
+    if (this.isNew && !this.referralCode) {
+        this.referralCode = require('crypto').randomBytes(4).toString('hex')
+    }
+    next()
+})
 
 module.exports = mongoose.model("User", UserCreation)

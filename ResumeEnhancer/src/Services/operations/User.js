@@ -3,7 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted, setProfileUserFields } from '../../Slices/profileSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
-import { Profile, Password, RecruiterApplication, SuspensionAppeal } from '../Apis/UserApi.js'
+import { Profile, Password, RecruiterApplication, SuspensionAppeal, Referral } from '../Apis/UserApi.js'
 
 const {
     getprofile, updatenotifications, completeonboarding,
@@ -12,6 +12,7 @@ const {
 const { changepassword } = Password
 const { apply: applyForRecruiterUrl } = RecruiterApplication
 const { submit: appealSuspensionUrl } = SuspensionAppeal
+const { stats: referralStatsUrl } = Referral
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -241,6 +242,27 @@ export function ExportMyData(token) {
             toast.error(error?.response?.data?.message || "Could not export your data")
         } finally {
             toast.dismiss(toastId)
+        }
+    }
+}
+
+// the Account page's "Invite friends" card sir — no dedicated slice, just returns the data since
+// it's a small, occasionally-viewed panel rather than something the rest of the app reads
+export function GetReferralStats(token) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", referralStatsUrl, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data
+        } catch (error) {
+            logApiError("Error fetching referral stats", error)
+            return null
         }
     }
 }

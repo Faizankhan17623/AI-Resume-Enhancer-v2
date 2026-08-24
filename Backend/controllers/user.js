@@ -25,6 +25,7 @@ exports.createUser = async (req, res) => {
         // recruiter fast-track signup sir — see Validation/schemas.js's createUserSchema for the
         // conditional-required rules on these five when accountType is 'Recruiter'
         const { accountType, companyName, companyWebsite, companySize, location, hiringNeeds } = req.body
+        const { referralCode } = req.body
 
         // not case sir
         if (!firstName || !lastName || !email || !password || !number || !Code || !otp) {
@@ -114,6 +115,17 @@ exports.createUser = async (req, res) => {
         // — same review queue the post-hoc /For-Recruiters flow already uses.
         const isRecruiterSignup = accountType === 'Recruiter'
 
+        // referral link resolution sir — a code that doesn't match anyone (stale link, typo,
+        // tampered) is silently ignored rather than blocking the signup; referredBy just stays
+        // unset and no bonus is ever paid out for it. The actual bonus is granted later, on this
+        // new account's first real login (see loginUser below) — not here — so a fake account
+        // that's created but never logged into can't be farmed for free credits.
+        let referredBy
+        if (referralCode) {
+            const referrer = await User.findOne({ referralCode: referralCode.trim() }).select('_id')
+            if (referrer) referredBy = referrer._id
+        }
+
         const Creation = await User.create({
             firstName: firstName,
             lastName: lastName,
@@ -122,6 +134,7 @@ exports.createUser = async (req, res) => {
             number: number,
             CountryCode: Code,
             Verified: false,
+            ...(referredBy ? { referredBy } : {}),
             ...(isRecruiterSignup ? {
                 role: 'Recruiter',
                 recruiterApplication: {
@@ -160,6 +173,47 @@ exports.createUser = async (req, res) => {
 // account lockout policy sir — tune ONLY here
 const MAX_FAILED_ATTEMPTS = 5
 const LOCK_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+
+// referral program policy sir — tune ONLY here. Credits are granted by moving `count` (credits
+// USED, see utils/Plans.js's consumeCredit) backwards, same direction as refundCredit — giving a
+// bonus means letting the user use N more before hitting their plan's cap.
+const REFERRAL_BONUS_CREDITS = 5
+// caps how many times ONE referrer can be paid out sir — without this, two colluding accounts
+// (or one person's two emails) could loop signup+login indefinitely for free credits
+const MAX_REFERRALS_PER_USER = 10
+
+// pays out the referral bonus to both sides sir, called from loginUser on the referred user's
+// first login. The findOneAndUpdate below is the actual race guard: it flips
+// referralBonusGranted from false->true and only proceeds if THIS call is the one that flipped
+// it, so two concurrent logins for the same account (double-click, retry) can never pay out
+// twice. The referrer's cap check happens first and simply skips the payout (not an error) once
+// MAX_REFERRALS_PER_USER is reached — the new user still gets to keep their own account as normal,
+// they just don't get the bonus for a referrer who's already maxed out.
+const grantReferralBonus = async (referredUserId, referrerId) => {
+    const referrer = await User.findById(referrerId).select('referralCount count')
+    if (!referrer || referrer.referralCount >= MAX_REFERRALS_PER_USER) return
+
+    const claimed = await User.findOneAndUpdate(
+        { _id: referredUserId, referralBonusGranted: false },
+        { referralBonusGranted: true },
+        { new: true }
+    ).select('count')
+    if (!claimed) return // sir — another concurrent call already paid this account out
+
+    // count can never go below zero sir — same clamp Admin.js's adjustCredits uses. A raw
+    // $inc could take it negative, which the Account page's credits-used progress bar
+    // (creditsUsed / creditsLimit) would render as a negative-width bar.
+    await User.findByIdAndUpdate(referredUserId, { count: Math.max(0, claimed.count - REFERRAL_BONUS_CREDITS) })
+
+    const updatedReferrer = await User.findOneAndUpdate(
+        { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
+        { $inc: { referralCount: 1 } },
+        { new: true }
+    ).select('count')
+    if (updatedReferrer) {
+        await User.findByIdAndUpdate(referrerId, { count: Math.max(0, updatedReferrer.count - REFERRAL_BONUS_CREDITS) })
+    }
+}
 
 // ============================================================
 // LOGIN USER
@@ -270,6 +324,17 @@ exports.loginUser = async (req, res) => {
         // with the four OAuth flows, and it sets the cross-site cookie attributes that actually
         // let the cookie reach a browser on a different origin.
         const JwtCreation = issueSession(res, existingUser)
+
+        // referral bonus sir — paid out on this account's FIRST successful login, not at signup.
+        // existingUser.Verified is still the pre-login value here (the flip happens in the update
+        // right below), so `!Verified` is exactly "never logged in before" — the strongest signal
+        // this codebase has that the account is real, not a fake farmed purely for the bonus.
+        // Fire-and-forget: a referral-bonus failure must never block the login itself.
+        if (!existingUser.Verified && existingUser.referredBy && !existingUser.referralBonusGranted) {
+            grantReferralBonus(existingUser._id, existingUser.referredBy).catch((err) =>
+                logger.error('referral bonus grant failed', { err, userId: existingUser._id })
+            )
+        }
 
         await User.findByIdAndUpdate(_id, { token: JwtCreation, Verified: true })
 
@@ -1358,6 +1423,30 @@ exports.submitSuspensionAppeal = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while submitting your appeal',
+        })
+    }
+}
+
+// ============================================================
+// REFERRAL STATS — the Account page's "Invite friends" card sir
+// ============================================================
+exports.getReferralStats = async (req, res) => {
+    try {
+        const id = req.User.id
+        const user = await User.findById(id).select('referralCode referralCount')
+
+        return res.status(200).json({
+            success: true,
+            referralCode: user.referralCode,
+            referralCount: user.referralCount,
+            maxReferrals: MAX_REFERRALS_PER_USER,
+            bonusCredits: REFERRAL_BONUS_CREDITS,
+        })
+    } catch (error) {
+        (req.log || logger).error('get referral stats failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your referral stats',
         })
     }
 }

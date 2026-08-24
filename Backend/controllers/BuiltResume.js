@@ -7,6 +7,7 @@ const cloudinary = require('cloudinary').v2
 
 const BuiltResume = require('../Models/BuiltResume')
 const CreditSpend = require('../Models/CreditSpend')
+const PortfolioView = require('../Models/PortfolioView')
 const { consumeCredit, refundCredit, getUserPlan } = require('../utils/Plans')
 const logger = require('../utils/logger')
 const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
@@ -977,6 +978,13 @@ exports.togglePortfolioShare = async (req, res) => {
     }
 }
 
+// unique-viewer cookie for the public portfolio page sir — same shape/lifetime reasoning as
+// VisitorLog's track-visit cookie, just scoped to "have you viewed THIS resume" instead of
+// "have you ever visited the site". 24h is enough to stop a refresh-spam from inflating the
+// count while still counting a genuine return visit tomorrow as a new view.
+const PORTFOLIO_VIEW_COOKIE = 'portfolio_view_id'
+const PORTFOLIO_VIEW_COOKIE_MAX_AGE = 24 * 60 * 60 * 1000
+
 // GET /public/built-resumes/:shareId — public portfolio page sir, NO auth
 // same safe-subset reasoning as Review.js's getPublicReview: only what a template needs to
 // render is returned, never user/_id/timestamps/versions
@@ -993,6 +1001,31 @@ exports.getPublicPortfolio = async (req, res) => {
                 message: 'This portfolio was not found or is no longer public',
             })
         }
+
+        // count this as a view sir — deduped per (resume, viewer), same pattern as
+        // controllers/Visitor.js's trackVisit. A cookie is the strong signal (survives a refresh);
+        // falling back to the IP means a cookie-less request (script, cleared cookies) still only
+        // counts once per address instead of once per hit.
+        let viewerId = req.cookies?.[PORTFOLIO_VIEW_COOKIE]
+        if (!viewerId) {
+            viewerId = crypto.randomBytes(16).toString('hex')
+            res.cookie(PORTFOLIO_VIEW_COOKIE, viewerId, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: PORTFOLIO_VIEW_COOKIE_MAX_AGE,
+                path: '/',
+            })
+        }
+        const dedupeKey = viewerId || req.ip
+
+        // only bump viewCount when the row is genuinely new sir — a duplicate insert just fails
+        // on PortfolioView's unique index (11000) and is silently ignored, same as VisitorLog
+        PortfolioView.create({ resume: resume._id, viewerId: dedupeKey })
+            .then(() => BuiltResume.updateOne({ _id: resume._id }, { $inc: { viewCount: 1 } }))
+            .catch((err) => {
+                if (err.code !== 11000) (req.log || logger).error('portfolio view log failed', { err })
+            })
 
         return res.status(200).json({
             success: true,

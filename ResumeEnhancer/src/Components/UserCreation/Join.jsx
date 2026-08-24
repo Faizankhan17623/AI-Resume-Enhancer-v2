@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate, Link, useSearchParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { FaUser, FaBriefcase } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
@@ -27,9 +27,15 @@ const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
 const Join = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm()
   const [accountType, setAccountType] = useState('User')
+  const [searchParams] = useSearchParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { loading } = useSelector((state) => state.auth)
+
+  // referral code sir — a friend's invite link is /Signup?ref=CODE. Read once here and carried
+  // through the same untouched-spread pipe as accountType below; createUserSchema (backend)
+  // silently ignores it if empty/unknown, so a plain /Signup visit is unaffected.
+  const referralCode = searchParams.get('ref')
 
   const onSubmit = (data) => {
     // park the form data sir — the OTP screen finishes the creation with it. accountType and
@@ -37,7 +43,7 @@ const Join = () => {
     // (Services/operations/Auth.js) just spreads signupData with no field allowlist, and the
     // backend's createUserSchema conditionally requires the company fields only when
     // accountType is 'Recruiter' (see Validation/schemas.js).
-    dispatch(setSignupData({ ...data, accountType }))
+    dispatch(setSignupData({ ...data, accountType, ...(referralCode ? { referralCode } : {}) }))
     dispatch(SendTheOtp(data.email, navigate))
   }
 

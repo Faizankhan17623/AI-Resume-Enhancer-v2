@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt, FaShareAlt, FaCopy, FaCrown } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt, FaShareAlt, FaCopy, FaCrown, FaEye } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -465,6 +465,9 @@ const BuilderEditor = () => {
                       <FaCopy className="text-sm" />
                     </button>
                   </div>
+                  <p className="mt-2.5 text-xs text-richblack-400 flex items-center gap-1.5">
+                    <FaEye className="text-[10px]" /> {current?.viewCount || 0} view{current?.viewCount === 1 ? '' : 's'}
+                  </p>
                   <button
                     onClick={handleToggleShareInModal}
                     disabled={sharing}

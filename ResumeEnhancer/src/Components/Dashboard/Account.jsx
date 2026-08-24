@@ -5,14 +5,15 @@ import { Link, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import Swal from 'sweetalert2'
-import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes } from 'react-icons/fa'
+import toast from 'react-hot-toast'
+import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes, FaUserFriends, FaCopy } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import ShareTestimonialCard from './ShareTestimonialCard'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
-import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData } from '../../Services/operations/User'
+import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
@@ -128,6 +129,52 @@ const EditableField = ({ label, value, onSave, type = 'text' }) => {
           <FaEdit className="text-xs" />
         </button>
       )}
+    </div>
+  )
+}
+
+// invite-a-friend card sir — User-only (mirrors ShareTestimonialCard's own gate), shows the
+// personal referral link, a copy button, and how many successful referrals paid out so far.
+// Fetches its own data independently rather than riding GetProfile, since it's a small
+// occasionally-viewed panel, not something the rest of the app needs on every profile load.
+const ReferralCard = ({ token }) => {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    GetReferralStats(token)().then(setStats)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!stats) return null
+
+  const referralUrl = `${window.location.origin}/Signup?ref=${stats.referralCode}`
+  const capped = stats.referralCount >= stats.maxReferrals
+
+  return (
+    <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+      <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+        <FaUserFriends className="text-yellow-50 text-base" /> Invite Friends
+      </h2>
+      <p className="text-xs text-richblack-400 mb-4">
+        Share your link — you and your friend each get {stats.bonusCredits} bonus AI credits once they sign up and log in.
+      </p>
+      <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
+        <p className="text-xs text-richblack-200 truncate flex-1">{referralUrl}</p>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(referralUrl)
+            toast.success('Copied to clipboard')
+          }}
+          className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+          title="Copy link"
+        >
+          <FaCopy className="text-sm" />
+        </button>
+      </div>
+      <p className="text-xs text-richblack-400 mt-3">
+        {stats.referralCount} of {stats.maxReferrals} referrals used
+        {capped && ' — you\'ve reached the limit for bonus credits'}
+      </p>
     </div>
   )
 }
@@ -327,6 +374,10 @@ const Account = () => {
             )}
           </div>
         </div>
+
+        {/* Invite friends sir — User-only, same gate as the referral endpoint itself needing a
+            real logged-in User account (Admin/Support/Recruiter have no plan/credits to bonus) */}
+        {user.role === 'User' && <ReferralCard token={token} />}
 
         {/* Share a homepage testimonial sir — User-only, mirrors isUser on the backend */}
         {user.role === 'User' && <ShareTestimonialCard />}
