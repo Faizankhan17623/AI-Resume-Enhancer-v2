@@ -56,6 +56,9 @@ const AdminReports = lazy(() => import('./Components/Admin/Reports'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
 const SharedPortfolio = lazy(() => import('./Components/extra/SharedPortfolio'))
+const PrivacyPolicy = lazy(() => import('./Components/extra/PrivacyPolicy'))
+const TermsAndConditions = lazy(() => import('./Components/extra/TermsAndConditions'))
+const RefundPolicy = lazy(() => import('./Components/extra/RefundPolicy'))
 const RecruiterJobList = lazy(() => import('./Components/Recruiter/JobList'))
 const RecruiterJobBuilder = lazy(() => import('./Components/Recruiter/JobBuilder'))
 const RecruiterJobDetail = lazy(() => import('./Components/Recruiter/JobDetailRecruiter'))
@@ -167,6 +170,9 @@ function App() {
             <Route path="/Pricing" element={<Pricing />} />
             <Route path="/Shared/:shareId" element={<SharedReport />} />
             <Route path="/Portfolio/:shareId" element={<SharedPortfolio />} />
+            <Route path="/Privacy-Policy" element={<PrivacyPolicy />} />
+            <Route path="/Terms-And-Conditions" element={<TermsAndConditions />} />
+            <Route path="/Refund-Policy" element={<RefundPolicy />} />
             <Route path="/oauth/complete" element={<OAuthComplete />} />
             {/* public job board sir — deliberately NOT /Dashboard/Job-Search, that's the
                 unrelated private Tavily web-search feature. Anyone can browse without logging in. */}

@@ -30,6 +30,14 @@ const footerColumns = [
       { name: 'Sign up', path: '/Signup' },
     ],
   },
+  {
+    title: 'Legal',
+    links: [
+      { name: 'Privacy Policy', path: '/Privacy-Policy' },
+      { name: 'Terms & Conditions', path: '/Terms-And-Conditions' },
+      { name: 'Refund & Cancellation', path: '/Refund-Policy' },
+    ],
+  },
 ]
 
 const Footer = () => {
