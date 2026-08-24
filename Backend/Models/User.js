@@ -264,11 +264,16 @@ const UserCreation = new mongoose.Schema(
 
 // mints a stable referral code once, at creation, sir — never on every save. crypto is required
 // lazily here since this is the only place in the model that needs it.
-UserCreation.pre('save', function (next) {
+//
+// no `next` callback parameter sir — this app's Mongoose version (9.x) does not inject one for a
+// synchronous pre-save hook; declaring the old `function(next){...next()}` shape leaves `next`
+// undefined and throws "next is not a function" on every single save (found live: this broke
+// getReferralStats's backfill save with a 500 for any pre-existing account). A synchronous hook
+// just returns/falls through — no callback needed.
+UserCreation.pre('save', function () {
     if (this.isNew && !this.referralCode) {
         this.referralCode = require('crypto').randomBytes(4).toString('hex')
     }
-    next()
 })
 
 module.exports = mongoose.model("User", UserCreation)
