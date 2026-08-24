@@ -11,6 +11,7 @@ const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { getModelForPlan } = require('../utils/AiModel')
 const { detectGenericness } = require('../utils/GenericPhraseDetector')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
+const { validatePdfUpload } = require('../utils/pdfUpload')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -40,10 +41,11 @@ exports.generateCoverLetter = async (req, res) => {
         }
 
         const PDf = req.files?.PDf
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf)
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             })
         }
 

@@ -13,6 +13,7 @@ const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
 const { getModelForPlan } = require('../utils/AiModel')
 const { runReview } = require('../services/reviewService')
+const { validatePdfUpload } = require('../utils/pdfUpload')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -839,10 +840,11 @@ exports.tailorResume = async (req, res) => {
         }
 
         const PDf = req.files?.PDf
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf)
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             })
         }
 

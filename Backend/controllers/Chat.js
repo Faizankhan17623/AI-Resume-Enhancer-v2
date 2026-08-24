@@ -11,6 +11,7 @@ const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { getModelForPlan } = require('../utils/AiModel')
 const { withTransaction } = require('../utils/withTransaction')
+const { validatePdfUpload } = require('../utils/pdfUpload')
 const logger = require('../utils/logger')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
@@ -25,10 +26,11 @@ exports.createChat = async (req, res) => {
 
         const PDf = req.files?.PDf
         // not a pdf file error sir
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf)
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             })
         }
 

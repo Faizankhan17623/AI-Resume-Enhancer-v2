@@ -1,5 +1,6 @@
 const { PDFParse } = require('pdf-parse')
 const { checkResumeText } = require('../utils/GrammarCheck')
+const { validatePdfUpload } = require('../utils/pdfUpload')
 const logger = require('../utils/logger')
 
 // POST /grammar-check — free, instant pre-check sir, no AI credit spent
@@ -7,10 +8,11 @@ const logger = require('../utils/logger')
 exports.checkGrammar = async (req, res) => {
     try {
         const PDf = req.files?.PDf
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf)
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             })
         }
 

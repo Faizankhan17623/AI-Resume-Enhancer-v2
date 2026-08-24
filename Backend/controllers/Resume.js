@@ -3,6 +3,7 @@ const { PDFParse } = require('pdf-parse')
 
 const Resume = require('../Models/Resume')
 const { checkAtsFormatting } = require('../utils/atsFormatCheck')
+const { validatePdfUpload } = require('../utils/pdfUpload')
 const logger = require('../utils/logger')
 
 // POST /resumes — save a parsed resume for reuse sir, no AI call, no credit spent
@@ -11,10 +12,11 @@ exports.saveResume = async (req, res) => {
         const id = req?.User.id
 
         const PDf = req.files?.PDf
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf)
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             })
         }
 

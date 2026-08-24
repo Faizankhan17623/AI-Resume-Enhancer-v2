@@ -4,6 +4,7 @@ const { PDFParse } = require('pdf-parse');
 const Resume = require('../Models/Resume');
 const { runReview } = require('../services/reviewService');
 const { checkAtsFormatting } = require('../utils/atsFormatCheck');
+const { validatePdfUpload } = require('../utils/pdfUpload');
 const logger = require('../utils/logger');
 
 // Thin controllers sir — parse the request, call the service, shape the response.
@@ -35,10 +36,11 @@ exports.Calling = async (req, res) => {
         const id = req?.User.id
 
         const PDf = req.files?.PDf;
-        if (!PDf) {
+        const uploadError = validatePdfUpload(PDf);
+        if (uploadError) {
             return res.status(400).json({
                 success: false,
-                message: 'The uploaded file must be a PDF or Word document',
+                message: uploadError,
             });
         }
 
