@@ -38,7 +38,8 @@ const {
     deleteAccount,
     applyForRecruiter,
     submitSuspensionAppeal,
-    getReferralStats
+    getReferralStats,
+    getReferralHistory
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -101,5 +102,7 @@ route.get('/profile/export',Auth,exportMyData)
 
 // the Account page's "Invite friends" card sir
 route.get('/referral/stats',Auth,getReferralStats)
+// the Account page's referral dashboard sir — full invite list + week/month/year/custom totals
+route.get('/referral/history',Auth,getReferralHistory)
 
 module.exports = route

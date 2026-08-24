@@ -67,5 +67,6 @@ export const Notifications = {
 }
 
 export const Referral = {
-    stats: BASE_URL + "/referral/stats"
+    stats: BASE_URL + "/referral/stats",
+    history: BASE_URL + "/referral/history"
 }

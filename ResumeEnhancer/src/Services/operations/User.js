@@ -12,7 +12,7 @@ const {
 const { changepassword } = Password
 const { apply: applyForRecruiterUrl } = RecruiterApplication
 const { submit: appealSuspensionUrl } = SuspensionAppeal
-const { stats: referralStatsUrl } = Referral
+const { stats: referralStatsUrl, history: referralHistoryUrl } = Referral
 
 // the account page loads everything from this one call sir
 export function GetProfile(token) {
@@ -262,6 +262,32 @@ export function GetReferralStats(token) {
             return response.data
         } catch (error) {
             logApiError("Error fetching referral stats", error)
+            return null
+        }
+    }
+}
+
+// the Account page's referral dashboard sir — full invite list + week/month/year/custom totals.
+// customFrom/customTo are optional ISO date strings (yyyy-mm-dd from a <input type="date">).
+export function GetReferralHistory(token, customFrom, customTo) {
+    return async () => {
+        try {
+            const params = new URLSearchParams()
+            if (customFrom) params.set('from', customFrom)
+            if (customTo) params.set('to', customTo)
+            const url = params.toString() ? `${referralHistoryUrl}?${params}` : referralHistoryUrl
+
+            const response = await apiConnector("GET", url, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data
+        } catch (error) {
+            logApiError("Error fetching referral history", error)
             return null
         }
     }

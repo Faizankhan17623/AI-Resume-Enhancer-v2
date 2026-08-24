@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes, FaUserFriends, FaCopy } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import ShareTestimonialCard from './ShareTestimonialCard'
+import ReferralDashboardModal from './ReferralDashboardModal'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
@@ -133,12 +134,16 @@ const EditableField = ({ label, value, onSave, type = 'text' }) => {
   )
 }
 
-// invite-a-friend card sir — User-only (mirrors ShareTestimonialCard's own gate), shows the
-// personal referral link, a copy button, and how many successful referrals paid out so far.
-// Fetches its own data independently rather than riding GetProfile, since it's a small
-// occasionally-viewed panel, not something the rest of the app needs on every profile load.
-const ReferralCard = ({ token }) => {
+// invite-a-friend card sir — visible to both User and Recruiter accounts (a Recruiter can invite
+// people and see who they've brought in on the dashboard below), but the CREDIT bonus is
+// User-only — Recruiters don't spend AI review credits, so there's nothing meaningful to bonus
+// (see controllers/user.js's grantReferralBonus for the matching backend-side skip). Fetches its
+// own data independently rather than riding GetProfile, since it's a small, occasionally-viewed
+// panel, not something the rest of the app needs on every profile load.
+const ReferralCard = ({ token, userRole }) => {
   const [stats, setStats] = useState(null)
+  const [dashboardOpen, setDashboardOpen] = useState(false)
+  const isUser = userRole === 'User'
 
   useEffect(() => {
     GetReferralStats(token)().then(setStats)
@@ -148,34 +153,48 @@ const ReferralCard = ({ token }) => {
   if (!stats) return null
 
   const referralUrl = `${window.location.origin}/Signup?ref=${stats.referralCode}`
-  const capped = stats.referralCount >= stats.maxReferrals
+  const capped = isUser && stats.referralCount >= stats.maxReferrals
 
   return (
-    <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
-      <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
-        <FaUserFriends className="text-yellow-50 text-base" /> Invite Friends
-      </h2>
-      <p className="text-xs text-richblack-400 mb-4">
-        Share your link — you and your friend each get {stats.bonusCredits} bonus AI credits once they sign up and log in.
-      </p>
-      <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
-        <p className="text-xs text-richblack-200 truncate flex-1">{referralUrl}</p>
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(referralUrl)
-            toast.success('Copied to clipboard')
-          }}
-          className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
-          title="Copy link"
-        >
-          <FaCopy className="text-sm" />
-        </button>
+    <>
+      <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+        <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+          <FaUserFriends className="text-yellow-50 text-base" /> Invite Friends
+        </h2>
+        <p className="text-xs text-richblack-400 mb-4">
+          {isUser
+            ? `Share your link — you and your friend each get ${stats.bonusCredits} bonus AI credits once they sign up and log in.`
+            : 'Share your link to invite people to Resumify. Track everyone you\'ve brought in on your referral dashboard.'}
+        </p>
+        <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
+          <p className="text-xs text-richblack-200 truncate flex-1">{referralUrl}</p>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(referralUrl)
+              toast.success('Copied to clipboard')
+            }}
+            className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+            title="Copy link"
+          >
+            <FaCopy className="text-sm" />
+          </button>
+        </div>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-xs text-richblack-400">
+            {isUser
+              ? `${stats.referralCount} of ${stats.maxReferrals} referrals used${capped ? " — you've reached the limit for bonus credits" : ''}`
+              : `${stats.referralCount} referral${stats.referralCount === 1 ? '' : 's'} so far`}
+          </p>
+          <button
+            onClick={() => setDashboardOpen(true)}
+            className="text-xs font-semibold text-yellow-50 hover:underline cursor-pointer shrink-0"
+          >
+            View dashboard
+          </button>
+        </div>
       </div>
-      <p className="text-xs text-richblack-400 mt-3">
-        {stats.referralCount} of {stats.maxReferrals} referrals used
-        {capped && ' — you\'ve reached the limit for bonus credits'}
-      </p>
-    </div>
+      <ReferralDashboardModal open={dashboardOpen} onClose={() => setDashboardOpen(false)} token={token} />
+    </>
   )
 }
 
@@ -375,9 +394,9 @@ const Account = () => {
           </div>
         </div>
 
-        {/* Invite friends sir — User-only, same gate as the referral endpoint itself needing a
-            real logged-in User account (Admin/Support/Recruiter have no plan/credits to bonus) */}
-        {user.role === 'User' && <ReferralCard token={token} />}
+        {/* Invite friends sir — visible to User AND Recruiter (Admin/Support have no referral
+            use case), the credit bonus itself stays User-only inside ReferralCard/the backend */}
+        {(user.role === 'User' || user.role === 'Recruiter') && <ReferralCard token={token} userRole={user.role} />}
 
         {/* Share a homepage testimonial sir — User-only, mirrors isUser on the backend */}
         {user.role === 'User' && <ShareTestimonialCard />}

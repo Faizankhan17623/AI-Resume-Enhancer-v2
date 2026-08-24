@@ -7,12 +7,14 @@ const crypto = require('crypto')
 const User = require('../Models/User');
 const OTP = require('../Models/OTP.js')
 const LoginLog = require('../Models/LoginLog.js')
+const ReferralLog = require('../Models/ReferralLog.js')
 const mailSender = require('../utils/Nodemailer.js')
 const { logSystemAction } = require('../utils/AdminLog.js')
 
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
 const { otpEmail } = require('../Templates/OTP.js')
+const { referralSuccessTemplate } = require('../Templates/ReferralSuccess.js')
 const { issueSession, publicUser, buildClearAuthCookie } = require('../utils/session.js')
 const logger = require('../utils/logger.js')
 // ============================================================
@@ -182,37 +184,75 @@ const REFERRAL_BONUS_CREDITS = 5
 // (or one person's two emails) could loop signup+login indefinitely for free credits
 const MAX_REFERRALS_PER_USER = 10
 
-// pays out the referral bonus to both sides sir, called from loginUser on the referred user's
-// first login. The findOneAndUpdate below is the actual race guard: it flips
-// referralBonusGranted from false->true and only proceeds if THIS call is the one that flipped
-// it, so two concurrent logins for the same account (double-click, retry) can never pay out
-// twice. The referrer's cap check happens first and simply skips the payout (not an error) once
-// MAX_REFERRALS_PER_USER is reached — the new user still gets to keep their own account as normal,
-// they just don't get the bonus for a referrer who's already maxed out.
-const grantReferralBonus = async (referredUserId, referrerId) => {
-    const referrer = await User.findById(referrerId).select('referralCount count')
-    if (!referrer || referrer.referralCount >= MAX_REFERRALS_PER_USER) return
+// pays out the referral bonus sir, called from loginUser on the referred user's first login.
+// The findOneAndUpdate below is the actual race guard: it flips referralBonusGranted from
+// false->true and only proceeds if THIS call is the one that flipped it, so two concurrent
+// logins for the same account (double-click, retry) can never pay out twice. The referrer's cap
+// check happens first and simply skips the CREDIT part (not an error, and the invite still gets
+// logged) once MAX_REFERRALS_PER_USER is reached.
+//
+// Credits only ever move for a User referrer AND a User referee sir — a Recruiter can refer or
+// be referred (the link/card is visible to them too, per the Account page), but Recruiters don't
+// spend AI review credits so there is nothing meaningful to bonus. Every successful referral
+// still gets a ReferralLog row regardless of role, with bonusCredits: 0 in the no-credit case, so
+// the invite DASHBOARD (who you invited, when) is accurate for every role even when no money/
+// credits changed hands.
+const grantReferralBonus = async (referredUser, referrerId) => {
+    const referrer = await User.findById(referrerId).select('firstName lastName email role referralCount count')
+    if (!referrer) return
 
     const claimed = await User.findOneAndUpdate(
-        { _id: referredUserId, referralBonusGranted: false },
+        { _id: referredUser._id, referralBonusGranted: false },
         { referralBonusGranted: true },
         { new: true }
     ).select('count')
     if (!claimed) return // sir — another concurrent call already paid this account out
 
-    // count can never go below zero sir — same clamp Admin.js's adjustCredits uses. A raw
-    // $inc could take it negative, which the Account page's credits-used progress bar
-    // (creditsUsed / creditsLimit) would render as a negative-width bar.
-    await User.findByIdAndUpdate(referredUserId, { count: Math.max(0, claimed.count - REFERRAL_BONUS_CREDITS) })
+    const bothAreUsers = referrer.role === 'User' && referredUser.role === 'User'
+    const underCap = referrer.referralCount < MAX_REFERRALS_PER_USER
+    const grantCredits = bothAreUsers && underCap
 
-    const updatedReferrer = await User.findOneAndUpdate(
-        { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
-        { $inc: { referralCount: 1 } },
-        { new: true }
-    ).select('count')
-    if (updatedReferrer) {
-        await User.findByIdAndUpdate(referrerId, { count: Math.max(0, updatedReferrer.count - REFERRAL_BONUS_CREDITS) })
+    if (grantCredits) {
+        // count can never go below zero sir — same clamp Admin.js's adjustCredits uses. A raw
+        // $inc could take it negative, which the Account page's credits-used progress bar
+        // (creditsUsed / creditsLimit) would render as a negative-width bar.
+        await User.findByIdAndUpdate(referredUser._id, { count: Math.max(0, claimed.count - REFERRAL_BONUS_CREDITS) })
     }
+
+    // referralCount (the dashboard's "X of 10 used" cap display) only climbs for the credit-
+    // earning case sir — a Recruiter referral doesn't consume any of the cap since it never
+    // costs anything to grant
+    let updatedReferrerCount = referrer.count
+    if (grantCredits) {
+        const updatedReferrer = await User.findOneAndUpdate(
+            { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
+            { $inc: { referralCount: 1 } },
+            { new: true }
+        ).select('count')
+        if (updatedReferrer) {
+            updatedReferrerCount = Math.max(0, updatedReferrer.count - REFERRAL_BONUS_CREDITS)
+            await User.findByIdAndUpdate(referrerId, { count: updatedReferrerCount })
+        }
+    }
+
+    const grantedAt = new Date()
+    const bonusCredits = grantCredits ? REFERRAL_BONUS_CREDITS : 0
+
+    // fire-and-forget sir — a logging/email failure must never undo a real credit grant that
+    // already landed above
+    ReferralLog.create({
+        referrer: referrerId,
+        referredUser: referredUser._id,
+        referredUserName: `${referredUser.firstName} ${referredUser.lastName}`,
+        referredUserEmail: referredUser.email,
+        bonusCredits,
+    }).catch((err) => logger.error('referral log failed', { err, referrerId, referredUserId: referredUser._id }))
+
+    mailSender(
+        referrer.email,
+        'Your Invite Was Successful',
+        referralSuccessTemplate(referrer.firstName, `${referredUser.firstName} ${referredUser.lastName}`, bonusCredits, grantedAt)
+    ).catch((err) => logger.error('referral success email failed', { err, referrerId }))
 }
 
 // ============================================================
@@ -331,7 +371,7 @@ exports.loginUser = async (req, res) => {
         // this codebase has that the account is real, not a fake farmed purely for the bonus.
         // Fire-and-forget: a referral-bonus failure must never block the login itself.
         if (!existingUser.Verified && existingUser.referredBy && !existingUser.referralBonusGranted) {
-            grantReferralBonus(existingUser._id, existingUser.referredBy).catch((err) =>
+            grantReferralBonus(existingUser, existingUser.referredBy).catch((err) =>
                 logger.error('referral bonus grant failed', { err, userId: existingUser._id })
             )
         }
@@ -1457,6 +1497,66 @@ exports.getReferralStats = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your referral stats',
+        })
+    }
+}
+
+// ============================================================
+// REFERRAL HISTORY — the Account page's referral dashboard sir:
+// who was invited, when, how much, plus week/month/year/custom totals
+// ============================================================
+exports.getReferralHistory = async (req, res) => {
+    try {
+        const id = req.User.id
+
+        // the full invite list sir — newest first, this codebase's referral volume per user is
+        // small (capped at 10 credit-earning ones, uncapped but still small for the no-credit
+        // Recruiter case) so no pagination needed here, unlike Admin's user list
+        const entries = await ReferralLog.find({ referrer: id })
+            .select('referredUserName referredUserEmail bonusCredits createdAt')
+            .sort({ createdAt: -1 })
+
+        const now = new Date()
+        const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+        const startOfWeek = startOfDay(new Date(now.getTime() - now.getDay() * 24 * 60 * 60 * 1000))
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        const startOfYear = new Date(now.getFullYear(), 0, 1)
+
+        // custom range sir — ?from=YYYY-MM-DD&to=YYYY-MM-DD, both optional and independent
+        const customFrom = req.query.from ? new Date(req.query.from) : null
+        const customTo = req.query.to ? new Date(req.query.to) : null
+
+        const sumSince = (since) =>
+            entries
+                .filter((e) => e.createdAt >= since)
+                .reduce((acc, e) => ({ invites: acc.invites + 1, credits: acc.credits + e.bonusCredits }), { invites: 0, credits: 0 })
+
+        const totals = {
+            week: sumSince(startOfWeek),
+            month: sumSince(startOfMonth),
+            year: sumSince(startOfYear),
+            allTime: entries.reduce((acc, e) => ({ invites: acc.invites + 1, credits: acc.credits + e.bonusCredits }), { invites: 0, credits: 0 }),
+        }
+
+        // custom range is a filter-then-sum sir, not a "since" — both bounds (or just one) can
+        // be given, so it isn't reusable via the sumSince helper above
+        if (customFrom || customTo) {
+            const inRange = entries.filter((e) =>
+                (!customFrom || e.createdAt >= customFrom) && (!customTo || e.createdAt <= customTo)
+            )
+            totals.custom = inRange.reduce((acc, e) => ({ invites: acc.invites + 1, credits: acc.credits + e.bonusCredits }), { invites: 0, credits: 0 })
+        }
+
+        return res.status(200).json({
+            success: true,
+            entries,
+            totals,
+        })
+    } catch (error) {
+        (req.log || logger).error('get referral history failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your referral history',
         })
     }
 }
