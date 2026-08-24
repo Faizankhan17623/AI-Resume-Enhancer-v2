@@ -44,13 +44,18 @@ const SharedPortfolio = () => {
         </Link>
       </div>
 
-      <div className={`flex-1 w-full mx-auto px-4 py-10 ${loading ? 'flex' : ''}`}>
+      <div className={`flex-1 w-full mx-auto px-4 py-10 ${loading || notFound ? 'flex items-center justify-center' : ''}`}>
         {loading ? (
           <Loading text="Loading resume..." />
         ) : notFound ? (
-          <div className="max-w-2xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
+          <div className="max-w-2xl w-full mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center animate-fadeIn">
             <p className="text-richblack-200 mb-6">This resume was not found or is no longer public.</p>
-            <Link to="/" className="text-yellow-50 hover:underline text-sm font-semibold">Go home</Link>
+            <Link
+              to="/"
+              className="inline-block px-6 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full shadow-md hover:bg-yellow-25 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            >
+              Go home
+            </Link>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
