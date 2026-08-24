@@ -45,6 +45,7 @@ const BuilderEditor = () => {
   const printRef = useRef(null)
   const saveTimer = useRef(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [scoreModalOpen, setScoreModalOpen] = useState(false)
   const [scoreJd, setScoreJd] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -232,13 +233,19 @@ const BuilderEditor = () => {
     DownloadBuiltResumeDocx(resumeId, current.title, token)
   }
 
-  // Pro/ProMax only sir — Basic gets the upgrade nudge instead of the actual toggle call,
-  // matching the isBasic gate CoverLetter.jsx/JobSearch.jsx already use for their own Pro features
+  // Pro/ProMax only sir — Basic gets the upgrade nudge instead of the modal, matching the
+  // isBasic gate CoverLetter.jsx/JobSearch.jsx already use for their own Pro features.
+  // Opens the modal first; the modal's own toggle button actually creates the link — this just
+  // reveals the panel so a not-yet-shared resume can turn sharing on from inside it.
   const handleShareClick = () => {
     if (isBasic) {
       toast.error("Public portfolio links are a Pro feature, please upgrade your plan")
       return
     }
+    setShareModalOpen(true)
+  }
+
+  const handleToggleShareInModal = () => {
     dispatch(TogglePortfolioShare(resumeId, token))
   }
 
@@ -278,8 +285,7 @@ const BuilderEditor = () => {
       `}</style>
 
       <PageTransition className="h-full overflow-y-auto px-4 lg:px-6 py-6">
-        <div className="mb-6 print:hidden">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
           <input
             value={current.title || ''}
             onChange={(e) => patch({ title: e.target.value })}
@@ -420,26 +426,62 @@ const BuilderEditor = () => {
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
             >
               {isBasic ? <FaCrown className="text-yellow-50" /> : <FaShareAlt className={current?.isPublic ? "text-yellow-50" : undefined} />}
-              {current?.isPublic ? 'Unshare portfolio' : 'Share as portfolio'}
+              Share
             </button>
           </div>
         </div>
-          {current?.isPublic && portfolioUrl && (
-            <div className="mt-4 max-w-md">
-              <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
-                <p className="text-xs text-richblack-200 truncate flex-1">{portfolioUrl}</p>
-                <button
-                  onClick={() => copyText(portfolioUrl)}
-                  className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
-                  title="Copy link"
-                >
-                  <FaCopy className="text-sm" />
+
+        {/* portfolio share modal sir — the actual toggle-on/link/copy/close lives in here now,
+            the toolbar button above only opens this panel */}
+        <AnimatePresence>
+        {shareModalOpen && (
+          <motion.div
+            initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          >
+            <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
+            <motion.div variants={modalPanel} className="relative w-full max-w-md rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-bold text-lg text-richblack-5">Share as portfolio</h3>
+                <button onClick={() => setShareModalOpen(false)} className="text-richblack-400 hover:text-richblack-5 cursor-pointer">
+                  <FaTimes />
                 </button>
               </div>
-              <p className="text-xs text-richblack-400 mt-1.5">Anyone with this link can view this resume as a public portfolio page.</p>
-            </div>
-          )}
-        </div>
+
+              {current?.isPublic && portfolioUrl ? (
+                <>
+                  <p className="text-sm text-richblack-300 mb-3">Anyone with this link can view this resume as a public portfolio page.</p>
+                  <div className="flex items-center gap-2 rounded-lg bg-richblack-900/60 border border-richblack-600 px-4 py-2.5">
+                    <p className="text-xs text-richblack-200 truncate flex-1">{portfolioUrl}</p>
+                    <button
+                      onClick={() => copyText(portfolioUrl)}
+                      className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+                      title="Copy link"
+                    >
+                      <FaCopy className="text-sm" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleToggleShareInModal}
+                    className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-pink-200 border border-pink-700/40 rounded-full hover:bg-pink-700/10 transition-all duration-200 cursor-pointer"
+                  >
+                    Turn off sharing
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-richblack-300 mb-4">Publish this resume as a public portfolio page anyone can view with a link.</p>
+                  <IconBtn
+                    text="Create portfolio link"
+                    onclick={handleToggleShareInModal}
+                    customClasses="text-sm w-full justify-center"
+                  />
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+        </AnimatePresence>
 
         {/* score modal sir — needs a JD before it can send this resume through the AI Review pipeline */}
         <AnimatePresence>
