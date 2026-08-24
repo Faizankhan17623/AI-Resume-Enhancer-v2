@@ -32,7 +32,7 @@ const SharedPortfolio = () => {
   return (
     <div className="min-h-screen bg-richblack-900 flex flex-col">
       <Helmet>
-        <title>{resume?.title ? `${resume.title} | Resumify` : 'Shared Portfolio | Resumify'}</title>
+        <title>{resume?.title ? `${resume.title} | Resumify` : 'Shared Resume | Resumify'}</title>
       </Helmet>
 
       <div className="border-b border-richblack-700 bg-richblack-900/90 py-4 print:hidden">
@@ -44,12 +44,12 @@ const SharedPortfolio = () => {
         </Link>
       </div>
 
-      <div className="flex-1 w-full mx-auto px-4 py-10">
+      <div className={`flex-1 w-full mx-auto px-4 py-10 ${loading ? 'flex' : ''}`}>
         {loading ? (
-          <Loading text="Loading portfolio..." />
+          <Loading text="Loading resume..." />
         ) : notFound ? (
           <div className="max-w-2xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
-            <p className="text-richblack-200 mb-6">This portfolio was not found or is no longer public.</p>
+            <p className="text-richblack-200 mb-6">This resume was not found or is no longer public.</p>
             <Link to="/" className="text-yellow-50 hover:underline text-sm font-semibold">Go home</Link>
           </div>
         ) : (
