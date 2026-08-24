@@ -442,7 +442,8 @@ const BuilderEditor = () => {
             <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
             <motion.div variants={modalPanel} className="relative w-full max-w-md rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-lg text-richblack-5">Share the resume</h3>
+                <div className="w-5" />
+                <h3 className="flex-1 text-center font-display font-bold text-lg text-richblack-5">Share the resume</h3>
                 <button onClick={() => setShareModalOpen(false)} className="text-richblack-400 hover:text-richblack-5 cursor-pointer">
                   <FaTimes />
                 </button>
