@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift } from 'react-icons/fa'
 import toast from 'react-hot-toast'
@@ -40,6 +41,7 @@ const Users = () => {
   const [page, setPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState('')
   const [selected, setSelected] = useState([])
+  const [grantingCredits, setGrantingCredits] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   // opens straight to a user's detail drawer sir when arriving from the global admin
   // search (?highlight=<userId>) — the modal fetches by id, so it doesn't matter whether
@@ -162,7 +164,7 @@ const Users = () => {
       title: 'Grant bonus credits to ALL users',
       html: `
         <p style="font-size:13px;color:#B8B0A0;margin-bottom:10px;">Every User account gets this many bonus credits, and an email notifying them. This cannot be undone.</p>
-        <input id="swal-credits" type="number" min="1" placeholder="5" class="swal2-input" style="margin:0 0 8px;">
+        <input id="swal-credits" type="number" min="1" placeholder="0" class="swal2-input" style="margin:0 0 8px;">
         <input id="swal-reason" type="text" placeholder="Reason (optional, shown in the email)" class="swal2-input" style="margin:0;">
       `,
       showCancelButton: true,
@@ -187,8 +189,19 @@ const Users = () => {
     })
     if (!confirm.isConfirmed) return
 
+    setGrantingCredits(true)
     const result = await dispatch(GrantCreditsToAll(value.credits, value.reason, token))
-    if (result) toast.success(result)
+    setGrantingCredits(false)
+
+    if (result) {
+      Swal.fire({
+        ...swalDark,
+        icon: 'success',
+        title: 'Credits granted',
+        text: result,
+        confirmButtonText: 'Done',
+      })
+    }
   }
 
   const handleBan = async (target) => {
@@ -264,6 +277,20 @@ const Users = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      {/* full-screen loader sir while the broadcast credit grant is in flight — the request only
+          resolves once the DB write for every user has actually landed (emails are sent
+          fire-and-forget server-side after), so this hides the instant the real work is done */}
+      <AnimatePresence>
+      {grantingCredits && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Granting bonus credits to everyone..." />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 

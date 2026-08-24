@@ -232,9 +232,9 @@ export const AdjustCredits = (userId, delta, reason, token, page, search, roleFi
 
 // broadcast bonus sir — not a userAction() call like the others: it doesn't target a single row,
 // so there's no page/search/roleFilter to refetch against automatically. Caller (Users.jsx)
-// dispatches this directly and refetches its own list afterward.
+// dispatches this directly, shows its own full-screen loader while this is in flight, and
+// refetches its own list afterward — no toast.loading here, the caller's loader already covers it.
 export const GrantCreditsToAll = (credits, reason, token) => async (dispatch) => {
-    const toastId = toast.loading('Granting bonus credits to everyone...')
     try {
         const response = await apiConnector("POST", grantcreditsall, { credits, ...(reason ? { reason } : {}) }, {
             Authorization: `Bearer ${token}`
@@ -250,8 +250,6 @@ export const GrantCreditsToAll = (credits, reason, token) => async (dispatch) =>
         logApiError("Grant credits to all failed", error)
         toast.error(error?.response?.data?.message || "The bulk grant failed")
         return null
-    } finally {
-        toast.dismiss(toastId)
     }
 }
 
