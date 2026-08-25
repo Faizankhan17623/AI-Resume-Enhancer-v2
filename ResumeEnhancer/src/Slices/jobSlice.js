@@ -8,6 +8,7 @@ const initialState = {
     currentJob: null,
     jobApplicants: [],
     jobAnalytics: null,
+    recruiterOverview: null,
 
     // public board sir
     publicJobs: [],
@@ -35,6 +36,9 @@ const jobSlice = createSlice({
         },
         setJobAnalytics(state, value) {
             state.jobAnalytics = value.payload
+        },
+        setRecruiterOverview(state, value) {
+            state.recruiterOverview = value.payload
         },
         // Hire/Reject updates the one row in place sir — same pattern as an optimistic-ish
         // local patch after a successful PATCH, no full refetch needed
@@ -73,6 +77,7 @@ export const {
     setCurrentJob,
     setJobApplicants,
     setJobAnalytics,
+    setRecruiterOverview,
     patchJobApplicant,
     patchJobApplicantsBulk,
     setPublicJobs,

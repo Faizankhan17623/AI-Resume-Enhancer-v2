@@ -65,6 +65,7 @@ const RecruiterJobDetail = lazy(() => import('./Components/Recruiter/JobDetailRe
 const RecruiterTestBuilder = lazy(() => import('./Components/Recruiter/TestBuilder'))
 const RecruiterJobApplicantsList = lazy(() => import('./Components/Recruiter/JobApplicantsList'))
 const RecruiterJobAnalytics = lazy(() => import('./Components/Recruiter/JobAnalytics'))
+const RecruiterOverview = lazy(() => import('./Components/Recruiter/RecruiterOverview'))
 const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/AttemptDetail'))
 const RecruiterAccount = lazy(() => import('./Components/Recruiter/RecruiterAccount'))
 const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
@@ -224,6 +225,7 @@ function App() {
                 any of these gets redirected to their own Dashboard instead of being let through.
                 Jobs are the top-level view now — a Test lives inside a Job, reached from it. */}
             <Route path="/Recruiter" element={<RecruiterRoute><RecruiterJobList /></RecruiterRoute>} />
+            <Route path="/Recruiter/Analytics" element={<RecruiterRoute><RecruiterOverview /></RecruiterRoute>} />
             <Route path="/Recruiter/New" element={<RecruiterRoute><RecruiterJobBuilder /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId" element={<RecruiterRoute><RecruiterJobDetail /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/Test" element={<RecruiterRoute><RecruiterTestBuilder /></RecruiterRoute>} />

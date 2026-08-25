@@ -7,6 +7,7 @@ import {
     setCurrentJob,
     setJobApplicants,
     setJobAnalytics,
+    setRecruiterOverview,
     patchJobApplicant,
     patchJobApplicantsBulk,
     setPublicJobs,
@@ -17,8 +18,9 @@ import {
 
 const {
     createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, getJobApplicants,
-    getJobAnalytics, inviteApplicantToTest, setApplicationOutcome, bulkInviteApplicants,
-    bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob, listMyApplications,
+    getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, setApplicationOutcome,
+    bulkInviteApplicants, bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob,
+    listMyApplications,
 } = JobData
 
 // ---------------------------------------------------------------------------
@@ -203,6 +205,30 @@ export function GetJobAnalytics(jobId, token) {
         } catch (error) {
             logApiError("Error fetching job analytics", error)
             toast.error(error?.response?.data?.message || "Could not load the job's analytics")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// totals + per-job breakdown ACROSS every job the recruiter has posted sir — the landing view
+// for "how am I doing overall", separate from GetJobAnalytics' single-job funnel
+export function GetRecruiterOverviewAnalytics(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", getRecruiterOverviewAnalytics, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setRecruiterOverview(response.data.analytics))
+        } catch (error) {
+            logApiError("Error fetching your analytics overview", error)
+            toast.error(error?.response?.data?.message || "Could not load your analytics overview")
         } finally {
             dispatch(setLoading(false))
         }

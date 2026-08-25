@@ -225,6 +225,96 @@ exports.getJobApplicants = async (req, res) => {
     }
 }
 
+// GET /jobs/analytics-overview sir — a recruiter's totals ACROSS every job they've posted, plus
+// a per-job breakdown so they can see which posting is actually performing without opening each
+// one's own funnel (getJobAnalytics below) individually. One aggregation over JobApplication
+// grouped by job, joined back onto the recruiter's own Job list in memory — cheap at the scale
+// one recruiter's postings run at, no need for a $lookup pipeline.
+exports.getRecruiterOverviewAnalytics = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+
+        const jobs = await Job.find({ recruiter: recruiterId }).select('title status views createdAt').sort({ createdAt: -1 })
+        if (jobs.length === 0) {
+            return res.status(200).json({
+                success: true,
+                analytics: {
+                    totals: { jobs: 0, views: 0, applications: 0, invitedToTest: 0, hired: 0, rejected: 0, hireRate: 0 },
+                    jobs: [],
+                },
+            })
+        }
+
+        const jobIds = jobs.map((j) => j._id)
+        const perJobCounts = await JobApplication.aggregate([
+            { $match: { job: { $in: jobIds } } },
+            { $group: { _id: { job: '$job', status: '$status' }, count: { $sum: 1 } } },
+        ])
+
+        // job._id -> { applied, invited_to_test, completed_test, rejected, hired } sir
+        const countsByJob = new Map()
+        for (const row of perJobCounts) {
+            const jobId = String(row._id.job)
+            if (!countsByJob.has(jobId)) countsByJob.set(jobId, {})
+            countsByJob.get(jobId)[row._id.status] = row.count
+        }
+
+        let totalViews = 0, totalApplications = 0, totalInvited = 0, totalHired = 0, totalRejected = 0
+
+        const jobBreakdown = jobs.map((job) => {
+            const c = countsByJob.get(String(job._id)) || {}
+            const applications = (c.applied || 0) + (c.invited_to_test || 0) + (c.completed_test || 0) + (c.rejected || 0) + (c.hired || 0)
+            const invitedToTest = applications - (c.applied || 0)
+            const hired = c.hired || 0
+            const rejected = c.rejected || 0
+
+            totalViews += job.views
+            totalApplications += applications
+            totalInvited += invitedToTest
+            totalHired += hired
+            totalRejected += rejected
+
+            return {
+                _id: job._id,
+                title: job.title,
+                status: job.status,
+                views: job.views,
+                applications,
+                invitedToTest,
+                hired,
+                rejected,
+                hireRate: applications ? Number(((hired / applications) * 100).toFixed(1)) : 0,
+            }
+        })
+
+        // strongest posting first sir — most hires, ties broken by most applications, so the
+        // recruiter's best-performing job surfaces at the top without them having to sort it themselves
+        jobBreakdown.sort((a, b) => b.hired - a.hired || b.applications - a.applications)
+
+        return res.status(200).json({
+            success: true,
+            analytics: {
+                totals: {
+                    jobs: jobs.length,
+                    views: totalViews,
+                    applications: totalApplications,
+                    invitedToTest: totalInvited,
+                    hired: totalHired,
+                    rejected: totalRejected,
+                    hireRate: totalApplications ? Number(((totalHired / totalApplications) * 100).toFixed(1)) : 0,
+                },
+                jobs: jobBreakdown,
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get recruiter overview analytics failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your analytics overview',
+        })
+    }
+}
+
 // GET /jobs/:jobId/analytics sir — the funnel: views -> applications -> invited -> test
 // completed -> hired/rejected, plus test-performance stats. One aggregation pass per
 // collection, same Promise.all-of-independent-queries shape as Admin.js's getDashboardStats.

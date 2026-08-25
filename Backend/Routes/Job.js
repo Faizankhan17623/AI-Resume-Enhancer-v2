@@ -19,6 +19,7 @@ const {
     closeJob,
     getJobApplicants,
     getJobAnalytics,
+    getRecruiterOverviewAnalytics,
     inviteApplicantToTest,
     setApplicationOutcome,
     bulkInviteApplicantsToTest,
@@ -40,6 +41,7 @@ const {
 // cleared them (see Middlewares/Auth.js). A locked (pending/rejected) Recruiter 403s here.
 route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createJobSchema }), createJob)
 route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
+route.get('/jobs/analytics-overview', Auth, isRecruiter, isApprovedRecruiter, getRecruiterOverviewAnalytics)
 route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
 route.post('/jobs/:jobId/applicants/bulk-invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkInviteApplicantsSchema }), bulkInviteApplicantsToTest)
 route.patch('/jobs/:jobId/applicants/bulk-status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkApplicationOutcomeSchema }), bulkSetApplicationOutcome)

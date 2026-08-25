@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router'
 import { motion } from 'motion/react'
-import { FaBriefcase, FaPlus, FaUserFriends } from 'react-icons/fa'
+import { FaBriefcase, FaPlus, FaUserFriends, FaChartLine } from 'react-icons/fa'
 
 // mirrors Admin/AdminNav.jsx's tab-bar pattern sir — Recruiter is its own isolated role with
 // its own small URL space, no shared tabs with Admin/Support. Jobs are the top-level view now —
 // a Test lives inside a Job (see JobBuilder.jsx/TestBuilder.jsx), not standalone.
 const tabs = [
   { name: 'My Jobs', path: '/Recruiter', icon: <FaBriefcase /> },
+  { name: 'Analytics', path: '/Recruiter/Analytics', icon: <FaChartLine /> },
   { name: 'New Job', path: '/Recruiter/New', icon: <FaPlus /> },
   { name: 'Account', path: '/Recruiter/Account', icon: <FaUserFriends /> },
 ]
