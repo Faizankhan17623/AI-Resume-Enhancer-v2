@@ -3,11 +3,11 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
+const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, atrisk, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -146,6 +146,26 @@ export function GetSecurity(token) {
             dispatch(setSecurity(response.data.security))
         } catch (error) {
             logApiError("Error fetching the security stats", error)
+        }
+    }
+}
+
+// paying subscribers gone quiet 7+ days sir — same inactivity signal StreakCron.js's
+// sendWinBackNudges already emails on, just finally visible to an admin
+export function GetAtRisk(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", atrisk, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setAtRisk(response.data.atRisk))
+        } catch (error) {
+            logApiError("Error fetching at-risk users", error)
         }
     }
 }

@@ -10,7 +10,7 @@ import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetAtRisk, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -85,7 +85,7 @@ const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
@@ -96,6 +96,7 @@ const Overview = () => {
     dispatch(GetDeletions(token))
     dispatch(GetReconciliation(token))
     dispatch(GetSecurity(token))
+    dispatch(GetAtRisk(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -443,6 +444,66 @@ const Overview = () => {
               <p className="text-sm text-richblack-400">Loading...</p>
             )}
           </div>
+        </div>
+
+        {/* At-risk subscribers sir — the same 14-day inactivity signal StreakCron.js's
+            sendWinBackNudges already emails blind, just finally visible to an admin. Paying
+            (Subscription: true) accounts use a tighter 7-day threshold since a quiet paid
+            account is a stronger churn/revenue signal than a quiet free one. */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2"><FaUserClock className="text-yellow-25" /> At-risk subscribers</h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            Paying accounts with no activity in 7+ days — the same signal the win-back email already fires on, now visible here too.
+          </p>
+          {atRisk ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className={`font-display text-2xl ${atRisk.payingCount > 0 ? 'text-pink-200' : 'text-richblack-5'}`}>{atRisk.payingCount}</p>
+                  <p className="text-xs text-richblack-400">paying, quiet 7+ days</p>
+                </div>
+                <div>
+                  <p className="font-display text-2xl text-richblack-5">{atRisk.freeInactiveCount}</p>
+                  <p className="text-xs text-richblack-400">free accounts, quiet 14+ days</p>
+                </div>
+              </div>
+              {atRisk.paying?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
+                        <th className="pb-2 pr-4">User</th>
+                        <th className="pb-2 pr-4">Plan</th>
+                        <th className="pb-2 pr-4">Last active</th>
+                        <th className="pb-2">Renews / expires</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {atRisk.paying.slice(0, 10).map((u) => (
+                        <tr key={u._id} className="border-b border-richblack-700/50 last:border-0">
+                          <td className="py-2 pr-4 text-richblack-100">
+                            {u.firstName} {u.lastName}
+                            <span className="text-richblack-400 text-xs"> · {u.email}</span>
+                          </td>
+                          <td className="py-2 pr-4 text-richblack-300">{u.SubType}</td>
+                          <td className="py-2 pr-4 text-richblack-400 text-xs">
+                            {u.lastActivityDate ? new Date(u.lastActivityDate).toLocaleDateString() : 'never'}
+                          </td>
+                          <td className="py-2 text-richblack-400 text-xs">
+                            {u.SubscriptionExpires ? new Date(u.SubscriptionExpires).toLocaleDateString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-richblack-400">No paying subscribers currently at risk.</p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-richblack-400">Loading...</p>
+          )}
         </div>
 
         {/* 30-day charts sir — one categorical slot (validated blue) per single-series chart,

@@ -20,6 +20,7 @@ const initialState = {
     deletions: null,
     reconciliation: null,
     security: null,
+    atRisk: null,
     traffic: null,
     trafficRange: 'week',
     settings: [],
@@ -81,6 +82,9 @@ const adminSlice = createSlice({
         setSecurity(state, value) {
             state.security = value.payload
         },
+        setAtRisk(state, value) {
+            state.atRisk = value.payload
+        },
         setTraffic(state, value) {
             state.traffic = value.payload
         },
@@ -107,6 +111,6 @@ const adminSlice = createSlice({
 
 export const {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } = adminSlice.actions
 export default adminSlice.reducer

@@ -644,6 +644,60 @@ exports.getReconciliation = async (req, res) => {
     }
 }
 
+// GET /admin/at-risk — paying subscribers going quiet sir, the churn signal that previously had
+// zero dashboard visibility even though StreakCron.js's sendWinBackNudges already emails
+// inactive users blind (14-day threshold, ALL plans, no admin ever sees who's actually on it).
+// This surfaces the SAME 14-day inactivity signal but split by whether the user is a paying
+// subscriber right now (Subscription: true) — a quiet ProMax account is a revenue-at-risk
+// signal worth an admin's attention, a quiet free Basic account is just normal churn.
+exports.getAtRiskUsers = async (req, res) => {
+    try {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+
+        const [payingAtRisk, freeInactive] = await Promise.all([
+            // paying + quiet 7+ days sir — the same feature they're being billed for going unused
+            // is the strongest early churn signal, well before the free-tier 14-day nudge fires
+            User.find({
+                Subscription: true,
+                isBanned: { $ne: true },
+                $or: [
+                    { lastActivityDate: { $lt: sevenDaysAgo } },
+                    { lastActivityDate: { $exists: false } },
+                ],
+            })
+                .select('firstName lastName email SubType SubscriptionExpires lastActivityDate')
+                .sort({ lastActivityDate: 1 })
+                .limit(50),
+            // free + quiet 14+ days sir — same threshold sendWinBackNudges already emails on,
+            // just finally visible here instead of only ever reaching the user's inbox
+            User.countDocuments({
+                Subscription: false,
+                isBanned: { $ne: true },
+                $or: [
+                    { lastActivityDate: { $lt: fourteenDaysAgo } },
+                    { lastActivityDate: { $exists: false } },
+                ],
+            }),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            atRisk: {
+                payingCount: payingAtRisk.length,
+                paying: payingAtRisk,
+                freeInactiveCount: freeInactive,
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get at-risk users failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting at-risk users',
+        })
+    }
+}
+
 // GET /admin/security — visibility into account lockouts sir, the one abuse signal that
 // previously had zero dashboard presence despite the underlying protection already existing
 // (per-account lockout in controllers/user.js, IP rate limiters in Middlewares/RateLimit.js —

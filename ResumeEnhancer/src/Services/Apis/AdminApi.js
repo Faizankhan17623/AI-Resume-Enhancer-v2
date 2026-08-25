@@ -11,6 +11,7 @@ export const AdminStats = {
     deletions: BASE_URL + "/admin/deletions",
     reconciliation: BASE_URL + "/admin/reconciliation",
     security: BASE_URL + "/admin/security",
+    atrisk: BASE_URL + "/admin/at-risk",
     search: BASE_URL + "/admin/search"
 }
 
