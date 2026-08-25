@@ -60,6 +60,22 @@ const UserCreation = new mongoose.Schema(
             type:Number,
             default:0
         },
+        // stacks ON TOP of the plan's normal credit allowance sir — admin grants (Admin.js's
+        // adjustCredits/grantCreditsToAll) and referral rewards (controllers/user.js's
+        // grantReferralBonus) both add here instead of decrementing `count`, so a bonus never
+        // gets silently wasted once a user is already at/near their plan cap. consumeCredit in
+        // utils/Plans.js draws from the plan allowance first, then this pool.
+        bonusCredits:{
+            type:Number,
+            default:0
+        },
+        // how much of bonusCredits has been spent sir — lets refundCredit in utils/Plans.js tell
+        // whether the credit it's refunding came out of the plan allowance or the bonus pool, so
+        // it hands the refund back to the right bucket instead of always crediting `count`
+        spentBonus:{
+            type:Number,
+            default:0
+        },
         // required only for a normal signup sir — Google never gives us a phone number,
         // and there's no equivalent to ask for mid-OAuth-redirect without extra friction
         number:{

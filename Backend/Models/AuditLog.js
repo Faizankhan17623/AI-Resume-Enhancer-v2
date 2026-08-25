@@ -27,6 +27,7 @@ const auditLogSchema = new mongoose.Schema(
                 'USER_BAN',
                 'USER_UNBAN',
                 'CREDIT_ADJUST',
+                'CREDIT_BONUS_BROADCAST',
                 'USER_DELETE',
                 'IMPERSONATE',
                 'ANNOUNCEMENT_CREATE',

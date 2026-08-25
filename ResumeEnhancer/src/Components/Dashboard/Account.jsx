@@ -316,6 +316,12 @@ const Account = () => {
                 />
               </div>
             )}
+            {plan.bonusCredits > 0 && (
+              <div className="mt-3 flex justify-between text-sm">
+                <span className="text-richblack-200">Bonus credits available</span>
+                <span className="text-yellow-50 font-mono font-bold">+{plan.bonusCredits}</span>
+              </div>
+            )}
 
             {plan.expiresAt && (
               <p className="mt-4 text-xs text-richblack-300">

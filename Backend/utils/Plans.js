@@ -98,33 +98,59 @@ const consumeCredit = async (userId, session) => {
         return { ok: true, plan: plan.key }
     }
 
-    // atomic check-and-increment so two parallel requests cannot both sneak in sir
+    // atomic check-and-increment so two parallel requests cannot both sneak in sir — plan
+    // allowance first, same as before
     const updated = await User.findOneAndUpdate(
         { _id: userId, count: { $lt: plan.credits } },
         { $inc: { count: 1 } },
         { returnDocument: 'after', session }
     )
 
-    if (!updated) {
-        // top plan has nothing to upgrade to sir — tell them the credits renew instead
-        const message =
-            plan.key === 'Basic'
-                ? 'The Free tier for using this project is over pleases make the purchase'
-                : plan.key === 'ProMax'
-                    ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
-                    : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
-        return { ok: false, message, plan: plan.key }
+    if (updated) {
+        return { ok: true, plan: plan.key }
     }
 
-    return { ok: true, plan: plan.key }
+    // plan allowance is used up sir — fall back to the bonus pool (admin grants, referral
+    // rewards) before blocking. Tracked as its own counter, spentBonus, rather than mixed into
+    // `count`, so the profile page can show "used your plan credits, now drawing down N bonus"
+    // instead of a used-count that silently exceeds the plan's displayed cap.
+    const bonusSpend = await User.findOneAndUpdate(
+        { _id: userId, bonusCredits: { $gt: 0 } },
+        { $inc: { bonusCredits: -1, spentBonus: 1 } },
+        { returnDocument: 'after', session }
+    )
+
+    if (bonusSpend) {
+        return { ok: true, plan: plan.key }
+    }
+
+    // top plan has nothing to upgrade to sir — tell them the credits renew instead
+    const message =
+        plan.key === 'Basic'
+            ? 'The Free tier for using this project is over pleases make the purchase'
+            : plan.key === 'ProMax'
+                ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
+                : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
+    return { ok: false, message, plan: plan.key }
 }
 
 // hands a spent credit back sir — for the non-transactional callers (an AI route that already
 // consumed a credit and only then had the upstream Groq call fail). Never drops below zero.
 // Prefer passing a session to consumeCredit where a transaction is available; this is the
 // compensating action for the paths where one isn't.
+//
+// Mirrors consumeCredit's spend order in reverse: if this user has spent into their bonus pool
+// (spentBonus > 0), the refund hands a bonus credit back first, since that's what was actually
+// just spent for anyone over their plan allowance. Otherwise it refunds a plain plan credit.
 const refundCredit = async (userId, session) => {
     try {
+        const bonusRefund = await User.findOneAndUpdate(
+            { _id: userId, spentBonus: { $gt: 0 } },
+            { $inc: { bonusCredits: 1, spentBonus: -1 } },
+            { session }
+        )
+        if (bonusRefund) return
+
         await User.findOneAndUpdate(
             { _id: userId, count: { $gt: 0 } },
             { $inc: { count: -1 } },

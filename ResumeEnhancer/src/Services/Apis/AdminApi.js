@@ -7,6 +7,7 @@ export const AdminStats = {
     health: BASE_URL + "/admin/health",
     insights: BASE_URL + "/admin/insights",
     auditlogs: BASE_URL + "/admin/audit",
+    creditgrants: BASE_URL + "/admin/credit-grants",
     traffic: BASE_URL + "/admin/traffic",
     deletions: BASE_URL + "/admin/deletions",
     reconciliation: BASE_URL + "/admin/reconciliation",

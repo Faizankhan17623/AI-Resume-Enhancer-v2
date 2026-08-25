@@ -468,7 +468,9 @@ const Users = () => {
 
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-richblack-300">
-                      <span className="font-mono">{row.count}</span> credits used · joined {new Date(row.createdAt).toLocaleDateString()}
+                      <span className="font-mono">{row.count}</span> credits used
+                      {row.bonusCredits > 0 && <span className="text-yellow-50"> · <span className="font-mono">{row.bonusCredits}</span> bonus</span>}
+                      {' '}· joined {new Date(row.createdAt).toLocaleDateString()}
                     </p>
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => handleCredits(row)} aria-label="Grant bonus credits" title="Grant bonus credits"
@@ -569,7 +571,10 @@ const Users = () => {
                           )
                         })()}
                       </td>
-                      <td className="p-4 font-mono text-richblack-100">{row.count}</td>
+                      <td className="p-4 font-mono text-richblack-100">
+                        {row.count}
+                        {row.bonusCredits > 0 && <span className="text-yellow-50 ml-1.5" title="Bonus credits available">+{row.bonusCredits}</span>}
+                      </td>
                       <td className="p-4">
                         {row.isBanned ? (
                           <span className="flex flex-col items-start gap-1">

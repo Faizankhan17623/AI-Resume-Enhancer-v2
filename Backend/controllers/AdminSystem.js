@@ -547,6 +547,77 @@ exports.getAuditLogs = async (req, res) => {
     }
 }
 
+// GET /admin/credit-grants?adminPage=1&referralPage=1&search=foo — where every bonus credit
+// came from sir, split into its two real sources rather than merged into one feed:
+//   - "admin" section: CREDIT_ADJUST (single-user, Admin.js's adjustCredits) and
+//     CREDIT_BONUS_BROADCAST (Admin.js's grantCreditsToAll), read from AuditLog
+//   - "referral" section: ReferralLog rows with bonusCredits > 0 (a Recruiter referral logs a
+//     row too but with bonusCredits: 0 — excluded here, this page is specifically about credits,
+//     not the full invite history already shown on the user's own Account page)
+// Each section paginates independently since they're unrelated collections with unrelated
+// volumes — a search only touches the admin section's target/actor email and the referral
+// section's referrer/referredUser email, both server-side via a regex on denormalized/joined fields.
+exports.getCreditGrants = async (req, res) => {
+    try {
+        const adminPage = Math.max(1, parseInt(req.query.adminPage) || 1)
+        const referralPage = Math.max(1, parseInt(req.query.referralPage) || 1)
+        const limit = 20
+        const search = (req.query.search || '').trim()
+        const safe = search ? search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : null
+
+        const adminFilter = { action: { $in: ['CREDIT_ADJUST', 'CREDIT_BONUS_BROADCAST'] } }
+        if (safe) {
+            const matchingActors = await User.find({ email: { $regex: safe, $options: 'i' } }).select('_id')
+            adminFilter.$or = [
+                { targetEmail: { $regex: safe, $options: 'i' } },
+                { actor: { $in: matchingActors.map((u) => u._id) } },
+            ]
+        }
+
+        const referralFilter = { bonusCredits: { $gt: 0 } }
+        if (safe) {
+            const matchingReferrers = await User.find({ email: { $regex: safe, $options: 'i' } }).select('_id')
+            referralFilter.$or = [
+                { referredUserEmail: { $regex: safe, $options: 'i' } },
+                { referrer: { $in: matchingReferrers.map((u) => u._id) } },
+            ]
+        }
+
+        const [adminGrants, adminTotal, referralGrants, referralTotal] = await Promise.all([
+            AuditLog.find(adminFilter)
+                .populate('actor', 'firstName lastName email')
+                .sort({ createdAt: -1 })
+                .skip((adminPage - 1) * limit)
+                .limit(limit),
+            AuditLog.countDocuments(adminFilter),
+            ReferralLog.find(referralFilter)
+                .populate('referrer', 'firstName lastName email')
+                .sort({ createdAt: -1 })
+                .skip((referralPage - 1) * limit)
+                .limit(limit),
+            ReferralLog.countDocuments(referralFilter),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            admin: {
+                grants: adminGrants,
+                pagination: { page: adminPage, limit, total: adminTotal, pages: Math.ceil(adminTotal / limit) },
+            },
+            referral: {
+                grants: referralGrants,
+                pagination: { page: referralPage, limit, total: referralTotal, pages: Math.ceil(referralTotal / limit) },
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get credit grants failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting the credit grants',
+        })
+    }
+}
+
 // GET /admin/deletions — visibility into the silent 2-day account-purge cron sir
 // (AccountPurgeCron.js): who's currently pending, and who it's purged recently.
 // Purge history only goes back to when AccountPurgeCron started writing ACCOUNT_PURGED

@@ -149,7 +149,7 @@ exports.getUsers = async (req, res) => {
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('firstName lastName email role isBanned banReason suspensionAppeal Verified Subscription SubType SubscriptionExpires count createdAt provider')
+                .select('firstName lastName email role isBanned banReason suspensionAppeal Verified Subscription SubType SubscriptionExpires count bonusCredits createdAt provider')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),
@@ -747,10 +747,12 @@ exports.banUser = async (req, res) => {
 
 // PATCH /admin/users/:userId/credits — support tool sir, body: { credits, reason? }
 // Bonus-only: `credits` is a positive amount that's always GRANTED to the user, same direction
-// as grantCreditsToAll below. It's applied by reducing the USED count (floored at 0) since that's
-// what the User model actually tracks, and always emails the user — there's no charge/silent
-// path here anymore, so an admin can never accidentally increase a user's used-count by typing
-// a plain positive number (see CREDIT_ADJUST audit history from before this endpoint changed).
+// as grantCreditsToAll below. It's ADDED to bonusCredits (a pool that stacks on top of the
+// user's plan allowance, drawn from by consumeCredit in utils/Plans.js only once the plan
+// allowance is used up) rather than decrementing the used count — decrementing `count` floored
+// at zero silently wasted any grant that pushed a user past their plan's normal cap (e.g.
+// granting a Basic user, 5-credit cap, 400 bonus credits did nothing once `count` hit 0). Always
+// emails the user — there's no charge/silent path here anymore.
 exports.adjustCredits = async (req, res) => {
     try {
         const actorId = req?.User.id
@@ -772,7 +774,11 @@ exports.adjustCredits = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('firstName lastName email count')
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $inc: { bonusCredits: credits } },
+            { new: true }
+        ).select('firstName lastName email count bonusCredits')
 
         if (!user) {
             return res.status(404).json({
@@ -781,12 +787,7 @@ exports.adjustCredits = async (req, res) => {
             })
         }
 
-        // count can never go below zero sir
-        const oldCount = user.count
-        user.count = Math.max(0, oldCount - credits)
-        await user.save()
-
-        logAction(actorId, 'CREDIT_ADJUST', user, { credits, from: oldCount, to: user.count })
+        logAction(actorId, 'CREDIT_ADJUST', user, { credits, newBonusBalance: user.bonusCredits, reason })
 
         mailSender(
             user.email,
@@ -796,7 +797,7 @@ exports.adjustCredits = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${user.email}: granted ${credits} bonus credit${credits === 1 ? '' : 's'} (used ${oldCount} → ${user.count})`,
+            message: `${user.email}: granted ${credits} bonus credit${credits === 1 ? '' : 's'} (bonus balance now ${user.bonusCredits})`,
             user
         })
     } catch (error) {
@@ -829,12 +830,12 @@ exports.grantCreditsToAll = async (req, res) => {
             })
         }
 
-        // same "count can never go below zero" clamp as adjustCredits sir, done in the DB with
-        // an aggregation pipeline update so updateMany can express Math.max in one write instead
-        // of loading every user into memory first
+        // ADDED to bonusCredits sir, not subtracted from count — same reasoning as the single-
+        // user adjustCredits above, so a broadcast bonus isn't silently wasted for anyone
+        // already at/near their plan cap
         const result = await User.updateMany(
             { role: 'User' },
-            [{ $set: { count: { $max: [0, { $subtract: ['$count', credits] }] } } }]
+            { $inc: { bonusCredits: credits } }
         )
 
         logAction(actorId, 'CREDIT_BONUS_BROADCAST', {}, { credits, reason, matched: result.matchedCount })

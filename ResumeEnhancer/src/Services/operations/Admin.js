@@ -7,7 +7,7 @@ import {
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
+const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -337,6 +337,21 @@ export async function GlobalSearch(q, token) {
     }
 
     return { users: response.data.users, payments: response.data.payments }
+}
+
+// where every bonus credit came from sir — two independently-paginated sections (admin grants,
+// referral rewards), not a Redux thunk like GetAuditLogs since the page owns both page numbers
+// itself and refetches directly, same pattern as GlobalSearch above
+export async function GetCreditGrants(token, { adminPage = 1, referralPage = 1, search = "" } = {}) {
+    const response = await apiConnector("GET", creditgrants, null, {
+        Authorization: `Bearer ${token}`
+    }, { adminPage, referralPage, search })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+
+    return { admin: response.data.admin, referral: response.data.referral }
 }
 
 // ---------- money sir ----------

@@ -50,6 +50,7 @@ const AdminOverview = lazy(() => import('./Components/Admin/Overview'))
 const AdminUsers = lazy(() => import('./Components/Admin/Users'))
 const AdminPayments = lazy(() => import('./Components/Admin/Payments'))
 const AdminAudit = lazy(() => import('./Components/Admin/Audit'))
+const AdminCreditGrants = lazy(() => import('./Components/Admin/CreditGrants'))
 const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements'))
 const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
@@ -240,6 +241,7 @@ function App() {
             <Route path="/Admin/Users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/Admin/Payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
             <Route path="/Admin/Audit" element={<AdminRoute><AdminAudit /></AdminRoute>} />
+            <Route path="/Admin/Credit-Grants" element={<AdminRoute><AdminCreditGrants /></AdminRoute>} />
             <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
             <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
             <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />

@@ -213,15 +213,14 @@ const grantReferralBonus = async (referredUser, referrerId) => {
     const grantCredits = bothAreUsers && underCap
 
     if (grantCredits) {
-        // count can never go below zero sir — same clamp Admin.js's adjustCredits uses, done as
-        // an aggregation-pipeline update so the read-and-clamp happens atomically IN the write
-        // rather than a separate read (claimed.count) followed by a plain overwrite. The referred
-        // account is already race-safe via the referralBonusGranted flip above (only one caller
-        // ever reaches this line for a given account), but this form is used here too for
-        // consistency with the referrer's update just below, which genuinely needs it.
+        // ADDED to bonusCredits sir, not subtracted from count — decrementing count floored at
+        // zero silently wasted the referral bonus for anyone already at/near their plan cap (the
+        // same bug Admin.js's adjustCredits had, found via the same user report). bonusCredits
+        // stacks on top of the plan allowance and is drawn down by consumeCredit in utils/
+        // Plans.js only once that allowance is used up, so the bonus is never lost.
         await User.updateOne(
             { _id: referredUser._id },
-            [{ $set: { count: { $max: [0, { $subtract: ['$count', REFERRAL_BONUS_CREDITS] }] } } }]
+            { $inc: { bonusCredits: REFERRAL_BONUS_CREDITS } }
         )
     }
 
@@ -234,14 +233,14 @@ const grantReferralBonus = async (referredUser, referrerId) => {
         // findByIdAndUpdate. Two people referred by the same User logging in within milliseconds
         // of each other could both read the same starting count and each write back the SAME
         // decremented value, silently dropping one of the two bonus credits. The fix does the
-        // cap check, the referralCount bump, AND the count decrement in ONE atomic
+        // cap check, the referralCount bump, AND the bonusCredits increment in ONE atomic
         // aggregation-pipeline update — no separate read of the pre-update value at all.
         await User.updateOne(
             { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
             [{
                 $set: {
                     referralCount: { $add: ['$referralCount', 1] },
-                    count: { $max: [0, { $subtract: ['$count', REFERRAL_BONUS_CREDITS] }] },
+                    bonusCredits: { $add: ['$bonusCredits', REFERRAL_BONUS_CREDITS] },
                 },
             }]
         )
@@ -1223,7 +1222,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted recruiterApplication')
+            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count bonusCredits createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted recruiterApplication')
 
         if (!user) {
             return res.status(404).json({
@@ -1262,6 +1261,7 @@ exports.getProfile = async (req, res) => {
                 name: plan.name,
                 creditsUsed: user.count,
                 creditsLimit: plan.credits,          // null means unlimited sir
+                bonusCredits: user.bonusCredits,     // admin grants + referral rewards, on top of creditsLimit
                 maxMessagesPerChat: plan.maxMessagesPerChat,
                 expiresAt: plan.key === 'Basic' ? null : user.SubscriptionExpires,
             } : null,

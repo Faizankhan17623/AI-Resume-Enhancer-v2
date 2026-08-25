@@ -42,6 +42,7 @@ const {
     getHealth,
     getInsights,
     getAuditLogs,
+    getCreditGrants,
     getTraffic,
     getDeletions,
     getSecurity,
@@ -104,6 +105,7 @@ route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter,
 route.post('/admin/users/grant-credits-all', Auth, isAdmin, adminWriteLimiter, validate({ body: grantCreditsToAllSchema }), grantCreditsToAll)
 route.delete('/admin/users/:userId', Auth, isAdmin, adminWriteLimiter, deleteUser)
 route.get('/admin/audit', Auth, isAdmin, adminReadLimiter, getAuditLogs)
+route.get('/admin/credit-grants', Auth, isAdmin, adminReadLimiter, getCreditGrants)
 route.get('/admin/settings', Auth, isAdmin, adminReadLimiter, getSettings)
 route.patch('/admin/settings/:key', Auth, isAdmin, adminWriteLimiter, upsertSetting)
 route.post('/admin/announcements', Auth, isAdmin, adminWriteLimiter, createAnnouncement)
