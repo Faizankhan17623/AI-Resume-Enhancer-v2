@@ -187,8 +187,8 @@ const AdminNav = () => {
 
   return (
     <div className="border-b border-richblack-700 bg-richblack-900">
-      <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-x-4">
-        <div className="flex gap-1 overflow-x-auto">
+      <div className="w-full px-6 flex flex-wrap items-center justify-between gap-x-4">
+        <div className="flex gap-1 flex-wrap">
           {tabs.map((tab) => {
             const active = location.pathname === tab.path
             return (
