@@ -287,8 +287,8 @@ export const UpdateUserRole = (userId, role, token, page, search, roleFilter) =>
 export const UpdateUserPlan = (userId, plan, token, page, search, roleFilter) =>
     userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, "Updating the plan...", roleFilter)
 
-export const AdjustCredits = (userId, delta, reason, token, page, search, roleFilter) =>
-    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { delta, ...(reason ? { reason } : {}) }, token, page, search, "Adjusting the credits...", roleFilter)
+export const AdjustCredits = (userId, credits, reason, token, page, search, roleFilter) =>
+    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { credits, ...(reason ? { reason } : {}) }, token, page, search, "Granting bonus credits...", roleFilter)
 
 // broadcast bonus sir — not a userAction() call like the others: it doesn't target a single row,
 // so there's no page/search/roleFilter to refetch against automatically. Caller (Users.jsx)

@@ -1,8 +1,8 @@
 const { escapeHtml } = require('../utils/escapeHtml')
 
 // sent when an admin grants bonus credits sir — controllers/Admin.js's adjustCredits (single
-// user, negative delta only) and grantCreditsToAll (broadcast). Deliberately does NOT fire for a
-// positive delta (a charge/correction, not a gift) — see the isBonus check at each call site.
+// user, bonus-only) and grantCreditsToAll (broadcast). Both always fire this — there's no
+// charge/correction path through either endpoint anymore.
 //
 // name/reason are escaped sir — name is the recipient's own firstName (Zod only length-checks
 // it, never strips HTML), and reason is free-text an admin/support staffer types into the

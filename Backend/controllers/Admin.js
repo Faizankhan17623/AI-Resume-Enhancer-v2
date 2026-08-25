@@ -745,15 +745,17 @@ exports.banUser = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/:userId/credits — support tool sir, body: { delta, reason? }
-// delta is applied to the USED count: { delta: -1 } refunds one credit, { delta: 2 } charges two.
-// A negative delta is treated as a BONUS and emails the user sir — a positive one is a charge/
-// correction, never a gift, so it stays silent same as before.
+// PATCH /admin/users/:userId/credits — support tool sir, body: { credits, reason? }
+// Bonus-only: `credits` is a positive amount that's always GRANTED to the user, same direction
+// as grantCreditsToAll below. It's applied by reducing the USED count (floored at 0) since that's
+// what the User model actually tracks, and always emails the user — there's no charge/silent
+// path here anymore, so an admin can never accidentally increase a user's used-count by typing
+// a plain positive number (see CREDIT_ADJUST audit history from before this endpoint changed).
 exports.adjustCredits = async (req, res) => {
     try {
         const actorId = req?.User.id
         const { userId } = req.params
-        const delta = Number(req.body.delta)
+        const credits = Number(req.body.credits)
         const reason = (req.body.reason || '').trim()
 
         if (!mongoose.isValidObjectId(userId)) {
@@ -763,10 +765,10 @@ exports.adjustCredits = async (req, res) => {
             })
         }
 
-        if (!Number.isInteger(delta) || delta === 0) {
+        if (!Number.isInteger(credits) || credits <= 0) {
             return res.status(400).json({
                 success: false,
-                message: "'delta' must be a non-zero integer (negative refunds credits)",
+                message: "'credits' must be a positive integer",
             })
         }
 
@@ -781,29 +783,27 @@ exports.adjustCredits = async (req, res) => {
 
         // count can never go below zero sir
         const oldCount = user.count
-        user.count = Math.max(0, oldCount + delta)
+        user.count = Math.max(0, oldCount - credits)
         await user.save()
 
-        logAction(actorId, 'CREDIT_ADJUST', user, { delta, from: oldCount, to: user.count })
+        logAction(actorId, 'CREDIT_ADJUST', user, { credits, from: oldCount, to: user.count })
 
-        if (delta < 0) {
-            mailSender(
-                user.email,
-                "You've Received Bonus Credits",
-                creditBonusTemplate(user.firstName, Math.abs(delta), reason)
-            ).catch((err) => logger.error('credit bonus email failed', { err, userId: user._id }))
-        }
+        mailSender(
+            user.email,
+            "You've Received Bonus Credits",
+            creditBonusTemplate(user.firstName, credits, reason)
+        ).catch((err) => logger.error('credit bonus email failed', { err, userId: user._id }))
 
         return res.status(200).json({
             success: true,
-            message: `${user.email}: used credits went ${oldCount} → ${user.count}`,
+            message: `${user.email}: granted ${credits} bonus credit${credits === 1 ? '' : 's'} (used ${oldCount} → ${user.count})`,
             user
         })
     } catch (error) {
         (req.log || logger).error('adjust credits failed', { err: error })
         return res.status(500).json({
             success: false,
-            message: 'Something went wrong while adjusting the credits',
+            message: 'Something went wrong while granting the bonus credits',
         })
     }
 }

@@ -136,24 +136,26 @@ const Users = () => {
     setSelected([])
   }
 
-  // ask for the credit delta sir — negative refunds/bonuses (which email the user), positive charges (silent)
+  // ask how many bonus credits to grant this one user sir — bonus-only, positive amounts only,
+  // always emails the user. Matches handleGrantCreditsToAll below, just scoped to one row.
   const handleCredits = async (target) => {
     const { value } = await Swal.fire({
       ...swalDark,
-      title: 'Adjust credits',
+      title: 'Grant bonus credits',
       html: `
-        <p style="font-size:13px;color:#B8B0A0;margin-bottom:10px;">${target.email} has used ${target.count} credits. Negative grants a bonus (emails the user), positive charges.</p>
-        <input id="swal-delta" type="number" placeholder="-1" class="swal2-input" style="margin:0 0 8px;">
+        <p style="font-size:13px;color:#B8B0A0;margin-bottom:10px;">${target.email} has used ${target.count} credits so far. This grants bonus credits and emails them.</p>
+        <input id="swal-credits" type="number" min="1" placeholder="How many credits to give?" class="swal2-input" style="margin:0 0 8px;">
         <input id="swal-reason" type="text" placeholder="Reason (optional, shown in the bonus email)" class="swal2-input" style="margin:0;">
       `,
       showCancelButton: true,
       focusConfirm: false,
+      confirmButtonText: 'Grant credits',
       preConfirm: () => ({
-        delta: parseInt(document.getElementById('swal-delta').value),
+        credits: parseInt(document.getElementById('swal-credits').value),
         reason: document.getElementById('swal-reason').value,
       }),
     })
-    if (value?.delta) dispatch(AdjustCredits(target._id, value.delta, value.reason, token, page, search, roleFilter))
+    if (value?.credits > 0) dispatch(AdjustCredits(target._id, value.credits, value.reason, token, page, search, roleFilter))
   }
 
   // broadcast a bonus to every User account sir — the strongest confirm dialog in this file,
@@ -469,7 +471,7 @@ const Users = () => {
                       <span className="font-mono">{row.count}</span> credits used · joined {new Date(row.createdAt).toLocaleDateString()}
                     </p>
                     <div className="flex gap-1 shrink-0">
-                      <button onClick={() => handleCredits(row)} aria-label="Adjust credits" title="Adjust credits"
+                      <button onClick={() => handleCredits(row)} aria-label="Grant bonus credits" title="Grant bonus credits"
                         className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                         <FaCoins className="text-sm" />
                       </button>
@@ -595,7 +597,7 @@ const Users = () => {
                       <td className="p-4 text-xs text-richblack-300">{new Date(row.createdAt).toLocaleDateString()}</td>
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => handleCredits(row)} title="Adjust credits"
+                          <button onClick={() => handleCredits(row)} title="Grant bonus credits"
                             className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                             <FaCoins className="text-sm" />
                           </button>

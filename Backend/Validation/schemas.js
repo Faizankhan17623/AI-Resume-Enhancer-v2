@@ -214,14 +214,15 @@ const bulkBanSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
-// `delta` sir, a non-zero signed adjustment (negative refunds credits), matching the controller.
-// Bounded on both sides: an unbounded delta here is effectively a free-credits endpoint.
+// `credits` sir, a positive bonus amount to grant a single user — this endpoint is bonus-only
+// now (always reduces used-count, floored at 0, always emails), matching grantCreditsToAllSchema
+// below. Bounded so an unbounded amount here isn't effectively a free-credits endpoint.
 const adjustCreditsSchema = z.object({
-    delta: z.coerce
+    credits: z.coerce
         .number()
-        .int("'delta' must be a non-zero integer (negative refunds credits)")
-        .refine((n) => n !== 0, "'delta' must be a non-zero integer (negative refunds credits)")
-        .refine((n) => Math.abs(n) <= 100000, 'That adjustment is too large'),
+        .int("'credits' must be a positive integer")
+        .positive("'credits' must be a positive integer")
+        .max(100000, 'That amount is too large'),
     reason: z.string().trim().max(300).optional(),
 })
 
