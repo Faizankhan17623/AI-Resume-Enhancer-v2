@@ -8,6 +8,7 @@ import {
     setJobApplicants,
     setJobAnalytics,
     patchJobApplicant,
+    patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
@@ -16,8 +17,8 @@ import {
 
 const {
     createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, getJobApplicants,
-    getJobAnalytics, inviteApplicantToTest, setApplicationOutcome, listPublicJobs, getPublicJob,
-    applyToJob, listMyApplications,
+    getJobAnalytics, inviteApplicantToTest, setApplicationOutcome, bulkInviteApplicants,
+    bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob, listMyApplications,
 } = JobData
 
 // ---------------------------------------------------------------------------
@@ -226,6 +227,59 @@ export function SetApplicationOutcome(applicationId, status, token) {
         } catch (error) {
             logApiError("Error updating the application", error)
             toast.error(error?.response?.data?.message || "Could not update the application")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// invites several 'applied' candidates to the job's test at once sir — same skipped-vs-invited
+// message shape the backend returns, applicants list patched in place, no full refetch needed
+export function BulkInviteApplicantsToTest(applicationIds, jobId, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Inviting candidates...")
+        try {
+            const response = await apiConnector("POST", `${bulkInviteApplicants}/${jobId}/applicants/bulk-invite`, { applicationIds }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(patchJobApplicantsBulk({ applicationIds: response.data.invited, status: 'invited_to_test' }))
+            return true
+        } catch (error) {
+            logApiError("Error bulk-inviting candidates", error)
+            toast.error(error?.response?.data?.message || "Could not invite the selected candidates")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
+// hires/rejects several 'completed_test' candidates at once sir — same shape as above
+export function BulkSetApplicationOutcome(applicationIds, status, jobId, token) {
+    return async (dispatch) => {
+        const toastId = toast.loading(status === 'hired' ? "Marking as hired..." : "Rejecting...")
+        try {
+            const response = await apiConnector("PATCH", `${bulkApplicationOutcome}/${jobId}/applicants/bulk-status`, { applicationIds, status }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(patchJobApplicantsBulk({ applicationIds: response.data.updated, status }))
+            return true
+        } catch (error) {
+            logApiError("Error bulk-updating applications", error)
+            toast.error(error?.response?.data?.message || "Could not update the selected candidates")
             return false
         } finally {
             toast.dismiss(toastId)

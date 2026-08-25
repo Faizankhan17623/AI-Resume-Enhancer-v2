@@ -338,6 +338,19 @@ const setApplicationOutcomeSchema = z.object({
     status: z.enum(['hired', 'rejected'], { error: 'Status must be hired or rejected' }),
 })
 
+const bulkInviteApplicantsSchema = z.object({
+    applicationIds: z.array(objectId, { error: 'applicationIds must be a non-empty array' })
+        .min(1, 'applicationIds must be a non-empty array')
+        .max(200, 'Cannot act on more than 200 applicants at once'),
+})
+
+const bulkApplicationOutcomeSchema = z.object({
+    applicationIds: z.array(objectId, { error: 'applicationIds must be a non-empty array' })
+        .min(1, 'applicationIds must be a non-empty array')
+        .max(200, 'Cannot act on more than 200 applicants at once'),
+    status: z.enum(['hired', 'rejected'], { error: 'Status must be hired or rejected' }),
+})
+
 // ---------------------------------------------------------------------------
 // recruiter self-signup application sir — see User.recruiterApplication
 // ---------------------------------------------------------------------------
@@ -418,6 +431,8 @@ module.exports = {
     jobIdParamSchema,
     applyToJobSchema,
     setApplicationOutcomeSchema,
+    bulkInviteApplicantsSchema,
+    bulkApplicationOutcomeSchema,
 
     // recruiter self-signup application
     recruiterApplicationSchema,

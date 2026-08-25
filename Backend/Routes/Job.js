@@ -7,6 +7,8 @@ const {
     updateJobSchema,
     applyToJobSchema,
     setApplicationOutcomeSchema,
+    bulkInviteApplicantsSchema,
+    bulkApplicationOutcomeSchema,
 } = require('../Validation/schemas.js')
 const {
     createJob,
@@ -19,6 +21,8 @@ const {
     getJobAnalytics,
     inviteApplicantToTest,
     setApplicationOutcome,
+    bulkInviteApplicantsToTest,
+    bulkSetApplicationOutcome,
     listPublicJobs,
     getPublicJob,
     applyToJob,
@@ -37,6 +41,8 @@ const {
 route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createJobSchema }), createJob)
 route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
 route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
+route.post('/jobs/:jobId/applicants/bulk-invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkInviteApplicantsSchema }), bulkInviteApplicantsToTest)
+route.patch('/jobs/:jobId/applicants/bulk-status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkApplicationOutcomeSchema }), bulkSetApplicationOutcome)
 route.get('/jobs/:jobId/analytics', Auth, isRecruiter, isApprovedRecruiter, getJobAnalytics)
 route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publishJob)
 route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)

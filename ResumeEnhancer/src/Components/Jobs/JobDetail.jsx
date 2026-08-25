@@ -9,6 +9,7 @@ import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import { GetPublicJob, ApplyToJob } from '../../Services/operations/Job'
 import { GetResumes } from '../../Services/operations/Resume'
+import { GetBuiltResumes, ReviewBuiltResume } from '../../Services/operations/BuiltResume'
 
 const JobDetail = () => {
   const { jobId } = useParams()
@@ -17,8 +18,11 @@ const JobDetail = () => {
   const { isLoggedIn, token } = useSelector((state) => state.auth)
   const { currentPublicJob: job, loading } = useSelector((state) => state.job)
   const { resumes } = useSelector((state) => state.resume)
+  const { resumes: builtResumes } = useSelector((state) => state.builtResume)
   const [selectedResumeId, setSelectedResumeId] = useState('')
   const [applying, setApplying] = useState(false)
+  const [tailorResumeId, setTailorResumeId] = useState('')
+  const [tailoring, setTailoring] = useState(false)
 
   useEffect(() => {
     dispatch(GetPublicJob(jobId))
@@ -26,7 +30,10 @@ const JobDetail = () => {
   }, [jobId])
 
   useEffect(() => {
-    if (isLoggedIn) dispatch(GetResumes(token))
+    if (isLoggedIn) {
+      dispatch(GetResumes(token))
+      dispatch(GetBuiltResumes(token))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn])
 
@@ -34,6 +41,7 @@ const JobDetail = () => {
     ? (resumes.find((r) => r.isDefault) || resumes[0])._id
     : ''
   const effectiveResumeId = selectedResumeId || defaultResumeId
+  const effectiveTailorResumeId = tailorResumeId || builtResumes[0]?._id || ''
 
   const handleApply = async () => {
     if (!isLoggedIn) {
@@ -45,6 +53,19 @@ const JobDetail = () => {
     const success = await dispatch(ApplyToJob(jobId, token, applyPayload))
     setApplying(false)
     if (success) navigate('/Dashboard/My-Applications')
+  }
+
+  // runs the existing ATS review pipeline against THIS job's own JD sir — no copy/pasting the
+  // description into the builder separately, same review pipeline/report page as any other review
+  const handleTailorReview = async () => {
+    if (!isLoggedIn) {
+      navigate('/Login', { state: { from: `/Jobs/${jobId}` } })
+      return
+    }
+    if (!effectiveTailorResumeId) return
+    setTailoring(true)
+    await dispatch(ReviewBuiltResume(effectiveTailorResumeId, job.description, token, navigate))
+    setTailoring(false)
   }
 
   if (loading || !job) {
@@ -119,6 +140,32 @@ const JobDetail = () => {
               screening test if they'd like to move forward.
             </p>
           </div>
+
+          {isLoggedIn && builtResumes.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-richblack-700">
+              <label className="block text-xs text-richblack-300 mb-1.5">Tailor & review against this job</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select
+                  value={effectiveTailorResumeId}
+                  onChange={(e) => setTailorResumeId(e.target.value)}
+                  className="flex-1 bg-richblack-700 border border-richblack-600 text-richblack-5 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-yellow-50"
+                >
+                  {builtResumes.map((r) => (
+                    <option key={r._id} value={r._id}>{r.title || 'Untitled resume'}</option>
+                  ))}
+                </select>
+                <IconBtn
+                  text="Tailor & review"
+                  onclick={handleTailorReview}
+                  loading={tailoring}
+                  customClasses="justify-center whitespace-nowrap"
+                />
+              </div>
+              <p className="text-xs text-richblack-400 mt-2">
+                Runs your AI review against this job's own description — no need to paste it anywhere. Uses one AI credit.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

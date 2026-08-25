@@ -410,6 +410,122 @@ exports.setApplicationOutcome = async (req, res) => {
     }
 }
 
+// POST /jobs/:jobId/applicants/bulk-invite sir — invite several 'applied' candidates for THIS
+// job to its test in one go, body: { applicationIds: [...] }. Same skip-invalid-rather-than-fail
+// shape as Admin.js's bulkBanUsers: a stale/already-progressed row is skipped, not a hard failure
+// that blocks the rest of a legitimate batch. Scoped to one recruiter-owned job (not global
+// applicationIds) so a recruiter can't act on another recruiter's applicants by id-guessing.
+exports.bulkInviteApplicantsToTest = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { jobId } = req.params
+        const { applicationIds } = req.body
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+        if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'applicationIds must be a non-empty array' })
+        }
+        if (applicationIds.length > 200) {
+            return res.status(400).json({ success: false, message: 'Cannot act on more than 200 applicants at once' })
+        }
+
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test')
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+        if (!job.test) {
+            return res.status(400).json({ success: false, message: 'This job has no test attached yet' })
+        }
+
+        const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
+        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId })
+
+        const invited = []
+        const skipped = []
+        for (const application of applications) {
+            if (application.status !== 'applied') {
+                skipped.push(String(application._id))
+                continue
+            }
+            application.status = 'invited_to_test'
+            await application.save()
+            invited.push(String(application._id))
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${invited.length} candidate${invited.length === 1 ? '' : 's'} invited to the test${skipped.length ? `, ${skipped.length} skipped (already progressed)` : ''}`,
+            invited,
+            skipped,
+        })
+    } catch (error) {
+        (req.log || logger).error('bulk invite applicants failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while inviting the candidates',
+        })
+    }
+}
+
+// PATCH /jobs/:jobId/applicants/bulk-status sir — hire/reject several 'completed_test'
+// candidates for THIS job in one go, body: { applicationIds: [...], status }. Same
+// completed-test-only gate as the single setApplicationOutcome above, same skip-not-fail shape.
+exports.bulkSetApplicationOutcome = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { jobId } = req.params
+        const { applicationIds, status } = req.body
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+        if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'applicationIds must be a non-empty array' })
+        }
+        if (applicationIds.length > 200) {
+            return res.status(400).json({ success: false, message: 'Cannot act on more than 200 applicants at once' })
+        }
+        if (!['hired', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Status must be hired or rejected' })
+        }
+
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id')
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
+        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId })
+
+        const updated = []
+        const skipped = []
+        for (const application of applications) {
+            if (application.status !== 'completed_test') {
+                skipped.push(String(application._id))
+                continue
+            }
+            application.status = status
+            await application.save()
+            updated.push(String(application._id))
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${updated.length} candidate${updated.length === 1 ? '' : 's'} ${status === 'hired' ? 'marked as hired' : 'rejected'}${skipped.length ? `, ${skipped.length} skipped (test not completed)` : ''}`,
+            updated,
+            skipped,
+        })
+    } catch (error) {
+        (req.log || logger).error('bulk set application outcome failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the applications',
+        })
+    }
+}
+
 // ---------------------------------------------------------------------------
 // public sir — no auth required, published jobs only
 // ---------------------------------------------------------------------------

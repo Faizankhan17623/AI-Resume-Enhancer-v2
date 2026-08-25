@@ -43,6 +43,15 @@ const jobSlice = createSlice({
             const app = state.jobApplicants.find((a) => a._id === applicationId)
             if (app) app.status = status
         },
+        // same in-place patch as patchJobApplicant above sir, just for many rows at once after
+        // a bulk invite/hire/reject — avoids a full applicants refetch for the common case
+        patchJobApplicantsBulk(state, value) {
+            const { applicationIds, status } = value.payload
+            const idSet = new Set(applicationIds)
+            state.jobApplicants.forEach((a) => {
+                if (idSet.has(a._id)) a.status = status
+            })
+        },
         setPublicJobs(state, value) {
             state.publicJobs = value.payload.jobs
             state.publicJobsPagination = value.payload.pagination
@@ -65,6 +74,7 @@ export const {
     setJobApplicants,
     setJobAnalytics,
     patchJobApplicant,
+    patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
