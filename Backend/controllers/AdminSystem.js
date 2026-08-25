@@ -177,6 +177,87 @@ exports.getAiStats = async (req, res) => {
     }
 }
 
+// GET /admin/ai/by-user — which USERS are actually burning the tokens, 30-day window sir.
+// Deliberately TOKEN volume, not a dollar figure — see AiModel.js's own comment, this app runs
+// on Groq's free tier right now, so a dollar-per-token cost would be fabricated, not real. This
+// is the honest version of "is a plan tier unprofitable": raw consumption per account, which is
+// what would need re-checking against real pricing the day this app ever leaves the free tier.
+// Also grouped by plan so a Basic account burning Pro-level tokens stands out immediately.
+exports.getAiUsageByUser = async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+        const [byUser, byPlanAvg] = await Promise.all([
+            AiLog.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo }, user: { $ne: null } } },
+                {
+                    $group: {
+                        _id: '$user',
+                        calls: { $sum: 1 },
+                        tokens: { $sum: '$totalTokens' },
+                        plan: { $last: '$plan' },
+                    },
+                },
+                { $sort: { tokens: -1 } },
+                { $limit: 25 },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'userDoc',
+                        pipeline: [{ $project: { firstName: 1, lastName: 1, email: 1 } }],
+                    },
+                },
+                { $unwind: { path: '$userDoc', preserveNullAndEmptyArrays: true } },
+                {
+                    $project: {
+                        _id: 1,
+                        calls: 1,
+                        tokens: 1,
+                        plan: 1,
+                        firstName: '$userDoc.firstName',
+                        lastName: '$userDoc.lastName',
+                        email: '$userDoc.email',
+                    },
+                },
+            ]),
+            // per-plan average tokens/user sir — the baseline the top-25 list above is judged
+            // against ("is this ONE user way above their plan's normal usage")
+            AiLog.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo }, user: { $ne: null } } },
+                { $group: { _id: { user: '$user', plan: '$plan' }, tokens: { $sum: '$totalTokens' } } },
+                { $group: { _id: '$_id.plan', avgTokensPerUser: { $avg: '$tokens' }, users: { $sum: 1 } } },
+            ]),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            usage: {
+                topUsers: byUser.map((u) => ({
+                    _id: u._id,
+                    name: u.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : null,
+                    email: u.email || null,
+                    plan: u.plan,
+                    calls: u.calls,
+                    tokens: u.tokens,
+                })),
+                byPlanAverage: byPlanAvg.map((p) => ({
+                    plan: p._id,
+                    avgTokensPerUser: Math.round(p.avgTokensPerUser),
+                    users: p.users,
+                })),
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get ai usage by user failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting per-user AI usage',
+        })
+    }
+}
+
 // GET /admin/health — green/red dots for the dashboard sir
 exports.getHealth = async (req, res) => {
     try {

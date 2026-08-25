@@ -36,6 +36,7 @@ const {
 const {
     getPayments,
     getAiStats,
+    getAiUsageByUser,
     getHealth,
     getInsights,
     getAuditLogs,
@@ -72,6 +73,7 @@ route.get('/admin/chats/:chatId', Auth, isSupport, adminReadLimiter, getChatDeta
 route.patch('/admin/users/:userId/credits', Auth, isSupport, adminWriteLimiter, validate({ body: adjustCreditsSchema }), adjustCredits)
 route.get('/admin/payments', Auth, isSupport, adminReadLimiter, getPayments)
 route.get('/admin/ai', Auth, isSupport, adminReadLimiter, getAiStats)
+route.get('/admin/ai/by-user', Auth, isSupport, adminReadLimiter, getAiUsageByUser)
 route.get('/admin/health', Auth, isSupport, adminReadLimiter, getHealth)
 route.get('/admin/insights', Auth, isSupport, adminReadLimiter, getInsights)
 route.get('/admin/traffic', Auth, isSupport, adminReadLimiter, getTraffic)

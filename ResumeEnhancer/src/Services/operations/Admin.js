@@ -3,11 +3,11 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
+const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -54,6 +54,26 @@ export function GetAiStats(token) {
             dispatch(setAiStats(response.data))
         } catch (error) {
             logApiError("Error fetching the AI stats", error)
+        }
+    }
+}
+
+// per-user token consumption, 30-day window sir — deliberately TOKEN volume, not a dollar
+// figure, since this app runs on Groq's free tier right now (see AiModel.js/AdminSystem.js)
+export function GetAiUsageByUser(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", aiUsageByUserUrl, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setAiUsageByUser(response.data.usage))
+        } catch (error) {
+            logApiError("Error fetching per-user AI usage", error)
         }
     }
 }

@@ -3,6 +3,7 @@ import BASE_URL from '../../utils/backendUrl'
 export const AdminStats = {
     dashboardstats: BASE_URL + "/admin/stats",
     aistats: BASE_URL + "/admin/ai",
+    aiUsageByUser: BASE_URL + "/admin/ai/by-user",
     health: BASE_URL + "/admin/health",
     insights: BASE_URL + "/admin/insights",
     auditlogs: BASE_URL + "/admin/audit",

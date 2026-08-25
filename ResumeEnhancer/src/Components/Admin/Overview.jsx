@@ -10,7 +10,7 @@ import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -85,12 +85,13 @@ const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, health, deletions, reconciliation, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
     dispatch(GetDashboardStats(token))
     dispatch(GetAiStats(token))
+    dispatch(GetAiUsageByUser(token))
     dispatch(GetHealth(token))
     dispatch(GetDeletions(token))
     dispatch(GetReconciliation(token))
@@ -499,6 +500,56 @@ const Overview = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* per-user AI token consumption sir — deliberately token volume, not a dollar figure:
+            this app runs on Groq's free tier right now (see AiModel.js), so a $/user number
+            would be fabricated. avgTokensPerUser per plan is the baseline each row is judged
+            against — a Basic account near a ProMax-level average is the signal worth noticing. */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2"><FaCoins className="text-yellow-25" /> AI usage by user — 30 days</h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            Token volume, not a dollar cost — this app runs on Groq's free tier right now.
+          </p>
+          {aiUsageByUser?.byPlanAverage?.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-4">
+              {aiUsageByUser.byPlanAverage.map((p) => (
+                <div key={p.plan} className="px-3 py-2 rounded-lg bg-richblack-700/50 border border-richblack-600">
+                  <p className="text-[10px] text-richblack-400 uppercase tracking-wide">{p.plan} avg/user</p>
+                  <p className="text-sm font-semibold text-richblack-5">{p.avgTokensPerUser.toLocaleString()} tok · {p.users} users</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {aiUsageByUser?.topUsers?.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-richblack-400 border-b border-richblack-700">
+                    <th className="pb-2 pr-4">User</th>
+                    <th className="pb-2 pr-4">Plan</th>
+                    <th className="pb-2 pr-4">Calls</th>
+                    <th className="pb-2">Tokens</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiUsageByUser.topUsers.map((u) => (
+                    <tr key={u._id} className="border-b border-richblack-700/50 last:border-0">
+                      <td className="py-2 pr-4 text-richblack-100">
+                        {u.name || u.email || 'Deleted user'}
+                        {u.name && u.email && <span className="text-richblack-400 text-xs"> · {u.email}</span>}
+                      </td>
+                      <td className="py-2 pr-4 text-richblack-300">{u.plan}</td>
+                      <td className="py-2 pr-4 text-richblack-300">{u.calls}</td>
+                      <td className="py-2 text-richblack-5 font-mono text-xs">{u.tokens.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-richblack-400">No AI usage in the last 30 days.</p>
+          )}
         </div>
 
         {/* recent AI errors sir — surfaces AiLog failures the admin would otherwise only see via getAiStats' recentErrors, previously fetched but never rendered */}
