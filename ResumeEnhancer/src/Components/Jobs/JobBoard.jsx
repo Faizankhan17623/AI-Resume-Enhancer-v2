@@ -95,7 +95,7 @@ const JobBoard = () => {
           <Loading text="Loading jobs..." />
         ) : publicJobs.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center flex flex-col items-center">
-            <p className="text-richblack-200">No jobs match your search right now.</p>
+            <p className="text-richblack-200">There's no job for you with us right now.</p>
           </div>
         ) : (
           <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="space-y-4">
