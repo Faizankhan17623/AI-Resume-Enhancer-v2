@@ -12,6 +12,7 @@ export const AdminStats = {
     reconciliation: BASE_URL + "/admin/reconciliation",
     security: BASE_URL + "/admin/security",
     atrisk: BASE_URL + "/admin/at-risk",
+    referralabuse: BASE_URL + "/admin/referral-abuse",
     search: BASE_URL + "/admin/search"
 }
 

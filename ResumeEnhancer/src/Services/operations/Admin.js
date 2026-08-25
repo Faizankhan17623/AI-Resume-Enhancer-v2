@@ -3,11 +3,11 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
 
-const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, atrisk, search: searchUrl } = AdminStats
+const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -166,6 +166,26 @@ export function GetAtRisk(token) {
             dispatch(setAtRisk(response.data.atRisk))
         } catch (error) {
             logApiError("Error fetching at-risk users", error)
+        }
+    }
+}
+
+// referrers near the payout cap, whose invitees got banned afterward, or paying out unusually
+// fast sir — see controllers/AdminSystem.js's getReferralAbuseSignals for what each list means
+export function GetReferralAbuse(token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("GET", referralabuse, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setReferralAbuse(response.data.referralAbuse))
+        } catch (error) {
+            logApiError("Error fetching referral abuse signals", error)
         }
     }
 }

@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins, FaUserSecret } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
-import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetAtRisk, GetTraffic } from '../../Services/operations/Admin'
+import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetAtRisk, GetReferralAbuse, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
@@ -85,7 +85,7 @@ const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   useEffect(() => {
@@ -97,6 +97,7 @@ const Overview = () => {
     dispatch(GetReconciliation(token))
     dispatch(GetSecurity(token))
     dispatch(GetAtRisk(token))
+    dispatch(GetReferralAbuse(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -501,6 +502,62 @@ const Overview = () => {
                 <p className="text-sm text-richblack-400">No paying subscribers currently at risk.</p>
               )}
             </>
+          ) : (
+            <p className="text-sm text-richblack-400">Loading...</p>
+          )}
+        </div>
+
+        {/* Referral abuse signals sir — controllers/user.js's MAX_REFERRALS_PER_USER cap already
+            guards against colluding-account farming, but had zero admin visibility into who's
+            close to it or shows real abuse signs. Three lists, no new tracking added: near the
+            cap, invitees later banned (the strongest signal), and unusually fast payout velocity. */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2"><FaUserSecret className="text-pink-100" /> Referral abuse signals</h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            Referrers worth a closer look — near the payout cap, invitees later banned, or paying out unusually fast. Not an accusation, just a "look here first" list.
+          </p>
+          {referralAbuse ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div>
+                <p className="text-xs font-semibold text-richblack-300 mb-2">Near the 10-referral cap</p>
+                {referralAbuse.nearCap?.length > 0 ? (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {referralAbuse.nearCap.map((u) => (
+                      <div key={u._id} className="flex items-center justify-between text-xs">
+                        <span className="text-richblack-100 truncate">{u.email}</span>
+                        <span className="text-yellow-25 shrink-0 ml-2">{u.referralCount}/10</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-richblack-500">None right now.</p>}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-richblack-300 mb-2">Invitees later banned</p>
+                {referralAbuse.bannedReferredReferrers?.length > 0 ? (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {referralAbuse.bannedReferredReferrers.map((u) => (
+                      <div key={u._id} className="flex items-center justify-between text-xs">
+                        <span className="text-richblack-100 truncate">{u.email}</span>
+                        <span className="text-pink-200 shrink-0 ml-2">{u.bannedReferred}/{u.totalReferred} banned</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-richblack-500">None right now.</p>}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-richblack-300 mb-2">3+ payouts in 7 days</p>
+                {referralAbuse.highVelocity?.length > 0 ? (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {referralAbuse.highVelocity.map((u) => (
+                      <div key={u._id} className="flex items-center justify-between text-xs">
+                        <span className="text-richblack-100 truncate">{u.email}</span>
+                        <span className="text-yellow-25 shrink-0 ml-2">{u.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-richblack-500">None right now.</p>}
+              </div>
+            </div>
           ) : (
             <p className="text-sm text-richblack-400">Loading...</p>
           )}

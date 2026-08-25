@@ -11,6 +11,7 @@ const AuditLog = require('../Models/AuditLog')
 const LoginLog = require('../Models/LoginLog')
 const VisitorLog = require('../Models/VisitorLog')
 const CreditSpend = require('../Models/CreditSpend')
+const ReferralLog = require('../Models/ReferralLog')
 const { REQUIRED_ENV_VARS } = require('../utils/checkRequiredEnv')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
@@ -694,6 +695,118 @@ exports.getAtRiskUsers = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting at-risk users',
+        })
+    }
+}
+
+// GET /admin/referral-abuse — the referral program's own abuse guard (MAX_REFERRALS_PER_USER in
+// controllers/user.js caps payouts at 10 per referrer, specifically to stop "two colluding
+// accounts... loop signup+login indefinitely for free credits", per that file's own comment) had
+// zero admin visibility into who's actually anywhere near triggering it. This surfaces three real
+// signals from data already collected, no new tracking added: (1) referrers close to/at the cap,
+// (2) referrers whose invited accounts got banned afterward — the strongest signal, since a fake
+// account created purely to farm a referral bonus is exactly the kind of account that gets banned
+// once noticed, (3) referral velocity — many payouts in a short window, the exact
+// signup+login-loop pattern MAX_REFERRALS_PER_USER exists to blunt.
+exports.getReferralAbuseSignals = async (req, res) => {
+    try {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+        const [nearCap, bannedReferredCounts, velocity] = await Promise.all([
+            // referralCount is only ever bumped for a credit-earning referral sir (see
+            // grantReferralBonus) — this is the cap defined in controllers/user.js, duplicated
+            // here as a literal since that file doesn't export it standalone
+            User.find({ referralCount: { $gte: 7 } })
+                .select('firstName lastName email referralCount')
+                .sort({ referralCount: -1 })
+                .limit(25),
+            // group ReferralLog by referrer, join each referred account's CURRENT ban status sir
+            // — a referrer whose invitees keep getting banned is the strongest abuse signal here
+            ReferralLog.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'referredUser',
+                        foreignField: '_id',
+                        as: 'referredDoc',
+                        pipeline: [{ $project: { isBanned: 1 } }],
+                    },
+                },
+                { $unwind: { path: '$referredDoc', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: '$referrer',
+                        totalReferred: { $sum: 1 },
+                        bannedReferred: { $sum: { $cond: [{ $eq: ['$referredDoc.isBanned', true] }, 1, 0] } },
+                    },
+                },
+                { $match: { bannedReferred: { $gt: 0 } } },
+                { $sort: { bannedReferred: -1 } },
+                { $limit: 25 },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'referrerDoc',
+                        pipeline: [{ $project: { firstName: 1, lastName: 1, email: 1 } }],
+                    },
+                },
+                { $unwind: { path: '$referrerDoc', preserveNullAndEmptyArrays: true } },
+                {
+                    $project: {
+                        _id: 1,
+                        totalReferred: 1,
+                        bannedReferred: 1,
+                        firstName: '$referrerDoc.firstName',
+                        lastName: '$referrerDoc.lastName',
+                        email: '$referrerDoc.email',
+                    },
+                },
+            ]),
+            // 3+ successful referrals inside 7 days sir — one person genuinely inviting their
+            // whole team in a week is rare; this is a "look closer", not an auto-ban list
+            ReferralLog.aggregate([
+                { $match: { createdAt: { $gte: sevenDaysAgo }, bonusCredits: { $gt: 0 } } },
+                { $group: { _id: '$referrer', count: { $sum: 1 } } },
+                { $match: { count: { $gte: 3 } } },
+                { $sort: { count: -1 } },
+                { $limit: 25 },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'referrerDoc',
+                        pipeline: [{ $project: { firstName: 1, lastName: 1, email: 1 } }],
+                    },
+                },
+                { $unwind: { path: '$referrerDoc', preserveNullAndEmptyArrays: true } },
+                {
+                    $project: {
+                        _id: 1,
+                        count: 1,
+                        firstName: '$referrerDoc.firstName',
+                        lastName: '$referrerDoc.lastName',
+                        email: '$referrerDoc.email',
+                    },
+                },
+            ]),
+        ])
+
+        return res.status(200).json({
+            success: true,
+            referralAbuse: {
+                nearCap,
+                bannedReferredReferrers: bannedReferredCounts,
+                highVelocity: velocity,
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get referral abuse signals failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting referral abuse signals',
         })
     }
 }
