@@ -614,19 +614,24 @@ const Overview = () => {
               </ResponsiveContainer>
             </div>
           )}
+        </div>
 
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <h3 className="font-display text-base text-richblack-5 mb-4">AI tokens — 30 days</h3>
-            <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={aiStats?.last30Days?.perDay || []}>
-                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
-                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
-                <Bar dataKey="tokens" name="Tokens" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* AI tokens sir — pulled out of the grid above into its own full-width row. It used to
+            be the 3rd/4th card in that grid (Signups, Reviews, [Revenue], AI tokens), which
+            always left it as the trailing odd-one-out on its own row at only half/a-third width
+            instead of stretching — found live from a screenshot of exactly that on Support's
+            2-column version of the grid. */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+          <h3 className="font-display text-base text-richblack-5 mb-4">AI tokens — 30 days</h3>
+          <ResponsiveContainer width="100%" height={190}>
+            <BarChart data={aiStats?.last30Days?.perDay || []}>
+              <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+              <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+              <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
+              <Bar dataKey="tokens" name="Tokens" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* per-user AI token consumption sir — deliberately token volume, not a dollar figure:
