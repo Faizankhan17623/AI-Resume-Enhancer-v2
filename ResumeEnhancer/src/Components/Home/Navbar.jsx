@@ -22,7 +22,6 @@ const resumeMenu = [
 // Tools dropdown sir — the non-resume-specific features
 const toolsMenu = [
   { name: 'AI Coach', desc: 'Chat with the AI about your career', path: '/Dashboard/Chats', icon: FaComments },
-  { name: 'Job Search', desc: 'Find roles that match your resume', path: '/Dashboard/Job-Search', icon: FaSearch },
   { name: 'Leaderboard', desc: 'See how your score stacks up', path: '/Dashboard/Leaderboard', icon: FaTrophy },
 ]
 
@@ -264,18 +263,21 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-8">
           <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
           <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
-          {/* the free public job board sir (/Jobs) — no login required, deliberately separate
-              from Tools > Job Search above (/Dashboard/Job-Search, the paid tailoring feature
-              behind login). This link was missing entirely: nothing in the navbar pointed at
-              /Jobs, so it was unreachable except by typing the URL directly. Always a plain
-              Link (never gated to /Login like the dropdown items), since the page itself is public. */}
+          {/* the free public job board sir (/Jobs), labeled "Job Search" here — no login
+              required, deliberately separate from the paid tailoring feature at
+              /Dashboard/Job-Search (removed from the Tools dropdown above once this link was
+              added, so there's now exactly one "Job Search" entry instead of two different
+              features both claiming the name). This link was missing entirely at first: nothing
+              in the navbar pointed at /Jobs, so it was unreachable except by typing the URL
+              directly. Always a plain Link (never gated to /Login like the dropdown items),
+              since the page itself is public. */}
           <Link
             to="/Jobs"
             className={`text-sm font-medium transition-colors duration-200 ${
               location.pathname.startsWith('/Jobs') ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
             }`}
           >
-            Job Board
+            Job Search
           </Link>
           <Link
             to="/Pricing"
