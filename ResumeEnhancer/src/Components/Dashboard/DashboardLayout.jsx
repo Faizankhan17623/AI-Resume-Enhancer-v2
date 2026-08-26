@@ -356,6 +356,18 @@ const DashboardLayout = ({ title, children }) => {
             >
               {theme === 'dark' ? <FiSun className="text-base" /> : <FiMoon className="text-base" />}
             </button>
+            {/* dedicated logout button, right in the header sir — the sidebar's profile row
+                already has one, but it's not always visible/reachable (collapsed sidebar,
+                mobile where the sidebar is off-screen by default), so this is a second, always-
+                present exit point that works everywhere regardless of sidebar state */}
+            <button
+              onClick={() => dispatch(LogoutUser(navigate))}
+              aria-label="Log out"
+              title="Log out"
+              className="p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
+            >
+              <FaSignOutAlt className="text-base" />
+            </button>
             {/* logout moved into the sidebar's own Claude-style profile row sir (desktop AND the
                 mobile slide-over both have it now) — kept here only as the avatar, so a mobile
                 user (sidebar off-screen by default) still has a visible identity anchor in the
