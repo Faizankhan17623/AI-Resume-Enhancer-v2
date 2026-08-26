@@ -137,6 +137,21 @@ const UserCreation = new mongoose.Schema(
             type:String,
             trim:true
         },
+        // Support-only sir — a distinct third state beyond plain isBanned. A regular suspended
+        // Support account can still log in and submit their one appeal (Auth.js's ban-exempt
+        // path); permanentlySuspended additionally blocks even THAT — no appeal, no exceptions,
+        // set either directly via Admin.js's permanentlySuspendSupport (a standalone action, no
+        // appeal required first) or as the outcome of rejectSupportAppeal. Still lets them log
+        // in (isBanned alone doesn't block login itself, only every route after), but every page
+        // shows only the permanent-suspension notice — see SupportRoute.jsx.
+        permanentlySuspended: {
+            type: Boolean,
+            default: false,
+        },
+        permanentSuspensionReason: {
+            type: String,
+            trim: true,
+        },
         // the banned user's own response to an Admin sir — the ONLY way a banned account can ever
         // reach an Admin, since every other route is blocked the instant isBanned is true (see
         // Auth.js's ban check and its one exemption, POST /appeal-suspension). Same shape as

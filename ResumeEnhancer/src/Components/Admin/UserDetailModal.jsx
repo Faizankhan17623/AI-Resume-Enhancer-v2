@@ -116,7 +116,9 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
                   <div className="rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2 col-span-2">
                     <p className="text-[10px] text-richblack-400 mb-1">Status</p>
                     <p className="text-sm text-richblack-5 font-medium">
-                      {user.isBanned ? `Banned${user.banReason ? ` — ${user.banReason}` : ''}` : (user.Verified ? 'Active' : 'Unverified')}
+                      {user.isBanned
+                        ? `${user.permanentlySuspended ? 'Permanently banned' : 'Banned'}${user.banReason ? ` — ${user.banReason}` : ''}`
+                        : (user.Verified ? 'Active' : 'Unverified')}
                     </p>
                   </div>
                   {user.isBanned && user.suspensionAppeal?.message && (

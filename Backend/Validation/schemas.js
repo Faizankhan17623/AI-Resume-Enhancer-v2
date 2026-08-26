@@ -206,6 +206,13 @@ const banUserSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
+// permanentlySuspendSupport (Admin.js) sir — unlike banUserSchema above, reason is REQUIRED
+// here, not optional: this is the final, no-appeal action, so it always needs an explanation
+// the account holder can see.
+const permanentSuspendSchema = z.object({
+    reason: z.string({ error: 'A reason is required' }).trim().min(1, 'A reason is required').max(500),
+})
+
 const bulkBanSchema = z.object({
     userIds: z.array(objectId, { error: 'userIds must be a non-empty array' })
         .min(1, 'userIds must be a non-empty array')
@@ -412,6 +419,7 @@ module.exports = {
     updateUserRoleSchema,
     bulkUpdateRoleSchema,
     banUserSchema,
+    permanentSuspendSchema,
     bulkBanSchema,
     adjustCreditsSchema,
     grantCreditsToAllSchema,

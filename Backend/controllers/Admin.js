@@ -156,7 +156,7 @@ exports.getUsers = async (req, res) => {
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('firstName lastName email role isBanned banReason suspensionAppeal Verified Subscription SubType SubscriptionExpires count bonusCredits createdAt provider')
+                .select('firstName lastName email role isBanned banReason permanentlySuspended suspensionAppeal Verified Subscription SubType SubscriptionExpires count bonusCredits createdAt provider')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),
@@ -866,7 +866,7 @@ exports.rejectSupportAppeal = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('firstName lastName email role isBanned suspensionAppeal')
+        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason suspensionAppeal')
 
         if (!user) {
             return res.status(404).json({
@@ -899,6 +899,11 @@ exports.rejectSupportAppeal = async (req, res) => {
         user.suspensionAppeal.status = 'reviewed'
         user.suspensionAppeal.reviewedBy = adminId
         user.suspensionAppeal.reviewedAt = new Date()
+        // rejecting the one and only appeal IS the permanent-suspension outcome sir — there is
+        // nothing left to appeal after this, so the account moves into the same locked-out-
+        // everywhere state permanentlySuspendSupport below sets directly
+        user.permanentlySuspended = true
+        user.permanentSuspensionReason = user.banReason
         await user.save()
 
         logAction(adminId, 'SUPPORT_APPEAL_REJECTED', user, {})
@@ -911,7 +916,7 @@ exports.rejectSupportAppeal = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${user.email}'s appeal has been marked reviewed — the suspension stands`,
+            message: `${user.email}'s appeal has been marked reviewed — the suspension is now permanent`,
             user
         })
     } catch (error) {
@@ -919,6 +924,94 @@ exports.rejectSupportAppeal = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while rejecting the appeal',
+        })
+    }
+}
+
+// PATCH /admin/users/:userId/permanent-suspend — Admin-only sir, body: { reason }.
+// STANDALONE action, no pending appeal required first — the other way into the same permanent
+// state is rejectSupportAppeal above, which reaches it via an appeal that was already submitted.
+// This one is for when an Admin wants to permanently suspend a Support account directly (severe
+// misconduct, no appeal warranted) rather than waiting for/requiring them to appeal first.
+exports.permanentlySuspendSupport = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userId } = req.params
+        const reason = (req.body.reason || '').trim()
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user id',
+            })
+        }
+
+        if (!reason) {
+            return res.status(400).json({
+                success: false,
+                message: 'A reason is required to permanently suspend a Support account',
+            })
+        }
+
+        if (userId === adminId) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot suspend yourself',
+            })
+        }
+
+        const user = await User.findById(userId).select('firstName lastName email role isBanned permanentlySuspended suspensionAppeal')
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            })
+        }
+
+        if (user.role !== 'Support') {
+            return res.status(400).json({
+                success: false,
+                message: 'This action only applies to a Support account',
+            })
+        }
+
+        if (user.permanentlySuspended) {
+            return res.status(400).json({
+                success: false,
+                message: 'This account is already permanently suspended',
+            })
+        }
+
+        user.isBanned = true
+        user.banReason = reason
+        user.permanentlySuspended = true
+        user.permanentSuspensionReason = reason
+        // no appeal is possible once permanently suspended sir (Auth.js's ban-exempt path
+        // explicitly excludes this state) — clear anything left over from a prior, separate
+        // suspension so the drawer never shows a stale appeal against this new, final one
+        user.suspensionAppeal = undefined
+        user.supportAppealUsed = false
+        await user.save()
+
+        logAction(adminId, 'SUPPORT_PERMANENTLY_SUSPENDED', user, { reason })
+
+        mailSender(
+            user.email,
+            'Your Support Account Has Been Permanently Suspended',
+            supportSuspendedTemplate(`${user.firstName} ${user.lastName}`, reason, true)
+        ).catch((err) => logger.error('permanent suspension email failed', { err, userId: user._id }))
+
+        return res.status(200).json({
+            success: true,
+            message: `${user.email} has been permanently suspended`,
+            user
+        })
+    } catch (error) {
+        (req.log || logger).error('permanently suspend support failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while permanently suspending the account',
         })
     }
 }

@@ -4,13 +4,13 @@ import { useSearchParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
-import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift } from 'react-icons/fa'
+import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift, FaSkullCrossbones } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
-import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, DeleteUser, PermanentlySuspendSupport } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import { getProviderMeta } from '../../utils/authProvider'
 import UserDetailModal from './UserDetailModal'
@@ -256,6 +256,26 @@ const Users = () => {
     if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter))
   }
 
+  // standalone permanent-suspend sir — no pending appeal required first, unlike the "Reject
+  // appeal" action in UserDetailModal.jsx (the other path to this same state, for when an
+  // appeal was already filed). Support-only, since that's the only role this whole one-way/
+  // suspend-only/one-appeal policy applies to.
+  const handlePermanentlySuspend = async (target) => {
+    const { value, isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: `Permanently suspend ${target.email}?`,
+      html: 'This is final — no appeal will be offered, even if none has been submitted yet. The account can still log in, but every page will show only the permanent-suspension notice.',
+      input: 'text',
+      inputPlaceholder: 'Reason for the permanent suspension',
+      customClass: { input: 'swal-dark-select' },
+      inputValidator: (value) => (!value || !value.trim()) ? 'A reason is required' : undefined,
+      showCancelButton: true,
+      confirmButtonText: 'Permanently suspend',
+      confirmButtonColor: '#C1443C',
+    })
+    if (isConfirmed) dispatch(PermanentlySuspendSupport(target._id, value, token, page, search, roleFilter))
+  }
+
   // deliberate, explicit action sir — not a casual dropdown, since this is revenue-adjacent
   // (fixing a failed webhook, honoring a refund, a manual giveaway)
   const handleFixPlan = async (target) => {
@@ -456,7 +476,7 @@ const Users = () => {
                           title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
                           className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
                         >
-                          BANNED
+                          {row.permanentlySuspended ? 'PERMANENT' : 'BANNED'}
                         </span>
                         {row.suspensionAppeal?.status === 'pending' && (
                           <span
@@ -537,6 +557,16 @@ const Users = () => {
                             className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                             {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
                           </button>
+                          {/* Support-only standalone permanent suspend sir — no pending appeal
+                              required first, unlike the "Reject appeal" action in
+                              UserDetailModal.jsx. Hidden once already permanently suspended,
+                              there's nothing further this action could do. */}
+                          {row.role === 'Support' && !row.permanentlySuspended && (
+                            <button onClick={() => handlePermanentlySuspend(row)} aria-label="Permanently suspend" title="Permanently suspend (final, no appeal)"
+                              className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                              <FaSkullCrossbones className="text-sm" />
+                            </button>
+                          )}
                           <button onClick={() => handleDelete(row)} aria-label="Delete user" title="Delete"
                             className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                             <FaTrash className="text-sm" />
@@ -634,7 +664,7 @@ const Users = () => {
                               title={row.banReason ? `Reason: ${row.banReason}` : 'No reason recorded'}
                               className="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-pink-700/30 text-pink-100 border border-pink-700 cursor-help"
                             >
-                              BANNED
+                              {row.permanentlySuspended ? 'PERMANENT' : 'BANNED'}
                             </span>
                             {row.suspensionAppeal?.status === 'pending' && (
                               <span
@@ -674,6 +704,12 @@ const Users = () => {
                                 className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                                 {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
                               </button>
+                              {row.role === 'Support' && !row.permanentlySuspended && (
+                                <button onClick={() => handlePermanentlySuspend(row)} title="Permanently suspend (final, no appeal)"
+                                  className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                                  <FaSkullCrossbones className="text-sm" />
+                                </button>
+                              )}
                               <button onClick={() => handleDelete(row)} title="Delete"
                                 className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                                 <FaTrash className="text-sm" />

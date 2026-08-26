@@ -109,6 +109,13 @@ const publicUser = (user) => ({
     isBanned: user.isBanned || false,
     banReason: user.isBanned ? user.banReason : undefined,
     suspensionAppealStatus: user.isBanned ? (user.suspensionAppeal?.status || undefined) : undefined,
+    // Support-only sir — see Models/User.js. Lets the frontend render the distinct
+    // permanent-suspension screen (no appeal option at all) right after login, same
+    // no-extra-call reasoning as everything else in this block.
+    permanentlySuspended: user.isBanned ? (user.permanentlySuspended || false) : false,
+    permanentSuspensionReason: user.isBanned && user.permanentlySuspended
+        ? (user.permanentSuspensionReason || user.banReason)
+        : undefined,
 })
 
 module.exports = {

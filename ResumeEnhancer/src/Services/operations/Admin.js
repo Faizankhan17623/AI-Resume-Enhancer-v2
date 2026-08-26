@@ -322,6 +322,12 @@ export const BanUser = (userId, banned, reason, token, page, search, roleFilter)
 export const RejectSupportAppeal = (userId, token, page, search, roleFilter) =>
     userAction("PATCH", `${banuser}/${userId}/reject-appeal`, {}, token, page, search, "Rejecting the appeal...", roleFilter)
 
+// standalone permanent suspension sir — no pending appeal required first, unlike
+// RejectSupportAppeal above (the OTHER way into the same permanent state, for when an appeal
+// was already filed). Same locked-out-everywhere, no-appeal-possible outcome either way.
+export const PermanentlySuspendSupport = (userId, reason, token, page, search, roleFilter) =>
+    userAction("PATCH", `${banuser}/${userId}/permanent-suspend`, { reason }, token, page, search, "Permanently suspending the account...", roleFilter)
+
 export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, banned ? "Suspending accounts..." : "Restoring accounts...", roleFilter)
 

@@ -49,7 +49,7 @@ exports.Auth = async (req, res, next) => {
         // load the live account state sir — role and ban status must be FRESH from the DB,
         // never trusted from a token that could be days old. recruiterApplication.status is
         // what isApprovedRecruiter (below) checks, loaded here so that gate needs no extra query.
-        const user = await User.findById(decoded.id).select('role isBanned banReason Buffer tokenVersion recruiterApplication')
+        const user = await User.findById(decoded.id).select('role isBanned banReason permanentlySuspended permanentSuspensionReason Buffer tokenVersion recruiterApplication')
 
         if (!user) {
             return res.status(401).json({
@@ -70,14 +70,21 @@ exports.Auth = async (req, res, next) => {
         }
 
         // banned users are blocked everywhere, instantly sir — except the one exempt path above,
-        // which is how they get to actually appeal the ban in the first place
-        if (user.isBanned && !isBanCheckExempt(req)) {
+        // which is how they get to actually appeal the ban in the first place.
+        // permanentlySuspended (Support-only) additionally blocks even that exempt path — there
+        // is no appeal left to submit once an Admin has permanently suspended the account, either
+        // directly (Admin.js's permanentlySuspendSupport) or as the outcome of rejecting their
+        // one appeal, so the exemption itself does not apply here.
+        if (user.isBanned && !(isBanCheckExempt(req) && !user.permanentlySuspended)) {
             return res.status(403).json({
                 success: false,
                 banned: true,
-                message: user.banReason
-                    ? `Your account has been suspended: ${user.banReason}`
-                    : 'Your account has been suspended, please contact support',
+                permanent: user.permanentlySuspended || undefined,
+                message: user.permanentlySuspended
+                    ? `Your account has been permanently suspended: ${user.permanentSuspensionReason || user.banReason || 'no reason recorded'}`
+                    : user.banReason
+                        ? `Your account has been suspended: ${user.banReason}`
+                        : 'Your account has been suspended, please contact support',
             })
         }
 

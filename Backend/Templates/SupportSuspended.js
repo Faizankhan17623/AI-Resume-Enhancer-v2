@@ -1,11 +1,11 @@
 const { escapeHtml } = require('../utils/escapeHtml')
 
-// sent the moment a Support account is suspended sir — controllers/Admin.js's banUser, only for
-// role: 'Support' (a regular User's suspension has no equivalent email today; this is new,
-// scoped to Support per the one-way/suspend-only policy that role now has). name/reason are
-// escaped: reason is free-text an Admin types into the ban dialog, same injection risk
-// CreditBonus.js's template already guards against.
-exports.supportSuspendedTemplate = (name, reason) => {
+// sent the moment a Support account is suspended sir — controllers/Admin.js's banUser (normal,
+// appealable suspension) and permanentlySuspendSupport (the standalone permanent action, no
+// appeal offered at all — `permanent: true`). name/reason are escaped: reason is free-text an
+// Admin types into the ban dialog, same injection risk CreditBonus.js's template already guards
+// against.
+exports.supportSuspendedTemplate = (name, reason, permanent = false) => {
   name = escapeHtml(name)
   reason = escapeHtml(reason)
   return `<!DOCTYPE html>
@@ -50,7 +50,7 @@ exports.supportSuspendedTemplate = (name, reason) => {
 
               <h1 style="margin:0 0 10px;text-align:center;font-size:24px;font-weight:700;
                          color:#F9FAFB;line-height:1.3;">
-                Hi ${name}, your Support account has been suspended
+                Hi ${name}, your Support account has been ${permanent ? 'permanently ' : ''}suspended
               </h1>
               <p style="margin:0 0 20px;text-align:center;color:#9CA3AF;font-size:15px;line-height:1.65;">
                 An administrator has suspended your access to the Support dashboard.
@@ -64,9 +64,9 @@ exports.supportSuspendedTemplate = (name, reason) => {
               </div>
 
               <p style="margin:0;text-align:center;color:#9CA3AF;font-size:14px;line-height:1.65;">
-                You get exactly <strong style="color:#F9FAFB;">one appeal</strong> for this
-                suspension. Sign in and go to your account to submit it — make it count, there's
-                no second attempt.
+                ${permanent
+                  ? '<strong style="color:#F9FAFB;">This suspension is final.</strong> No appeal is available for this account.'
+                  : 'You get exactly <strong style="color:#F9FAFB;">one appeal</strong> for this suspension. Sign in and go to your account to submit it — make it count, there\'s no second attempt.'}
               </p>
             </td>
           </tr>

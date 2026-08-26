@@ -25,9 +25,12 @@ const SupportSuspended = () => {
   const [submitting, setSubmitting] = useState(false)
 
   const appealStatus = user?.suspensionAppealStatus
-  // 'reviewed' + Support role + still banned (this page only renders while banned) means the
-  // one shot has already been used and the outcome wasn't reinstatement sir — final.
-  const appealExhausted = appealStatus === 'reviewed'
+  // authoritative sir — user.permanentlySuspended (Backend/utils/session.js's publicUser),
+  // reachable either by an Admin rejecting the one appeal (which also sets this) or directly
+  // via the standalone Permanently Suspend action (no appeal ever required or submitted).
+  // Checking this instead of the appeal status directly also correctly covers that second
+  // case, where appealStatus is simply undefined (no appeal was ever filed at all).
+  const appealExhausted = user?.permanentlySuspended || false
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,16 +54,18 @@ const SupportSuspended = () => {
             <div className="w-14 h-14 rounded-full bg-pink-900/15 flex items-center justify-center mx-auto mb-4">
               <FaLock className="text-2xl text-pink-100" />
             </div>
-            <h2 className="font-display text-2xl text-richblack-5">Your Support account has been suspended</h2>
+            <h2 className="font-display text-2xl text-richblack-5">
+              Your Support account has been {appealExhausted ? 'permanently ' : ''}suspended
+            </h2>
             <p className="text-sm text-richblack-300 mt-1.5">
-              An admin has restricted access to your account. Every other page is locked until this is resolved.
+              An admin has restricted access to your account. Every other page is locked{appealExhausted ? '' : ' until this is resolved'}.
             </p>
           </div>
 
           <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-8">
             <div className="rounded-lg border border-pink-700 bg-pink-700/10 p-3 mb-6 text-xs text-pink-100">
               <span className="font-semibold">Reason given by admin: </span>
-              {user?.banReason || 'No reason was provided.'}
+              {(appealExhausted ? user?.permanentSuspensionReason : user?.banReason) || 'No reason was provided.'}
             </div>
 
             {appealExhausted ? (
@@ -68,7 +73,9 @@ const SupportSuspended = () => {
                 <FaTimesCircle className="text-3xl text-pink-200 mx-auto mb-3" />
                 <p className="text-richblack-5 font-semibold mb-1.5">This suspension is final</p>
                 <p className="text-sm text-richblack-300">
-                  Your one appeal for a Support account was reviewed and this decision stands. There is no further appeal available for this suspension.
+                  {appealStatus === 'reviewed'
+                    ? 'Your one appeal for this suspension was reviewed and this decision stands.'
+                    : 'This account has been permanently suspended.'} There is no appeal available for this suspension.
                 </p>
               </div>
             ) : appealStatus === 'pending' ? (
