@@ -422,8 +422,10 @@ const Overview = () => {
           </div>
 
           {/* Security sir — the one abuse signal (per-account lockouts) that previously had
-              zero dashboard visibility despite the protection already existing */}
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+              zero dashboard visibility despite the protection already existing. lg:col-span-2
+              sir — it's the 5th card in this 2-column grid, so it lands alone on the last row;
+              spanning both columns gives it the full row width instead of sitting half-empty. */}
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6 lg:col-span-2">
             <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2"><FaShieldAlt className="text-pink-100" /> Security</h2>
             {security ? (
               <div className="space-y-4">
