@@ -187,21 +187,24 @@ const AdminNav = () => {
 
   return (
     <div className="border-b border-richblack-700 bg-richblack-900">
-      {/* tabs + search back on one straight line sir, per direct request — the search bar's own
-          row below the tabs (an earlier fix for it drifting off-center against a variable-width
-          tab list) is gone; a 3-column grid keeps the SAME centering guarantee (the middle
-          column is always the true center of the bar, not just whatever space the tabs left)
-          while putting everything on one row. justify-end on the right column keeps the layout
-          from breaking if a future 4th column is ever added here. */}
-      <div className="w-full px-6 grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 py-1">
-        <div className="flex gap-1 flex-wrap">
+      {/* tabs + search on one straight line sir, per direct request. The earlier 3-column grid
+          (1fr / auto / 1fr) forced the tabs into a fixed fraction of the row instead of their
+          natural content width — with 6 Support tabs that fraction was too narrow, so
+          flex-wrap inside it wrapped Testimonials/Reports onto a second line and the search bar
+          (centered against a now-wrong "remaining space") drifted off to the right. Fixed by
+          letting the tabs take their natural width and scroll horizontally on overflow instead
+          of ever wrapping — every admin/support screen has room for these tabs in practice, this
+          is just a safety net — while minmax(0,1fr) on both outer grid tracks is what actually
+          keeps the search bar precisely centered on the bar regardless of tab count. */}
+      <div className="w-full px-6 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4 py-1">
+        <div className="flex gap-1 overflow-x-auto hairline-scrollbar">
           {tabs.map((tab) => {
             const active = location.pathname === tab.path
             return (
               <Link
                 key={tab.name}
                 to={tab.path}
-                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 transition-colors duration-200 ${
                   active ? 'text-yellow-50' : 'text-richblack-300 hover:text-richblack-5'
                 }`}
               >
