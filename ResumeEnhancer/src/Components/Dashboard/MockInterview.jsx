@@ -264,7 +264,7 @@ const MockInterview = () => {
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Mock interviews are a Pro Max feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade to Pro Max for scored, structured mock interviews tailored to your resume and target job.</p>
-            <Link to="/Pricing" className="inline-block">
+            <Link to="/Pricing" state={{ reason: 'mockInterview' }} className="inline-block">
               <IconBtn text="View plans" />
             </Link>
           </div>

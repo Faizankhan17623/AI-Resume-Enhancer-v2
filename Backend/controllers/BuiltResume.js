@@ -761,6 +761,7 @@ exports.generateResume = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: spend.message,
+                ...(spend.code ? { code: spend.code } : {}),
             })
         }
 
@@ -864,6 +865,7 @@ exports.tailorResume = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: spend.message,
+                ...(spend.code ? { code: spend.code } : {}),
             })
         }
 

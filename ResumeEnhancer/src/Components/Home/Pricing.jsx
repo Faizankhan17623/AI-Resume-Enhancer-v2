@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router'
+import { useNavigate, useLocation } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaCheck, FaHeart, FaStar, FaTimes } from 'react-icons/fa'
+import { FaCheck, FaHeart, FaStar, FaTimes, FaCrown } from 'react-icons/fa'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import Loading from '../extra/Loading'
@@ -31,6 +31,17 @@ const CAPABILITY_MATRIX = [
   { label: 'Highest limits: 300 AI uses & 500 msgs/chat', tiers: ['ProMax'] },
 ]
 
+// context-aware banner sir — shown only when a caller navigates here WITH a reason (see
+// Dashboard/NewReview.jsx's UpgradeUpsell and DashboardHome.jsx's credits pill, both pass
+// `state: { reason: 'credits' }`). A plain /Pricing visit (Navbar link, Footer, etc.) has no
+// location.state and shows nothing extra — this is additive, never the only way to reach the page.
+const REASON_BANNERS = {
+  credits: "You've used all your free AI reviews — here's what upgrading unlocks.",
+  coverLetter: 'Cover letters are a Pro feature — here\'s what upgrading unlocks.',
+  jobSearch: 'Job search is a Pro feature — here\'s what upgrading unlocks.',
+  mockInterview: 'Mock interviews are a Pro Max feature — here\'s what upgrading unlocks.',
+}
+
 const PLAN_META = {
   Basic: {
     tagline: 'Enough to try it for real, no card needed.',
@@ -52,6 +63,8 @@ const PLAN_META = {
 const Pricing = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
+  const reasonBanner = REASON_BANNERS[location.state?.reason]
   const { plans, loading } = useSelector((state) => state.payment)
   const { token, user, isLoggedIn } = useSelector((state) => state.auth)
   // tracks which plan's buy button is mid-flight sir — keyed by plan.key so only the
@@ -99,6 +112,13 @@ const Pricing = () => {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 max-w-7xl mx-auto px-6 py-16 w-full"
       >
+
+        {reasonBanner && (
+          <div className="max-w-xl mx-auto mb-8 flex items-center justify-center gap-2.5 rounded-xl bg-yellow-900/10 border border-yellow-800/40 px-5 py-3 text-center">
+            <FaCrown className="text-yellow-50 shrink-0" />
+            <p className="text-sm text-yellow-25">{reasonBanner}</p>
+          </div>
+        )}
 
         {/* Header sir */}
         <div className="text-center mb-14">

@@ -124,14 +124,20 @@ const consumeCredit = async (userId, session) => {
         return { ok: true, plan: plan.key }
     }
 
-    // top plan has nothing to upgrade to sir — tell them the credits renew instead
-    const message =
-        plan.key === 'Basic'
-            ? 'The Free tier for using this project is over pleases make the purchase'
-            : plan.key === 'ProMax'
-                ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
-                : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
-    return { ok: false, message, plan: plan.key }
+    // top plan has nothing to upgrade to sir — tell them the credits renew instead.
+    // `code` sir — a machine-readable reason the frontend can switch on (see the
+    // Dashboard's upgrade-upsell card), instead of string-matching `message` which is
+    // free-text copy that can change independently. 'UPGRADE_AVAILABLE' covers both Basic
+    // (upgrade to any paid plan) and Pro (upgrade to ProMax) — anywhere there's a paid tier
+    // above the user's current one worth showing a "View plans" button for. ProMax has
+    // nothing above it, so it gets its own code and the frontend shows no upgrade CTA there.
+    const isTopPlan = plan.key === 'ProMax'
+    const message = isTopPlan
+        ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
+        : plan.key === 'Basic'
+            ? 'The Free tier for using this project is over, please make the purchase'
+            : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
+    return { ok: false, message, plan: plan.key, code: isTopPlan ? 'CREDITS_RENEW' : 'UPGRADE_AVAILABLE' }
 }
 
 // hands a spent credit back sir — for the non-transactional callers (an AI route that already

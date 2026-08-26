@@ -86,7 +86,7 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
 
     const spend = await consumeCredit(userId)
     if (!spend.ok) {
-        return { ok: false, status: 403, message: spend.message }
+        return { ok: false, status: 403, message: spend.message, code: spend.code }
     }
 
     // write-ahead marker sir — see Models/CreditSpend.js. Resolved (deleted) on every path below,

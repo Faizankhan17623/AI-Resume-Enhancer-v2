@@ -63,7 +63,7 @@ exports.createChat = async (req, res) => {
         // created, or create a chat the user's own sidebar list never learned about (orphan).
         const outcome = await withTransaction(async (session) => {
             const spend = await consumeCredit(id, session)
-            if (!spend.ok) return { denied: spend.message }
+            if (!spend.ok) return { denied: spend.message, deniedCode: spend.code }
 
             const [chat] = await Chat.create([{
                 user: id,
@@ -82,7 +82,8 @@ exports.createChat = async (req, res) => {
         if (outcome.denied) {
             return res.status(403).json({
                 success: false,
-                message: outcome.denied
+                message: outcome.denied,
+                ...(outcome.deniedCode ? { code: outcome.deniedCode } : {}),
             })
         }
 

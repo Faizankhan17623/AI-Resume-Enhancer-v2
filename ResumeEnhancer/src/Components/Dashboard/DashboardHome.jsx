@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes } from 'react-icons/fa'
+import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes, FaCrown } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
@@ -26,8 +26,18 @@ const DashboardHome = () => {
   }, [])
 
   const activity = profile?.activity
+  const plan = profile?.plan
   const onboardingCompleted = profile?.user?.onboardingCompleted
   const recruiterApplication = profile?.user?.recruiterApplication
+
+  // ambient credits-remaining awareness sir — Basic-only, everyone else's cap either doesn't
+  // exist (unlimited-feeling higher tiers) or isn't the thing worth nudging on this page. Was
+  // completely absent before: a Basic user had zero visibility into "3 of 5 left" until they
+  // actually hit the wall somewhere else in the app (see NewReview.jsx's upgrade upsell) —
+  // this is the earlier, softer version of the same nudge.
+  const creditsRemaining = plan?.key === 'Basic' && plan.creditsLimit != null
+    ? Math.max(0, plan.creditsLimit - plan.creditsUsed)
+    : null
 
   const onboardingSteps = [
     { label: 'Run your first AI resume review', done: (activity?.reviewCount ?? 0) > 0, to: '/Dashboard/New-Review' },
@@ -93,11 +103,30 @@ const DashboardHome = () => {
           <p className="text-sm text-richblack-300">
             Hey <span className="text-richblack-5 font-semibold">{user?.firstName}</span> — here's how your resume is doing.
           </p>
-          <Link to="/Dashboard/New-Review">
-            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:bg-yellow-25 transition-all duration-200 cursor-pointer">
-              <FaPlus className="text-xs" /> New review
-            </button>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            {creditsRemaining !== null && (
+              <Link
+                to="/Pricing"
+                state={{ reason: 'credits' }}
+                title="View plans"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors duration-200 ${
+                  creditsRemaining === 0
+                    ? 'bg-pink-700/15 border-pink-700 text-pink-100 hover:bg-pink-700/25'
+                    : creditsRemaining <= 2
+                      ? 'bg-yellow-700/15 border-yellow-700 text-yellow-25 hover:bg-yellow-700/25'
+                      : 'bg-richblack-800 border-richblack-600 text-richblack-200 hover:text-richblack-5'
+                }`}
+              >
+                <FaCrown className="text-[10px]" />
+                {creditsRemaining === 0 ? 'No free reviews left' : `${creditsRemaining} free review${creditsRemaining === 1 ? '' : 's'} left`}
+              </Link>
+            )}
+            <Link to="/Dashboard/New-Review">
+              <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:bg-yellow-25 transition-all duration-200 cursor-pointer">
+                <FaPlus className="text-xs" /> New review
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Onboarding checklist sir — shows until every step is done or the user dismisses it, never again after that */}

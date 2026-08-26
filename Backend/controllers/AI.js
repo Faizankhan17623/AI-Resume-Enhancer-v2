@@ -17,6 +17,7 @@ const send = (res, result) => {
         return res.status(result.status).json({
             success: false,
             message: result.message,
+            ...(result.code !== undefined ? { code: result.code } : {}),
             ...(result.note !== undefined ? { note: result.note } : {}),
             ...(result.disabledUntil !== undefined ? { disabledUntil: result.disabledUntil } : {}),
         })

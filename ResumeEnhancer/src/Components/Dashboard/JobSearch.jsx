@@ -61,7 +61,7 @@ const JobSearch = () => {
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Job search is a Pro feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade your plan to search the live web for job openings that match what you're looking for.</p>
-            <Link to="/Pricing" className="inline-block">
+            <Link to="/Pricing" state={{ reason: 'jobSearch' }} className="inline-block">
               <IconBtn text="View plans" />
             </Link>
           </div>

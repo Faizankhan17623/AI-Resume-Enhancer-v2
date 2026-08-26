@@ -16,9 +16,17 @@ const { checkgrammar } = GrammarCheckApi
 const { streak } = StreakApi
 const { leaderboard, weeklyReviews, streaks } = LeaderboardApi
 
+// `onUpgradeNeeded` sir — called instead of the generic error toast when the backend's 403 has
+// code: 'UPGRADE_AVAILABLE' (utils/Plans.js's consumeCredit, on Basic/Pro plans with nothing
+// left — see NewReview.jsx, which swaps in Components/extra/UpgradeUpsell instead of just
+// showing an error the user has no obvious next step for). A ProMax user hitting their monthly
+// cap gets code: 'CREDITS_RENEW' instead, which still falls through to the plain toast below —
+// there's nothing to upgrade TO from ProMax, so no upsell card makes sense there.
+const isUpgradeError = (error) => error?.response?.data?.code === 'UPGRADE_AVAILABLE'
+
 // the big one sir — upload the PDF + JD and get the full ATS review back
 // FormData because the backend reads req.files.PDf
-export function CreateReview(pdfFile, jd, token, navigate) {
+export function CreateReview(pdfFile, jd, token, navigate, onUpgradeNeeded) {
     return async (dispatch) => {
         // no loading toast here sir — NewReview.jsx already renders a full centered <Loading>
         // while setLoading(true) is on, so a toast on top of it was a second, redundant spinner
@@ -44,6 +52,10 @@ export function CreateReview(pdfFile, jd, token, navigate) {
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
             logApiError("Error creating the review", error)
+            if (isUpgradeError(error) && onUpgradeNeeded) {
+                onUpgradeNeeded(error.response.data.message)
+                return
+            }
             const message = error?.response?.status === 503
                 ? featureDisabledMessage(error.response.data, "Could not analyze the resume")
                 : (error?.response?.data?.message || "Could not analyze the resume")
@@ -55,7 +67,7 @@ export function CreateReview(pdfFile, jd, token, navigate) {
 }
 
 // same as CreateReview sir, but re-scores a previously saved resume — no PDF re-upload needed
-export function CreateReviewFromResume(resumeId, jd, token, navigate) {
+export function CreateReviewFromResume(resumeId, jd, token, navigate, onUpgradeNeeded) {
     return async (dispatch) => {
         // no loading toast here either sir, same reason as CreateReview above
         dispatch(setLoading(true))
@@ -76,6 +88,10 @@ export function CreateReviewFromResume(resumeId, jd, token, navigate) {
             if (navigate && response.data.reviewId) navigate(`/Dashboard/Review/${response.data.reviewId}`)
         } catch (error) {
             logApiError("Error creating the review", error)
+            if (isUpgradeError(error) && onUpgradeNeeded) {
+                onUpgradeNeeded(error.response.data.message)
+                return
+            }
             const message = error?.response?.status === 503
                 ? featureDisabledMessage(error.response.data, "Could not analyze the resume")
                 : (error?.response?.data?.message || "Could not analyze the resume")

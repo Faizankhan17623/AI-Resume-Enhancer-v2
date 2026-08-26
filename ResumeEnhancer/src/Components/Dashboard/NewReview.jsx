@@ -9,6 +9,7 @@ import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
+import UpgradeUpsell from '../extra/UpgradeUpsell'
 import { CreateReview, CreateReviewFromResume, CheckGrammar } from '../../Services/operations/Review'
 import { GetResumes } from '../../Services/operations/Resume'
 import { setGrammar } from '../../Slices/reviewSlice'
@@ -27,6 +28,12 @@ const NewReview = () => {
   const { token } = useSelector((state) => state.auth)
   const { loading, grammar, grammarChecking } = useSelector((state) => state.review)
   const { resumes } = useSelector((state) => state.resume)
+  // set instead of a toast when the credit-consuming request comes back
+  // code: 'UPGRADE_AVAILABLE' sir (see Services/operations/Review.js's isUpgradeError) — swaps
+  // the whole form out for the same upsell card CoverLetter/JobSearch/MockInterview use for
+  // their Pro-only gate, since "you're out of credits" deserves an actual next step, not just
+  // an error that vanishes in 3 seconds
+  const [upgradeMessage, setUpgradeMessage] = useState(null)
 
   useEffect(() => {
     dispatch(GetResumes(token))
@@ -75,7 +82,7 @@ const NewReview = () => {
         toast.error("Please choose a saved resume")
         return
       }
-      dispatch(CreateReviewFromResume(effectiveResumeId, jd.trim(), token, navigate))
+      dispatch(CreateReviewFromResume(effectiveResumeId, jd.trim(), token, navigate, setUpgradeMessage))
       return
     }
 
@@ -83,7 +90,7 @@ const NewReview = () => {
       toast.error("Please upload your resume PDF")
       return
     }
-    dispatch(CreateReview(pdfFile, jd.trim(), token, navigate))
+    dispatch(CreateReview(pdfFile, jd.trim(), token, navigate, setUpgradeMessage))
   }
 
   return (
@@ -94,7 +101,13 @@ const NewReview = () => {
 
       <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
-        {loading ? (
+        {upgradeMessage ? (
+          <UpgradeUpsell
+            title="You've used all your free reviews"
+            message={upgradeMessage}
+            reason="credits"
+          />
+        ) : loading ? (
           <Loading text="The AI is reading your resume — give it a few seconds..." />
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">

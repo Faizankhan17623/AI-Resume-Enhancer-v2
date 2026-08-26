@@ -93,7 +93,7 @@ const CoverLetter = () => {
             <FaCrown className="text-3xl text-yellow-50 mx-auto mb-4" />
             <p className="text-richblack-100 mb-2 font-semibold">Cover letters are a Pro feature</p>
             <p className="text-richblack-300 text-sm mb-6">Upgrade your plan to generate a tailored cover letter from your resume and a job description.</p>
-            <Link to="/Pricing" className="inline-block">
+            <Link to="/Pricing" state={{ reason: 'coverLetter' }} className="inline-block">
               <IconBtn text="View plans" />
             </Link>
           </motion.div>
