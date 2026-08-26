@@ -122,11 +122,7 @@ exports.createUser = async (req, res) => {
         // unset and no bonus is ever paid out for it. The actual bonus is granted later, on this
         // new account's first real login (see loginUser below) — not here — so a fake account
         // that's created but never logged into can't be farmed for free credits.
-        let referredBy
-        if (referralCode) {
-            const referrer = await User.findOne({ referralCode: referralCode.trim() }).select('_id')
-            if (referrer) referredBy = referrer._id
-        }
+        const referredBy = await resolveReferralCode(referralCode)
 
         const Creation = await User.create({
             firstName: firstName,
@@ -183,6 +179,15 @@ const REFERRAL_BONUS_CREDITS = 5
 // caps how many times ONE referrer can be paid out sir — without this, two colluding accounts
 // (or one person's two emails) could loop signup+login indefinitely for free credits
 const MAX_REFERRALS_PER_USER = 10
+
+// shared by createUser here AND services/oauth.js's createOAuthUser sir — one place that turns a
+// ?ref= code into the referrer's _id, so a stale/typo'd/unknown code is silently ignored the same
+// way on both signup paths instead of each reimplementing the lookup
+const resolveReferralCode = async (referralCode) => {
+    if (!referralCode) return undefined
+    const referrer = await User.findOne({ referralCode: referralCode.trim() }).select('_id')
+    return referrer?._id
+}
 
 // pays out the referral bonus sir, called from loginUser on the referred user's first login.
 // The findOneAndUpdate below is the actual race guard: it flips referralBonusGranted from
@@ -1572,3 +1577,9 @@ exports.getReferralHistory = async (req, res) => {
         })
     }
 }
+
+// reused by services/oauth.js sir — OAuth signup goes through the exact same referral-code
+// resolution and first-login bonus payout as the local signup/login flow, instead of a second
+// hand-rolled copy that can silently drift out of sync with this one
+exports.resolveReferralCode = resolveReferralCode
+exports.grantReferralBonus = grantReferralBonus

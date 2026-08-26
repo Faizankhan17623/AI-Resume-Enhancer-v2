@@ -19,6 +19,7 @@ const LoginLog = require('../Models/LoginLog')
 const { createExchangeCode, redeemExchangeCode } = require('../utils/oauthExchange')
 const { signSessionToken, buildAuthCookie, publicUser } = require('../utils/session')
 const logger = require('../utils/logger')
+const { resolveReferralCode, grantReferralBonus } = require('../controllers/user')
 
 // every OAuth-created account gets this same placeholder password hashed in sir — it's never
 // shown or usable for a real password login (loginUser routes any non-'local' provider to the
@@ -61,15 +62,30 @@ const stateCookieOptions = () => ({
  */
 const createOAuthController = (config) => {
     // STEP 1 sir — bounce the user to the provider's consent screen with a random state nonce,
-    // stashed in a short-lived cookie and re-checked on the way back (OAuth CSRF mitigation)
+    // stashed in a short-lived cookie and re-checked on the way back (OAuth CSRF mitigation).
+    // A ?ref=CODE on this route (see Join.jsx's OAuth buttons) rides along in its OWN cookie,
+    // never inside `state` itself — state must stay exactly the opaque nonce Google/GitHub echo
+    // back verbatim, so the CSRF comparison on the way back can't be broken by smuggling data
+    // into it.
     const login = (req, res) => {
         const state = crypto.randomBytes(16).toString('hex')
 
-        res.setHeader('Set-Cookie', cookie.stringifySetCookie({
+        const cookies = [cookie.stringifySetCookie({
             name: config.stateCookie,
             value: state,
             ...stateCookieOptions(),
-        }))
+        })]
+
+        const referralCode = typeof req.query.ref === 'string' ? req.query.ref.trim().slice(0, 100) : ''
+        if (referralCode) {
+            cookies.push(cookie.stringifySetCookie({
+                name: `${config.stateCookie}_ref`,
+                value: referralCode,
+                ...stateCookieOptions(),
+            }))
+        }
+
+        res.setHeader('Set-Cookie', cookies)
 
         return res.redirect(config.authUrl(state))
     }
@@ -102,6 +118,11 @@ const createOAuthController = (config) => {
             const email = profile.email.toLowerCase().trim()
             const providerId = String(profile.providerId)
 
+            // read once, cleared below sir — same short-lived, httpOnly cookie pattern as the
+            // state nonce itself, just a separate cookie so it can't corrupt the CSRF comparison
+            const referralCookieName = `${config.stateCookie}_ref`
+            const referralCode = req.cookies?.[referralCookieName]
+
             // ---- account resolution + linking sir ----
             // A returning user is found by providerId, never by email: an email change on the
             // provider's side must not silently resolve to a different local account.
@@ -126,7 +147,8 @@ const createOAuthController = (config) => {
                         return failRedirect(`An account with this email already exists using ${providerLabel} sign-in. Please log in with ${providerLabel} instead, or contact support to link accounts.`)
                     }
                 } else {
-                    user = await createOAuthUser(config.name, providerId, email, profile)
+                    const referredBy = await resolveReferralCode(referralCode)
+                    user = await createOAuthUser(config.name, providerId, email, profile, referredBy)
                 }
             }
 
@@ -147,14 +169,25 @@ const createOAuthController = (config) => {
                 user.BufferTiming = null
             }
 
+            // referral bonus sir — same first-login gate as the local flow's loginUser
+            // (controllers/user.js): !Verified here still means "never completed a login before"
+            // since the flip happens right after. Fire-and-forget, must never block the login.
+            if (!user.Verified && user.referredBy && !user.referralBonusGranted) {
+                grantReferralBonus(user, user.referredBy).catch((err) =>
+                    logger.error('referral bonus grant failed', { err, userId: user._id })
+                )
+            }
+
             user.Verified = true
             const jwtToken = signSessionToken(user)
             user.token = jwtToken
             await user.save()
 
             res.setHeader('Set-Cookie', [
-                // clear the state cookie now that it has served its purpose sir
+                // clear the state cookie (and the referral cookie, if one was set) now that
+                // they've served their purpose sir
                 cookie.stringifySetCookie({ name: config.stateCookie, value: '', maxAge: 0, path: '/' }),
+                cookie.stringifySetCookie({ name: referralCookieName, value: '', maxAge: 0, path: '/' }),
                 buildAuthCookie(jwtToken),
             ])
 
@@ -213,7 +246,7 @@ const createOAuthController = (config) => {
 // shared new-account creation sir — firstName isn't unique at the schema level but createUser's
 // local flow treats it as one via a manual check, so avoid a collision here too by suffixing a
 // short random tag rather than blocking the sign-up outright
-const createOAuthUser = async (provider, providerId, email, profile) => {
+const createOAuthUser = async (provider, providerId, email, profile, referredBy) => {
     let firstName = (profile.firstName || 'User').slice(0, 50)
     const lastName = (profile.lastName || 'User').slice(0, 50)
 
@@ -231,7 +264,13 @@ const createOAuthUser = async (provider, providerId, email, profile) => {
         password: defaultPasswordHash,
         provider,
         providerId,
-        Verified: true,
+        // Verified starts false sir, same as the local signup flow — it flips true on this
+        // account's first completed login (right after, in callback above), which is what gates
+        // the referral bonus. An OAuth account used to be marked Verified immediately here, which
+        // silently broke the referral bonus for every OAuth signup: the bonus condition
+        // (!Verified) could never be true by the time grantReferralBonus's caller ran.
+        Verified: false,
+        ...(referredBy ? { referredBy } : {}),
     })
 }
 

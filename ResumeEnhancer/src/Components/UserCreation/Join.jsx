@@ -39,6 +39,14 @@ const Join = () => {
   // silently ignores it if empty/unknown, so a plain /Signup visit is unaffected.
   const referralCode = searchParams.get('ref')
 
+  // OAuth can't carry React state through the provider's full-page redirect sir, so the code
+  // rides as its own ?ref= query param straight on the /auth/google | /auth/github URL — the
+  // backend (services/oauth.js's login handler) reads it there and stashes it in a short-lived
+  // cookie for the round trip. Without this an OAuth signup from a referral link silently drops
+  // the referral (found live: this was the actual cause of the referral bonus never paying out
+  // for anyone who used "Continue with Google/GitHub").
+  const withRef = (url) => referralCode ? `${url}?ref=${encodeURIComponent(referralCode)}` : url
+
   const onSubmit = (data) => {
     // park the form data sir — the OTP screen finishes the creation with it. accountType and
     // (when Recruiter) the company fields ride along in `data` untouched — CreateTheUser
@@ -128,7 +136,7 @@ const Join = () => {
                 <div className="space-y-3">
                   <button
                     type="button"
-                    onClick={() => startOAuth('google', OAuth.google)}
+                    onClick={() => startOAuth('google', withRef(OAuth.google))}
                     className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
                   >
                     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -142,7 +150,7 @@ const Join = () => {
 
                   <button
                     type="button"
-                    onClick={() => startOAuth('github', OAuth.github)}
+                    onClick={() => startOAuth('github', withRef(OAuth.github))}
                     className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">

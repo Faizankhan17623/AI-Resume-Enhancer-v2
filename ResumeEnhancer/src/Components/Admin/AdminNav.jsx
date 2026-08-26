@@ -98,9 +98,9 @@ const GlobalAdminSearch = () => {
   const hasResults = results && (results.users.length > 0 || results.payments.length > 0)
 
   return (
-    <div ref={boxRef} className="relative w-full max-w-xs my-2">
+    <div ref={boxRef} className="relative w-full max-w-xl mx-auto my-2">
       <div className="relative">
-        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-richblack-400 text-xs" />
+        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm" />
         <input
           type="text"
           value={query}
@@ -108,9 +108,9 @@ const GlobalAdminSearch = () => {
           onFocus={() => setOpen(true)}
           placeholder="Search users or payments..."
           aria-label="Search users or payments"
-          className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-8 pr-8 py-1.5 text-xs text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+          className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-10 pr-10 py-2.5 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
         />
-        {loading && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-richblack-400 text-xs animate-spin" />}
+        {loading && <FaSpinner className="absolute right-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm animate-spin" />}
       </div>
 
       <AnimatePresence>
@@ -120,7 +120,7 @@ const GlobalAdminSearch = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 mt-2 w-80 max-w-[90vw] rounded-xl bg-richblack-800 border border-richblack-600 shadow-2xl shadow-richblack-900/50 overflow-hidden"
+            className="absolute z-50 mt-2 w-full max-w-[90vw] rounded-xl bg-richblack-800 border border-richblack-600 shadow-2xl shadow-richblack-900/50 overflow-hidden"
           >
             {!results || (!hasResults && !loading) ? (
               <p className="text-xs text-richblack-400 px-4 py-4 text-center">
@@ -187,7 +187,7 @@ const AdminNav = () => {
 
   return (
     <div className="border-b border-richblack-700 bg-richblack-900">
-      <div className="w-full px-6 flex flex-wrap items-center justify-between gap-x-4">
+      <div className="w-full px-6 flex flex-wrap items-center gap-x-4">
         <div className="flex gap-1 flex-wrap">
           {tabs.map((tab) => {
             const active = location.pathname === tab.path
@@ -211,6 +211,12 @@ const AdminNav = () => {
             )
           })}
         </div>
+      </div>
+      {/* own centered row sir, independent of the tabs' width — a flex item centered next to a
+          variable-width tab list (the old justify-between layout) drifts off-center as tabs wrap
+          across screen sizes; this row spans the full bar so mx-auto always centers it on the
+          section, not just in whatever space the tabs happened to leave */}
+      <div className="w-full px-6 pb-3 flex justify-center">
         <GlobalAdminSearch />
       </div>
     </div>

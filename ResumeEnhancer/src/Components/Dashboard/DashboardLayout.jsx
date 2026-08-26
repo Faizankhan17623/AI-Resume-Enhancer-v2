@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
-import { FiSun, FiMoon, FiMenu, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import { FiSun, FiMoon, FiMenu, FiX, FiChevronLeft, FiChevronRight, FiPlus } from 'react-icons/fi'
 import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
+import AnnouncementBanner from '../extra/AnnouncementBanner'
 import { LogoutUser } from '../../Services/operations/Auth'
 import { modalBackdrop } from '../../utils/motion'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
@@ -60,7 +61,7 @@ const isActive = (link, pathname) => {
   return pathname.startsWith(link.path)
 }
 
-const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
+const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
   <>
     <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
       <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
@@ -68,6 +69,19 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
         Resum<span className="text-warm-200">ify</span>
       </span>
     </Link>
+
+    {/* the sidebar's single primary action sir, Claude-sidebar-style "+ New" pill up top —
+        New Review is this app's equivalent of "start something new": it's the first thing a
+        user does with a fresh credit, same role the "+ New" chat button plays over there */}
+    {!user?.isBanned && (
+      <Link
+        to="/Dashboard/New-Review"
+        onClick={onNavigate}
+        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold bg-yellow-50 text-richblack-900 hover:bg-yellow-25 transition-colors duration-150"
+      >
+        <FiPlus className="text-base shrink-0" /> New Review
+      </Link>
+    )}
 
     <div className="flex-1 min-h-0 overflow-y-auto hairline-scrollbar flex flex-col gap-4 pr-0.5">
       {/* banned sir — the ENTIRE normal nav is replaced by this one locked item. Every other
@@ -130,11 +144,31 @@ const SidebarContent = ({ pathname, user, streak, onNavigate }) => (
           <FaFire className="text-pink-200 shrink-0" /> {streak.currentStreak}-day streak
         </div>
       )}
-      <div className="px-3 py-2.5 rounded-xl bg-richblack-700/60 border border-richblack-600 text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-richblack-5">
-          <FaCrown className="text-yellow-50 text-[11px]" /> {user?.SubType || 'Basic'} plan
+
+      {/* Claude-sidebar-style profile row sir — avatar, name, plan badge, all pinned to the
+          sidebar's own bottom edge instead of split across the topbar (avatar/logout) and a
+          separate plan-only card the way this looked before. onLogout is optional: the mobile
+          slide-over passes nothing extra here since it already closes itself via onNavigate,
+          desktop passes the real logout handler. */}
+      <button
+        onClick={onLogout}
+        title="Log out"
+        className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-richblack-700/60 transition-colors duration-150 cursor-pointer text-left group"
+      >
+        <div
+          style={{ backgroundColor: getAvatarColor(user) }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+        >
+          {getInitial(user)}
         </div>
-      </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-richblack-5 truncate">{user?.firstName} {user?.lastName}</p>
+          <p className="flex items-center gap-1 text-[11px] text-richblack-300">
+            <FaCrown className="text-yellow-50 text-[10px] shrink-0" /> {user?.SubType || 'Basic'} plan
+          </p>
+        </div>
+        <FaSignOutAlt className="text-richblack-500 group-hover:text-pink-200 text-xs shrink-0 transition-colors duration-150" />
+      </button>
     </div>
   </>
 )
@@ -216,7 +250,7 @@ const DashboardLayout = ({ title, children }) => {
           style={{ width: sidebarWidth }}
           className="h-full flex flex-col gap-6 border-r border-richblack-700 bg-richblack-800 p-4"
         >
-          <SidebarContent pathname={location.pathname} user={user} streak={streak} />
+          <SidebarContent pathname={location.pathname} user={user} streak={streak} onLogout={() => dispatch(LogoutUser(navigate))} />
         </div>
         {!sidebarCollapsed && (
           <div
@@ -267,13 +301,27 @@ const DashboardLayout = ({ title, children }) => {
                   <FiX />
                 </button>
               </div>
-              <SidebarContent pathname={location.pathname} user={user} streak={streak} onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent
+                pathname={location.pathname}
+                user={user}
+                streak={streak}
+                onNavigate={() => setMobileOpen(false)}
+                onLogout={() => { setMobileOpen(false); dispatch(LogoutUser(navigate)) }}
+              />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
       <div className="flex-1 min-w-0 flex flex-col">
+        {/* the admin's live broadcast sir — App.jsx already renders this one above <Routes>, but
+            DashboardLayout is `fixed inset-0` (covers the full viewport, see the outer div above)
+            so that copy sits visually behind it and a logged-in user inside the Dashboard never
+            saw it until they navigated back out to the home page. Mounting it again here, inside
+            the fixed shell's own layout flow, is what actually makes it visible on every
+            Dashboard page — it's the same component, so it fetches/dismisses independently but
+            shows the identical live announcement. */}
+        <AnnouncementBanner />
         <div className="flex items-center justify-between px-4 lg:px-6 py-4 border-b border-richblack-700 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -293,19 +341,34 @@ const DashboardLayout = ({ title, children }) => {
             >
               {theme === 'dark' ? <FiSun className="text-base" /> : <FiMoon className="text-base" />}
             </button>
+            {/* logout moved into the sidebar's own Claude-style profile row sir (desktop AND the
+                mobile slide-over both have it now) — kept here only as the avatar, so a mobile
+                user (sidebar off-screen by default) still has a visible identity anchor in the
+                topbar; tapping it opens the same slide-over that carries the actual logout button.
+                On desktop it falls back to logging out directly, covering the case where the
+                sidebar itself (and its profile row) has been collapsed via the rail toggle. */}
             <button
-              onClick={() => dispatch(LogoutUser(navigate))}
-              aria-label="Logout"
-              className="hidden sm:flex p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-pink-700/20 hover:text-pink-100 hover:border-pink-700 transition-all duration-200 cursor-pointer"
+              onClick={() => (sidebarCollapsed ? dispatch(LogoutUser(navigate)) : setMobileOpen(true))}
+              aria-label="Open menu"
+              title={sidebarCollapsed ? 'Log out' : undefined}
+              className="lg:hidden"
             >
-              <FaSignOutAlt className="text-sm" />
+              <div
+                style={{ backgroundColor: getAvatarColor(user) }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+              >
+                {getInitial(user)}
+              </div>
             </button>
-            <div
+            <button
+              onClick={() => sidebarCollapsed && dispatch(LogoutUser(navigate))}
+              aria-label={sidebarCollapsed ? 'Log out' : 'Account'}
+              title={sidebarCollapsed ? 'Log out' : undefined}
+              className={`hidden lg:flex w-8 h-8 rounded-full items-center justify-center text-xs font-semibold text-white shrink-0 ${sidebarCollapsed ? 'cursor-pointer' : 'cursor-default'}`}
               style={{ backgroundColor: getAvatarColor(user) }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
             >
               {getInitial(user)}
-            </div>
+            </button>
           </div>
         </div>
 
