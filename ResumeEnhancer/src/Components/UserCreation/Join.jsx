@@ -224,11 +224,20 @@ const Join = () => {
                     <label className={labelClass}>Phone Number</label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                       placeholder="9876543210"
                       className={inputClass}
                       {...register("number", {
                         required: "Phone number is required",
-                        pattern: { value: /^[0-9]{10}$/, message: "Enter a valid 10-digit number" }
+                        pattern: { value: /^[0-9]{10}$/, message: "Enter a valid 10-digit number" },
+                        onChange: (e) => {
+                          // stop the field at 10 digits sir, instead of only rejecting it after
+                          // submit via the pattern check above — strips non-digits too, so a
+                          // pasted "+91 98765 43210" still lands as a clean 10-digit number
+                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          if (digitsOnly !== e.target.value) e.target.value = digitsOnly
+                        },
                       })}
                     />
                     {errors.number && <p className={errorClass}>{errors.number.message}</p>}

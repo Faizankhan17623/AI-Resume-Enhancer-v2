@@ -240,6 +240,14 @@ const grantReferralBonus = async (referredUser, referrerId) => {
         // decremented value, silently dropping one of the two bonus credits. The fix does the
         // cap check, the referralCount bump, AND the bonusCredits increment in ONE atomic
         // aggregation-pipeline update — no separate read of the pre-update value at all.
+        //
+        // `updatePipeline: true` is REQUIRED here sir — this app's Mongoose version (9.x) throws
+        // "Cannot pass an array to query updates unless the `updatePipeline` option is set" on a
+        // bare pipeline-style update array without it (found live: this was silently breaking
+        // EVERY referral — the referrer's bonusCredits/referralCount from the two updateOnes
+        // above already landed, but this call threw before ReferralLog.create() below ever ran,
+        // so the dashboard's invite list stayed empty and referralCount never advanced even
+        // though the referred user's own signup bonus went through fine).
         await User.updateOne(
             { _id: referrerId, referralCount: { $lt: MAX_REFERRALS_PER_USER } },
             [{
@@ -247,7 +255,8 @@ const grantReferralBonus = async (referredUser, referrerId) => {
                     referralCount: { $add: ['$referralCount', 1] },
                     bonusCredits: { $add: ['$bonusCredits', REFERRAL_BONUS_CREDITS] },
                 },
-            }]
+            }],
+            { updatePipeline: true }
         )
     }
 
