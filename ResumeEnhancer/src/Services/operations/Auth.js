@@ -90,17 +90,6 @@ export function LoginUser(email, password, navigate, onStatus) {
 
             const { token, user, accountRecovered } = response.data
 
-            dispatch(setToken(token))
-            dispatch(setUser(user))
-            dispatch(setLogin(true))
-
-            // the token is NOT persisted sir — it stays in redux (memory) only, because the
-            // httpOnly session cookie set by this same response is the real credential and a
-            // localStorage copy would hand it to any XSS. Only the non-sensitive user object is
-            // cached, purely so a reload can paint the dashboard without a flash - and that cache is
-            // written by the setUser reducer itself (Slices/authSlice.js), so redux and
-            // localStorage cannot drift apart.
-
             // distinct message sir — this is a meaningfully different event from a normal login
             // and the user should notice their deletion got undone
             const successMessage = accountRecovered
@@ -110,9 +99,30 @@ export function LoginUser(email, password, navigate, onStatus) {
 
             // each role lands on its OWN dashboard sir — never a shared landing page
             const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
+
+            // setLogin(true) is DELAYED along with the redirect sir, not dispatched immediately —
+            // Login/User.jsx is wrapped in OpenRoute, which watches isLoggedIn and instantly
+            // swaps the whole page out for a <Navigate> the moment it flips true. Dispatching it
+            // right here used to tear the success overlay down before the browser had painted a
+            // single frame of it, since OpenRoute's redirect fires independently of (and faster
+            // than) the setTimeout below — found live: the checkmark simply never appeared.
+            // token/user are still set immediately so a reload mid-pause still has a valid
+            // session; only the isLoggedIn flip (and the resulting route swap) waits.
+            dispatch(setToken(token))
+            dispatch(setUser(user))
+            // the token is NOT persisted sir — it stays in redux (memory) only, because the
+            // httpOnly session cookie set by this same response is the real credential and a
+            // localStorage copy would hand it to any XSS. Only the non-sensitive user object is
+            // cached, purely so a reload can paint the dashboard without a flash - and that cache is
+            // written by the setUser reducer itself (Slices/authSlice.js), so redux and
+            // localStorage cannot drift apart.
+
             // brief pause sir — long enough for the checkmark to register before the page changes
             // out from under it, short enough that login still feels instant
-            setTimeout(() => { if (navigate) navigate(landingPath) }, 900)
+            setTimeout(() => {
+                dispatch(setLogin(true))
+                if (navigate) navigate(landingPath)
+            }, 900)
         } catch (error) {
             logApiError("Error logging in", error)
             onStatus?.('error', error?.response?.data?.message || "Login failed")
