@@ -49,7 +49,7 @@ exports.Auth = async (req, res, next) => {
         // load the live account state sir — role and ban status must be FRESH from the DB,
         // never trusted from a token that could be days old. recruiterApplication.status is
         // what isApprovedRecruiter (below) checks, loaded here so that gate needs no extra query.
-        const user = await User.findById(decoded.id).select('role isBanned banReason permanentlySuspended permanentSuspensionReason Buffer tokenVersion recruiterApplication')
+        const user = await User.findById(decoded.id).select('role isBanned banReason permanentlySuspended permanentSuspensionReason suspensionAppeal Buffer tokenVersion recruiterApplication')
 
         if (!user) {
             return res.status(401).json({
@@ -85,6 +85,13 @@ exports.Auth = async (req, res, next) => {
                     : user.banReason
                         ? `Your account has been suspended: ${user.banReason}`
                         : 'Your account has been suspended, please contact support',
+                // discrete fields sir, mirroring publicUser()'s shape — so a tab that gets banned
+                // MID-SESSION (apiConnector.js's ban interceptor) can merge these straight into
+                // the cached user on its way to the Suspended page, instead of showing a blank
+                // "no reason was provided" until the next real login re-syncs it
+                banReason: user.banReason || undefined,
+                permanentSuspensionReason: user.permanentSuspensionReason || undefined,
+                suspensionAppealStatus: user.suspensionAppeal?.status || undefined,
             })
         }
 
