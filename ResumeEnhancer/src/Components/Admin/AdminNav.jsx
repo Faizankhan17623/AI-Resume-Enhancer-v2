@@ -98,7 +98,7 @@ const GlobalAdminSearch = () => {
   const hasResults = results && (results.users.length > 0 || results.payments.length > 0)
 
   return (
-    <div ref={boxRef} className="relative w-full max-w-xl mx-auto my-2">
+    <div ref={boxRef} className="relative w-full max-w-xl my-2">
       <div className="relative">
         <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm" />
         <input
@@ -187,24 +187,22 @@ const AdminNav = () => {
 
   return (
     <div className="border-b border-richblack-700 bg-richblack-900">
-      {/* tabs + search on one straight line sir, per direct request. The earlier 3-column grid
-          (1fr / auto / 1fr) forced the tabs into a fixed fraction of the row instead of their
-          natural content width — with 6 Support tabs that fraction was too narrow, so
-          flex-wrap inside it wrapped Testimonials/Reports onto a second line and the search bar
-          (centered against a now-wrong "remaining space") drifted off to the right. Fixed by
-          letting the tabs take their natural width and scroll horizontally on overflow instead
-          of ever wrapping — every admin/support screen has room for these tabs in practice, this
-          is just a safety net — while minmax(0,1fr) on both outer grid tracks is what actually
-          keeps the search bar precisely centered on the bar regardless of tab count. */}
-      <div className="w-full px-6 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4 py-1">
-        <div className="flex gap-1 overflow-x-auto hairline-scrollbar">
+      {/* tabs + search on one straight line sir, per direct request: tabs keep their natural
+          width (never shrunk/scrolled — every earlier attempt reserved fixed space for the
+          search bar first and squeezed the tabs into whatever was left, which cut Testimonials
+          off entirely on Support's 6-tab bar), and the search bar fills whatever space remains
+          after the tabs — shrink-0 on the tabs plus flex-1 (capped by GlobalAdminSearch's own
+          max-w-xl so it doesn't stretch absurdly wide) on the search wrapper is what actually
+          gives the tabs first claim on the row. */}
+      <div className="w-full px-6 flex items-center gap-x-4 py-1">
+        <div className="flex gap-1 shrink-0">
           {tabs.map((tab) => {
             const active = location.pathname === tab.path
             return (
               <Link
                 key={tab.name}
                 to={tab.path}
-                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 transition-colors duration-200 ${
+                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
                   active ? 'text-yellow-50' : 'text-richblack-300 hover:text-richblack-5'
                 }`}
               >
@@ -220,8 +218,9 @@ const AdminNav = () => {
             )
           })}
         </div>
-        <GlobalAdminSearch />
-        <div />
+        <div className="flex-1 flex justify-end">
+          <GlobalAdminSearch />
+        </div>
       </div>
     </div>
   )
