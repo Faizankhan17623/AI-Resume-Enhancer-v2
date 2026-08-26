@@ -316,6 +316,12 @@ export const GrantCreditsToAll = (credits, reason, token) => async (dispatch) =>
 export const BanUser = (userId, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...", roleFilter)
 
+// marks a Support account's one appeal reviewed/rejected sir — the account STAYS suspended,
+// this just closes out the appeal (see Backend/controllers/Admin.js's rejectSupportAppeal) and
+// fires the "this is final" email to the account holder
+export const RejectSupportAppeal = (userId, token, page, search, roleFilter) =>
+    userAction("PATCH", `${banuser}/${userId}/reject-appeal`, {}, token, page, search, "Rejecting the appeal...", roleFilter)
+
 export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter) =>
     userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, banned ? "Suspending accounts..." : "Restoring accounts...", roleFilter)
 

@@ -15,6 +15,7 @@ const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
 const { otpEmail } = require('../Templates/OTP.js')
 const { referralSuccessTemplate } = require('../Templates/ReferralSuccess.js')
+const { supportAppealSubmittedTemplate } = require('../Templates/SupportAppealSubmitted.js')
 const { issueSession, publicUser, buildClearAuthCookie } = require('../utils/session.js')
 const logger = require('../utils/logger.js')
 // ============================================================
@@ -1448,7 +1449,7 @@ exports.submitSuspensionAppeal = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('role isBanned banReason suspensionAppeal supportAppealUsed')
+        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason suspensionAppeal supportAppealUsed')
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' })
         }
@@ -1491,6 +1492,18 @@ exports.submitSuspensionAppeal = async (req, res) => {
         }
         if (user.role === 'Support') user.supportAppealUsed = true
         await user.save()
+
+        // Support-only alert to the admin team sir — this is their one and only shot, so it's
+        // worth a proactive nudge rather than relying on someone noticing the APPEALED badge on
+        // the Users list. Fire-and-forget, same as every other email — must never fail the
+        // actual appeal submission.
+        if (user.role === 'Support' && process.env.ADMIN_ALERT_EMAIL) {
+            mailSender(
+                process.env.ADMIN_ALERT_EMAIL,
+                'Support Appeal Submitted — Review Needed',
+                supportAppealSubmittedTemplate(`${user.firstName} ${user.lastName}`, user.email, message.trim())
+            ).catch((err) => logger.error('support appeal submitted alert failed', { err, userId: user._id }))
+        }
 
         return res.status(200).json({
             success: true,

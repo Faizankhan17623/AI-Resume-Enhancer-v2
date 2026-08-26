@@ -23,6 +23,7 @@ const {
     deleteUser,
     banUser,
     bulkBanUsers,
+    rejectSupportAppeal,
     adjustCredits,
     grantCreditsToAll,
     impersonateUser,
@@ -99,6 +100,7 @@ route.post('/admin/recruiter-applications/:userId/reject', Auth, isAdmin, adminW
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserPlanSchema }), updateUserPlan)
 route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkBanSchema }), bulkBanUsers)
 route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, validate({ body: banUserSchema }), banUser)
+route.patch('/admin/users/:userId/reject-appeal', Auth, isAdmin, adminWriteLimiter, rejectSupportAppeal)
 route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter, impersonateUser)
 // broadcast bonus credits to every User account sir — Admin-only like every other bulk action
 // above, and registered as a literal path so it never collides with the :userId param routes

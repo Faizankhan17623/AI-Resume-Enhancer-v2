@@ -711,7 +711,7 @@ const Users = () => {
           </div>
         )}
       </PageTransition>
-      <UserDetailModal userId={detailUserId} onClose={() => setDetailUserId(null)} />
+      <UserDetailModal userId={detailUserId} onClose={() => setDetailUserId(null)} page={page} search={search} roleFilter={roleFilter} />
     </div>
   )
 }

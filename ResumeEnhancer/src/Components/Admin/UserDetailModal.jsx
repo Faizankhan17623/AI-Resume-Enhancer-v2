@@ -1,18 +1,23 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
+import Swal from 'sweetalert2'
 import { FaTimes } from 'react-icons/fa'
 import { modalBackdrop } from '../../utils/motion'
-import { GetUserDetail } from '../../Services/operations/Admin'
+import { GetUserDetail, RejectSupportAppeal } from '../../Services/operations/Admin'
 import { getProviderMeta } from '../../utils/authProvider'
+
+const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
 // lightweight read-only drawer sir — surfaces the /admin/users/:userId endpoint that already
 // existed on the backend (profile + review/chat counts + recent reviews/payments) but had
-// no frontend consumer at all before this
-const UserDetailModal = ({ userId, onClose }) => {
+// no frontend consumer at all before this. page/search/roleFilter are passed through from
+// Users.jsx sir — only needed now to refetch the list correctly after RejectSupportAppeal below
+const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
   const dispatch = useDispatch()
-  const { token } = useSelector((state) => state.auth)
+  const { token, user: me } = useSelector((state) => state.auth)
   const { userDetail, userDetailLoading } = useSelector((state) => state.admin)
+  const isAdmin = me?.role === 'Admin'
 
   useEffect(() => {
     if (userId) dispatch(GetUserDetail(userId, token))
@@ -28,6 +33,22 @@ const UserDetailModal = ({ userId, onClose }) => {
 
   const user = userDetail?.user
   const activity = userDetail?.activity
+
+  const handleRejectAppeal = async () => {
+    const { isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: `Reject ${user.email}'s appeal?`,
+      text: 'The account stays suspended. This was their one and only appeal for this suspension — they will be emailed that the decision is final.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Reject the appeal',
+      confirmButtonColor: '#C1443C',
+    })
+    if (isConfirmed) {
+      await dispatch(RejectSupportAppeal(user._id, token, page, search, roleFilter))
+      dispatch(GetUserDetail(userId, token))
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -104,6 +125,20 @@ const UserDetailModal = ({ userId, onClose }) => {
                         {user.suspensionAppeal.status === 'pending' ? "User's appeal (pending review)" : "User's appeal"}
                       </p>
                       <p className="text-sm text-richblack-5">{user.suspensionAppeal.message}</p>
+                      {/* Support's one-shot appeal sir — Admin-only, and only while there's
+                          actually a pending appeal to close out. Restoring the account
+                          (banUser, banned:false) is still the "accept" path; this is the
+                          explicit "reviewed and rejected, stays suspended" action that was
+                          missing entirely before — an Admin previously had no way to mark an
+                          appeal reviewed without also un-banning the account. */}
+                      {isAdmin && user.role === 'Support' && user.suspensionAppeal.status === 'pending' && (
+                        <button
+                          onClick={handleRejectAppeal}
+                          className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer"
+                        >
+                          Reject appeal (final)
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

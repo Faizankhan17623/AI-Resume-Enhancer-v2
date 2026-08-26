@@ -11,6 +11,9 @@ const { logAction } = require('../utils/AdminLog')
 const mailSender = require('../utils/Nodemailer.js')
 const { supportPromotionTemplate } = require('../Templates/supportPromotionTemplate.js')
 const { creditBonusTemplate } = require('../Templates/CreditBonus.js')
+const { supportSuspendedTemplate } = require('../Templates/SupportSuspended.js')
+const { supportRestoredTemplate } = require('../Templates/SupportRestored.js')
+const { supportAppealFinalTemplate } = require('../Templates/SupportAppealFinal.js')
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
@@ -717,6 +720,18 @@ exports.bulkBanUsers = async (req, res) => {
             await user.save()
             logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: trimmedReason, bulk: true })
             updated.push(user.email)
+
+            // same Support-only notification as the single-user banUser sir
+            if (user.role === 'Support') {
+                const template = banned
+                    ? supportSuspendedTemplate(`${user.firstName} ${user.lastName}`, user.banReason)
+                    : supportRestoredTemplate(`${user.firstName} ${user.lastName}`)
+                mailSender(
+                    user.email,
+                    banned ? 'Your Support Account Has Been Suspended' : 'Your Support Account Has Been Restored',
+                    template
+                ).catch((err) => logger.error('support suspend/restore email failed', { err, userId: user._id, banned, bulk: true }))
+            }
         }
 
         return res.status(200).json({
@@ -803,6 +818,20 @@ exports.banUser = async (req, res) => {
 
         logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: user.banReason })
 
+        // Support-only sir — a regular User's suspension has no email today (this is a new,
+        // deliberately scoped notification, not a general ban-email feature). Fire-and-forget,
+        // same as every other email in this file — a mail hiccup must never fail the real action.
+        if (user.role === 'Support') {
+            const template = banned
+                ? supportSuspendedTemplate(`${user.firstName} ${user.lastName}`, user.banReason)
+                : supportRestoredTemplate(`${user.firstName} ${user.lastName}`)
+            mailSender(
+                user.email,
+                banned ? 'Your Support Account Has Been Suspended' : 'Your Support Account Has Been Restored',
+                template
+            ).catch((err) => logger.error('support suspend/restore email failed', { err, userId: user._id, banned }))
+        }
+
         return res.status(200).json({
             success: true,
             message: banned
@@ -815,6 +844,81 @@ exports.banUser = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the ban status',
+        })
+    }
+}
+
+// PATCH /admin/users/:userId/reject-appeal — Admin-only sir, no body needed.
+// The explicit "this appeal was reviewed and rejected" action Support's one-shot appeal policy
+// always implied but never actually had a button for — an Admin previously only had "restore"
+// (banUser, banned:false) or silently doing nothing, neither of which ever marked the appeal
+// reviewed or told the account holder their one shot was used up. The account STAYS suspended;
+// this only closes out the appeal and fires the "this is final" email.
+exports.rejectSupportAppeal = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { userId } = req.params
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user id',
+            })
+        }
+
+        const user = await User.findById(userId).select('firstName lastName email role isBanned suspensionAppeal')
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            })
+        }
+
+        if (user.role !== 'Support') {
+            return res.status(400).json({
+                success: false,
+                message: 'This action only applies to a Support account',
+            })
+        }
+
+        if (!user.isBanned) {
+            return res.status(400).json({
+                success: false,
+                message: 'This account is not currently suspended',
+            })
+        }
+
+        if (user.suspensionAppeal?.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'There is no pending appeal to reject for this account',
+            })
+        }
+
+        user.suspensionAppeal.status = 'reviewed'
+        user.suspensionAppeal.reviewedBy = adminId
+        user.suspensionAppeal.reviewedAt = new Date()
+        await user.save()
+
+        logAction(adminId, 'SUPPORT_APPEAL_REJECTED', user, {})
+
+        mailSender(
+            user.email,
+            'Your Appeal Has Been Reviewed',
+            supportAppealFinalTemplate(`${user.firstName} ${user.lastName}`)
+        ).catch((err) => logger.error('support appeal final email failed', { err, userId: user._id }))
+
+        return res.status(200).json({
+            success: true,
+            message: `${user.email}'s appeal has been marked reviewed — the suspension stands`,
+            user
+        })
+    } catch (error) {
+        (req.log || logger).error('reject support appeal failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while rejecting the appeal',
         })
     }
 }
