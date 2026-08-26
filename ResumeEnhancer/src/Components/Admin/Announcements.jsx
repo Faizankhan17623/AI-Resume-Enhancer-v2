@@ -9,6 +9,7 @@ import AdminNav from './AdminNav'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
+import { useMinDurationLoading } from '../../Hooks/useMinDurationLoading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAnnouncements, CreateAnnouncement, UpdateAnnouncement, ToggleAnnouncement, DeleteAnnouncement } from '../../Services/operations/Admin'
 import { istPartsToUtcDate, utcDateToIstDisplay, utcDateToIstParts, istDateStrFromNow } from '../../utils/istTime'
@@ -85,8 +86,11 @@ const Announcements = () => {
   // grantingCredits and BuilderEditor.jsx's sharing, replacing the old toast.loading("Publishing...").
   // publishLabel is captured separately from editingId sir, since resetForm() clears editingId
   // right after dispatch — by the time this loader actually renders, editingId would already be
-  // null and always show "Publishing..." even while saving an edit
-  const [publishing, setPublishing] = useState(false)
+  // null and always show "Publishing..." even while saving an edit.
+  // useMinDurationLoading, not plain useState, sir — a publish/save usually resolves in well
+  // under a second, which flashed the spinner on/off too fast to actually notice (found live:
+  // reported as "the loader isn't showing" when it really was, just imperceptibly briefly)
+  const [publishing, setPublishing] = useMinDurationLoading(600)
   const [publishLabel, setPublishLabel] = useState('Publishing...')
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)

@@ -7,6 +7,7 @@ import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
+import { useMinDurationLoading } from '../../Hooks/useMinDurationLoading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetSettings, UpdateSetting } from '../../Services/operations/Admin'
 import { istPartsToUtcDate, utcDateToIstDisplay, istDateStrFromNow } from '../../utils/istTime'
@@ -32,8 +33,11 @@ const Settings = () => {
   const [disablingKey, setDisablingKey] = useState(null)
   const [disableForm, setDisableForm] = useState({ note: '', date: istDateStrFromNow(0), hour: 12, minute: 0, meridiem: 'PM' })
   // full-screen loader while a toggle/note save is in flight sir — replaces the old silent
-  // wait (no in-flight indicator at all, just the eventual success/error toast)
-  const [updating, setUpdating] = useState(false)
+  // wait (no in-flight indicator at all, just the eventual success/error toast).
+  // useMinDurationLoading, not plain useState, sir — same reasoning as Announcements.jsx: a
+  // toggle usually resolves in well under a second, too fast for a plain on/off flag to read
+  // as a visible loader
+  const [updating, setUpdating] = useMinDurationLoading(600)
 
   useEffect(() => {
     dispatch(GetSettings(token))

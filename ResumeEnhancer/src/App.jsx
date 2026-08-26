@@ -19,6 +19,7 @@ import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 import CookieConsent from './Components/extra/CookieConsent'
 import ErrorBoundary from './Components/extra/ErrorBoundary'
+import MobileBlock from './Components/extra/MobileBlock'
 
 // Lazy-loaded route components — split into separate chunks for faster initial load sir
 const Join = lazy(() => import('./Components/UserCreation/Join'))
@@ -160,6 +161,11 @@ function App() {
 
   return (
     <>
+      {/* full-screen block sir, checked first — this app isn't built for phone widths (the
+          resume builder, resizable dashboard sidebar, and side-by-side chat/report panes all
+          assume real desktop space). Sits above everything else via z-[999], so a phone visitor
+          never sees a half-broken layout underneath it. */}
+      <MobileBlock />
       {/* the live admin broadcast sir — shows only when one is published */}
       <AnnouncementBanner />
       {/* cookie consent card sir — shows once until accepted */}
