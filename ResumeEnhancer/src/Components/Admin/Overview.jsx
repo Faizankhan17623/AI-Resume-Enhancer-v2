@@ -178,8 +178,10 @@ const Overview = () => {
           )}
         </AnimatePresence>
 
-        {/* Stat cards sir */}
-        <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stat cards sir — grid-cols-3 for Support (Revenue card removed above, statCards only
+            has 3 entries for that role), so the cards actually fill the row instead of leaving
+            an empty 4th slot the way a fixed 4-column grid did */}
+        <motion.div variants={staggerContainer(0.06)} initial="hidden" animate="show" className={`grid grid-cols-2 ${isSupport ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}>
           {statCards.map((card, index) => (
             <motion.div
               key={index}
@@ -274,8 +276,10 @@ const Overview = () => {
           )}
         </div>
 
-        {/* Health + AI + Deletions + Security row sir */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Health + AI + Deletions + Reconciliation + Security sir — 5 cards, 2 per row (not 4)
+            so the trailing 5th card (Security) actually fills half a row instead of sitting
+            alone at a quarter-width on its own line */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2">
               <FaHeartbeat className="text-pink-100" /> System Health
