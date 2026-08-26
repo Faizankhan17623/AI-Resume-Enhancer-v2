@@ -551,6 +551,23 @@ exports.updateUserPlan = async (req, res) => {
             })
         }
 
+        // plans/credits are a User-only concept sir — Support/Recruiter/Admin accounts don't
+        // consume AI credits or hold a subscription (see Backend/utils/Plans.js), so there's
+        // nothing here to actually change for them. Read the role BEFORE touching anything.
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            })
+        }
+        if (targetForRoleCheck.role !== 'User') {
+            return res.status(400).json({
+                success: false,
+                message: 'Plans can only be changed for a User account',
+            })
+        }
+
         // Basic means clearing the subscription sir; paid plans get the full validity window + a fresh credit count
         const update = plan === 'Basic'
             ? { Subscription: false, SubType: 'Basic', SubscriptionExpires: null }
@@ -828,6 +845,25 @@ exports.adjustCredits = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "'credits' must be a positive integer",
+            })
+        }
+
+        // credits are a User-only concept sir — Admin/Support/Recruiter accounts don't spend AI
+        // review credits (Backend/utils/Plans.js), same reasoning grantCreditsToAll below already
+        // uses for its broadcast version. Read the role first so a Support/Admin/Recruiter target
+        // gets a clear rejection instead of a silent no-op bonusCredits bump plus a pointless
+        // "You've received bonus credits" email.
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            })
+        }
+        if (targetForRoleCheck.role !== 'User') {
+            return res.status(400).json({
+                success: false,
+                message: 'Bonus credits can only be granted to a User account',
             })
         }
 

@@ -515,16 +515,24 @@ const Users = () => {
                       {' '}· joined {new Date(row.createdAt).toLocaleDateString()}
                     </p>
                     <div className="flex gap-1 shrink-0">
-                      <button onClick={() => handleCredits(row)} aria-label="Grant bonus credits" title="Grant bonus credits"
-                        className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
-                        <FaCoins className="text-sm" />
-                      </button>
+                      {/* credits/plan are a User-only concept sir (Backend/utils/Plans.js) — an
+                          Admin viewing a Support row (the only non-User role that can appear
+                          here, since Admins never show up in this list at all) previously still
+                          saw both these buttons even though the backend now rejects them */}
+                      {row.role === 'User' && (
+                        <button onClick={() => handleCredits(row)} aria-label="Grant bonus credits" title="Grant bonus credits"
+                          className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                          <FaCoins className="text-sm" />
+                        </button>
+                      )}
                       {isAdmin && (
                         <>
-                          <button onClick={() => handleFixPlan(row)} aria-label="Fix plan" title="Fix plan (refund/webhook/giveaway)"
-                            className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
-                            <FaWrench className="text-sm" />
-                          </button>
+                          {row.role === 'User' && (
+                            <button onClick={() => handleFixPlan(row)} aria-label="Fix plan" title="Fix plan (refund/webhook/giveaway)"
+                              className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                              <FaWrench className="text-sm" />
+                            </button>
+                          )}
                           <button onClick={() => handleBan(row)} aria-label={row.isBanned ? "Restore user" : "Suspend user"} title={row.isBanned ? "Restore" : "Suspend"}
                             className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                             {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
@@ -646,16 +654,22 @@ const Users = () => {
                       <td className="p-4 text-xs text-richblack-300">{new Date(row.createdAt).toLocaleDateString()}</td>
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => handleCredits(row)} title="Grant bonus credits"
-                            className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
-                            <FaCoins className="text-sm" />
-                          </button>
+                          {/* credits/plan are a User-only concept sir — see the mobile card view
+                              above for the full reasoning */}
+                          {row.role === 'User' && (
+                            <button onClick={() => handleCredits(row)} title="Grant bonus credits"
+                              className="p-2 rounded-md text-yellow-50 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                              <FaCoins className="text-sm" />
+                            </button>
+                          )}
                           {isAdmin && (
                             <>
-                              <button onClick={() => handleFixPlan(row)} title="Fix plan (refund/webhook/giveaway)"
-                                className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
-                                <FaWrench className="text-sm" />
-                              </button>
+                              {row.role === 'User' && (
+                                <button onClick={() => handleFixPlan(row)} title="Fix plan (refund/webhook/giveaway)"
+                                  className="p-2 rounded-md text-blue-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                                  <FaWrench className="text-sm" />
+                                </button>
+                              )}
                               <button onClick={() => handleBan(row)} title={row.isBanned ? "Restore" : "Suspend"}
                                 className="p-2 rounded-md text-pink-100 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
                                 {row.isBanned ? <FaUndo className="text-sm" /> : <FaBan className="text-sm" />}
