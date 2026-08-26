@@ -51,8 +51,14 @@ export function CreateTheUser(signupData, otp, navigate) {
             }
 
             toast.success("Account created, please log in")
-            dispatch(setSignupData(null))
+            // navigate BEFORE clearing signupData sir — OTP.jsx's own guard
+            // (`if (!signupData) return <Navigate to="/Signup" />`) re-renders the instant
+            // signupData goes null and was winning this race, bouncing the user back to
+            // /Signup right after a successful signup instead of landing on /Login. Clearing
+            // it after the navigate call means that guard never gets a chance to fire on this
+            // page again — the user's already been routed away.
             if (navigate) navigate("/Login")
+            dispatch(setSignupData(null))
         } catch (error) {
             logApiError("Error creating the user", error)
             toast.error(error?.response?.data?.message || "Could not create the account")
@@ -173,7 +179,7 @@ export function LogoutUser(navigate) {
 
         dispatch(setToken(null))
         dispatch(setUser(null))
-        dispatch(setLogin(false))
+        dispatch(setLogin(false))
         toast.success("Logged out")
         if (navigate) navigate("/")
     }
@@ -197,7 +203,7 @@ export function DeleteAccount(token, navigate) {
             toast.success("Account scheduled for deletion — check your email for details")
             dispatch(setToken(null))
             dispatch(setUser(null))
-            dispatch(setLogin(false))
+            dispatch(setLogin(false))
             if (navigate) navigate("/")
         } catch (error) {
             logApiError("Error deleting the account", error)
