@@ -5,11 +5,11 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift } from 'react-icons/fa'
-import toast from 'react-hot-toast'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
+import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
 import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, DeleteUser } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import { getProviderMeta } from '../../utils/authProvider'
@@ -48,6 +48,11 @@ const Users = () => {
   // that user is even on the currently loaded page. Lazy init, not an effect, since the
   // param is already known synchronously at mount
   const [detailUserId, setDetailUserId] = useState(() => searchParams.get('highlight'))
+  // shows a real loader for at least 4s on a role-filter switch sir — the plain
+  // {loading && users.length === 0} check below never re-fires here since the PREVIOUS filter's
+  // list is still populated while the new one loads, so a switch used to just silently swap
+  // the table with no feedback at all
+  const [switchingRole, triggerSwitchingRole] = useMinDurationFlag(4000)
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
@@ -79,6 +84,7 @@ const Users = () => {
   }
 
   const handleRoleFilterChange = (e) => {
+    triggerSwitchingRole()
     setRoleFilter(e.target.value)
     setPage(1)
     setSelected([])
@@ -334,7 +340,16 @@ const Users = () => {
             <button
               onClick={handleGrantCreditsToAll}
               title="Grant bonus credits to every User account, with an email notification"
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-caribgreen-25 border border-caribgreen-700 rounded-lg hover:bg-caribgreen-700/20 transition-all duration-200 cursor-pointer"
+              // filled at rest sir, not just on hover — the old `text-caribgreen-25
+              // border-caribgreen-700 hover:bg-caribgreen-700/20` had no background until
+              // hovered, so the resting state was pale mint text directly on the page
+              // background. caribgreen-700 (near-black, fixed across both themes per this
+              // app's accent-color convention — see index.css's light/dark blocks) is nearly
+              // invisible as a plain border in light mode with nothing behind it; filling it in
+              // as the button's actual background at rest, like the approved-status badges
+              // elsewhere in Admin already do, is what makes caribgreen-25 text legible in
+              // BOTH themes instead of only reading correctly in dark mode.
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-caribgreen-25 bg-caribgreen-700 border border-caribgreen-700 rounded-lg hover:bg-caribgreen-600 transition-all duration-200 cursor-pointer"
             >
               <FaGift /> Grant bonus to all
             </button>
@@ -384,7 +399,7 @@ const Users = () => {
           </div>
         )}
 
-        {loading && users.length === 0 ? (
+        {switchingRole || (loading && users.length === 0) ? (
           <Loading text="Loading the users..." />
         ) : (
           <div className={loading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}>

@@ -11,11 +11,13 @@ const { logout } = Logout
 const { forgotpassword, resetpassword } = Password
 const { deleteaccount } = Account
 
-// step 1 of the signup sir — fire the OTP mail and move to the OTP screen
-export function SendTheOtp(email, navigate) {
+// step 1 of the signup sir — fire the OTP mail and move to the OTP screen. `onStatus` follows
+// the same pattern as LoginUser below: ('loading'|'success'|'error', message) instead of a
+// toast, so Join.jsx can drive the same full-screen LoginStatusOverlay used for login.
+export function SendTheOtp(email, navigate, onStatus) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Sending the OTP...")
+        onStatus?.('loading', 'Sending the OTP...')
         try {
             const response = await apiConnector("POST", createotp, { email })
 
@@ -23,23 +25,23 @@ export function SendTheOtp(email, navigate) {
                 throw new Error(response.data.message)
             }
 
-            toast.success("OTP sent to your email")
-            if (navigate) navigate("/Verify-Otp")
+            onStatus?.('success', 'OTP sent to your email')
+            // brief pause sir — same as LoginUser, long enough for the checkmark to register
+            setTimeout(() => { if (navigate) navigate("/Verify-Otp") }, 900)
         } catch (error) {
             logApiError("Error sending the OTP", error)
-            toast.error(error?.response?.data?.message || "Could not send the OTP")
+            onStatus?.('error', error?.response?.data?.message || "Could not send the OTP")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
 
-// step 2 sir — the full account creation with the OTP the user typed
-export function CreateTheUser(signupData, otp, navigate) {
+// step 2 sir — the full account creation with the OTP the user typed. Same onStatus pattern.
+export function CreateTheUser(signupData, otp, navigate, onStatus) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Creating your account...")
+        onStatus?.('loading', 'Verifying...')
         try {
             const response = await apiConnector("POST", createuser, {
                 ...signupData,
@@ -50,29 +52,35 @@ export function CreateTheUser(signupData, otp, navigate) {
                 throw new Error(response.data.message)
             }
 
-            toast.success("Account created, please log in")
+            onStatus?.('success', 'Account created — redirecting to log in')
             // navigate BEFORE clearing signupData sir — OTP.jsx's own guard
             // (`if (!signupData) return <Navigate to="/Signup" />`) re-renders the instant
             // signupData goes null and was winning this race, bouncing the user back to
             // /Signup right after a successful signup instead of landing on /Login. Clearing
             // it after the navigate call means that guard never gets a chance to fire on this
             // page again — the user's already been routed away.
-            if (navigate) navigate("/Login")
-            dispatch(setSignupData(null))
+            setTimeout(() => {
+                if (navigate) navigate("/Login")
+                dispatch(setSignupData(null))
+            }, 900)
         } catch (error) {
             logApiError("Error creating the user", error)
-            toast.error(error?.response?.data?.message || "Could not create the account")
+            onStatus?.('error', error?.response?.data?.message || "Could not create the account")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
 
-export function LoginUser(email, password, navigate) {
+// `onStatus` sir — replaces the old toast.loading/success/error trio. Called with
+// ('loading'|'success'|'error', message) so the caller (Login/User.jsx's LoginStatusOverlay) can
+// drive one centered status panel instead of a toast, matching the same status-overlay pattern
+// OAuthComplete.jsx uses for the OAuth login path. navigate is still called on success, but only
+// AFTER a short pause so the success checkmark is actually visible before the redirect fires.
+export function LoginUser(email, password, navigate, onStatus) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Logging you in...")
+        onStatus?.('loading', 'Logging in...')
         try {
             const response = await apiConnector("POST", login, { email, password })
 
@@ -93,22 +101,23 @@ export function LoginUser(email, password, navigate) {
             // written by the setUser reducer itself (Slices/authSlice.js), so redux and
             // localStorage cannot drift apart.
 
-            // longer + distinct toast sir — this is a meaningfully different event from a normal
-            // login and the user should notice their deletion got undone
-            if (accountRecovered) {
-                toast.success("Your account was recovered — the scheduled deletion has been cancelled", { duration: 6000 })
-            } else {
-                toast.success(`Welcome back ${user?.firstName || ''}`)
-            }
+            // distinct message sir — this is a meaningfully different event from a normal login
+            // and the user should notice their deletion got undone
+            const successMessage = accountRecovered
+                ? "Account recovered — the scheduled deletion has been cancelled"
+                : "Login successful"
+            onStatus?.('success', successMessage)
+
             // each role lands on its OWN dashboard sir — never a shared landing page
             const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
-            if (navigate) navigate(landingPath)
+            // brief pause sir — long enough for the checkmark to register before the page changes
+            // out from under it, short enough that login still feels instant
+            setTimeout(() => { if (navigate) navigate(landingPath) }, 900)
         } catch (error) {
             logApiError("Error logging in", error)
-            toast.error(error?.response?.data?.message || "Could not log you in")
+            onStatus?.('error', error?.response?.data?.message || "Login failed")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }

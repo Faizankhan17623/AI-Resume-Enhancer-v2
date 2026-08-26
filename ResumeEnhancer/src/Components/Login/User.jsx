@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router'
@@ -6,6 +7,7 @@ import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
+import LoginStatusOverlay from './LoginStatusOverlay'
 import { LoginUser } from '../../Services/operations/Auth'
 import { OAuth } from '../../Services/Apis/UserApi'
 import { startOAuth } from '../../utils/oauthProviders'
@@ -19,9 +21,21 @@ const User = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { loading } = useSelector((state) => state.auth)
+  // drives LoginStatusOverlay sir — { status: 'loading'|'success'|'error'|null, message }.
+  // Replaces the old toast.loading/success/error trio (see Services/operations/Auth.js's
+  // LoginUser, which now calls onStatus instead of toasting directly).
+  const [loginStatus, setLoginStatus] = useState({ status: null, message: '' })
 
   const onSubmit = (data) => {
-    dispatch(LoginUser(data.email, data.password, navigate))
+    dispatch(LoginUser(data.email, data.password, navigate, (status, message) => {
+      setLoginStatus({ status, message })
+      // an error clears itself after a moment sir so the form is usable again for a retry —
+      // loading/success don't need this, they're cleared by the redirect (success) or the next
+      // submit overwriting this same state (loading)
+      if (status === 'error') {
+        setTimeout(() => setLoginStatus({ status: null, message: '' }), 2200)
+      }
+    }))
   }
 
   return (
@@ -79,7 +93,7 @@ const User = () => {
 
           <IconBtn
             type="submit"
-            text={loading ? "Logging in..." : "Log in"}
+            text="Log in"
             disabled={loading}
             customClasses="w-full justify-center"
           />
@@ -93,7 +107,14 @@ const User = () => {
           <div className="space-y-3">
             <button
               type="button"
-              onClick={() => startOAuth('google', OAuth.google)}
+              onClick={() => {
+                // this button navigates the whole page away (startOAuth uses
+                // window.location.href) sir, so 'loading' just needs to show briefly before
+                // that navigation takes over — there's no success/error to report from here,
+                // OAuthComplete.jsx's own overlay picks up the moment the provider redirects back
+                setLoginStatus({ status: 'loading', message: 'Redirecting to Google...' })
+                startOAuth('google', OAuth.google)
+              }}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -107,7 +128,10 @@ const User = () => {
 
             <button
               type="button"
-              onClick={() => startOAuth('github', OAuth.github)}
+              onClick={() => {
+                setLoginStatus({ status: 'loading', message: 'Redirecting to GitHub...' })
+                startOAuth('github', OAuth.github)
+              }}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -123,6 +147,8 @@ const User = () => {
           </p>
         </form>
       </PageTransition>
+
+      <LoginStatusOverlay status={loginStatus.status} message={loginStatus.message} />
     </div>
   )
 }

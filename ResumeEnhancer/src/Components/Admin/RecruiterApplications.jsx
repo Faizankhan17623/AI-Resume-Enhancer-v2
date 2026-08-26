@@ -7,6 +7,8 @@ import { FaCheck, FaTimes, FaUserTie, FaGlobe } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
+import Loading from '../extra/Loading'
+import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetRecruiterApplications, ApproveRecruiterApplication, RejectRecruiterApplication } from '../../Services/operations/Admin'
 
@@ -28,10 +30,17 @@ const STATUS_BADGE = {
 // call based on company name/brand, not an automated check (per the user's explicit ask)
 const RecruiterApplications = () => {
   const [statusFilter, setStatusFilter] = useState('pending')
+  // shows a real loader for at least 4s on a status-tab switch sir — see Hooks/useMinDurationFlag.js
+  const [switchingTab, triggerSwitchingTab] = useMinDurationFlag(4000)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { recruiterApplications, loading } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
+
+  const handleStatusFilterChange = (value) => {
+    triggerSwitchingTab()
+    setStatusFilter(value)
+  }
 
   useEffect(() => {
     dispatch(GetRecruiterApplications(token, statusFilter))
@@ -80,7 +89,7 @@ const RecruiterApplications = () => {
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
-                onClick={() => setStatusFilter(f.value)}
+                onClick={() => handleStatusFilterChange(f.value)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 cursor-pointer ${
                   statusFilter === f.value ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
                 }`}
@@ -92,8 +101,8 @@ const RecruiterApplications = () => {
         </div>
 
         <div className="space-y-3">
-          {loading ? (
-            <p className="text-sm text-richblack-300 py-6 text-center">Loading...</p>
+          {switchingTab || (loading && recruiterApplications.length === 0) ? (
+            <Loading text="Loading recruiter applications..." />
           ) : recruiterApplications.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing here.</p>
           ) : (

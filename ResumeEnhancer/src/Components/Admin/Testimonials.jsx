@@ -6,6 +6,8 @@ import { FaStar, FaCheck, FaTimes, FaTrash, FaCommentDots } from 'react-icons/fa
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
+import Loading from '../extra/Loading'
+import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetTestimonials, ModerateTestimonial, DeleteTestimonial } from '../../Services/operations/Admin'
 
@@ -24,15 +26,24 @@ const STATUS_BADGE = {
 
 const Testimonials = () => {
   const [statusFilter, setStatusFilter] = useState('pending')
+  // shows a real loader for at least 4s on a status-tab switch sir — see
+  // Hooks/useMinDurationFlag.js: the plain {loading && testimonials.length === 0} check never
+  // re-fires here since the PREVIOUS tab's list is still populated while the new one loads
+  const [switchingTab, triggerSwitchingTab] = useMinDurationFlag(4000)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { testimonials } = useSelector((state) => state.admin)
+  const { testimonials, loading } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
 
   useEffect(() => {
     dispatch(GetTestimonials(token, statusFilter))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter])
+
+  const handleStatusFilterChange = (value) => {
+    triggerSwitchingTab()
+    setStatusFilter(value)
+  }
 
   return (
     <div className="min-h-screen w-full bg-richblack-900">
@@ -51,7 +62,7 @@ const Testimonials = () => {
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
-                onClick={() => setStatusFilter(f.value)}
+                onClick={() => handleStatusFilterChange(f.value)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 cursor-pointer ${
                   statusFilter === f.value ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
                 }`}
@@ -63,7 +74,9 @@ const Testimonials = () => {
         </div>
 
         <div className="space-y-3">
-          {testimonials.length === 0 ? (
+          {switchingTab || (loading && testimonials.length === 0) ? (
+            <Loading text="Loading testimonials..." />
+          ) : testimonials.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing here sir.</p>
           ) : (
             <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">

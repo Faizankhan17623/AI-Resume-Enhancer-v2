@@ -8,6 +8,7 @@ import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
+import Loading from '../extra/Loading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAnnouncements, CreateAnnouncement, UpdateAnnouncement, ToggleAnnouncement, DeleteAnnouncement } from '../../Services/operations/Admin'
 import { istPartsToUtcDate, utcDateToIstDisplay, utcDateToIstParts, istDateStrFromNow } from '../../utils/istTime'
@@ -80,6 +81,13 @@ const Announcements = () => {
   const [startSchedule, setStartSchedule] = useState(emptySchedule(1))
   const [endSchedule, setEndSchedule] = useState(emptySchedule(1))
   const [editingId, setEditingId] = useState(null)
+  // full-screen loader while publish/save is in flight sir — same pattern as Users.jsx's
+  // grantingCredits and BuilderEditor.jsx's sharing, replacing the old toast.loading("Publishing...").
+  // publishLabel is captured separately from editingId sir, since resetForm() clears editingId
+  // right after dispatch — by the time this loader actually renders, editingId would already be
+  // null and always show "Publishing..." even while saving an edit
+  const [publishing, setPublishing] = useState(false)
+  const [publishLabel, setPublishLabel] = useState('Publishing...')
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { announcements } = useSelector((state) => state.admin)
@@ -147,10 +155,11 @@ const Announcements = () => {
     const schedule = buildScheduleDates()
     if (schedule === null) return
 
+    setPublishLabel(editingId ? 'Saving...' : 'Publishing...')
     if (editingId) {
-      dispatch(UpdateAnnouncement(editingId, { title: title.trim(), message: message.trim(), ...schedule }, token))
+      dispatch(UpdateAnnouncement(editingId, { title: title.trim(), message: message.trim(), ...schedule }, token, setPublishing))
     } else {
-      dispatch(CreateAnnouncement(title.trim(), message.trim(), token, schedule))
+      dispatch(CreateAnnouncement(title.trim(), message.trim(), token, schedule, setPublishing))
     }
     resetForm()
   }
@@ -162,6 +171,17 @@ const Announcements = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      <AnimatePresence>
+      {publishing && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={publishLabel} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-8">
 

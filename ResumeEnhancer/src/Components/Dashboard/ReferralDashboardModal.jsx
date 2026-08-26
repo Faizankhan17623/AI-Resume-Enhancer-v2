@@ -59,7 +59,7 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
             </div>
 
             {loading || !data ? (
-              <Loading text="Loading your referral history..." />
+              <Loading text="Loading your referral history..." size="compact" />
             ) : (
               <>
                 {/* totals sir — week/month/year/all-time, always shown; custom slots in as a 5th

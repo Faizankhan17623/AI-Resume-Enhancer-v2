@@ -264,6 +264,19 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-8">
           <NavDropdown label="Resume" items={resumeMenu} active={resumeActive} />
           <NavDropdown label="Tools" items={toolsMenu} active={toolsActive} />
+          {/* the free public job board sir (/Jobs) — no login required, deliberately separate
+              from Tools > Job Search above (/Dashboard/Job-Search, the paid tailoring feature
+              behind login). This link was missing entirely: nothing in the navbar pointed at
+              /Jobs, so it was unreachable except by typing the URL directly. Always a plain
+              Link (never gated to /Login like the dropdown items), since the page itself is public. */}
+          <Link
+            to="/Jobs"
+            className={`text-sm font-medium transition-colors duration-200 ${
+              location.pathname.startsWith('/Jobs') ? 'text-yellow-50' : 'text-richblack-100 hover:text-richblack-5'
+            }`}
+          >
+            Job Board
+          </Link>
           <Link
             to="/Pricing"
             className={`text-sm font-medium transition-colors duration-200 ${

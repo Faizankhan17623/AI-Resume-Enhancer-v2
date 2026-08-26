@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router'
-import toast from 'react-hot-toast'
 import { setToken, setUser, setLogin } from '../../Slices/authSlice'
 import { apiConnector } from '../../Services/apiConnector'
 import { OAuth } from '../../Services/Apis/UserApi'
+import LoginStatusOverlay from './LoginStatusOverlay'
 
 // landing page for every OAuth provider's redirect sir — the backend's GET /auth/<provider>/callback
 // sends the browser here with only a short-lived, single-use ?code (never the real JWT — a
@@ -16,6 +16,17 @@ const OAuthComplete = () => {
   const [searchParams] = useSearchParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  // same status-overlay pattern as Login/User.jsx sir, replacing this page's old toast calls —
+  // one shared look for "logging in" across both the password form and every OAuth provider.
+  // The initial value is computed straight from the URL sir (a lazy initializer, read once at
+  // mount) rather than set inside the effect below — ?oauthError= is already known synchronously
+  // from the very first render, so there's no real "loading" moment for that case, and setting
+  // state synchronously inside an effect body is exactly the cascading-render pattern React's own
+  // hooks lint rule (react-hooks/set-state-in-effect) flags.
+  const [loginStatus, setLoginStatus] = useState(() => {
+    const oauthError = searchParams.get('oauthError')
+    return oauthError ? { status: 'error', message: oauthError } : { status: 'loading', message: 'Finishing sign-in...' }
+  })
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -23,8 +34,7 @@ const OAuthComplete = () => {
     const oauthError = searchParams.get('oauthError')
 
     if (oauthError) {
-      toast.error(oauthError)
-      navigate('/Login', { replace: true })
+      setTimeout(() => navigate('/Login', { replace: true }), 1600)
       return
     }
 
@@ -51,16 +61,17 @@ const OAuthComplete = () => {
         // the real credential; only the non-sensitive user object is cached for paint-on-reload.
         localStorage.setItem('user', JSON.stringify(user))
 
-        toast.success(`Welcome ${user?.firstName || ''}`)
+        setLoginStatus({ status: 'success', message: 'Login successful' })
         // each role lands on its OWN dashboard sir — same rule LoginUser uses in Services/operations/Auth.js,
         // never a shared landing page (OAuth accounts can be Admin/Support too, not just User)
         const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
-        navigate(landingPath, { replace: true })
+        // same brief pause as the password login sir — long enough for the checkmark to register
+        setTimeout(() => navigate(landingPath, { replace: true }), 900)
       })
       .catch((error) => {
         if (!alive) return
-        toast.error(error?.response?.data?.message || 'Could not complete sign-in')
-        navigate('/Login', { replace: true })
+        setLoginStatus({ status: 'error', message: error?.response?.data?.message || 'Could not complete sign-in' })
+        setTimeout(() => navigate('/Login', { replace: true }), 1600)
       })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +79,7 @@ const OAuthComplete = () => {
 
   return (
     <div className="min-h-screen w-full bg-richblack-900 flex items-center justify-center">
-      <p className="text-richblack-300 text-sm">Finishing sign-in...</p>
+      <LoginStatusOverlay status={loginStatus.status} message={loginStatus.message} />
     </div>
   )
 }

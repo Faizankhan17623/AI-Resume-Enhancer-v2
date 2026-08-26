@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaToggleOn, FaToggleOff, FaSlidersH, FaCheck } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
+import Loading from '../extra/Loading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetSettings, UpdateSetting } from '../../Services/operations/Admin'
 import { istPartsToUtcDate, utcDateToIstDisplay, istDateStrFromNow } from '../../utils/istTime'
@@ -30,6 +31,9 @@ const Settings = () => {
   // disable-confirmation state sir — only set while turning a flag ON->OFF, requires reason + future IST time
   const [disablingKey, setDisablingKey] = useState(null)
   const [disableForm, setDisableForm] = useState({ note: '', date: istDateStrFromNow(0), hour: 12, minute: 0, meridiem: 'PM' })
+  // full-screen loader while a toggle/note save is in flight sir — replaces the old silent
+  // wait (no in-flight indicator at all, just the eventual success/error toast)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     dispatch(GetSettings(token))
@@ -44,7 +48,7 @@ const Settings = () => {
       return
     }
     // turning ON — no note/date required, just re-enable now
-    dispatch(UpdateSetting(setting.key, true, '', token, null))
+    dispatch(UpdateSetting(setting.key, true, '', token, null, setUpdating))
   }
 
   const handleConfirmDisable = (setting) => {
@@ -56,14 +60,14 @@ const Settings = () => {
     if (!disabledUntil || disabledUntil <= new Date()) {
       return
     }
-    dispatch(UpdateSetting(setting.key, false, note.trim(), token, disabledUntil.toISOString()))
+    dispatch(UpdateSetting(setting.key, false, note.trim(), token, disabledUntil.toISOString(), setUpdating))
     setDisablingKey(null)
   }
 
   const handleSaveNote = (setting) => {
     const note = noteDrafts[setting.key]
     if (note === undefined || note === setting.note) return
-    dispatch(UpdateSetting(setting.key, setting.enabled, note, token, setting.disabledUntil))
+    dispatch(UpdateSetting(setting.key, setting.enabled, note, token, setting.disabledUntil, setUpdating))
     setSavedFlash((prev) => ({ ...prev, [setting.key]: true }))
     setTimeout(() => setSavedFlash((prev) => ({ ...prev, [setting.key]: false })), 1500)
   }
@@ -75,6 +79,17 @@ const Settings = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      <AnimatePresence>
+      {updating && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Saving..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2">
@@ -88,7 +103,7 @@ const Settings = () => {
             toggle/note-save re-renders this list from Redux and restages the fade-in
             across every card, not just the one that changed */}
         {loading && !settings.length ? (
-          <p className="text-sm text-richblack-400 py-6 text-center">Loading settings...</p>
+          <Loading text="Loading settings..." />
         ) : (
           <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">
             {settings.map((setting) => {

@@ -8,6 +8,7 @@ import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
+import LoginStatusOverlay from '../Login/LoginStatusOverlay'
 import { setSignupData } from '../../Slices/authSlice'
 import { SendTheOtp } from '../../Services/operations/Auth'
 import { OAuth } from '../../Services/Apis/UserApi'
@@ -47,6 +48,10 @@ const Join = () => {
   // for anyone who used "Continue with Google/GitHub").
   const withRef = (url) => referralCode ? `${url}?ref=${encodeURIComponent(referralCode)}` : url
 
+  // drives LoginStatusOverlay sir — same pattern as Login/User.jsx: replaces the old
+  // toast.loading/success/error trio with one centered status panel
+  const [otpStatus, setOtpStatus] = useState({ status: null, message: '' })
+
   const onSubmit = (data) => {
     // park the form data sir — the OTP screen finishes the creation with it. accountType and
     // (when Recruiter) the company fields ride along in `data` untouched — CreateTheUser
@@ -54,7 +59,12 @@ const Join = () => {
     // backend's createUserSchema conditionally requires the company fields only when
     // accountType is 'Recruiter' (see Validation/schemas.js).
     dispatch(setSignupData({ ...data, accountType, ...(referralCode ? { referralCode } : {}) }))
-    dispatch(SendTheOtp(data.email, navigate))
+    dispatch(SendTheOtp(data.email, navigate, (status, message) => {
+      setOtpStatus({ status, message })
+      if (status === 'error') {
+        setTimeout(() => setOtpStatus({ status: null, message: '' }), 2200)
+      }
+    }))
   }
 
   return (
@@ -350,7 +360,7 @@ const Join = () => {
             <div className="space-y-4">
               <IconBtn
                 type="submit"
-                text={loading ? "Sending OTP..." : "Get OTP"}
+                text="Get OTP"
                 disabled={loading}
                 customClasses="w-full justify-center"
               />
@@ -377,6 +387,8 @@ const Join = () => {
           </div>
         </div>
       </PageTransition>
+
+      <LoginStatusOverlay status={otpStatus.status} message={otpStatus.message} />
     </div>
   )
 }

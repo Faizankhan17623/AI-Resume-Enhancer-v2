@@ -6,6 +6,8 @@ import { FaBug, FaLightbulb, FaTrash, FaClipboardList } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
+import Loading from '../extra/Loading'
+import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetReports, UpdateReportStatus, DeleteReport } from '../../Services/operations/Admin'
 
@@ -43,15 +45,29 @@ const STATUS_LABEL = {
 const Reports = () => {
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('open')
+  // shows a real loader for at least 4s on either filter switching sir — see
+  // Hooks/useMinDurationFlag.js: one shared flag covers both the type and status tabs, since
+  // both trigger the exact same re-fetch
+  const [switchingFilter, triggerSwitchingFilter] = useMinDurationFlag(4000)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { reports } = useSelector((state) => state.admin)
+  const { reports, loading } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
 
   useEffect(() => {
     dispatch(GetReports(token, typeFilter, statusFilter))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter])
+
+  const handleTypeFilterChange = (value) => {
+    triggerSwitchingFilter()
+    setTypeFilter(value)
+  }
+
+  const handleStatusFilterChange = (value) => {
+    triggerSwitchingFilter()
+    setStatusFilter(value)
+  }
 
   return (
     <div className="min-h-screen w-full bg-richblack-900">
@@ -71,7 +87,7 @@ const Reports = () => {
               {TYPE_FILTERS.map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setTypeFilter(f.value)}
+                  onClick={() => handleTypeFilterChange(f.value)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 cursor-pointer ${
                     typeFilter === f.value ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
                   }`}
@@ -84,7 +100,7 @@ const Reports = () => {
               {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setStatusFilter(f.value)}
+                  onClick={() => handleStatusFilterChange(f.value)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 cursor-pointer ${
                     statusFilter === f.value ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
                   }`}
@@ -97,7 +113,9 @@ const Reports = () => {
         </div>
 
         <div className="space-y-3">
-          {reports.length === 0 ? (
+          {switchingFilter || (loading && reports.length === 0) ? (
+            <Loading text="Loading reports..." />
+          ) : reports.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing here sir.</p>
           ) : (
             <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">

@@ -435,10 +435,13 @@ export function GetAnnouncements(token) {
     }
 }
 
-export function CreateAnnouncement(title, message, token, options = {}) {
+// `onLoadingChange` sir — replaces the old toast.loading("Publishing...") with the real spinner
+// (Components/extra/Loading.jsx), same as every other Admin page. Success/error still toast,
+// same as the rest of Admin — this only changes the IN-FLIGHT indicator.
+export function CreateAnnouncement(title, message, token, options = {}, onLoadingChange) {
     const { active, startsAt, expiresAt } = options
     return async (dispatch) => {
-        const toastId = toast.loading("Publishing...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", createannouncement, { title, message, active, startsAt, expiresAt }, {
                 Authorization: `Bearer ${token}`
@@ -454,14 +457,14 @@ export function CreateAnnouncement(title, message, token, options = {}) {
             logApiError("Error creating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not publish")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function UpdateAnnouncement(announcementId, payload, token) {
+export function UpdateAnnouncement(announcementId, payload, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Saving...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${toggleannouncement}/${announcementId}`, payload, {
                 Authorization: `Bearer ${token}`
@@ -477,7 +480,7 @@ export function UpdateAnnouncement(announcementId, payload, token) {
             logApiError("Error updating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not update")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -545,8 +548,12 @@ export function GetSettings(token) {
     }
 }
 
-export function UpdateSetting(key, enabled, note, token, disabledUntil) {
+// `onLoadingChange` sir — shows the real spinner (Components/extra/Loading.jsx) while a toggle
+// or note save is in flight, same pattern as CreateAnnouncement/UpdateAnnouncement above.
+// Success/error still toast.
+export function UpdateSetting(key, enabled, note, token, disabledUntil, onLoadingChange) {
     return async (dispatch) => {
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${updatesetting}/${key}`, { enabled, note, disabledUntil }, {
                 Authorization: `Bearer ${token}`
@@ -561,6 +568,8 @@ export function UpdateSetting(key, enabled, note, token, disabledUntil) {
         } catch (error) {
             logApiError("Error updating the setting", error)
             toast.error(error?.response?.data?.message || "Could not update the setting")
+        } finally {
+            onLoadingChange?.(false)
         }
     }
 }
