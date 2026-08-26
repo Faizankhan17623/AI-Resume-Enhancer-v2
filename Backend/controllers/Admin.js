@@ -286,6 +286,18 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
+        // Support is one-way sir, per direct request — once promoted to Support, an account can
+        // never be moved back to User or Recruiter through this endpoint. Suspension (banUser)
+        // is the only way to remove a Support account's access from here on; that path is
+        // stricter too (a reason is required, and the account gets exactly one appeal ever, see
+        // controllers/user.js's submitSuspensionAppeal).
+        if (user.role === 'Support' && role !== 'Support') {
+            return res.status(400).json({
+                success: false,
+                message: 'A Support account cannot be demoted — suspend it instead if access needs to be removed',
+            })
+        }
+
         const oldRole = user.role
         user.role = role
         await user.save()
@@ -344,9 +356,17 @@ exports.bulkUpdateUserRole = async (req, res) => {
         const updated = []
         const skipped = []
 
+        // same one-way rule as the single-user endpoint above sir — an existing Support account
+        // being demoted is skipped, not a hard failure, same treatment as an Admin id in the batch
+        let skippedSupport = 0
         for (const user of users) {
             if (user.role === 'Admin') {
                 skipped.push(user.email)
+                continue
+            }
+            if (user.role === 'Support' && role !== 'Support') {
+                skipped.push(user.email)
+                skippedSupport++
                 continue
             }
             const oldRole = user.role
@@ -357,9 +377,13 @@ exports.bulkUpdateUserRole = async (req, res) => {
             updated.push(user.email)
         }
 
+        const skipNotes = []
+        if (skipped.length - skippedSupport > 0) skipNotes.push("admins can't be changed here")
+        if (skippedSupport > 0) skipNotes.push("Support accounts can't be demoted, suspend them instead")
+
         return res.status(200).json({
             success: true,
-            message: `${updated.length} account${updated.length === 1 ? '' : 's'} moved to ${role}${skipped.length ? `, ${skipped.length} skipped (admins can't be changed here)` : ''}`,
+            message: `${updated.length} account${updated.length === 1 ? '' : 's'} moved to ${role}${skipped.length ? `, ${skipped.length} skipped (${skipNotes.join('; ')})` : ''}`,
             updated,
             skipped,
         })
@@ -645,11 +669,22 @@ exports.bulkBanUsers = async (req, res) => {
         }
 
         const validIds = userIds.filter((id) => mongoose.isValidObjectId(id) && id !== adminId)
-        const users = await User.find({ _id: { $in: validIds } }).select('firstName lastName email role isBanned banReason')
+        const users = await User.find({ _id: { $in: validIds } }).select('firstName lastName email role isBanned banReason suspensionAppeal supportAppealUsed')
 
         const updated = []
         const skipped = []
         const trimmedReason = banned ? (reason || '').trim() : undefined
+
+        // same rule as the single-user banUser sir — a reason is required whenever the batch
+        // includes a Support account being suspended, since suspension is their only path off
+        // Support (no demotion, see updateUserRole) and that reason is what they see in their
+        // one and only appeal
+        if (banned && !trimmedReason && users.some((u) => u.role === 'Support')) {
+            return res.status(400).json({
+                success: false,
+                message: 'A reason is required when suspending a Support account',
+            })
+        }
 
         for (const user of users) {
             if (banned && user.role === 'Admin') {
@@ -658,6 +693,10 @@ exports.bulkBanUsers = async (req, res) => {
             }
             user.isBanned = banned
             user.banReason = trimmedReason
+            // same reset as the single-user banUser sir — a stale appeal/one-shot flag from a
+            // PAST suspension must not linger into whatever comes next for this account
+            user.suspensionAppeal = undefined
+            user.supportAppealUsed = false
             await user.save()
             logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: trimmedReason, bulk: true })
             updated.push(user.email)
@@ -706,7 +745,7 @@ exports.banUser = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason suspensionAppeal')
+        const user = await User.findById(userId).select('firstName lastName email role isBanned banReason suspensionAppeal supportAppealUsed')
 
         if (!user) {
             return res.status(404).json({
@@ -723,12 +762,26 @@ exports.banUser = async (req, res) => {
             })
         }
 
+        // Support is one-way (see updateUserRole below — a Support account can never be moved
+        // back to User/Recruiter), so suspension is the ONLY way to remove a Support account's
+        // access. A reason is required here specifically so that action always comes with an
+        // explanation the account holder can actually see and respond to in their one appeal.
+        if (banned && user.role === 'Support' && !(reason || '').trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'A reason is required when suspending a Support account',
+            })
+        }
+
         user.isBanned = banned
         user.banReason = banned ? (reason || '').trim() : undefined
         // a fresh ban starts with no appeal sir, and un-banning clears any appeal entirely —
         // otherwise a stale appeal from THIS suspension would linger and confuse a future,
-        // unrelated one
+        // unrelated one. supportAppealUsed resets alongside it for the same reason: a Support
+        // account gets one appeal PER suspension, not one ever — un-banning ends this suspension,
+        // so the next one (if any) starts its own fresh allowance.
         user.suspensionAppeal = undefined
+        user.supportAppealUsed = false
         await user.save()
 
         logAction(adminId, banned ? 'USER_BAN' : 'USER_UNBAN', user, { reason: user.banReason })

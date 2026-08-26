@@ -1448,7 +1448,7 @@ exports.submitSuspensionAppeal = async (req, res) => {
             })
         }
 
-        const user = await User.findById(userId).select('isBanned banReason suspensionAppeal')
+        const user = await User.findById(userId).select('role isBanned banReason suspensionAppeal supportAppealUsed')
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' })
         }
@@ -1458,6 +1458,18 @@ exports.submitSuspensionAppeal = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Your account is not currently suspended',
+            })
+        }
+
+        // Support gets exactly ONE appeal per suspension, ever sir — every other role keeps
+        // unlimited resubmission (the pending-appeal check just below). This must be checked
+        // BEFORE that one: a Support account whose one appeal was already reviewed and rejected
+        // has status !== 'pending', so without this check they'd sail straight past the pending
+        // guard and file a second appeal — exactly the loophole the one-shot rule exists to close.
+        if (user.role === 'Support' && user.supportAppealUsed) {
+            return res.status(400).json({
+                success: false,
+                message: 'Your one appeal for this suspension has already been reviewed — this suspension is final',
             })
         }
 
@@ -1477,6 +1489,7 @@ exports.submitSuspensionAppeal = async (req, res) => {
             reviewedBy: undefined,
             reviewedAt: undefined,
         }
+        if (user.role === 'Support') user.supportAppealUsed = true
         await user.save()
 
         return res.status(200).json({

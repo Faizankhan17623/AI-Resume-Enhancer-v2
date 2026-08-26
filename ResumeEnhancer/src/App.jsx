@@ -56,6 +56,7 @@ const AdminCreditGrants = lazy(() => import('./Components/Admin/CreditGrants'))
 const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements'))
 const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
+const SupportSuspended = lazy(() => import('./Components/Admin/SupportSuspended'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
 const SharedPortfolio = lazy(() => import('./Components/extra/SharedPortfolio'))
@@ -275,6 +276,9 @@ function App() {
             <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
             <Route path="/Support/Testimonials" element={<SupportRoute><AdminTestimonials /></SupportRoute>} />
             <Route path="/Support/Reports" element={<SupportRoute><AdminReports /></SupportRoute>} />
+            {/* the one page a suspended Support account can reach sir — see SupportRoute.jsx,
+                same rule PrivateRoute.jsx already enforces for a regular User's /Dashboard/Suspended */}
+            <Route path="/Support/Suspended" element={<SupportRoute><SupportSuspended /></SupportRoute>} />
 
             {/* anything unknown goes home sir */}
             <Route path="*" element={<Navigate to="/" />} />

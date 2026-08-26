@@ -150,6 +150,17 @@ const UserCreation = new mongoose.Schema(
             reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
             reviewedAt: { type: Date },
         },
+        // Support-only sir — a Support account gets exactly ONE appeal per suspension, ever,
+        // unlike every other role (User/Recruiter keep unlimited resubmission, per the existing
+        // design: only "no more than one PENDING appeal at a time"). Set true the moment a
+        // Support account submits its one appeal (controllers/user.js's submitSuspensionAppeal)
+        // and checked there before allowing a second attempt. Cleared on unban, same as
+        // suspensionAppeal itself (Admin.js's banUser) — a FUTURE suspension starts its own
+        // fresh one-appeal allowance, this only guards against retrying the SAME suspension.
+        supportAppealUsed: {
+            type: Boolean,
+            default: false,
+        },
         Subscription:{
             type:Boolean,
             default:false

@@ -114,12 +114,20 @@ const Users = () => {
 
   const handleBulkBan = async (banned) => {
     if (banned) {
+      // same rule as the single-row suspend above sir — a reason is required whenever the
+      // selection includes a Support account (matches the backend's own check in
+      // Admin.js's bulkBanUsers)
+      const includesSupport = users.some((row) => selected.includes(row._id) && row.role === 'Support')
       const { value, isConfirmed } = await Swal.fire({
         ...swalDark,
         title: `Suspend ${selected.length} account${selected.length === 1 ? '' : 's'}?`,
+        html: includesSupport ? 'This selection includes a Support account — they get exactly ONE appeal, ever, before this becomes final.' : undefined,
         input: 'text',
         inputPlaceholder: 'Reason for the ban',
         customClass: { input: 'swal-dark-select' },
+        inputValidator: includesSupport
+          ? (value) => (!value || !value.trim()) ? 'A reason is required when the selection includes a Support account' : undefined
+          : undefined,
         showCancelButton: true,
         confirmButtonText: 'Suspend all',
         confirmButtonColor: '#C1443C',
@@ -226,12 +234,21 @@ const Users = () => {
       dispatch(BanUser(target._id, false, '', token, page, search, roleFilter))
       return
     }
+    // Support is one-way sir (see the role <select>'s own disabled state above) — suspension is
+    // the only path off a Support account from here on, and the backend now requires a reason
+    // for that specific case (Backend/controllers/Admin.js's banUser). Enforced here too so the
+    // prompt itself explains why, instead of a generic error toast after a blank submit.
+    const isSupportTarget = target.role === 'Support'
     const { value, isConfirmed } = await Swal.fire({
       ...swalDark,
       title: `Suspend ${target.email}?`,
+      html: isSupportTarget ? 'Support accounts get exactly ONE appeal, ever, before this becomes final.' : undefined,
       input: 'text',
       inputPlaceholder: 'Reason for the ban',
       customClass: { input: 'swal-dark-select' },
+      inputValidator: isSupportTarget
+        ? (value) => (!value || !value.trim()) ? 'A reason is required when suspending a Support account' : undefined
+        : undefined,
       showCancelButton: true,
       confirmButtonText: 'Suspend',
       confirmButtonColor: '#C1443C',
@@ -462,7 +479,8 @@ const Users = () => {
                       <label className="text-[10px] text-richblack-400 block mb-1">Role</label>
                       <select
                         value={row.role}
-                        disabled={!isAdmin || row._id === me?.id}
+                        disabled={!isAdmin || row._id === me?.id || row.role === 'Support'}
+                        title={row.role === 'Support' ? "Support accounts can't be demoted — suspend instead" : undefined}
                         onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
                         className="w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -568,10 +586,12 @@ const Users = () => {
                         </button>
                       </td>
                       <td className="p-4">
-                        {/* role select sir — Admin only, and never on yourself */}
+                        {/* role select sir — Admin only, never on yourself, and never editable
+                            once an account is already Support (one-way, suspend instead) */}
                         <select
                           value={row.role}
-                          disabled={!isAdmin || row._id === me?.id}
+                          disabled={!isAdmin || row._id === me?.id || row.role === 'Support'}
+                          title={row.role === 'Support' ? "Support accounts can't be demoted — suspend instead" : undefined}
                           onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
                           className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
