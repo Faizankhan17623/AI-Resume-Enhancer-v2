@@ -8,6 +8,7 @@ const User = require('../Models/User');
 const OTP = require('../Models/OTP.js')
 const LoginLog = require('../Models/LoginLog.js')
 const ReferralLog = require('../Models/ReferralLog.js')
+const AuditLog = require('../Models/AuditLog.js')
 const mailSender = require('../utils/Nodemailer.js')
 const { logSystemAction } = require('../utils/AdminLog.js')
 
@@ -1609,6 +1610,57 @@ exports.getReferralHistory = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your referral history',
+        })
+    }
+}
+
+// GET /credit-history — self-service sir, "who gave me how many bonus credits and why", merging
+// the two sources bonusCredits can actually come from:
+//   1. an Admin/Support grant (AuditLog, action: CREDIT_ADJUST, targetUser: me) — the specific
+//      staff member is deliberately NOT named here, just "our team", per direct product
+//      decision: internal staff identity stays out of user-facing UI.
+//   2. a referral bonus for MY OWN signup (ReferralLog, referredUser: me) — this is the one
+//      ReferralLog row created when I signed up via someone else's invite link and both of us
+//      got credited (grantReferralBonus above). Referrals I MADE myself already have their own
+//      dedicated dashboard (getReferralHistory above) and are deliberately excluded here — this
+//      endpoint is specifically "credits I received", not "credits I caused others to receive".
+exports.getCreditHistory = async (req, res) => {
+    try {
+        const id = req.User.id
+
+        const [grants, referralBonus] = await Promise.all([
+            AuditLog.find({ action: 'CREDIT_ADJUST', targetUser: id })
+                .select('details createdAt')
+                .sort({ createdAt: -1 }),
+            ReferralLog.findOne({ referredUser: id, bonusCredits: { $gt: 0 } })
+                .select('bonusCredits createdAt'),
+        ])
+
+        const entries = [
+            ...grants.map((g) => ({
+                source: 'admin_grant',
+                credits: g.details?.credits || 0,
+                reason: g.details?.reason || undefined,
+                date: g.createdAt,
+            })),
+            ...(referralBonus ? [{
+                source: 'referral_bonus',
+                credits: referralBonus.bonusCredits,
+                reason: 'Signed up using a referral link',
+                date: referralBonus.createdAt,
+            }] : []),
+        ].sort((a, b) => new Date(b.date) - new Date(a.date))
+
+        return res.status(200).json({
+            success: true,
+            entries,
+            totalReceived: entries.reduce((sum, e) => sum + e.credits, 0),
+        })
+    } catch (error) {
+        (req.log || logger).error('get credit history failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your credit history',
         })
     }
 }

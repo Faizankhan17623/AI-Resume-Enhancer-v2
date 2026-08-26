@@ -70,3 +70,5 @@ export const Referral = {
     stats: BASE_URL + "/referral/stats",
     history: BASE_URL + "/referral/history"
 }
+
+export const CreditHistory = BASE_URL + "/credit-history"

@@ -3,7 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setProfile, setLoading, setNotificationPrefs, setOnboardingCompleted, setProfileUserFields } from '../../Slices/profileSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
-import { Profile, Password, RecruiterApplication, SuspensionAppeal, Referral } from '../Apis/UserApi.js'
+import { Profile, Password, RecruiterApplication, SuspensionAppeal, Referral, CreditHistory as creditHistoryUrl } from '../Apis/UserApi.js'
 
 const {
     getprofile, updatenotifications, completeonboarding,
@@ -298,6 +298,27 @@ export function GetReferralHistory(token, customFrom, customTo) {
             return response.data
         } catch (error) {
             logApiError("Error fetching referral history", error)
+            return null
+        }
+    }
+}
+
+// the Account page's "who gave me bonus credits" panel sir — merges Admin/Support grants with
+// the user's own referral-signup bonus, see Backend/controllers/user.js's getCreditHistory
+export function GetCreditHistory(token) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", creditHistoryUrl, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data
+        } catch (error) {
+            logApiError("Error fetching credit history", error)
             return null
         }
     }

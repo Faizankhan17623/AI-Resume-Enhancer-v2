@@ -45,6 +45,8 @@ const auditLogSchema = new mongoose.Schema(
                 'REPORT_STATUS_CHANGE',
                 'REPORT_DELETE',
                 'RECRUITER_APPLICATION_REVIEW',
+                'SUPPORT_APPEAL_REJECTED',
+                'SUPPORT_PERMANENTLY_SUSPENDED',
             ],
             index: true,
         },

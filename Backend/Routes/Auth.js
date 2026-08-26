@@ -39,7 +39,8 @@ const {
     applyForRecruiter,
     submitSuspensionAppeal,
     getReferralStats,
-    getReferralHistory
+    getReferralHistory,
+    getCreditHistory
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -104,5 +105,10 @@ route.get('/profile/export',Auth,exportMyData)
 route.get('/referral/stats',Auth,getReferralStats)
 // the Account page's referral dashboard sir — full invite list + week/month/year/custom totals
 route.get('/referral/history',Auth,getReferralHistory)
+
+// the Account page's "who gave me bonus credits and why" panel sir — merges Admin/Support
+// grants (AuditLog) with the user's own referral-signup bonus (ReferralLog), see
+// controllers/user.js's getCreditHistory
+route.get('/credit-history',Auth,getCreditHistory)
 
 module.exports = route

@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import toast from 'react-hot-toast'
-import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes, FaUserFriends, FaCopy } from 'react-icons/fa'
+import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes, FaUserFriends, FaCopy, FaGift } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import ShareTestimonialCard from './ShareTestimonialCard'
 import ReferralDashboardModal from './ReferralDashboardModal'
@@ -14,7 +14,7 @@ import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
-import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats } from '../../Services/operations/User'
+import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats, GetCreditHistory } from '../../Services/operations/User'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
@@ -194,6 +194,49 @@ const ReferralCard = ({ token }) => {
       </div>
       <ReferralDashboardModal open={dashboardOpen} onClose={() => setDashboardOpen(false)} token={token} />
     </>
+  )
+}
+
+// shows the user where their bonus credits came from sir — a staff grant (Admin/Support, name
+// withheld on purpose, just "our team") or their own referral-signup bonus. Same self-fetch
+// pattern as ReferralCard above. Renders nothing if the user has never received a bonus credit.
+const sourceLabel = {
+  admin_grant: 'Granted by our team',
+  referral_bonus: 'Referral signup bonus',
+}
+
+const CreditHistoryCard = ({ token }) => {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    GetCreditHistory(token)().then(setData)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!data || data.entries.length === 0) return null
+
+  return (
+    <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2">
+          <FaGift className="text-yellow-50 text-base" /> Bonus Credit History
+        </h2>
+        <span className="text-yellow-50 font-mono font-bold text-sm">+{data.totalReceived}</span>
+      </div>
+      <p className="text-xs text-richblack-400 mb-4">Every bonus credit you've received, and why.</p>
+      <div className="divide-y divide-richblack-700">
+        {data.entries.map((entry, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+            <div className="min-w-0">
+              <p className="text-sm text-richblack-5">{sourceLabel[entry.source] || 'Bonus credit'}</p>
+              {entry.reason && <p className="text-xs text-richblack-400 mt-0.5 truncate">{entry.reason}</p>}
+              <p className="text-xs text-richblack-400 mt-0.5">{new Date(entry.date).toDateString()}</p>
+            </div>
+            <span className="text-caribgreen-100 font-mono font-bold text-sm shrink-0">+{entry.credits}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -428,6 +471,9 @@ const Account = () => {
         {/* Invite friends sir — User-only here. A Recruiter has their own reachable equivalent
             at /Recruiter/Account (this page is never reached by a Recruiter, see PrivateRoute) */}
         {user.role === 'User' && <ReferralCard token={token} />}
+
+        {/* Bonus credit history sir — User-only, self-hides when there's nothing to show */}
+        {user.role === 'User' && <CreditHistoryCard token={token} />}
 
         {/* Share a homepage testimonial sir — User-only, mirrors isUser on the backend */}
         {user.role === 'User' && <ShareTestimonialCard />}
