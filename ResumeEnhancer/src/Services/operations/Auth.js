@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setUser, setLoading, setToken, setLogin, setSignupData } from '../../Slices/authSlice.js'
+import { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } from '../../Slices/authSlice.js'
 import { CreateUser, SendOtp, Login, Logout, Password, Account } from '../Apis/UserApi.js'
 
 const { createuser } = CreateUser
@@ -172,8 +172,16 @@ export function ResetPassword(token, newPassword, confirmNewPassword, navigate) 
     }
 }
 
+// same LoginStatusOverlay used for login/signup sir, mounted once at the app root (App.jsx) and
+// driven by authSlice's logoutStatus — replaces the old toast.success("Logged out"), which was
+// easy to miss since it fires right as the page is navigating away underneath it. Logout has no
+// real failure mode worth showing the user (the local session is always cleared regardless of
+// whether the server call succeeds, see the try/catch below), so this only ever shows
+// 'loading' -> 'success', never 'error'.
 export function LogoutUser(navigate) {
     return async (dispatch) => {
+        dispatch(setLogoutStatus({ status: 'loading', message: 'Logging out...' }))
+
         // tell the SERVER to end the session sir. Clearing local state alone used to leave the
         // token valid for its full remaining 7 days, so anyone holding a copy stayed logged in
         // after the user thought they'd signed out. This bumps tokenVersion server-side, which
@@ -189,8 +197,14 @@ export function LogoutUser(navigate) {
         dispatch(setToken(null))
         dispatch(setUser(null))
         dispatch(setLogin(false))
-        toast.success("Logged out")
-        if (navigate) navigate("/")
+        dispatch(setLogoutStatus({ status: 'success', message: 'Logged out' }))
+
+        // same brief pause as every other status-overlay flow sir — long enough for the
+        // checkmark to register before the page navigates out from under it
+        setTimeout(() => {
+            if (navigate) navigate("/")
+            dispatch(setLogoutStatus({ status: null, message: '' }))
+        }, 900)
     }
 }
 

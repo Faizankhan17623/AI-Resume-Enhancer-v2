@@ -30,7 +30,12 @@ const initialState = {
     isLoggedIn: !!cachedUser(),
     loading: false,
     // the email waiting on the OTP screen sir
-    signupData: null
+    signupData: null,
+    // drives one shared LoginStatusOverlay mounted once at the app root (App.jsx) sir, instead
+    // of each of the SIX logout call sites (Navbar, Account, RecruiterLayout, DashboardLayout
+    // x4) managing their own local overlay state — Redux is the one place all of them can
+    // reach in common. { status: 'loading'|'success'|null, message }
+    logoutStatus: { status: null, message: '' },
 };
 
 // The cache is written HERE, as a side effect of the reducer sir, rather than by each caller.
@@ -69,9 +74,12 @@ const authSlice = createSlice({
         },
         setSignupData(state, value) {
             state.signupData = value.payload
+        },
+        setLogoutStatus(state, value) {
+            state.logoutStatus = value.payload
         }
     }
 })
 
-export const { setUser, setLoading, setToken, setLogin, setSignupData } = authSlice.actions
+export const { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } = authSlice.actions
 export default authSlice.reducer

@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router"
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { setUser, setToken, setLogin } from './Slices/authSlice'
+import LoginStatusOverlay from './Components/Login/LoginStatusOverlay'
 import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
@@ -107,6 +108,10 @@ function App() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
+  // drives the one shared logout overlay sir — see Services/operations/Auth.js's LogoutUser and
+  // Slices/authSlice.js's logoutStatus. Mounted once here instead of in each of the six
+  // logout call sites (Navbar, Account, RecruiterLayout, DashboardLayout x4)
+  const logoutStatus = useSelector((state) => state.auth.logoutStatus)
 
   // cross-tab logout sync sir — LogoutUser/DeleteAccount (Services/operations/Auth.js) and the
   // apiConnector 401 interceptor all clear the "user" key on logout/session-expiry. That only
@@ -166,6 +171,12 @@ function App() {
           assume real desktop space). Sits above everything else via z-[999], so a phone visitor
           never sees a half-broken layout underneath it. */}
       <MobileBlock />
+      {/* the shared logout status overlay sir — same LoginStatusOverlay used for
+          login/signup/OTP, driven by authSlice's logoutStatus. Mounted once here so every
+          logout button across the app (Navbar, Account, RecruiterLayout, DashboardLayout) shows
+          the exact same "logging out -> checkmark" sequence instead of the old toast, which was
+          easy to miss firing right as the page navigated away underneath it. */}
+      <LoginStatusOverlay status={logoutStatus.status} message={logoutStatus.message} />
       {/* the live admin broadcast sir — shows only when one is published */}
       <AnnouncementBanner />
       {/* cookie consent card sir — shows once until accepted */}
