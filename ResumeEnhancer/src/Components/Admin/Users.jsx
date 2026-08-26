@@ -563,7 +563,7 @@ const Users = () => {
                               there's nothing further this action could do. */}
                           {row.role === 'Support' && !row.permanentlySuspended && (
                             <button onClick={() => handlePermanentlySuspend(row)} aria-label="Permanently suspend" title="Permanently suspend (final, no appeal)"
-                              className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                              className="p-2 rounded-md bg-pink-700/25 text-pink-25 hover:bg-pink-700/40 transition-colors duration-200 cursor-pointer">
                               <FaSkullCrossbones className="text-sm" />
                             </button>
                           )}
@@ -706,7 +706,7 @@ const Users = () => {
                               </button>
                               {row.role === 'Support' && !row.permanentlySuspended && (
                                 <button onClick={() => handlePermanentlySuspend(row)} title="Permanently suspend (final, no appeal)"
-                                  className="p-2 rounded-md text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer">
+                                  className="p-2 rounded-md bg-pink-700/25 text-pink-25 hover:bg-pink-700/40 transition-colors duration-200 cursor-pointer">
                                   <FaSkullCrossbones className="text-sm" />
                                 </button>
                               )}
