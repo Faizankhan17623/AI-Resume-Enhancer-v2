@@ -136,8 +136,12 @@ exports.getUsers = async (req, res) => {
         const search = (req.query.search || '').trim()
         const role = (req.query.role || '').trim()
 
-        // Admins never show up here regardless of filter; role param can narrow to 'User', 'Support', or 'Recruiter'.
-        const filter = ['User', 'Support', 'Recruiter'].includes(role) ? { role } : { role: { $ne: 'Admin' } }
+        // Support sees ONLY User and Recruiter accounts sir — never Admin (already excluded for
+        // everyone below) and never OTHER Support accounts either, per direct request. An Admin
+        // caller keeps the original behaviour: anything but Admin, including Support.
+        const isSupportCaller = req.User.role === 'Support'
+        const allowedRoles = isSupportCaller ? ['User', 'Recruiter'] : ['User', 'Support', 'Recruiter']
+        const filter = allowedRoles.includes(role) ? { role } : { role: { $in: allowedRoles } }
         if (search) {
             const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             filter.$or = [

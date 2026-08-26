@@ -29,10 +29,18 @@ const USER_CSV_COLUMNS = [
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
-const ROLE_FILTER_OPTIONS = [
+// Support only ever sees User/Recruiter accounts sir (matches the backend's own restriction in
+// Admin.js's getUsers — a Support caller filtering by role=Support there now falls back to the
+// allowed set anyway, but the option shouldn't even be offered in the first place)
+const ADMIN_ROLE_FILTER_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'User', label: 'Users' },
   { value: 'Support', label: 'Support' },
+  { value: 'Recruiter', label: 'Recruiter' },
+]
+const SUPPORT_ROLE_FILTER_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'User', label: 'Users' },
   { value: 'Recruiter', label: 'Recruiter' },
 ]
 
@@ -57,6 +65,7 @@ const Users = () => {
   const { token, user: me } = useSelector((state) => state.auth)
   const { users, usersPagination, loading } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
+  const roleFilterOptions = isAdmin ? ADMIN_ROLE_FILTER_OPTIONS : SUPPORT_ROLE_FILTER_OPTIONS
   // only rows an admin can actually act on sir — same rule as the single-row ban button
   const selectableIds = users.filter((row) => row._id !== me?.id).map((row) => row._id)
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))
@@ -324,7 +333,7 @@ const Users = () => {
             onChange={handleRoleFilterChange}
             className="rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-2.5 text-sm text-richblack-5 cursor-pointer focus:outline-none focus:border-yellow-50 transition-colors duration-200"
           >
-            {ROLE_FILTER_OPTIONS.map((opt) => (
+            {roleFilterOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>

@@ -187,7 +187,13 @@ const AdminNav = () => {
 
   return (
     <div className="border-b border-richblack-700 bg-richblack-900">
-      <div className="w-full px-6 flex flex-wrap items-center gap-x-4">
+      {/* tabs + search back on one straight line sir, per direct request — the search bar's own
+          row below the tabs (an earlier fix for it drifting off-center against a variable-width
+          tab list) is gone; a 3-column grid keeps the SAME centering guarantee (the middle
+          column is always the true center of the bar, not just whatever space the tabs left)
+          while putting everything on one row. justify-end on the right column keeps the layout
+          from breaking if a future 4th column is ever added here. */}
+      <div className="w-full px-6 grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 py-1">
         <div className="flex gap-1 flex-wrap">
           {tabs.map((tab) => {
             const active = location.pathname === tab.path
@@ -211,13 +217,8 @@ const AdminNav = () => {
             )
           })}
         </div>
-      </div>
-      {/* own centered row sir, independent of the tabs' width — a flex item centered next to a
-          variable-width tab list (the old justify-between layout) drifts off-center as tabs wrap
-          across screen sizes; this row spans the full bar so mx-auto always centers it on the
-          section, not just in whatever space the tabs happened to leave */}
-      <div className="w-full px-6 pb-3 flex justify-center">
         <GlobalAdminSearch />
+        <div />
       </div>
     </div>
   )

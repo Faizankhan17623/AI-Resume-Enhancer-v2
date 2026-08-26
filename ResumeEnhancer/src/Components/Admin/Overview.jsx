@@ -84,7 +84,11 @@ const legendStyle = { fontSize: 12 }
 const Overview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { token } = useSelector((state) => state.auth)
+  const { token, user } = useSelector((state) => state.auth)
+  // Support sees this same Overview page (see App.jsx: /Support and /Admin both route here)
+  // sir, but per direct request Support should never see revenue figures — the stat card AND
+  // the Revenue chart further down are both hidden for that role
+  const isSupport = user?.role === 'Support'
   const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
@@ -134,7 +138,9 @@ const Overview = () => {
 
   const statCards = [
     { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified`, to: '/Admin/Users' },
-    { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
+    ...(isSupport ? [] : [
+      { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
+    ]),
     { icon: <FaFileAlt className="text-yellow-50" />, label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
     { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
   ]
@@ -565,8 +571,9 @@ const Overview = () => {
 
         {/* 30-day charts sir — one categorical slot (validated blue) per single-series chart,
             so every chart in this row reads as the same "kind of thing" rather than four
-            unrelated ad-hoc colors */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            unrelated ad-hoc colors. lg:grid-cols-2 for Support sir (Revenue card removed below,
+            same rule as the stat card above — Support never sees revenue figures) */}
+        <div className={`grid grid-cols-1 ${isSupport ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">Signups — 30 days</h3>
             <ResponsiveContainer width="100%" height={190}>
@@ -593,18 +600,20 @@ const Overview = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (₹) — 30 days</h3>
-            <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={charts?.revenuePerDay || []}>
-                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
-                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} formatter={(value) => [`₹${value}`, 'Revenue']} />
-                <Bar dataKey="amount" name="Revenue" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {!isSupport && (
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+              <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (₹) — 30 days</h3>
+              <ResponsiveContainer width="100%" height={190}>
+                <BarChart data={charts?.revenuePerDay || []}>
+                  <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+                  <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+                  <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} formatter={(value) => [`₹${value}`, 'Revenue']} />
+                  <Bar dataKey="amount" name="Revenue" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
             <h3 className="font-display text-base text-richblack-5 mb-4">AI tokens — 30 days</h3>
