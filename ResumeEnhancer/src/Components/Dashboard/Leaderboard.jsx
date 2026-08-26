@@ -29,7 +29,7 @@ const BOARDS = [
     valueSuffix: '',
     valueColor: scoreColor,
     emptyText: 'No scores yet — be the first to show up here.',
-    description: 'Top ATS scores across everyone using Resumify — fully anonymous, no resume content is ever shown.',
+    description: 'Top ATS scores across everyone using Resumify — no resume content is ever shown.',
   },
   {
     id: 'weeklyReviews',
@@ -49,7 +49,7 @@ const BOARDS = [
     valueSuffix: ' days',
     valueColor: () => 'text-warm-200',
     emptyText: 'No active streaks yet — use Resumify two days in a row to start one.',
-    description: 'Longest consecutive-day activity streaks, live right now — fully anonymous.',
+    description: 'Longest consecutive-day activity streaks, live right now.',
   },
 ]
 

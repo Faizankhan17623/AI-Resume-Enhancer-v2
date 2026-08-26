@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import toast from 'react-hot-toast'
 import { FaCrown, FaFileAlt, FaComments, FaSignOutAlt, FaBell, FaLock, FaShieldAlt, FaTrash, FaEdit, FaDownload, FaCheck, FaTimes, FaUserFriends, FaCopy } from 'react-icons/fa'
@@ -63,7 +63,10 @@ const statusChip = {
 }
 
 // one inline-editable profile field sir (name/email/phone) — click the pencil, edit, save or
-// cancel; onSave returns true/false so the field only exits edit mode on a real success
+// cancel; onSave returns true/false so the field only exits edit mode on a real success.
+// `saving` here still gates the pencil buttons (disabled mid-save), while the actual visible
+// loader is the shared full-screen overlay in Account below, driven by the same onSave call
+// via its own onLoadingChange param
 const EditableField = ({ label, value, onSave, type = 'text' }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
@@ -203,6 +206,21 @@ const Account = () => {
   const [changingPassword, setChangingPassword] = useState(false)
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
+  // one shared full-screen loader sir for every field-level action on this page (name/email/
+  // phone edits, notification toggles, password change, data export) — replaces each action's
+  // own toast.loading with the real centered spinner. Plain useState here, NOT
+  // useMinDurationLoading/useMinDurationFlag — the artificial minimum-visible-duration pattern
+  // is Admin-only (per explicit instruction): a User-facing loader shows for exactly as long as
+  // the backend actually takes, never padded out to a fixed length the way Admin's filter/tab
+  // switches are.
+  const [busy, setBusy] = useState(false)
+  const [busyLabel, setBusyLabel] = useState('Saving...')
+
+  const withBusyLabel = (label, onLoadingChange) => (next) => {
+    if (next) setBusyLabel(label)
+    onLoadingChange(next)
+  }
+
   useEffect(() => {
     dispatch(GetProfile(token))
     dispatch(GetPaymentHistory(token))
@@ -211,7 +229,7 @@ const Account = () => {
 
   const onChangePassword = async (data) => {
     setChangingPassword(true)
-    await dispatch(ChangePassword(data.oldPassword, data.newPassword, data.confirmNewPassword, token, () => resetPasswordForm()))
+    await dispatch(ChangePassword(data.oldPassword, data.newPassword, data.confirmNewPassword, token, () => resetPasswordForm(), withBusyLabel('Updating your password...', setBusy)))
     setChangingPassword(false)
   }
 
@@ -254,6 +272,17 @@ const Account = () => {
       <Helmet>
         <title>My Account | Resumify</title>
       </Helmet>
+
+      <AnimatePresence>
+      {busy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={busyLabel} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5">
 
@@ -365,32 +394,32 @@ const Account = () => {
               label="Streak reminders"
               hint="A nudge when your activity streak is about to break"
               checked={user.notifyStreak !== false}
-              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyStreak: value }, token))}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyStreak: value }, token, withBusyLabel('Saving...', setBusy)))}
             />
             <Toggle
               label="Win-back emails"
               hint="A note if you haven't reviewed a resume in a couple weeks"
               checked={user.notifyWinBack !== false}
-              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyWinBack: value }, token))}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyWinBack: value }, token, withBusyLabel('Saving...', setBusy)))}
             />
             <Toggle
               label="Weekly digest"
               hint="A weekly summary of your review activity and score progress"
               checked={user.notifyDigest !== false}
-              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyDigest: value }, token))}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyDigest: value }, token, withBusyLabel('Saving...', setBusy)))}
             />
             <Toggle
               label="Monthly resume health check"
               hint="A monthly ATS formatting score for your default resume"
               checked={user.notifyHealthCheck !== false}
-              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyHealthCheck: value }, token))}
+              onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyHealthCheck: value }, token, withBusyLabel('Saving...', setBusy)))}
             />
             {user.SubType === 'ProMax' && (
               <Toggle
                 label="Interview practice reminders"
                 hint="A weekly nudge to run a mock interview if you're on a streak but haven't practiced lately"
                 checked={user.notifyInterviewPrep !== false}
-                onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyInterviewPrep: value }, token))}
+                onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyInterviewPrep: value }, token, withBusyLabel('Saving...', setBusy)))}
               />
             )}
           </div>
@@ -414,12 +443,12 @@ const Account = () => {
               <EditableField
                 label="First name"
                 value={user.firstName}
-                onSave={(v) => dispatch(UpdateFirstName(v, token))}
+                onSave={(v) => dispatch(UpdateFirstName(v, token, withBusyLabel('Saving...', setBusy)))}
               />
               <EditableField
                 label="Last name"
                 value={user.lastName}
-                onSave={(v) => dispatch(UpdateLastName(v, token))}
+                onSave={(v) => dispatch(UpdateLastName(v, token, withBusyLabel('Saving...', setBusy)))}
               />
             </div>
             <div className="divide-y divide-richblack-700">
@@ -427,13 +456,13 @@ const Account = () => {
                 label="Email"
                 value={user.email}
                 type="email"
-                onSave={(v) => dispatch(UpdateEmail(v, token))}
+                onSave={(v) => dispatch(UpdateEmail(v, token, withBusyLabel('Saving...', setBusy)))}
               />
               <EditableField
                 label="Phone number"
                 value={user.number}
                 type="tel"
-                onSave={(v) => dispatch(UpdateNumber(v, token))}
+                onSave={(v) => dispatch(UpdateNumber(v, token, withBusyLabel('Saving...', setBusy)))}
               />
             </div>
           </div>
@@ -552,7 +581,7 @@ const Account = () => {
             </p>
           </div>
           <button
-            onClick={() => dispatch(ExportMyData(token))}
+            onClick={() => dispatch(ExportMyData(token, withBusyLabel('Preparing your data export...', setBusy)))}
             className="shrink-0 px-4 py-2.5 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
           >
             Download my data

@@ -51,9 +51,11 @@ export function GetProfile(token) {
     }
 }
 
-// flips one notification preference sir — { notifyStreak } or { notifyWinBack } or { notifyDigest }
-export function UpdateNotificationPrefs(prefs, token) {
+// flips one notification preference sir — { notifyStreak } or { notifyWinBack } or { notifyDigest }.
+// `onLoadingChange` shows the real centered spinner while the toggle's PATCH is in flight.
+export function UpdateNotificationPrefs(prefs, token, onLoadingChange) {
     return async (dispatch) => {
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", updatenotifications, prefs, {
                 Authorization: `Bearer ${token}`
@@ -73,14 +75,19 @@ export function UpdateNotificationPrefs(prefs, token) {
         } catch (error) {
             logApiError("Error updating notification preferences", error)
             toast.error(error?.response?.data?.message || "Could not update notification preferences")
+        } finally {
+            onLoadingChange?.(false)
         }
     }
 }
 
-// changes the password from the account page sir — needs the old one, same as every professional app
-export function ChangePassword(oldPassword, newPassword, confirmNewPassword, token, onSuccess) {
+// changes the password from the account page sir — needs the old one, same as every professional
+// app. `onLoadingChange` shows the real centered spinner (Components/extra/Loading.jsx) instead
+// of the old toast.loading, same pattern as CreateAnnouncement/UpdateSetting in Services/
+// operations/Admin.js — success/error still toast.
+export function ChangePassword(oldPassword, newPassword, confirmNewPassword, token, onSuccess, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Updating your password...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PUT", changepassword, {
                 oldPassword, newPassword, confirmNewPassword
@@ -98,7 +105,7 @@ export function ChangePassword(oldPassword, newPassword, confirmNewPassword, tok
             logApiError("Error updating the password", error)
             toast.error(error?.response?.data?.message || "Could not update the password")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -122,10 +129,12 @@ export function CompleteOnboarding(token) {
     }
 }
 
-// one shared helper sir — every profile-field edit follows the same call → merge → toast pattern
-const updateProfileField = (url, body, token, fieldForError) => {
+// one shared helper sir — every profile-field edit follows the same call → merge → toast
+// pattern. `onLoadingChange` shows the real centered spinner instead of a toast.loading, same
+// as ChangePassword above.
+const updateProfileField = (url, body, token, fieldForError, onLoadingChange) => {
     return async (dispatch) => {
-        const toastId = toast.loading("Saving...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", url, body, {
                 Authorization: `Bearer ${token}`
@@ -143,15 +152,15 @@ const updateProfileField = (url, body, token, fieldForError) => {
             toast.error(error?.response?.data?.message || `Could not update ${fieldForError}`)
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export const UpdateFirstName = (firstName, token) => updateProfileField(updatefirstname, { firstName }, token, "first name")
-export const UpdateLastName = (lastName, token) => updateProfileField(updatelastname, { lastName }, token, "last name")
-export const UpdateEmail = (email, token) => updateProfileField(updateemail, { email }, token, "email")
-export const UpdateNumber = (number, token) => updateProfileField(updatenumber, { number }, token, "phone number")
+export const UpdateFirstName = (firstName, token, onLoadingChange) => updateProfileField(updatefirstname, { firstName }, token, "first name", onLoadingChange)
+export const UpdateLastName = (lastName, token, onLoadingChange) => updateProfileField(updatelastname, { lastName }, token, "last name", onLoadingChange)
+export const UpdateEmail = (email, token, onLoadingChange) => updateProfileField(updateemail, { email }, token, "email", onLoadingChange)
+export const UpdateNumber = (number, token, onLoadingChange) => updateProfileField(updatenumber, { number }, token, "phone number", onLoadingChange)
 
 // self-signup request to become a Recruiter sir — role stays 'User' until an Admin approves
 // it (see Admin/RecruiterApplications.jsx). Reuses the same profile-merge action as the other
@@ -213,10 +222,11 @@ export function SubmitSuspensionAppeal(message, token) {
 }
 
 // GDPR-style self-service data export sir — downloads the response as a JSON file client-side,
-// no separate download endpoint needed since the data is small (one user's own records)
-export function ExportMyData(token) {
+// no separate download endpoint needed since the data is small (one user's own records).
+// `onLoadingChange` shows the real centered spinner instead of a toast.loading.
+export function ExportMyData(token, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Preparing your data export...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("GET", exportdata, null, {
                 Authorization: `Bearer ${token}`
@@ -241,7 +251,7 @@ export function ExportMyData(token) {
             logApiError("Error exporting data", error)
             toast.error(error?.response?.data?.message || "Could not export your data")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

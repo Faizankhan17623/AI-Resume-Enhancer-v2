@@ -147,28 +147,43 @@ const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
 
       {/* Claude-sidebar-style profile row sir — avatar, name, plan badge, all pinned to the
           sidebar's own bottom edge instead of split across the topbar (avatar/logout) and a
-          separate plan-only card the way this looked before. onLogout is optional: the mobile
-          slide-over passes nothing extra here since it already closes itself via onNavigate,
-          desktop passes the real logout handler. */}
-      <button
-        onClick={onLogout}
-        title="Log out"
-        className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-richblack-700/60 transition-colors duration-150 cursor-pointer text-left group"
-      >
-        <div
-          style={{ backgroundColor: getAvatarColor(user) }}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+          separate plan-only card the way this looked before.
+          Two SEPARATE clickable regions, not one button covering the whole row: clicking the
+          avatar/name/plan area now goes to the Account/Settings page, and only the dedicated
+          exit icon on the right logs out — found live: the whole row used to log out on any
+          click, including clicking your own name, which nobody expects. onLogout is optional:
+          the mobile slide-over passes nothing extra here since it already closes itself via
+          onNavigate, desktop passes the real logout handler. */}
+      <div className="flex items-center gap-1 rounded-xl hover:bg-richblack-700/60 transition-colors duration-150">
+        <Link
+          to="/Dashboard/Account"
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 px-2 py-2 flex-1 min-w-0 text-left cursor-pointer"
         >
-          {getInitial(user)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-richblack-5 truncate">{user?.firstName} {user?.lastName}</p>
-          <p className="flex items-center gap-1 text-[11px] text-richblack-300">
-            <FaCrown className="text-yellow-50 text-[10px] shrink-0" /> {user?.SubType || 'Basic'} plan
-          </p>
-        </div>
-        <FaSignOutAlt className="text-richblack-500 group-hover:text-pink-200 text-xs shrink-0 transition-colors duration-150" />
-      </button>
+          <div
+            style={{ backgroundColor: getAvatarColor(user) }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0"
+          >
+            {getInitial(user)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-richblack-5 truncate">{user?.firstName} {user?.lastName}</p>
+            <p className="flex items-center gap-1 text-[11px] text-richblack-300">
+              <FaCrown className="text-yellow-50 text-[10px] shrink-0" /> {user?.SubType || 'Basic'} plan
+            </p>
+          </div>
+        </Link>
+        <button
+          onClick={onLogout}
+          title="Log out"
+          aria-label="Log out"
+          // taller hit area + bigger icon sir, per direct request — was text-xs (~12px) with no
+          // vertical padding of its own, riding on the row's py-2; now a real square button
+          className="self-stretch px-3 flex items-center justify-center text-richblack-500 hover:text-pink-200 hover:bg-pink-700/10 rounded-r-xl transition-colors duration-150 cursor-pointer shrink-0"
+        >
+          <FaSignOutAlt className="text-base" />
+        </button>
+      </div>
     </div>
   </>
 )
@@ -344,13 +359,15 @@ const DashboardLayout = ({ title, children }) => {
             {/* logout moved into the sidebar's own Claude-style profile row sir (desktop AND the
                 mobile slide-over both have it now) — kept here only as the avatar, so a mobile
                 user (sidebar off-screen by default) still has a visible identity anchor in the
-                topbar; tapping it opens the same slide-over that carries the actual logout button.
-                On desktop it falls back to logging out directly, covering the case where the
-                sidebar itself (and its profile row) has been collapsed via the rail toggle. */}
+                topbar; tapping it opens the same slide-over that carries the actual logout
+                button. On desktop it falls back to navigating straight to Account, covering the
+                case where the sidebar itself (and its profile row) has been collapsed via the
+                rail toggle — same "click the profile = go to Account, never log out" rule as
+                the sidebar's own profile row now follows. */}
             <button
-              onClick={() => (sidebarCollapsed ? dispatch(LogoutUser(navigate)) : setMobileOpen(true))}
+              onClick={() => (sidebarCollapsed ? navigate('/Dashboard/Account') : setMobileOpen(true))}
               aria-label="Open menu"
-              title={sidebarCollapsed ? 'Log out' : undefined}
+              title={sidebarCollapsed ? 'My account' : undefined}
               className="lg:hidden"
             >
               <div
@@ -361,9 +378,9 @@ const DashboardLayout = ({ title, children }) => {
               </div>
             </button>
             <button
-              onClick={() => sidebarCollapsed && dispatch(LogoutUser(navigate))}
-              aria-label={sidebarCollapsed ? 'Log out' : 'Account'}
-              title={sidebarCollapsed ? 'Log out' : undefined}
+              onClick={() => sidebarCollapsed && navigate('/Dashboard/Account')}
+              aria-label={sidebarCollapsed ? 'My account' : 'Account'}
+              title={sidebarCollapsed ? 'My account' : undefined}
               className={`hidden lg:flex w-8 h-8 rounded-full items-center justify-center text-xs font-semibold text-white shrink-0 ${sidebarCollapsed ? 'cursor-pointer' : 'cursor-default'}`}
               style={{ backgroundColor: getAvatarColor(user) }}
             >
