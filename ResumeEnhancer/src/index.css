@@ -149,13 +149,16 @@ body {
 
 /* the main page/window scrollbar sir — thinned site-wide to match the same hairline look every
    in-page scroll panel already uses (see .hairline-scrollbar below), instead of the default
-   ~15-17px OS scrollbar. Firefox has no ::-webkit-scrollbar pseudo-elements, hence both rules. */
+   ~15-17px OS scrollbar. Firefox has no ::-webkit-scrollbar pseudo-elements, hence both rules —
+   `thin` is Firefox's narrowest built-in keyword, there's no numeric width override there.
+   min-height on the webkit thumb keeps the DRAGGABLE thumb itself long/grabbable even on a very
+   tall page, instead of shrinking down to a tiny nub as the page content grows. */
 html {
     scrollbar-width: thin;
     scrollbar-color: var(--color-richblack-600) transparent;
 }
 html::-webkit-scrollbar {
-    width: 8px;
+    width: 5px;
 }
 html::-webkit-scrollbar-track {
     background: transparent;
@@ -163,6 +166,7 @@ html::-webkit-scrollbar-track {
 html::-webkit-scrollbar-thumb {
     background: var(--color-richblack-600);
     border-radius: 9999px;
+    min-height: 80px;
 }
 html::-webkit-scrollbar-thumb:hover {
     background: var(--color-richblack-500);
