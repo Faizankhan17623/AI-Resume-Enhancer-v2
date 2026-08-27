@@ -48,17 +48,14 @@ exports.createUser = async (req, res) => {
             });
         }
 
-        // duplication checks sir — separate so the UI can show a field-specific error
-
-        // firstName already taken
-        const existingFirstName = await User.findOne({ firstName: firstName });
-        if (existingFirstName) {
-            return res.status(409).json({
-                success: false,
-                field: 'firstName',
-                message: 'This username is already taken',
-            });
-        }
+        // duplication checks sir — separate so the UI can show a field-specific error.
+        // firstName is NOT checked for uniqueness sir — it was never a username, just a display
+        // name, and two people sharing one is completely normal. That check used to live here and
+        // reject signup with "This username is already taken" at OTP-VERIFY time — after the user
+        // had already filled the whole form and waited for the email — even though SendOtp (below)
+        // already does the one duplicate check that actually matters (email) up front, before the
+        // OTP is ever sent. Removed entirely rather than moved earlier, since it was never a real
+        // rule to begin with (no unique index on firstName in Models/User.js either).
 
         // email already taken
         const existingEmail = await User.findOne({ email: email });
