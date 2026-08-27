@@ -228,6 +228,13 @@ const UserCreation = new mongoose.Schema(
             type: Boolean,
             default: true
         },
+        // Recruiter-side notification sir — same opt-out pattern as the User-facing ones above,
+        // just the one Recruiter-relevant email that exists so far: a candidate applying to one
+        // of their jobs (see controllers/Job.js's applyToJob)
+        notifyNewApplicant: {
+            type: Boolean,
+            default: true
+        },
         // brute-force lockout sir — on top of the IP rate limiter, this is PER-ACCOUNT so a
         // distributed attack (many IPs, one target account) still gets stopped
         failedLoginAttempts: {

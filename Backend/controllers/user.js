@@ -1046,6 +1046,8 @@ exports.exportMyData = async (req, res) => {
         const Resume = require('../Models/Resume')
         const BuiltResume = require('../Models/BuiltResume')
         const Payment = require('../Models/Payment')
+        const Job = require('../Models/Job')
+        const JobApplication = require('../Models/JobApplication')
 
         const user = await User.findById(userId)
             .select('-password -token -resetPasswordToken -resetPasswordExpires')
@@ -1068,6 +1070,17 @@ exports.exportMyData = async (req, res) => {
             Payment.find({ user: userId }).select('-signature'),
         ])
 
+        // Recruiter-only data sir — the arrays above are all candidate-side and come back empty
+        // for a Recruiter account, so without this a Recruiter's export would be nearly nothing.
+        // postedJobs is scoped by `recruiter`; receivedApplications is every application across
+        // ALL of that recruiter's own jobs (not `candidate: userId`, which is the OTHER role's scope).
+        let postedJobs = []
+        let receivedApplications = []
+        if (user.role === 'Recruiter') {
+            postedJobs = await Job.find({ recruiter: userId })
+            receivedApplications = await JobApplication.find({ job: { $in: postedJobs.map((j) => j._id) } })
+        }
+
         return res.status(200).json({
             success: true,
             exportedAt: new Date().toISOString(),
@@ -1078,6 +1091,8 @@ exports.exportMyData = async (req, res) => {
             resumes,
             builtResumes,
             payments,
+            postedJobs,
+            receivedApplications,
         })
     } catch (error) {
         (req.log || logger).error('export my data failed', { err: error })
@@ -1238,7 +1253,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count bonusCredits createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep onboardingCompleted recruiterApplication')
+            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count bonusCredits createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep notifyNewApplicant onboardingCompleted recruiterApplication')
 
         if (!user) {
             return res.status(404).json({
@@ -1303,7 +1318,7 @@ exports.getProfile = async (req, res) => {
 exports.updateNotificationPrefs = async (req, res) => {
     try {
         const userId = req.User.id;
-        const { notifyStreak, notifyWinBack, notifyDigest, notifyHealthCheck, notifyInterviewPrep } = req.body;
+        const { notifyStreak, notifyWinBack, notifyDigest, notifyHealthCheck, notifyInterviewPrep, notifyNewApplicant } = req.body;
 
         // only touch the fields the caller actually sent sir, so a partial update never resets the others
         const updates = {};
@@ -1312,6 +1327,7 @@ exports.updateNotificationPrefs = async (req, res) => {
         if (typeof notifyDigest === 'boolean') updates.notifyDigest = notifyDigest;
         if (typeof notifyHealthCheck === 'boolean') updates.notifyHealthCheck = notifyHealthCheck;
         if (typeof notifyInterviewPrep === 'boolean') updates.notifyInterviewPrep = notifyInterviewPrep;
+        if (typeof notifyNewApplicant === 'boolean') updates.notifyNewApplicant = notifyNewApplicant;
 
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({
@@ -1321,7 +1337,7 @@ exports.updateNotificationPrefs = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
-            .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep');
+            .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep notifyNewApplicant');
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -1338,6 +1354,7 @@ exports.updateNotificationPrefs = async (req, res) => {
             notifyDigest: updatedUser.notifyDigest,
             notifyHealthCheck: updatedUser.notifyHealthCheck,
             notifyInterviewPrep: updatedUser.notifyInterviewPrep,
+            notifyNewApplicant: updatedUser.notifyNewApplicant,
         });
     } catch (error) {
         (req.log || logger).error('update notification prefs failed', { err: error })

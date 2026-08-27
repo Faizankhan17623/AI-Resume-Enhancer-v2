@@ -18,8 +18,7 @@ import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, U
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
-
-const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+import { swalDark, passwordInputClass, passwordLabelClass, passwordErrorClass } from '../../utils/accountShared'
 
 // Support/Admin only sir — a normal User has nothing here worth showing, the badge would
 // just be noise ("User" on every single account)
@@ -28,12 +27,8 @@ const roleBadge = {
   Support: 'bg-blue-700/30 text-blue-25 border-blue-700',
 }
 
-const passwordInputClass = "w-full rounded-xl bg-richblack-900 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-const passwordLabelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
-const passwordErrorClass = "mt-1 text-xs text-pink-200"
-
-// small on/off switch sir — used only for the notification preferences below
-const Toggle = ({ checked, onChange, label, hint }) => (
+// small on/off switch sir — used for notification preferences, shared with RecruiterAccount.jsx
+export const Toggle = ({ checked, onChange, label, hint }) => (
   <div className="flex items-center justify-between py-3">
     <div>
       <p className="text-sm font-medium text-richblack-5">{label}</p>
@@ -67,7 +62,7 @@ const statusChip = {
 // `saving` here still gates the pencil buttons (disabled mid-save), while the actual visible
 // loader is the shared full-screen overlay in Account below, driven by the same onSave call
 // via its own onLoadingChange param
-const EditableField = ({ label, value, onSave, type = 'text' }) => {
+export const EditableField = ({ label, value, onSave, type = 'text' }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const [saving, setSaving] = useState(false)

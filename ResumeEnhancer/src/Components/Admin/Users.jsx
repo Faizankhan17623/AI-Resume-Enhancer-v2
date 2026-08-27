@@ -147,12 +147,14 @@ const Users = () => {
     setSelected([])
   }
 
+  // role is only ever 'Support' now sir — the backend enforces the same one-transition-only
+  // rule (see Backend/controllers/Admin.js's bulkUpdateUserRole), this is just the confirm dialog
   const handleBulkRoleChange = async (role) => {
     const { isConfirmed } = await Swal.fire({
       ...swalDark,
-      title: `Move ${selected.length} account${selected.length === 1 ? '' : 's'} to ${role}?`,
+      title: `Promote ${selected.length} account${selected.length === 1 ? '' : 's'} to Support?`,
       showCancelButton: true,
-      confirmButtonText: `Move to ${role}`,
+      confirmButtonText: 'Promote to Support',
     })
     if (!isConfirmed) return
     dispatch(BulkUpdateUserRole(selected, role, token, page, search, roleFilter))
@@ -418,23 +420,16 @@ const Users = () => {
             >
               Restore selected
             </button>
+            {/* the ONLY role change available anywhere in this page sir, per direct request —
+                a role is otherwise final. Recruiter is granted exclusively through the
+                recruiter-application approval flow (Admin/RecruiterApplications.jsx), never
+                here. handleBulkRoleChange itself only ever sends 'Support' now (see below), this
+                button is just the one remaining trigger for it. */}
             <button
               onClick={() => handleBulkRoleChange('Support')}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
             >
-              Move to Support
-            </button>
-            <button
-              onClick={() => handleBulkRoleChange('Recruiter')}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-700/20 text-yellow-25 border border-yellow-700 hover:bg-yellow-700/30 transition-colors duration-200 cursor-pointer"
-            >
-              Move to Recruiter
-            </button>
-            <button
-              onClick={() => handleBulkRoleChange('User')}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer"
-            >
-              Move to User
+              Promote to Support
             </button>
             <button
               onClick={() => setSelected([])}
@@ -497,17 +492,21 @@ const Users = () => {
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <label className="text-[10px] text-richblack-400 block mb-1">Role</label>
-                      <select
-                        value={row.role}
-                        disabled={!isAdmin || row._id === me?.id || row.role === 'Support'}
-                        title={row.role === 'Support' ? "Support accounts can't be demoted — suspend instead" : undefined}
-                        onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
-                        className="w-full rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="User">User</option>
-                        <option value="Support">Support</option>
-                        <option value="Recruiter">Recruiter</option>
-                      </select>
+                      {/* a role is final sir, per direct request — the only action left here is
+                          promoting a plain User to Support. Recruiter is granted exclusively
+                          through the recruiter-application approval flow, never from this page. */}
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">{row.role}</span>
+                        {isAdmin && row.role === 'User' && row._id !== me?.id && (
+                          <button
+                            onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter))}
+                            title="Promote to Support"
+                            className="shrink-0 px-2 py-1.5 text-[10px] font-semibold rounded-md bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
+                          >
+                            → Support
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="text-[10px] text-richblack-400 block mb-1">Plan</label>
@@ -624,19 +623,21 @@ const Users = () => {
                         </button>
                       </td>
                       <td className="p-4">
-                        {/* role select sir — Admin only, never on yourself, and never editable
-                            once an account is already Support (one-way, suspend instead) */}
-                        <select
-                          value={row.role}
-                          disabled={!isAdmin || row._id === me?.id || row.role === 'Support'}
-                          title={row.role === 'Support' ? "Support accounts can't be demoted — suspend instead" : undefined}
-                          onChange={(e) => dispatch(UpdateUserRole(row._id, e.target.value, token, page, search, roleFilter))}
-                          className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="User">User</option>
-                          <option value="Support">Support</option>
-                          <option value="Recruiter">Recruiter</option>
-                        </select>
+                        {/* a role is final sir, per direct request — the only action left here is
+                            promoting a plain User to Support. Recruiter is granted exclusively
+                            through the recruiter-application approval flow, never from this page. */}
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">{row.role}</span>
+                          {isAdmin && row.role === 'User' && row._id !== me?.id && (
+                            <button
+                              onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter))}
+                              title="Promote to Support"
+                              className="shrink-0 px-2 py-1.5 text-[10px] font-semibold rounded-md bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
+                            >
+                              → Support
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className="inline-block rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">

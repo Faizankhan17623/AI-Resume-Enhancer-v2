@@ -6,7 +6,10 @@ const Resume = require('../Models/Resume')
 const BuiltResume = require('../Models/BuiltResume')
 const Test = require('../Models/Test')
 const TestAttempt = require('../Models/TestAttempt')
+const User = require('../Models/User')
 const logger = require('../utils/logger')
+const mailSender = require('../utils/Nodemailer')
+const { newApplicantAlertTemplate } = require('../Templates/NewApplicantAlert')
 
 // ---------------------------------------------------------------------------
 // recruiter-side sir
@@ -717,7 +720,9 @@ exports.applyToJob = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid job id' })
         }
 
-        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id')
+        // title + recruiter selected here too sir — needed below to email the recruiter once
+        // the application is actually created
+        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id title recruiter')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
@@ -759,6 +764,34 @@ exports.applyToJob = async (req, res) => {
                 })
             }
             throw createErr
+        }
+
+        // email the recruiter sir — best-effort, wrapped in its own try/catch so a mail relay
+        // hiccup never fails the candidate's application response (same pattern as e.g.
+        // deleteAccount's mail send in controllers/user.js)
+        try {
+            const [recruiter, candidate] = await Promise.all([
+                User.findById(job.recruiter).select('firstName email notifyNewApplicant'),
+                User.findById(candidateId).select('firstName lastName'),
+            ])
+            if (recruiter?.notifyNewApplicant !== false) {
+                const frontendUrl = process.env.FRONTEND_URL
+                    ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+                    : "http://localhost:5173"
+                await mailSender(
+                    recruiter.email,
+                    'New Applicant — Resumify Recruiter',
+                    newApplicantAlertTemplate(
+                        recruiter.firstName,
+                        `${candidate.firstName} ${candidate.lastName}`,
+                        job.title,
+                        `${frontendUrl}/Recruiter/Jobs/${jobId}/applicants`,
+                        `${frontendUrl}/Recruiter/Account`
+                    )
+                )
+            }
+        } catch (mailError) {
+            (req.log || logger).error('new applicant alert mail failed', { err: mailError })
         }
 
         return res.status(201).json({

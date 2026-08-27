@@ -202,3 +202,15 @@ exports.isUser = (req, res, next) => {
     }
     next()
 }
+
+// product-feature gate sir, for the one feature (homepage testimonials) both candidate AND
+// recruiter accounts are allowed to use — Admin/Support still excluded, same as isUser above.
+exports.isUserOrRecruiter = (req, res, next) => {
+    if (req?.User?.role !== 'User' && req?.User?.role !== 'Recruiter') {
+        return res.status(403).json({
+            success: false,
+            message: 'Admin and Support accounts cannot use this feature',
+        })
+    }
+    next()
+}

@@ -254,10 +254,15 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
-        if (!['User', 'Support', 'Recruiter'].includes(role)) {
+        // the ONLY role change this endpoint allows any more sir, per direct request — a
+        // Recruiter role is granted exclusively through the recruiter-application approval flow
+        // (approveRecruiterApplication below), never through this generic editor, and a role is
+        // otherwise final: no User<->Recruiter, no demoting anyone, nothing but a straight
+        // User -> Support promotion.
+        if (role !== 'Support') {
             return res.status(400).json({
                 success: false,
-                message: "Role must be 'User', 'Support', or 'Recruiter'",
+                message: "This action can only promote a User to Support",
             })
         }
 
@@ -279,25 +284,10 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
-        // this endpoint can only move someone between User, Support, and Recruiter sir — an
-        // existing Admin's role is off-limits here entirely, same reasoning as the self-demote
-        // guard above
-        if (user.role === 'Admin') {
+        if (user.role !== 'User') {
             return res.status(400).json({
                 success: false,
-                message: 'Admin roles cannot be changed from this page',
-            })
-        }
-
-        // Support is one-way sir, per direct request — once promoted to Support, an account can
-        // never be moved back to User or Recruiter through this endpoint. Suspension (banUser)
-        // is the only way to remove a Support account's access from here on; that path is
-        // stricter too (a reason is required, and the account gets exactly one appeal ever, see
-        // controllers/user.js's submitSuspensionAppeal).
-        if (user.role === 'Support' && role !== 'Support') {
-            return res.status(400).json({
-                success: false,
-                message: 'A Support account cannot be demoted — suspend it instead if access needs to be removed',
+                message: 'Only a plain User account can be promoted to Support',
             })
         }
 
@@ -308,10 +298,9 @@ exports.updateUserRole = async (req, res) => {
         logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role })
         await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
 
-        const roleLabel = { Support: 'a Support member', Recruiter: 'a Recruiter', User: 'a normal User' }
         return res.status(200).json({
             success: true,
-            message: `${user.email} is now ${roleLabel[role] || role}`,
+            message: `${user.email} is now a Support member`,
             user
         })
     } catch (error) {
@@ -323,10 +312,9 @@ exports.updateUserRole = async (req, res) => {
     }
 }
 
-// PATCH /admin/users/bulk-role — move several accounts between User, Support, and Recruiter at
-// once sir, body: { userIds: [...], role: 'User' | 'Support' | 'Recruiter' }. Same rules as the
-// single-user version: can't touch yourself, can't touch an existing Admin — those ids are
-// skipped, not a hard failure.
+// PATCH /admin/users/bulk-role — promote several User accounts to Support at once sir, body:
+// { userIds: [...], role: 'Support' }. Same one-transition-only rule as the single-user version
+// above: this can ONLY move a plain User to Support, nothing else, ever.
 exports.bulkUpdateUserRole = async (req, res) => {
     try {
         const adminId = req?.User.id
@@ -346,10 +334,10 @@ exports.bulkUpdateUserRole = async (req, res) => {
             })
         }
 
-        if (!['User', 'Support', 'Recruiter'].includes(role)) {
+        if (role !== 'Support') {
             return res.status(400).json({
                 success: false,
-                message: "Role must be 'User', 'Support', or 'Recruiter'",
+                message: "This action can only promote a User to Support",
             })
         }
 
@@ -359,17 +347,11 @@ exports.bulkUpdateUserRole = async (req, res) => {
         const updated = []
         const skipped = []
 
-        // same one-way rule as the single-user endpoint above sir — an existing Support account
-        // being demoted is skipped, not a hard failure, same treatment as an Admin id in the batch
-        let skippedSupport = 0
+        // only a plain User can be promoted sir — anything else in the batch (an existing
+        // Support/Recruiter/Admin id) is skipped, not a hard failure, same treatment as before
         for (const user of users) {
-            if (user.role === 'Admin') {
+            if (user.role !== 'User') {
                 skipped.push(user.email)
-                continue
-            }
-            if (user.role === 'Support' && role !== 'Support') {
-                skipped.push(user.email)
-                skippedSupport++
                 continue
             }
             const oldRole = user.role
@@ -380,13 +362,9 @@ exports.bulkUpdateUserRole = async (req, res) => {
             updated.push(user.email)
         }
 
-        const skipNotes = []
-        if (skipped.length - skippedSupport > 0) skipNotes.push("admins can't be changed here")
-        if (skippedSupport > 0) skipNotes.push("Support accounts can't be demoted, suspend them instead")
-
         return res.status(200).json({
             success: true,
-            message: `${updated.length} account${updated.length === 1 ? '' : 's'} moved to ${role}${skipped.length ? `, ${skipped.length} skipped (${skipNotes.join('; ')})` : ''}`,
+            message: `${updated.length} account${updated.length === 1 ? '' : 's'} moved to Support${skipped.length ? `, ${skipped.length} skipped (only a plain User account can be promoted)` : ''}`,
             updated,
             skipped,
         })

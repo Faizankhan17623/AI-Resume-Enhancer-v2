@@ -168,6 +168,7 @@ const notificationPrefsSchema = z.object({
     notifyWinBack: z.boolean().optional(),
     notifyDigest: z.boolean().optional(),
     notifyHealthCheck: z.boolean().optional(),
+    notifyNewApplicant: z.boolean().optional(),
 })
 
 // ---------------------------------------------------------------------------

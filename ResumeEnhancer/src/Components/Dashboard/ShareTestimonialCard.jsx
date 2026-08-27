@@ -5,8 +5,9 @@ import { FaStar, FaCommentDots } from 'react-icons/fa'
 import { apiConnector } from '../../Services/apiConnector'
 import { Testimonials as TestimonialsApi } from '../../Services/Apis/AdminApi'
 
-// lets a User share a homepage testimonial sir — Admin/Support never see this, they have
-// nothing to review here, this is a User-only product feature (mirrors isUser on the backend)
+// lets a User or Recruiter share a homepage testimonial sir — Admin/Support never see this, they
+// have nothing to review here (mirrors isUserOrRecruiter on the backend). Rendered on both
+// Dashboard/Account.jsx and Recruiter/RecruiterAccount.jsx.
 const ShareTestimonialCard = () => {
   const { token } = useSelector((state) => state.auth)
   const [mine, setMine] = useState(undefined) // undefined = still loading
