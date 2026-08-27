@@ -147,6 +147,27 @@ body {
     background-color: var(--color-richblack-900);
 }
 
+/* the main page/window scrollbar sir — thinned site-wide to match the same hairline look every
+   in-page scroll panel already uses (see .hairline-scrollbar below), instead of the default
+   ~15-17px OS scrollbar. Firefox has no ::-webkit-scrollbar pseudo-elements, hence both rules. */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-richblack-600) transparent;
+}
+html::-webkit-scrollbar {
+    width: 8px;
+}
+html::-webkit-scrollbar-track {
+    background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+    background: var(--color-richblack-600);
+    border-radius: 9999px;
+}
+html::-webkit-scrollbar-thumb:hover {
+    background: var(--color-richblack-500);
+}
+
 /* slow light/dark crossfade sir (~5s) — only active while useTheme.js has just toggled
    (the "theme-transitioning" class it adds to <html> for 5s), so every surface using the
    theme's bg/text/border tokens eases together. Scoped to a temporary class rather than
