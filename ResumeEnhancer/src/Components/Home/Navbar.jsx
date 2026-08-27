@@ -4,13 +4,26 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiLogOut, FiSun, FiMoon, FiChevronDown } from 'react-icons/fi'
-import { FaSearch, FaUserCog } from 'react-icons/fa'
+import { FaFilePdf, FaFolderOpen, FaHistory, FaEnvelopeOpenText, FaComments, FaSearch, FaTrophy, FaUserCog } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 import NotificationBell from './NotificationBell'
 import { LogoutUser } from '../../Services/operations/Auth'
 import useTheme from '../../Hooks/useTheme'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
-import { resumeMenu, toolsMenu } from '../../utils/homeNavLinks'
+
+// Resume dropdown sir — every review/library feature we actually ship, so every link goes somewhere real
+const resumeMenu = [
+  { name: 'New Review', desc: 'Score your resume against a job description', path: '/Dashboard/New-Review', icon: FaFilePdf },
+  { name: 'My Resumes', desc: 'Your saved resume library', path: '/Dashboard/Resumes', icon: FaFolderOpen },
+  { name: 'History', desc: 'Every review you have run', path: '/Dashboard/History', icon: FaHistory },
+  { name: 'Cover Letter', desc: 'Generate a tailored cover letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
+]
+
+// Tools dropdown sir — the non-resume-specific features
+const toolsMenu = [
+  { name: 'AI Coach', desc: 'Chat with the AI about your career', path: '/Dashboard/Chats', icon: FaComments },
+  { name: 'Leaderboard', desc: 'See how your score stacks up', path: '/Dashboard/Leaderboard', icon: FaTrophy },
+]
 
 // Shared dropdown sir — logged-out users land on Login first, the target page opens right after
 const NavDropdown = ({ label, items, active }) => {
