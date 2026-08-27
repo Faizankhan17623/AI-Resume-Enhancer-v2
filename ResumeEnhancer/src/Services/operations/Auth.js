@@ -11,6 +11,25 @@ const { logout } = Logout
 const { forgotpassword, resetpassword } = Password
 const { deleteaccount } = Account
 
+// clears every account-scoped key this browser has cached sir — used by both LogoutUser and
+// DeleteAccount so "sign out" always means the same thing: the httpOnly session cookie is
+// already cleared server-side by that point (buildClearAuthCookie, Backend/utils/session.js),
+// and authSlice's persistUser already drops "user" via setUser(null), but this is the one place
+// that explicitly nukes localStorage/sessionStorage in full so nothing account-related survives
+// in this browser, even a key added later that some future caller forgets to clean up itself.
+// Deliberately NOT touching document.cookie: every real auth cookie here is httpOnly (unreadable
+// and unwritable from JS to begin with), and the only cookie JS *can* see is the anonymous
+// `visitor_id` analytics cookie (Backend/controllers/Visitor.js) — that one identifies the
+// device for visit-count analytics, not the account, and must survive logout/delete.
+const clearClientAuthState = () => {
+    try {
+        localStorage.removeItem("user")
+        sessionStorage.clear()
+    } catch {
+        // private mode / full storage sir — never let this block the actual sign-out
+    }
+}
+
 // step 1 of the signup sir — fire the OTP mail and move to the OTP screen. `onStatus` follows
 // the same pattern as LoginUser below: ('loading'|'success'|'error', message) instead of a
 // toast, so Join.jsx can drive the same full-screen LoginStatusOverlay used for login.
@@ -207,6 +226,14 @@ export function LogoutUser(navigate) {
         dispatch(setToken(null))
         dispatch(setUser(null))
         dispatch(setLogin(false))
+
+        // belt-and-suspenders sir — setUser(null) above already removes the "user" key via
+        // authSlice's persistUser, and the real credential is the httpOnly cookie the server
+        // just cleared, but this guarantees NOTHING account-related is left behind in this
+        // browser once the user has explicitly signed out, even if another key gets cached
+        // under the account in the future.
+        clearClientAuthState()
+
         dispatch(setLogoutStatus({ status: 'success', message: 'Logged out' }))
 
         // same brief pause as every other status-overlay flow sir — long enough for the
@@ -220,10 +247,12 @@ export function LogoutUser(navigate) {
 
 // suspends the account (2-day recovery window, undone automatically by logging back in) sir,
 // then logs the user out locally since their session is no longer usable — Auth middleware
-// blocks any Buffer:true account on the very next request anyway
+// blocks any Buffer:true account on the very next request anyway. Reuses the SAME logoutStatus
+// overlay as LogoutUser (mounted once in App.jsx) instead of a toast — this is really just
+// "delete, then log out", so it gets the same full-screen spinner -> checkmark treatment.
 export function DeleteAccount(token, navigate) {
     return async (dispatch) => {
-        const toastId = toast.loading("Deleting your account...")
+        dispatch(setLogoutStatus({ status: 'loading', message: 'Deleting your account...' }))
         try {
             const response = await apiConnector("DELETE", deleteaccount, null, {
                 Authorization: `Bearer ${token}`
@@ -233,16 +262,20 @@ export function DeleteAccount(token, navigate) {
                 throw new Error(response.data.message)
             }
 
-            toast.success("Account scheduled for deletion — check your email for details")
             dispatch(setToken(null))
             dispatch(setUser(null))
             dispatch(setLogin(false))
-            if (navigate) navigate("/")
+            clearClientAuthState()
+
+            dispatch(setLogoutStatus({ status: 'success', message: 'Account scheduled for deletion — check your email for details' }))
+            setTimeout(() => {
+                if (navigate) navigate("/")
+                dispatch(setLogoutStatus({ status: null, message: '' }))
+            }, 1400)
         } catch (error) {
             logApiError("Error deleting the account", error)
-            toast.error(error?.response?.data?.message || "Could not delete the account")
-        } finally {
-            toast.dismiss(toastId)
+            dispatch(setLogoutStatus({ status: 'error', message: error?.response?.data?.message || "Could not delete the account" }))
+            setTimeout(() => dispatch(setLogoutStatus({ status: null, message: '' })), 2200)
         }
     }
 }
