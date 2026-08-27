@@ -54,6 +54,18 @@ const otp = z
 
 const planKey = z.enum(['Basic', 'Pro', 'ProMax'], { error: 'Please pick a valid plan' })
 
+// an OPTIONAL date field sir — e.g. an "end date" input left blank when a form's "currently
+// studying/working" checkbox is checked. A plain HTML date input, once disabled rather than
+// unmounted, still submits its value as an empty string '' (never undefined), and
+// z.coerce.date() turns '' into `new Date('')` — an Invalid Date object, which Zod then rejects
+// with the confusing message "expected date, received Date" (found live: this broke every
+// fresher/experienced application on the new structured apply form). Stripping '' to undefined
+// BEFORE the date coercion runs is what actually makes "optional" mean optional here.
+const optionalDate = z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.coerce.date().optional()
+)
+
 // shared by createUserSchema (recruiter signup) and recruiterApplicationSchema (the post-hoc
 // /For-Recruiters flow) sir — one definition, same options either way
 const companySize = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], { error: 'Please select your company size' })
@@ -387,7 +399,7 @@ const educationEntrySchema = z.object({
     degree: z.enum(['bachelors', 'masters'], { error: 'Degree must be bachelors or masters' }),
     institution: z.string().trim().min(1, 'Institution is required').max(200),
     startDate: z.coerce.date({ error: 'A valid start date is required' }),
-    endDate: z.coerce.date().optional(),
+    endDate: optionalDate,
     currentlyStudying: z.boolean().default(false),
 }).refine(
     (data) => data.currentlyStudying || data.endDate !== undefined,
@@ -397,7 +409,7 @@ const educationEntrySchema = z.object({
 const workHistoryEntrySchema = z.object({
     companyName: z.string().trim().min(1, 'Company name is required').max(150),
     startDate: z.coerce.date({ error: 'A valid start date is required' }),
-    endDate: z.coerce.date().optional(),
+    endDate: optionalDate,
     currentlyWorking: z.boolean().default(false),
 }).refine(
     (data) => data.currentlyWorking || data.endDate !== undefined,
