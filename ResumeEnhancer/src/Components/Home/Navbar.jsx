@@ -251,7 +251,7 @@ const Navbar = () => {
         {/* Logo sir — navy + coral split wordmark, MyPerfectResume-style */}
         <Link to="/" className="flex items-center gap-2 group">
           <MdOutlineDocumentScanner className="text-3xl text-yellow-50 group-hover:rotate-6 transition-transform duration-300" />
-          <span className="font-display font-bold text-2xl text-richblack-5 tracking-tight">
+          <span className="font-display font-bold text-3xl text-richblack-5 tracking-tight">
             Resum<span className="text-warm-200">ify</span>
           </span>
         </Link>
