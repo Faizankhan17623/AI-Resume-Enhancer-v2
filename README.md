@@ -63,14 +63,31 @@ candidates with proctored tests — with a full admin/support back office runnin
 - **Recruiter Onboarding** — direct signup (locked pending Admin approval) or apply from an
   existing candidate account; every action stays locked until an Admin approves the application
 - **Job Postings** — draft → published → closed lifecycle, with an optional attached proctored
-  screening test
-- **Applicant Management** — review applicants ranked by test score, invite to test (single or
-  bulk), and record hire/reject outcomes (single or bulk)
+  screening test (a job can be published with or without one), real compensation details (a CTC
+  range for paid roles, a duration + certificate flag for unpaid/internship roles), and an
+  automatic 30-day expiry once published
+- **Structured Applications** — candidates apply through a multi-step form (fresher vs.
+  experienced, address, expected salary, education or work history, a real PDF resume upload)
+  instead of a one-click apply
+- **AI Fit-Scoring** — every application is scored automatically against the job description
+  (0-100, tiered not-a-fit / can-get-it-done / hireable / best-fit), so recruiters can filter and
+  rank applicants by fit before reading a single resume
+- **Applicant Management** — filter by status or fit tier, review applicants ranked by AI fit
+  score (then test score once available), invite to test (single or bulk — sends the candidate a
+  real email with their test link), close/reject an application at any stage, and record
+  hire/reject outcomes (single or bulk)
 - **Per-Job Analytics** — a full funnel (views → applications → invited → completed →
   hired/rejected), conversion-rate cards, and test performance stats
 - **Cross-Job Analytics** — totals across every posting, ranked by hires
+- **Job Deletion** — withdraw a posting outright; every applicant is emailed that it was withdrawn
 - **New-Applicant Email Alerts** — an email the moment a candidate applies to one of your jobs,
   opt-out from your Account page
+- **Recruiter Plans (Basic/Pro/ProMax)** — a separate subscription system from the User plans
+  above, gating active job postings and AI-scored applicants per month, with a visible usage meter
+  on the Account page
+- **Recruiter AI Tools** (Pro/ProMax) — an AI job-description writer, an AI interview-question
+  generator grounded in the job's own description, and AI candidate-summary write-ups, each with
+  its own monthly quota
 - **Recruiter Account Page** — the same self-service set candidates get: profile, edit profile,
   change password, email notifications, share your story, invite friends, export your data
   (posted jobs + received applications), delete account
@@ -121,7 +138,9 @@ candidates with proctored tests — with a full admin/support back office runnin
 - pdfkit (PDF) & docx (DOCX) for resume/report file generation
 - Cloudinary for file storage
 - Razorpay for payments, with idempotent webhook + client-verify activation (a MongoDB
-  transaction, guarded so the two can safely race each other without double-crediting a user)
+  transaction, guarded so the two can safely race each other without double-crediting a user) —
+  the Recruiter plan system (Basic/Pro/ProMax) has its own fully separate payment flow/collection,
+  never sharing code or DB fields with the User plan system above
 - Helmet, CORS (fail-closed allowlist), and rate limiting for security — limits are stored in
   MongoDB, so they hold across restarts and multiple instances, with an explicit fail-open vs.
   fail-closed policy per limiter (traffic-shaping limits fail open, security-critical ones like
