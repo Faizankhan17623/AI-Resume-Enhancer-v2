@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { FaMapMarkerAlt, FaBriefcase, FaArrowLeft } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import HomeLayout from '../Home/HomeLayout'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -49,19 +49,20 @@ const JobDetail = () => {
 
   if (loading || !job) {
     return (
-      <div className="min-h-screen bg-richblack-900 flex flex-col">
-        <Navbar />
-        <Loading text="Loading the job..." />
-      </div>
+      <HomeLayout>
+        <div className="bg-richblack-900 flex flex-col">
+          <Loading text="Loading the job..." />
+        </div>
+      </HomeLayout>
     )
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900 flex flex-col">
+    <HomeLayout>
+      <div className="w-full bg-richblack-900 flex flex-col">
       <Helmet>
         <title>{job.title} at {job.companyName} | Resumify</title>
       </Helmet>
-      <Navbar />
 
       <div className="flex-1 max-w-3xl mx-auto px-6 py-16 w-full">
         <Link to="/Jobs" className="inline-flex items-center gap-2 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200 mb-6">
@@ -123,7 +124,8 @@ const JobDetail = () => {
       </div>
 
       <Footer />
-    </div>
+      </div>
+    </HomeLayout>
   )
 }
 

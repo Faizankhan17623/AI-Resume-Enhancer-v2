@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import { FaSearch, FaMapMarkerAlt, FaBriefcase } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
+import HomeLayout from '../Home/HomeLayout'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import { staggerContainer, fadeUp } from '../../utils/motion'
@@ -34,11 +34,11 @@ const JobBoard = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900 flex flex-col">
+    <HomeLayout>
+      <div className="w-full bg-richblack-900 flex flex-col">
       <Helmet>
         <title>Jobs | Resumify</title>
       </Helmet>
-      <Navbar />
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -156,7 +156,8 @@ const JobBoard = () => {
       </motion.div>
 
       <Footer />
-    </div>
+      </div>
+    </HomeLayout>
   )
 }
 

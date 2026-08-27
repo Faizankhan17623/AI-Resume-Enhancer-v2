@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { setUser, setToken, setLogin } from './Slices/authSlice'
 import LoginStatusOverlay from './Components/Login/LoginStatusOverlay'
-import Navbar from './Components/Home/Navbar'
+import HomeLayout from './Components/Home/HomeLayout'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
 import TemplateSlider from './Components/Home/TemplateSlider'
@@ -88,20 +88,21 @@ const PageLoader = () => (
 
 const Homelayout = () => {
   return (
-    <div className="bg-richblack-900 min-h-screen flex flex-col">
-      <Helmet>
-        <title>Resumify — Beat the ATS</title>
-      </Helmet>
-      <Navbar />
-      <div className="flex-1">
-        <Banner />
-        <HowItWorks />
-        <TemplateSlider />
-        <Testimonials />
-        <FAQ />
+    <HomeLayout>
+      <div className="bg-richblack-900 flex flex-col">
+        <Helmet>
+          <title>Resumify — Beat the ATS</title>
+        </Helmet>
+        <div className="flex-1">
+          <Banner />
+          <HowItWorks />
+          <TemplateSlider />
+          <Testimonials />
+          <FAQ />
+        </div>
+        <Footer />
       </div>
-      <Footer />
-    </div>
+    </HomeLayout>
   )
 }
 

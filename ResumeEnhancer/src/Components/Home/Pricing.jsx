@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaCheck, FaHeart, FaStar, FaTimes, FaCrown } from 'react-icons/fa'
-import Navbar from './Navbar'
+import HomeLayout from './HomeLayout'
 import Footer from './Footer'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -100,11 +100,11 @@ const Pricing = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900 flex flex-col">
+    <HomeLayout>
+      <div className="w-full bg-richblack-900 flex flex-col">
       <Helmet>
         <title>Pricing | Resumify</title>
       </Helmet>
-      <Navbar />
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -262,7 +262,8 @@ const Pricing = () => {
       </motion.div>
 
       <Footer />
-    </div>
+      </div>
+    </HomeLayout>
   )
 }
 

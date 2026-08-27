@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaBriefcase, FaShieldAlt, FaChartLine, FaCheckCircle, FaClock, FaUserPlus, FaBolt, FaUsers, FaFileContract, FaPenNib, FaUserCheck, FaClipboardList, FaHandshake, FaBalanceScale, FaEye, FaHeart } from 'react-icons/fa'
-import Navbar from './Navbar'
+import HomeLayout from './HomeLayout'
 import Footer from './Footer'
 import IconBtn from '../extra/IconBtn'
 import { fadeUp, staggerContainer } from '../../utils/motion'
@@ -129,11 +129,11 @@ const ForRecruiters = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900 flex flex-col">
+    <HomeLayout>
+      <div className="w-full bg-richblack-900 flex flex-col">
       <Helmet>
         <title>For Recruiters | Resumify</title>
       </Helmet>
-      <Navbar />
 
       {/* Hero sir — deliberately more of a full landing feel now: badge, headline, then
           an immediate fork so nobody has to read the whole page to know which button is theirs */}
@@ -426,7 +426,8 @@ const ForRecruiters = () => {
       </motion.div>
 
       <Footer />
-    </div>
+      </div>
+    </HomeLayout>
   )
 }
 
