@@ -52,12 +52,12 @@ const RecruiterLayout = ({ children }) => {
         </div>
       </div>
       {isLocked && (
-        <div className={`px-6 py-3 flex items-center gap-2.5 text-sm border-b ${
+        <div className={`px-6 py-3 flex items-center gap-2.5 text-sm font-semibold border-b-2 ${
           approvalStatus === 'rejected'
-            ? 'bg-pink-700/10 border-pink-700 text-pink-100'
-            : 'bg-yellow-700/10 border-yellow-700 text-yellow-25'
+            ? 'bg-pink-700/20 border-pink-600 text-pink-50'
+            : 'bg-yellow-700/25 border-yellow-500 text-yellow-5'
         }`}>
-          <FaLock className="shrink-0" />
+          <FaLock className="shrink-0 text-base" />
           {approvalStatus === 'rejected'
             ? "Your recruiter application wasn't approved — every action is locked. Contact support to appeal."
             : 'Your recruiter account is pending admin approval — you can look around, but posting jobs and every other action is locked until then.'}
