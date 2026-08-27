@@ -17,6 +17,7 @@ const {
     updateJob,
     publishJob,
     closeJob,
+    deleteJob,
     getJobApplicants,
     getJobAnalytics,
     getRecruiterOverviewAnalytics,
@@ -29,6 +30,21 @@ const {
     applyToJob,
     listMyApplications,
 } = require('../controllers/Job.js')
+
+// applyToJob is multipart/form-data sir (the resume PDF rides as req.files.resume, alongside the
+// structured form fields) — express-fileupload puts the OTHER form fields on req.body as plain
+// strings, so the structured payload is sent as a single JSON-stringified 'data' field and parsed
+// back into an object HERE, before the validate() middleware's Zod schema ever sees it.
+const parseMultipartJson = (req, res, next) => {
+    if (typeof req.body?.data === 'string') {
+        try {
+            req.body = JSON.parse(req.body.data)
+        } catch {
+            return res.status(400).json({ success: false, message: 'Invalid application data' })
+        }
+    }
+    next()
+}
 
 // job postings sir — recruiter-management routes are isRecruiter only, public routes need no
 // auth at all, candidate routes are isUser only. Same strict role isolation as Routes/Test.js.
@@ -48,6 +64,7 @@ route.patch('/jobs/:jobId/applicants/bulk-status', Auth, isRecruiter, isApproved
 route.get('/jobs/:jobId/analytics', Auth, isRecruiter, isApprovedRecruiter, getJobAnalytics)
 route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publishJob)
 route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)
+route.delete('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, deleteJob)
 route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateJobSchema }), updateJob)
 route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, getJob)
 
@@ -56,7 +73,7 @@ route.get('/public/jobs', listPublicJobs)
 route.get('/public/jobs/:jobId', getPublicJob)
 
 // candidate side
-route.post('/jobs/:jobId/apply', Auth, isUser, validate({ body: applyToJobSchema }), applyToJob)
+route.post('/jobs/:jobId/apply', Auth, isUser, parseMultipartJson, validate({ body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
 route.patch('/job-applications/:applicationId/status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: setApplicationOutcomeSchema }), setApplicationOutcome)

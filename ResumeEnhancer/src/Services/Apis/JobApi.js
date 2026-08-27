@@ -10,6 +10,7 @@ export const JobData = {
     updateJob: BASE_URL + "/jobs",            // + /:jobId
     publishJob: BASE_URL + "/jobs",          // + /:jobId/publish
     closeJob: BASE_URL + "/jobs",            // + /:jobId/close
+    deleteJob: BASE_URL + "/jobs",           // + /:jobId
     getJobApplicants: BASE_URL + "/jobs",    // + /:jobId/applicants
     getJobAnalytics: BASE_URL + "/jobs",     // + /:jobId/analytics
     getRecruiterOverviewAnalytics: BASE_URL + "/jobs/analytics-overview",

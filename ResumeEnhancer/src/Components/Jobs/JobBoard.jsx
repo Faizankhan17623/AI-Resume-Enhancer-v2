@@ -9,6 +9,7 @@ import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import { staggerContainer, fadeUp } from '../../utils/motion'
 import { GetPublicJobs } from '../../Services/operations/Job'
+import { formatJobDate } from '../../utils/formatDate'
 
 const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
 
@@ -116,6 +117,7 @@ const JobBoard = () => {
                         {job.employmentType && (
                           <span className="flex items-center gap-1.5"><FaBriefcase /> {job.employmentType}</span>
                         )}
+                        {job.createdAt && <span className="text-richblack-400">Posted {formatJobDate(job.createdAt)}</span>}
                       </div>
                       {job.skills?.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">

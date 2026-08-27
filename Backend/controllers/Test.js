@@ -350,12 +350,27 @@ exports.startAttempt = async (req, res) => {
         const startedAt = new Date()
         const endsAt = new Date(startedAt.getTime() + test.timeLimitMinutes * 60 * 1000)
 
-        const attempt = await TestAttempt.create({
-            test: test._id,
-            candidate: candidateId,
-            startedAt,
-            endsAt,
-        })
+        let attempt
+        try {
+            attempt = await TestAttempt.create({
+                test: test._id,
+                candidate: candidateId,
+                startedAt,
+                endsAt,
+            })
+        } catch (createErr) {
+            // race-proof backstop sir — the unique {test,candidate} index (Models/TestAttempt.js)
+            // catches the narrow window between the two findOne checks above and this create()
+            // call, where two near-simultaneous requests could otherwise both pass the checks
+            // and both try to create an attempt
+            if (createErr.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'You have already completed this test',
+                })
+            }
+            throw createErr
+        }
 
         // links this attempt back to the application sir, so the recruiter's applicants list
         // (controllers/Job.js's getJobApplicants) can show attempt status/score/violations

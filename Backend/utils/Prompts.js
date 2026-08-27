@@ -356,4 +356,92 @@ Respond ONLY with a valid JSON object in EXACTLY this shape:
 }`
 }
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt }
+// ---------- RECRUITER AI FIT-SCORE (services/fitScoreService.js) ----------
+//
+// tiered 0-100 fit score for a recruiter reviewing applicants sir — same "never inflate the
+// score" discipline as REVIEW_CORE above, but the tiers are the ones the user specified directly:
+// 0-25 not a fit, 26-50 can get the work done, 51-75 hireable, 76-100 best fit. reasoning is kept
+// short (1-2 sentences) since it's also reused as the "AI candidate summary" upsell — see
+// services/fitScoreService.js.
+const buildFitScorePrompt = (jobDescription, resumeText) => `You are an expert technical recruiter with 10+ years of hiring experience, scoring how well ONE candidate's resume fits ONE specific job opening.
+
+=== JOB DESCRIPTION ===
+${jobDescription}
+
+=== CANDIDATE'S RESUME ===
+${resumeText}
+
+SCORING RULES (apply strictly and consistently):
+- Score fitScore from 0-100 based ONLY on how well this resume matches THIS job description.
+- 0-25 (not_a_fit): missing most required skills/experience, wrong field entirely, or severely underqualified.
+- 26-50 (can_get_it_done): has some relevant skills but significant gaps — could likely do the job with training, not a strong match today.
+- 51-75 (hireable): meets most core requirements, relevant experience, a reasonable hire.
+- 76-100 (best_fit): strong match on nearly every requirement, directly relevant experience, minimal gaps.
+- If the resume is for a clearly different field than the job, score it low and say so honestly in the reasoning. NEVER inflate the score to be encouraging — this score is for a recruiter making a real hiring decision, not for the candidate.
+- All scores are integers.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fences, no commentary, no text before or after:
+{
+  "fitScore": 0,
+  "fitTier": "not_a_fit | can_get_it_done | hireable | best_fit",
+  "reasoning": "1-2 sentences on why this score, grounded in specific resume/JD details"
+}`
+
+// ---------- RECRUITER AI TOOLS (Pro/ProMax upsell — Backend/controllers/RecruiterAI.js) ----------
+
+// drafts a full job description from a few bullet points sir — wired into JobBuilder.jsx's
+// "Draft with AI" button. Returns plain text (the description field itself, no JSON wrapper
+// needed — this one output IS the whole result, unlike the others below).
+const buildJobDescriptionPrompt = (title, employmentType, mustHaves) => `You are an expert technical recruiter writing a clear, honest job posting description.
+
+Role title: ${title}
+Employment type: ${employmentType || 'Not specified'}
+Key requirements/must-haves the recruiter gave you:
+${mustHaves}
+
+Write a complete, well-structured job description for this role (300-500 words) covering: a short intro to the role, key responsibilities, required skills/qualifications (grounded in the must-haves above — do not invent requirements they did not mention), and what a strong candidate looks like. Plain, professional prose — no markdown headers, no placeholder brackets, no company name (the recruiter will add that separately). Respond with ONLY the description text, no preamble, no commentary before or after.`
+
+// suggests test questions grounded in the job's own description sir — wired into
+// TestBuilder.jsx, recruiter accepts/edits/discards each suggestion individually before adding
+// it to the real test. Matches Test.js's question shape exactly (prompt/type/options/
+// correctAnswer/marks) so a suggestion can be dropped straight into the test builder's form.
+const buildInterviewQuestionsPrompt = (jobDescription, questionCount) => `You are an expert technical interviewer designing a screening test for a specific role.
+
+=== JOB DESCRIPTION ===
+${jobDescription}
+
+Generate ${questionCount} test questions that would genuinely screen a candidate for THIS role — a mix of multiple-choice (mcq) and short-answer (text) questions, grounded in the actual skills/requirements in the job description above. Do not invent requirements not implied by the JD.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fences, no commentary, no text before or after:
+{
+  "questions": [
+    {
+      "prompt": "the question text",
+      "type": "mcq | text",
+      "options": ["four options — mcq only, omit/empty array for text questions"],
+      "correctAnswer": "the correct option's exact text — mcq only, omit for text questions",
+      "suggestedMarks": 10
+    }
+  ]
+}`
+
+// a short, JD-relevant summary of one applicant's resume sir — shown next to the fit score in
+// JobApplicantsList.jsx. Computed alongside the fit score in the SAME AI call where possible
+// (see services/fitScoreService.js) to avoid a second round-trip per applicant; this standalone
+// prompt exists for the cases where a recruiter re-requests just the summary on demand.
+const buildCandidateSummaryPrompt = (jobDescription, resumeText) => `You are an expert technical recruiter writing a quick first-pass summary of a candidate's resume for a specific role, so a busy recruiter doesn't have to read the full resume themselves.
+
+=== JOB DESCRIPTION ===
+${jobDescription}
+
+=== CANDIDATE'S RESUME ===
+${resumeText}
+
+Write a short summary (2-4 sentences) of this candidate's resume highlights that are RELEVANT to this specific job — their most relevant experience, standout skills, and anything notably strong or notably missing for this role. Be honest and specific, grounded only in what's actually in the resume — do not invent experience.
+
+Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fences, no commentary, no text before or after:
+{
+  "summary": "the 2-4 sentence summary"
+}`
+
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt, buildFitScorePrompt, buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt }

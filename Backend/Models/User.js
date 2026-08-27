@@ -235,6 +235,47 @@ const UserCreation = new mongoose.Schema(
             type: Boolean,
             default: true
         },
+        // Recruiter plan sir — completely separate from the User Subscription/SubType/
+        // SubscriptionExpires fields above. Deliberately its own name, its own enum, its own
+        // expiry field: a Recruiter's paid plan must never be confused with (or accidentally
+        // overwrite) a User's plan state, since one account only ever really "is" one role at a
+        // time but the fields all live on the same User document. See utils/RecruiterPlans.js —
+        // the ONLY place recruiterPlan/recruiterPlanExpiresAt are read/written, mirroring how
+        // utils/Plans.js is the sole owner of Subscription/SubType.
+        recruiterPlan: {
+            type: String,
+            enum: ['Basic', 'Pro', 'ProMax'],
+            default: 'Basic'
+        },
+        recruiterPlanExpiresAt: {
+            type: Date
+        },
+        // usage counters for the current monthly cycle sir — reset by RecruiterPlans.js's
+        // resetRecruiterCycleIfNeeded, a lazy rolling reset (checked/applied on read, no cron
+        // needed), same idea as the credit-cycle pattern already used elsewhere in this app
+        recruiterCycleStart: {
+            type: Date
+        },
+        recruiterJobPostingsUsed: {
+            type: Number,
+            default: 0
+        },
+        recruiterAiScoresUsed: {
+            type: Number,
+            default: 0
+        },
+        recruiterJdWritesUsed: {
+            type: Number,
+            default: 0
+        },
+        recruiterInterviewQGenUsed: {
+            type: Number,
+            default: 0
+        },
+        recruiterSummariesUsed: {
+            type: Number,
+            default: 0
+        },
         // brute-force lockout sir — on top of the IP rate limiter, this is PER-ACCOUNT so a
         // distributed attack (many IPs, one target account) still gets stopped
         failedLoginAttempts: {

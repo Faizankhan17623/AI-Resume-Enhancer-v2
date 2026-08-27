@@ -183,6 +183,14 @@ const verifyPaymentSchema = z.object({
     razorpay_signature: z.string().min(1, 'Signature is required'),
 })
 
+// Recruiter plan purchase sir — a DISTINCT schema/enum from planKey/createOrderSchema above, even
+// though the string values overlap ('Pro'/'ProMax'), per the explicit instruction to keep the
+// Recruiter and User plan/payment systems completely separate end to end. verifyPaymentSchema's
+// shape has nothing plan-specific in it (just the three Razorpay fields), so it's reused as-is —
+// see controllers/RecruiterPayment.js.
+const recruiterPlanKey = z.enum(['Pro', 'ProMax'], { error: 'Please pick a valid plan' })
+const recruiterCreateOrderSchema = z.object({ plan: recruiterPlanKey })
+
 // ---------------------------------------------------------------------------
 // admin sir — these endpoints change roles and money, so their inputs are the
 // ones most worth constraining
@@ -318,33 +326,121 @@ const attemptIdParamSchema = z.object({ attemptId: objectId })
 
 const employmentType = z.enum(['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote'], { error: 'Invalid employment type' })
 
-const createJobSchema = z.object({
+// compensation sir — optional at create/update time (a draft can be saved half-filled-in), but
+// checked for internal consistency whenever it IS present: 'paid' needs ctcMin<=ctcMax, 'unpaid'
+// just needs a duration. Whether compensation is required AT ALL is enforced separately in
+// publishJob (Backend/controllers/Job.js), not here — a job can't go live without it, but can
+// still exist as an incomplete draft without it.
+const compensationFields = {
+    compensationType: z.enum(['paid', 'unpaid'], { error: 'Compensation type must be paid or unpaid' }).optional(),
+    ctcMin: z.coerce.number().min(0).optional(),
+    ctcMax: z.coerce.number().min(0).optional(),
+    unpaidDurationMonths: z.coerce.number().min(0).optional(),
+    certificateProvided: z.boolean().optional(),
+}
+
+const compensationRefinements = (schema) => schema.refine(
+    (data) => data.compensationType !== 'paid' || (data.ctcMin !== undefined && data.ctcMax !== undefined),
+    { message: 'Enter both a minimum and maximum CTC for a paid role', path: ['ctcMin'] }
+).refine(
+    (data) => data.compensationType !== 'paid' || data.ctcMin === undefined || data.ctcMax === undefined || data.ctcMax >= data.ctcMin,
+    { message: 'Maximum CTC must be greater than or equal to the minimum', path: ['ctcMax'] }
+).refine(
+    (data) => data.compensationType !== 'unpaid' || data.unpaidDurationMonths !== undefined,
+    { message: 'Enter the internship/unpaid duration in months', path: ['unpaidDurationMonths'] }
+)
+
+const createJobSchema = compensationRefinements(z.object({
     companyName: z.string({ error: 'Company name is required' }).trim().min(1, 'Company name is required').max(150),
     title: z.string({ error: 'Title is required' }).trim().min(1, 'Title is required').max(150),
     description: z.string({ error: 'Description is required' }).trim().min(1, 'Description is required').max(5000),
     location: z.string().trim().max(150).optional(),
     employmentType: employmentType.optional(),
     skills: z.array(z.string().trim().max(60)).max(30).optional(),
-})
+    ...compensationFields,
+}))
 
-const updateJobSchema = z.object({
+const updateJobSchema = compensationRefinements(z.object({
     companyName: z.string().trim().min(1).max(150).optional(),
     title: z.string().trim().min(1).max(150).optional(),
     description: z.string().trim().min(1).max(5000).optional(),
     location: z.string().trim().max(150).optional(),
     employmentType: employmentType.optional(),
     skills: z.array(z.string().trim().max(60)).max(30).optional(),
-})
+    ...compensationFields,
+}))
 
 const jobIdParamSchema = z.object({ jobId: objectId })
 
-const applyToJobSchema = z.object({
-    resume: objectId.optional(),
-    builtResume: objectId.optional(),
+// the structured application form sir — sent as multipart/form-data (the resume PDF rides
+// alongside it as req.files.resume, checked separately via utils/pdfUpload.js since Zod doesn't
+// see file uploads). The controller JSON.parses the form's single 'data' field into this shape
+// before calling .parse() here — see controllers/Job.js's applyToJob.
+const addressSchema = z.object({
+    line: z.string().trim().max(200).optional(),
+    city: z.string().trim().max(100).optional(),
+    state: z.string().trim().max(100).optional(),
+    pincode: z.string().trim().max(12).optional(),
 })
+
+const educationEntrySchema = z.object({
+    degree: z.enum(['bachelors', 'masters'], { error: 'Degree must be bachelors or masters' }),
+    institution: z.string().trim().min(1, 'Institution is required').max(200),
+    startDate: z.coerce.date({ error: 'A valid start date is required' }),
+    endDate: z.coerce.date().optional(),
+    currentlyStudying: z.boolean().default(false),
+}).refine(
+    (data) => data.currentlyStudying || data.endDate !== undefined,
+    { message: 'Enter an end date, or mark this as currently studying', path: ['endDate'] }
+)
+
+const workHistoryEntrySchema = z.object({
+    companyName: z.string().trim().min(1, 'Company name is required').max(150),
+    startDate: z.coerce.date({ error: 'A valid start date is required' }),
+    endDate: z.coerce.date().optional(),
+    currentlyWorking: z.boolean().default(false),
+}).refine(
+    (data) => data.currentlyWorking || data.endDate !== undefined,
+    { message: 'Enter an end date, or mark this as your current employer', path: ['endDate'] }
+)
+
+const applyToJobSchema = z.object({
+    experienceLevel: z.enum(['fresher', 'experienced'], { error: 'Please select fresher or experienced' }),
+    address: addressSchema,
+    expectedSalary: z.coerce.number().min(0, 'Expected salary must be a positive number'),
+    // fresher branch sir
+    education: z.array(educationEntrySchema).max(10).optional(),
+    // experienced branch sir
+    currentCtc: z.coerce.number().min(0).optional(),
+    workHistory: z.array(workHistoryEntrySchema).max(20).optional(),
+}).refine(
+    (data) => data.experienceLevel !== 'fresher' || (data.education && data.education.length > 0),
+    { message: 'Add at least one education entry', path: ['education'] }
+).refine(
+    (data) => data.experienceLevel !== 'experienced' || data.currentCtc !== undefined,
+    { message: 'Enter your current CTC', path: ['currentCtc'] }
+).refine(
+    (data) => data.experienceLevel !== 'experienced' || (data.workHistory && data.workHistory.length > 0),
+    { message: 'Add at least one previous/current employer', path: ['workHistory'] }
+)
 
 const setApplicationOutcomeSchema = z.object({
     status: z.enum(['hired', 'rejected'], { error: 'Status must be hired or rejected' }),
+})
+
+// ---------------------------------------------------------------------------
+// recruiter AI tools sir — controllers/RecruiterAI.js
+// ---------------------------------------------------------------------------
+
+const generateJobDescriptionSchema = z.object({
+    title: z.string({ error: 'A role title is required' }).trim().min(1, 'A role title is required').max(150),
+    employmentType: employmentType.optional(),
+    mustHaves: z.string({ error: 'Your must-have requirements are required' }).trim().min(1, 'Your must-have requirements are required').max(2000),
+})
+
+const generateInterviewQuestionsSchema = z.object({
+    jobId: objectId,
+    questionCount: z.coerce.number().int().min(1).max(20).optional(),
 })
 
 const bulkInviteApplicantsSchema = z.object({
@@ -415,6 +511,7 @@ module.exports = {
     // payment
     createOrderSchema,
     verifyPaymentSchema,
+    recruiterCreateOrderSchema,
 
     // admin
     updateUserRoleSchema,
@@ -440,6 +537,8 @@ module.exports = {
     updateJobSchema,
     jobIdParamSchema,
     applyToJobSchema,
+    generateJobDescriptionSchema,
+    generateInterviewQuestionsSchema,
     setApplicationOutcomeSchema,
     bulkInviteApplicantsSchema,
     bulkApplicationOutcomeSchema,

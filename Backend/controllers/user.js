@@ -1250,7 +1250,7 @@ exports.getProfile = async (req, res) => {
         const id = req?.User.id
 
         const user = await User.findById(id)
-            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count bonusCredits createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep notifyNewApplicant onboardingCompleted recruiterApplication')
+            .select('firstName lastName email number CountryCode role Verified provider Subscription SubType SubscriptionExpires count bonusCredits createdAt notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep notifyNewApplicant onboardingCompleted recruiterApplication recruiterPlan recruiterPlanExpiresAt recruiterJobPostingsUsed recruiterAiScoresUsed recruiterJdWritesUsed recruiterInterviewQGenUsed recruiterSummariesUsed')
 
         if (!user) {
             return res.status(404).json({
@@ -1275,6 +1275,11 @@ exports.getProfile = async (req, res) => {
             CoverLetter.countDocuments({ user: id }),
         ])
 
+        // Recruiter plan usage sir — completely separate block from the User `plan` below, same
+        // "effective plan, never trust the raw expired column" reasoning via getEffectiveRecruiterPlan
+        const { getEffectiveRecruiterPlan } = require('../utils/RecruiterPlans')
+        const recruiterPlan = user.role === 'Recruiter' ? getEffectiveRecruiterPlan(user) : null
+
         // Basic/Pro/ProMax is a User-only concept sir — an Admin/Support account never has
         // a real plan, so don't hand back a fake "Basic" here, null makes that explicit
         return res.status(200).json({
@@ -1292,6 +1297,18 @@ exports.getProfile = async (req, res) => {
                 bonusCredits: user.bonusCredits,     // admin grants + referral rewards, on top of creditsLimit
                 maxMessagesPerChat: plan.maxMessagesPerChat,
                 expiresAt: plan.key === 'Basic' ? null : user.SubscriptionExpires,
+            } : null,
+            recruiterPlan: recruiterPlan ? {
+                key: recruiterPlan.key,
+                name: recruiterPlan.name,
+                expiresAt: recruiterPlan.key === 'Basic' ? null : user.recruiterPlanExpiresAt,
+                usage: {
+                    jobPostings: { used: user.recruiterJobPostingsUsed, limit: recruiterPlan.jobPostings },
+                    aiScores: { used: user.recruiterAiScoresUsed, limit: recruiterPlan.aiScores },
+                    jdWrites: { used: user.recruiterJdWritesUsed, limit: recruiterPlan.jdWrites },
+                    interviewQGen: { used: user.recruiterInterviewQGenUsed, limit: recruiterPlan.interviewQGen },
+                    summaries: { used: user.recruiterSummariesUsed, limit: recruiterPlan.summaries },
+                },
             } : null,
             activity: {
                 reviewCount,

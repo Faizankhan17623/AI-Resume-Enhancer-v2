@@ -3,12 +3,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar } from 'react-icons/fa'
+import Swal from 'sweetalert2'
+import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
-import { GetJob, PublishJob, CloseJob } from '../../Services/operations/Job'
+import { GetJob, PublishJob, CloseJob, UpdateJob, DeleteJob } from '../../Services/operations/Job'
+import { swalDark } from '../../utils/accountShared'
 
 const statusBadge = {
   draft: 'bg-richblack-700 text-richblack-200 border-richblack-600',
@@ -27,10 +29,29 @@ const JobDetailRecruiter = () => {
   const [copied, setCopied] = useState(false)
   const { isLocked } = useRecruiterLock()
 
+  const [compensationType, setCompensationType] = useState('')
+  const [ctcMin, setCtcMin] = useState('')
+  const [ctcMax, setCtcMax] = useState('')
+  const [unpaidDurationMonths, setUnpaidDurationMonths] = useState('')
+  const [certificateProvided, setCertificateProvided] = useState(false)
+  const [savingComp, setSavingComp] = useState(false)
+
   useEffect(() => {
     dispatch(GetJob(jobId, token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
+
+  // seed the compensation form from the job once it loads sir — only while the recruiter hasn't
+  // started editing (mirrors JobBuilder.jsx's companyNameOverride pattern), so a background
+  // refetch after publish doesn't clobber an in-progress edit
+  useEffect(() => {
+    if (!job) return
+    setCompensationType(job.compensationType || '')
+    setCtcMin(job.ctcMin ?? '')
+    setCtcMax(job.ctcMax ?? '')
+    setUnpaidDurationMonths(job.unpaidDurationMonths ?? '')
+    setCertificateProvided(!!job.certificateProvided)
+  }, [job?._id])
 
   const handlePublish = async () => {
     const ok = await dispatch(PublishJob(jobId, token))
@@ -46,6 +67,38 @@ const JobDetailRecruiter = () => {
     toast.success("Public job link copied")
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  const handleSaveCompensation = async () => {
+    if (!compensationType) return toast.error("Pick paid or unpaid")
+    if (compensationType === 'paid' && (!ctcMin || !ctcMax)) return toast.error("Enter both a minimum and maximum CTC")
+    if (compensationType === 'unpaid' && !unpaidDurationMonths) return toast.error("Enter the internship/unpaid duration")
+
+    setSavingComp(true)
+    await dispatch(UpdateJob(jobId, {
+      compensationType,
+      ctcMin: compensationType === 'paid' ? Number(ctcMin) : undefined,
+      ctcMax: compensationType === 'paid' ? Number(ctcMax) : undefined,
+      unpaidDurationMonths: compensationType === 'unpaid' ? Number(unpaidDurationMonths) : undefined,
+      certificateProvided: compensationType === 'unpaid' ? certificateProvided : undefined,
+    }, token))
+    setSavingComp(false)
+  }
+
+  // a mistake sir, per direct request — deletes the job outright, every applicant gets an email
+  // (see controllers/Job.js's deleteJob)
+  const handleDelete = () => {
+    Swal.fire({
+      ...swalDark,
+      title: 'Delete this job posting?',
+      html: 'This cannot be undone. Every candidate who applied will be emailed that the posting was withdrawn.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete job',
+      confirmButtonColor: '#C1443C',
+    }).then((result) => {
+      if (result.isConfirmed) dispatch(DeleteJob(jobId, token, navigate))
+    })
   }
 
   if (loading || !job) {
@@ -81,12 +134,18 @@ const JobDetailRecruiter = () => {
                     text="Publish"
                     onclick={handlePublish}
                     customClasses="text-sm px-4 py-2"
-                    disabled={!job.test || isLocked}
+                    disabled={!job.compensationType || isLocked}
                   >
                     {isLocked && <FaLock />}
                   </IconBtn>
                 </span>
               )}
+              <button
+                onClick={handleDelete}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer"
+              >
+                <FaTrash className="text-[10px]" /> Delete
+              </button>
               {job.status === 'published' && (
                 <>
                   <button
@@ -121,9 +180,9 @@ const JobDetailRecruiter = () => {
             </div>
           </div>
 
-          {job.status === 'draft' && !job.test && (
+          {job.status === 'draft' && !job.compensationType && (
             <p className="text-xs text-yellow-25 mb-3">
-              Attach a proctored test before you can publish this job.
+              Add compensation details below before you can publish this job.
             </p>
           )}
 
@@ -131,7 +190,65 @@ const JobDetailRecruiter = () => {
         </div>
 
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="text-sm font-semibold text-richblack-5 mb-3">Compensation</h2>
+          <div className="flex gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setCompensationType('paid')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-200 cursor-pointer ${
+                compensationType === 'paid' ? 'bg-yellow-50 text-richblack-900 border-yellow-50' : 'border-richblack-600 text-richblack-200 hover:border-richblack-400'
+              }`}
+            >
+              Paid
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompensationType('unpaid')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-200 cursor-pointer ${
+                compensationType === 'unpaid' ? 'bg-yellow-50 text-richblack-900 border-yellow-50' : 'border-richblack-600 text-richblack-200 hover:border-richblack-400'
+              }`}
+            >
+              Unpaid
+            </button>
+          </div>
+
+          {compensationType === 'paid' && (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Minimum CTC</label>
+                <input type="number" min="0" value={ctcMin} onChange={(e) => setCtcMin(e.target.value)} placeholder="e.g. 450000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Maximum CTC</label>
+                <input type="number" min="0" value={ctcMax} onChange={(e) => setCtcMax(e.target.value)} placeholder="e.g. 880000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+              </div>
+            </div>
+          )}
+
+          {compensationType === 'unpaid' && (
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Duration (months)</label>
+                <input type="number" min="0" value={unpaidDurationMonths} onChange={(e) => setUnpaidDurationMonths(e.target.value)} placeholder="e.g. 3" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-richblack-200 cursor-pointer">
+                <input type="checkbox" checked={certificateProvided} onChange={(e) => setCertificateProvided(e.target.checked)} />
+                A completion certificate will be issued
+              </label>
+            </div>
+          )}
+
+          {compensationType && (
+            <IconBtn text={savingComp ? "Saving..." : "Save compensation"} onclick={handleSaveCompensation} disabled={savingComp} customClasses="text-sm" />
+          )}
+        </div>
+
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <h2 className="text-sm font-semibold text-richblack-5 mb-3">Proctored Test</h2>
+          <p className="text-xs text-richblack-400 mb-3">
+            Optional — a job can be published with or without a test. Without one, review
+            applicants straight from their application and AI fit score.
+          </p>
           {job.test ? (
             <p className="text-sm text-richblack-300">
               A test is attached to this job. Manage its questions from the applicants list once

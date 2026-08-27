@@ -4,6 +4,7 @@ import { logApiError } from '../logApiError.js'
 import { JobData } from '../Apis/JobApi.js'
 import {
     setMyJobs,
+    removeMyJob,
     setCurrentJob,
     setJobApplicants,
     setJobAnalytics,
@@ -17,7 +18,7 @@ import {
 } from '../../Slices/jobSlice.js'
 
 const {
-    createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, getJobApplicants,
+    createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, deleteJob, getJobApplicants,
     getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, setApplicationOutcome,
     bulkInviteApplicants, bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob,
     listMyApplications,
@@ -167,6 +168,35 @@ export function CloseJob(jobId, token) {
     }
 }
 
+// a mistake sir — deletes the job outright, every applicant gets an email that it was withdrawn
+// (best-effort, backend-side, see controllers/Job.js's deleteJob). Confirmation dialog lives in
+// the calling component (JobList.jsx), same pattern as every other destructive action here.
+export function DeleteJob(jobId, token, navigate) {
+    return async (dispatch) => {
+        const toastId = toast.loading("Deleting the job...")
+        try {
+            const response = await apiConnector("DELETE", `${deleteJob}/${jobId}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job deleted — every applicant has been notified")
+            dispatch(removeMyJob(jobId))
+            if (navigate) navigate('/Recruiter')
+            return true
+        } catch (error) {
+            logApiError("Error deleting the job", error)
+            toast.error(error?.response?.data?.message || "Could not delete the job")
+            return false
+        } finally {
+            toast.dismiss(toastId)
+        }
+    }
+}
+
 export function GetJobApplicants(jobId, token) {
     return async (dispatch) => {
         dispatch(setLoading(true))
@@ -179,7 +209,7 @@ export function GetJobApplicants(jobId, token) {
                 throw new Error(response.data.message)
             }
 
-            dispatch(setJobApplicants(response.data.applicants))
+            dispatch(setJobApplicants({ applicants: response.data.applicants, jobHasTest: response.data.jobHasTest }))
         } catch (error) {
             logApiError("Error fetching applicants", error)
             toast.error(error?.response?.data?.message || "Could not load the applicants")
@@ -384,11 +414,20 @@ export function GetPublicJob(jobId) {
 // candidate-side sir
 // ---------------------------------------------------------------------------
 
-export function ApplyToJob(jobId, token, applyPayload = {}) {
+// the structured multi-step application form sir — resumeFile rides as a real multipart file
+// (req.files.resume server-side), everything else (experienceLevel/address/expectedSalary/
+// education/currentCtc/workHistory) is JSON-stringified into one 'data' field, parsed back into
+// an object server-side (Routes/Job.js's parseMultipartJson) before Zod ever validates it —
+// mixing a file upload with a nested-object payload doesn't work as plain multipart fields.
+export function ApplyToJob(jobId, token, formPayload, resumeFile) {
     return async () => {
-        const toastId = toast.loading("Applying...")
+        const toastId = toast.loading("Submitting your application...")
         try {
-            const response = await apiConnector("POST", `${applyToJob}/${jobId}/apply`, applyPayload, {
+            const formData = new FormData()
+            formData.append("data", JSON.stringify(formPayload))
+            formData.append("resume", resumeFile)
+
+            const response = await apiConnector("POST", `${applyToJob}/${jobId}/apply`, formData, {
                 Authorization: `Bearer ${token}`
             })
 

@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import toast from 'react-hot-toast'
-import { FaBell, FaLock, FaTrash, FaEdit, FaDownload, FaUserFriends, FaCopy, FaSignOutAlt } from 'react-icons/fa'
+import { FaBell, FaLock, FaTrash, FaEdit, FaDownload, FaUserFriends, FaCopy, FaSignOutAlt, FaCrown } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import ShareTestimonialCard from '../Dashboard/ShareTestimonialCard'
 import ReferralDashboardModal from '../Dashboard/ReferralDashboardModal'
@@ -17,7 +17,29 @@ import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats } from '../../Services/operations/User'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
+import { BuyRecruiterPlan } from '../../Services/operations/RecruiterPayment'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
+
+// one usage meter row sir — "X of Y used this month", null limit renders as "Unlimited"
+const UsageBar = ({ label, used, limit }) => {
+  const percent = limit ? Math.min(100, (used / limit) * 100) : 0
+  return (
+    <div className="mb-3 last:mb-0">
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-richblack-200">{label}</span>
+        <span className="text-richblack-5 font-mono">{used}{limit !== null ? ` / ${limit}` : ' (unlimited)'}</span>
+      </div>
+      {limit !== null && (
+        <div className="w-full h-1.5 rounded-full bg-richblack-700 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${percent >= 90 ? 'bg-pink-200' : percent >= 60 ? 'bg-yellow-50' : 'bg-caribgreen-100'}`}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 // same invite-a-friend card layout as the User Account page's ReferralCard sir, just the
 // Recruiter-flavored copy this page already used before this rebuild (no credit bonus for
@@ -82,8 +104,9 @@ const ReferralCard = ({ token }) => {
 const RecruiterAccount = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { token } = useSelector((state) => state.auth)
+  const { token, user: authUser } = useSelector((state) => state.auth)
   const { profile, loading } = useSelector((state) => state.profile)
+  const [buyingPlan, setBuyingPlan] = useState(null)
   const [changingPassword, setChangingPassword] = useState(false)
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
@@ -137,7 +160,13 @@ const RecruiterAccount = () => {
     )
   }
 
-  const { user } = profile
+  const { user, recruiterPlan } = profile
+
+  const handleBuyPlan = async (planKey) => {
+    setBuyingPlan(planKey)
+    await dispatch(BuyRecruiterPlan(planKey, token, authUser, () => dispatch(GetProfile(token))))
+    setBuyingPlan(null)
+  }
 
   return (
     <RecruiterLayout>
@@ -181,6 +210,52 @@ const RecruiterAccount = () => {
             </button>
           </div>
         </div>
+
+        {/* Your Plan sir — usage meters for every metered limit, Claude-Code-style "X of Y used
+            this month" per direct request. Completely separate plan/payment system from the
+            User Account page's plan card — see utils/RecruiterPlans.js. */}
+        {recruiterPlan && (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg text-richblack-5">Your Plan</h2>
+              <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/15 text-yellow-100">
+                <FaCrown /> {recruiterPlan.name}
+              </span>
+            </div>
+
+            <UsageBar label="Active job postings" used={recruiterPlan.usage.jobPostings.used} limit={recruiterPlan.usage.jobPostings.limit} />
+            <UsageBar label="AI-scored applicants" used={recruiterPlan.usage.aiScores.used} limit={recruiterPlan.usage.aiScores.limit} />
+            <UsageBar label="AI job-description drafts" used={recruiterPlan.usage.jdWrites.used} limit={recruiterPlan.usage.jdWrites.limit} />
+            <UsageBar label="AI interview-question generations" used={recruiterPlan.usage.interviewQGen.used} limit={recruiterPlan.usage.interviewQGen.limit} />
+            <UsageBar label="AI candidate summaries" used={recruiterPlan.usage.summaries.used} limit={recruiterPlan.usage.summaries.limit} />
+
+            {recruiterPlan.expiresAt && (
+              <p className="mt-4 text-xs text-richblack-300">
+                Valid until <span className="text-richblack-5 font-medium">{new Date(recruiterPlan.expiresAt).toDateString()}</span>
+              </p>
+            )}
+
+            {recruiterPlan.key !== 'ProMax' && (
+              <div className="mt-5 flex flex-wrap gap-3">
+                {recruiterPlan.key === 'Basic' && (
+                  <IconBtn
+                    text={buyingPlan === 'Pro' ? 'Processing...' : 'Upgrade to Pro'}
+                    onclick={() => handleBuyPlan('Pro')}
+                    disabled={!!buyingPlan}
+                    customClasses="text-sm"
+                  />
+                )}
+                <IconBtn
+                  text={buyingPlan === 'ProMax' ? 'Processing...' : 'Upgrade to Pro Max'}
+                  onclick={() => handleBuyPlan('ProMax')}
+                  disabled={!!buyingPlan}
+                  customClasses="text-sm"
+                  outline={recruiterPlan.key === 'Basic'}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Email notifications sir — Recruiter-relevant toggle only. notifyStreak/notifyWinBack/
             notifyDigest/notifyHealthCheck/notifyInterviewPrep are candidate/resume-review

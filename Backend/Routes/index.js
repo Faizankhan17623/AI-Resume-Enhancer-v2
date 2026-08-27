@@ -25,6 +25,7 @@ const domains = [
     { name: 'auth', owns: ['/Createuser', '/Login', '/Logout', '/Send-otp', '/auth/*', '/profile/*', '/forgot-password', '/reset-password', '/change-password', '/delete-account', '/response', '/recruiter-applications'], router: require('./Auth.js') },
     { name: 'chat', owns: ['/chat'], router: require('./Chat.js') },
     { name: 'payment', owns: ['/payment'], router: require('./Payment.js') },
+    { name: 'recruiterPayment', owns: ['/recruiter/payment'], router: require('./RecruiterPayment.js') },
     { name: 'review', owns: ['/reviews', '/public/reviews', '/streak', '/leaderboard'], router: require('./Review.js') },
     { name: 'admin', owns: ['/admin', '/announcements'], router: require('./Admin.js') },
     { name: 'grammarCheck', owns: ['/grammar-check'], router: require('./GrammarCheck.js') },
@@ -41,6 +42,7 @@ const domains = [
     { name: 'keywordBank', owns: ['/keyword-bank'], router: require('./KeywordBank.js') },
     { name: 'test', owns: ['/tests', '/test-attempts'], router: require('./Test.js') },
     { name: 'job', owns: ['/jobs', '/public/jobs', '/job-applications'], router: require('./Job.js') },
+    { name: 'recruiterAi', owns: ['/recruiter-ai'], router: require('./RecruiterAI.js') },
     // NOTE sir: testimonial and report each also define '/admin/*' routes of their own. That's
     // intentional (the moderation endpoints live beside the feature they moderate) and the
     // collision check below proves they don't overlap with Admin.js's paths.

@@ -3,12 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaLock } from 'react-icons/fa'
+import { FaLock, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateJob } from '../../Services/operations/Job'
 import { GetProfile } from '../../Services/operations/User'
+import { GenerateJobDescription } from '../../Services/operations/RecruiterAi'
 
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
 
@@ -24,6 +25,8 @@ const JobBuilder = () => {
   const [employmentType, setEmploymentType] = useState('Full-time')
   const [skillsInput, setSkillsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [mustHaves, setMustHaves] = useState('')
+  const [draftingAi, setDraftingAi] = useState(false)
   const { isLocked } = useRecruiterLock()
 
   useEffect(() => {
@@ -58,6 +61,18 @@ const JobBuilder = () => {
     if (!job) return
   }
 
+  // Pro/ProMax upsell sir — drafts the description from a title + a few must-have bullet points,
+  // metered by utils/RecruiterPlans.js's recruiterJdWritesUsed
+  const handleDraftWithAi = async () => {
+    if (!title.trim()) return toast.error("Enter a job title first")
+    if (!mustHaves.trim()) return toast.error("Give the AI a few must-have requirements to work from")
+
+    setDraftingAi(true)
+    const drafted = await dispatch(GenerateJobDescription(title.trim(), employmentType, mustHaves.trim(), token))
+    setDraftingAi(false)
+    if (drafted) setDescription(drafted)
+  }
+
   return (
     <RecruiterLayout>
       <Helmet>
@@ -90,6 +105,24 @@ const JobBuilder = () => {
               placeholder="e.g. Frontend Engineer"
               className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
             />
+          </div>
+          <div className="rounded-xl border border-richblack-600 p-4 space-y-3">
+            <label className="block text-xs font-semibold text-richblack-200">Draft with AI (optional)</label>
+            <textarea
+              value={mustHaves}
+              onChange={(e) => setMustHaves(e.target.value)}
+              rows={2}
+              placeholder="A few must-have requirements, e.g. 3+ years React, remote-friendly, mid-level"
+              className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200 resize-none"
+            />
+            <button
+              type="button"
+              onClick={handleDraftWithAi}
+              disabled={draftingAi}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-yellow-50 text-richblack-900 hover:brightness-95 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FaMagic className="text-[10px]" /> {draftingAi ? 'Drafting...' : 'Draft description with AI'}
+            </button>
           </div>
           <div>
             <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Description</label>
@@ -136,8 +169,8 @@ const JobBuilder = () => {
         </div>
 
         <p className="text-xs text-richblack-400">
-          After creating the job, you'll attach a proctored test to it — the job can't be
-          published until a test is attached.
+          You can optionally attach a proctored test after creating the job — jobs can be
+          published either way. You'll add compensation details on the next screen before publishing.
         </p>
 
         {isLocked && (

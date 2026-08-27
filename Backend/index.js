@@ -61,6 +61,9 @@ app.use(helmet({
 // and mounted BEFORE express.json() below, so this route gets a Buffer as req.body while
 // every other route is unaffected and still gets the normal parsed JSON object.
 app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }))
+// same reasoning as above sir, just for the separate Recruiter-plan webhook
+// (controllers/RecruiterPayment.js) — its own path, own raw-body scope
+app.use('/api/v1/recruiter/payment/webhook', express.raw({ type: 'application/json' }))
 
 app.use(express.json())
 // express.json() leaves req.body undefined (not {}) when a request has no body sir —

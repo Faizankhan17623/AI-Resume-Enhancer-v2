@@ -8,6 +8,7 @@ import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { GetMyJobs } from '../../Services/operations/Job'
+import { formatJobDate } from '../../utils/formatDate'
 
 const statusBadge = {
   draft: 'bg-richblack-700 text-richblack-200 border-richblack-600',
@@ -80,7 +81,7 @@ const JobList = () => {
                     </span>
                   </div>
                   <p className="text-xs text-richblack-400">
-                    {job.companyName}{job.location ? ` · ${job.location}` : ''}{!job.test ? ' · no test attached yet' : ''}
+                    {job.companyName}{job.location ? ` · ${job.location}` : ''}{!job.test ? ' · no test attached' : ''} · Posted {formatJobDate(job.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold">

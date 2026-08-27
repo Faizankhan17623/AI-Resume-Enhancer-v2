@@ -7,6 +7,9 @@ const initialState = {
     myJobs: [],
     currentJob: null,
     jobApplicants: [],
+    // whether the CURRENT job (whichever one jobApplicants is for) has a proctored test attached
+    // sir — tests are optional now, this drives whether "Invite to test" even shows
+    jobHasTest: false,
     jobAnalytics: null,
     recruiterOverview: null,
 
@@ -28,11 +31,16 @@ const jobSlice = createSlice({
         setMyJobs(state, value) {
             state.myJobs = value.payload
         },
+        // after a successful DELETE sir — pulls the job straight out of the list, no refetch needed
+        removeMyJob(state, value) {
+            state.myJobs = state.myJobs.filter((job) => job._id !== value.payload)
+        },
         setCurrentJob(state, value) {
             state.currentJob = value.payload
         },
         setJobApplicants(state, value) {
-            state.jobApplicants = value.payload
+            state.jobApplicants = value.payload.applicants
+            state.jobHasTest = value.payload.jobHasTest
         },
         setJobAnalytics(state, value) {
             state.jobAnalytics = value.payload
@@ -74,6 +82,7 @@ const jobSlice = createSlice({
 
 export const {
     setMyJobs,
+    removeMyJob,
     setCurrentJob,
     setJobApplicants,
     setJobAnalytics,

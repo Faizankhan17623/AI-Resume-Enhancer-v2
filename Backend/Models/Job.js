@@ -41,6 +41,30 @@ const jobSchema = new mongoose.Schema(
         },
         // simple tag list sir — public search/filter matches against these, not a full-text index
         skills: [{ type: String, trim: true, maxlength: 60 }],
+        // compensation sir — required once published (checked in the controller, same as the
+        // test-attachment rule used to be), optional while still a draft so a recruiter can save
+        // partial progress. paid jobs give a CTC RANGE (min/max), not one number, since real
+        // compensation bands are rarely a single figure; unpaid jobs (internships, mostly) get a
+        // duration + whether a completion certificate is issued instead.
+        compensationType: {
+            type: String,
+            enum: ['paid', 'unpaid'],
+        },
+        ctcMin: {
+            type: Number,
+            min: 0,
+        },
+        ctcMax: {
+            type: Number,
+            min: 0,
+        },
+        unpaidDurationMonths: {
+            type: Number,
+            min: 0,
+        },
+        certificateProvided: {
+            type: Boolean,
+        },
         status: {
             type: String,
             enum: ['draft', 'published', 'closed'],
@@ -60,11 +84,20 @@ const jobSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        // set to now+30 days the moment the job is PUBLISHED (publishJob sets this, not
+        // createJob — a draft never expires) sir. A scheduled job (utils/JobExpiryCron.js, run
+        // from the worker process same as every other scheduled state transition in this app)
+        // flips any published job past this date to 'closed' automatically.
+        expiresAt: {
+            type: Date,
+        },
     },
     { timestamps: true }
 )
 
 // the public board's own query shape sir — published jobs, newest first
 jobSchema.index({ status: 1, createdAt: -1 })
+// the expiry cron's own query shape sir — published jobs whose expiresAt has passed
+jobSchema.index({ status: 1, expiresAt: 1 })
 
 module.exports = mongoose.model('Job', jobSchema)

@@ -72,6 +72,11 @@ const testAttemptSchema = new mongoose.Schema(
     { timestamps: true }
 )
 
-testAttemptSchema.index({ test: 1, candidate: 1 })
+// unique sir — a candidate gets exactly ONE attempt document per test, ever (an in-progress one
+// is resumed, never re-created; a completed one blocks any new create() at the controller layer
+// — see Test.js's startAttempt). This index makes that a hard DB guarantee instead of relying
+// solely on the two sequential findOne checks startAttempt already does, closing the narrow race
+// between those checks and the create() call that follows them.
+testAttemptSchema.index({ test: 1, candidate: 1 }, { unique: true })
 
 module.exports = mongoose.model('TestAttempt', testAttemptSchema)

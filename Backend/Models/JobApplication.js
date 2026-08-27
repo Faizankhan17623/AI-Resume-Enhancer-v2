@@ -26,8 +26,9 @@ const jobApplicationSchema = new mongoose.Schema(
             default: 'applied',
             index: true,
         },
-        // optional links to what was actually sent sir — same optional-link pattern as
-        // Application.js, either may be unset
+        // optional links to what was actually sent sir — kept for backward read-compatibility
+        // with applications created before the structured form below existed. The new form
+        // (resumeUrl below) is what every NEW application actually uses.
         resume: {
             type: mongoose.Schema.ObjectId,
             ref: 'Resume',
@@ -36,10 +37,78 @@ const jobApplicationSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'BuiltResume',
         },
+        // the structured application form sir — every field below is new. resumeUrl/resumePublicId
+        // are a real uploaded PDF (Cloudinary, same pattern as Test.js's violation snapshots and
+        // BuiltResume.js's exports), <2MB, validated server-side via utils/pdfUpload.js — NOT a
+        // ref to a saved Resume/BuiltResume document, since the candidate is asked to attach the
+        // actual file at apply time rather than pick from their library for this flow.
+        resumeUrl: {
+            type: String,
+        },
+        resumePublicId: {
+            type: String,
+        },
+        experienceLevel: {
+            type: String,
+            enum: ['fresher', 'experienced'],
+        },
+        address: {
+            line: { type: String, trim: true, maxlength: 200 },
+            city: { type: String, trim: true, maxlength: 100 },
+            state: { type: String, trim: true, maxlength: 100 },
+            pincode: { type: String, trim: true, maxlength: 12 },
+        },
+        expectedSalary: {
+            type: Number,
+            min: 0,
+        },
+        // fresher branch sir — an array so both a bachelor's AND a master's entry can be added,
+        // per direct request
+        education: [{
+            degree: { type: String, enum: ['bachelors', 'masters'] },
+            institution: { type: String, trim: true, maxlength: 200 },
+            startDate: { type: Date },
+            endDate: { type: Date },
+            currentlyStudying: { type: Boolean, default: false },
+        }],
+        // experienced branch sir — an array via the "+ add another employer" control on the form
+        currentCtc: {
+            type: Number,
+            min: 0,
+        },
+        workHistory: [{
+            companyName: { type: String, trim: true, maxlength: 150 },
+            startDate: { type: Date },
+            endDate: { type: Date },
+            currentlyWorking: { type: Boolean, default: false },
+        }],
         // set once the candidate actually starts the job's test sir
         testAttempt: {
             type: mongoose.Schema.ObjectId,
             ref: 'TestAttempt',
+        },
+        // AI fit-score sir — computed automatically right after the application is created (see
+        // controllers/Job.js's applyToJob + services/fitScoreService.js), best-effort: null means
+        // either "not scored yet" or "the recruiter was out of AI-score quota this month", the
+        // recruiter's applicant list tells these two apart via fitScoreSkippedReason.
+        fitScore: {
+            type: Number,
+            min: 0,
+            max: 100,
+        },
+        fitTier: {
+            type: String,
+            enum: ['not_a_fit', 'can_get_it_done', 'hireable', 'best_fit'],
+        },
+        fitScoreReasoning: {
+            type: String,
+            trim: true,
+            maxlength: 1000,
+        },
+        fitScoreSkippedReason: {
+            type: String,
+            trim: true,
+            maxlength: 300,
         },
     },
     { timestamps: true }

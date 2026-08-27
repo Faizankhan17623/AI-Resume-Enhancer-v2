@@ -1,15 +1,22 @@
 const mongoose = require('mongoose')
+const cloudinary = require('cloudinary').v2
+const { PDFParse } = require('pdf-parse')
 
 const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
-const Resume = require('../Models/Resume')
-const BuiltResume = require('../Models/BuiltResume')
 const Test = require('../Models/Test')
 const TestAttempt = require('../Models/TestAttempt')
 const User = require('../Models/User')
 const logger = require('../utils/logger')
 const mailSender = require('../utils/Nodemailer')
 const { newApplicantAlertTemplate } = require('../Templates/NewApplicantAlert')
+const { jobWithdrawnTemplate } = require('../Templates/JobWithdrawn')
+const { testInviteTemplate } = require('../Templates/TestInvite')
+const { validatePdfUpload } = require('../utils/pdfUpload')
+const { runFitScore } = require('../services/fitScoreService')
+
+// 2MB sir, per direct request — an application resume, not a full portfolio
+const MAX_APPLICATION_RESUME_BYTES = 2 * 1024 * 1024
 
 // ---------------------------------------------------------------------------
 // recruiter-side sir
@@ -19,7 +26,7 @@ const { newApplicantAlertTemplate } = require('../Templates/NewApplicantAlert')
 exports.createJob = async (req, res) => {
     try {
         const recruiterId = req?.User.id
-        const { companyName, title, description, location, employmentType, skills } = req.body
+        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided } = req.body
 
         const job = await Job.create({
             recruiter: recruiterId,
@@ -29,6 +36,11 @@ exports.createJob = async (req, res) => {
             location,
             employmentType,
             skills,
+            compensationType,
+            ctcMin,
+            ctcMax,
+            unpaidDurationMonths,
+            certificateProvided,
         })
 
         return res.status(201).json({
@@ -111,13 +123,18 @@ exports.updateJob = async (req, res) => {
             })
         }
 
-        const { companyName, title, description, location, employmentType, skills } = req.body
+        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided } = req.body
         if (companyName !== undefined) job.companyName = companyName
         if (title !== undefined) job.title = title
         if (description !== undefined) job.description = description
         if (location !== undefined) job.location = location
         if (employmentType !== undefined) job.employmentType = employmentType
         if (skills !== undefined) job.skills = skills
+        if (compensationType !== undefined) job.compensationType = compensationType
+        if (ctcMin !== undefined) job.ctcMin = ctcMin
+        if (ctcMax !== undefined) job.ctcMax = ctcMax
+        if (unpaidDurationMonths !== undefined) job.unpaidDurationMonths = unpaidDurationMonths
+        if (certificateProvided !== undefined) job.certificateProvided = certificateProvided
 
         await job.save()
 
@@ -131,8 +148,10 @@ exports.updateJob = async (req, res) => {
     }
 }
 
-// POST /jobs/:jobId/publish sir — a job needs a test attached before it can go public,
-// since the whole point of this feature is proctored screening
+// POST /jobs/:jobId/publish sir — a proctored test is now OPTIONAL, per direct request: a
+// recruiter can publish and screen applicants purely on the application + AI fit-score if they
+// don't want a test stage at all. Compensation info IS required before going public though,
+// since candidates should never see a live listing with no idea what it pays.
 exports.publishJob = async (req, res) => {
     try {
         const recruiterId = req?.User.id
@@ -147,14 +166,26 @@ exports.publishJob = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
-        if (!job.test) {
+        if (!job.compensationType) {
             return res.status(400).json({
                 success: false,
-                message: 'Attach and publish a test for this job before publishing it',
+                message: 'Add compensation details (paid or unpaid) before publishing this job',
             })
         }
 
+        // one active job posting sir — consumed here, at PUBLISH, not at draft-creation, since a
+        // recruiter should be free to create and discard as many drafts as they like without it
+        // counting against their monthly plan limit (see utils/RecruiterPlans.js)
+        const { consumeJobPosting } = require('../utils/RecruiterPlans')
+        const spend = await consumeJobPosting(recruiterId)
+        if (!spend.ok) {
+            return res.status(400).json({ success: false, message: spend.message, code: spend.code })
+        }
+
         job.status = 'published'
+        // 30-day expiry sir, starting fresh from THIS publish (re-publishing a closed job later
+        // would reset the clock, which is the right behavior — it's a new listing going live again)
+        job.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         await job.save()
 
         return res.status(200).json({ success: true, message: 'Job published', job })
@@ -196,6 +227,66 @@ exports.closeJob = async (req, res) => {
     }
 }
 
+// DELETE /jobs/:jobId sir — a hard delete, for when the recruiter made a mistake posting it (per
+// direct request). Every candidate who applied gets notified by email — best-effort, own
+// try/catch, same as every other non-critical mail send in this file — since the alternative
+// (silently vanishing) would leave them wondering why a job they applied to just disappeared.
+// The JobApplications themselves are deleted too: a job that no longer exists shouldn't leave
+// orphaned rows a candidate can still see under "My Applications".
+exports.deleteJob = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { jobId } = req.params
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId })
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        const applications = await JobApplication.find({ job: jobId }).populate('candidate', 'firstName lastName email')
+
+        await Promise.all([
+            Job.deleteOne({ _id: jobId }),
+            JobApplication.deleteMany({ job: jobId }),
+        ])
+
+        const frontendUrl = process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+            : "http://localhost:5173"
+
+        // allSettled sir, not all — one bad/dead candidate email must not stop the rest from
+        // being notified. Individual failures are logged, never surfaced to the recruiter (the
+        // job is already deleted at this point either way).
+        await Promise.allSettled(applications.map((application) => {
+            if (!application.candidate?.email) return Promise.resolve()
+            return mailSender(
+                application.candidate.email,
+                'A Job You Applied To Was Withdrawn',
+                jobWithdrawnTemplate(
+                    application.candidate.firstName,
+                    job.title,
+                    job.companyName,
+                    `${frontendUrl}/Jobs`
+                )
+            ).catch((mailError) => {
+                (req.log || logger).error('job withdrawn mail failed', { err: mailError, jobId, candidateId: application.candidate._id })
+            })
+        }))
+
+        return res.status(200).json({ success: true, message: 'Job deleted' })
+    } catch (error) {
+        (req.log || logger).error('delete job failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while deleting the job',
+        })
+    }
+}
+
 // GET /jobs/:jobId/applicants sir — every candidate who's applied, for the recruiter to review
 exports.getJobApplicants = async (req, res) => {
     try {
@@ -206,7 +297,7 @@ exports.getJobApplicants = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid job id' })
         }
 
-        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id')
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
@@ -218,7 +309,7 @@ exports.getJobApplicants = async (req, res) => {
             .populate('builtResume', 'title')
             .sort({ createdAt: -1 })
 
-        return res.status(200).json({ success: true, applicants })
+        return res.status(200).json({ success: true, applicants, jobHasTest: !!job.test })
     } catch (error) {
         (req.log || logger).error('get job applicants failed', { err: error })
         return res.status(500).json({
@@ -414,7 +505,7 @@ exports.inviteApplicantToTest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid application id' })
         }
 
-        const application = await JobApplication.findById(applicationId).populate('job')
+        const application = await JobApplication.findById(applicationId).populate('job').populate('candidate', 'firstName lastName email')
         if (!application || !application.job) {
             return res.status(404).json({ success: false, message: 'Application not found' })
         }
@@ -433,8 +524,41 @@ exports.inviteApplicantToTest = async (req, res) => {
             })
         }
 
+        // same guard the bulk version already had sir — re-inviting an already-hired/rejected/
+        // completed applicant makes no sense, only a fresh 'applied' row can be invited
+        if (application.status !== 'applied') {
+            return res.status(400).json({
+                success: false,
+                message: 'Only a newly-applied candidate can be invited to test',
+            })
+        }
+
         application.status = 'invited_to_test'
         await application.save()
+
+        // best-effort test-invite email sir — same pattern as every other non-critical mail
+        // send in this file, wrapped so a relay hiccup never fails the invite itself
+        try {
+            const test = await Test.findById(application.job.test).select('inviteCode timeLimitMinutes')
+            if (test?.inviteCode && application.candidate?.email) {
+                const frontendUrl = process.env.FRONTEND_URL
+                    ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+                    : "http://localhost:5173"
+                await mailSender(
+                    application.candidate.email,
+                    "You're Invited to a Test — Resumify",
+                    testInviteTemplate(
+                        application.candidate.firstName,
+                        application.job.title,
+                        application.job.companyName,
+                        `${frontendUrl}/Test/${test.inviteCode}`,
+                        test.timeLimitMinutes
+                    )
+                )
+            }
+        } catch (mailError) {
+            (req.log || logger).error('test invite mail failed', { err: mailError, applicationId })
+        }
 
         return res.status(200).json({
             success: true,
@@ -451,9 +575,15 @@ exports.inviteApplicantToTest = async (req, res) => {
 }
 
 // PATCH /job-applications/:applicationId/status sir — the recruiter recording an outcome.
-// Only reachable from 'completed_test': hiring/rejecting someone who hasn't finished the
-// screening step yet isn't a status this app's funnel supports, same "the test is the gate"
-// philosophy as inviteApplicantToTest above.
+//
+// 'hired' still requires the candidate to have actually finished the job's test (if it has
+// one) — you can't hire someone who never completed the screening step for a job that has a
+// screening step. If the job has NO test at all (see Part 4a — tests are optional now), 'hired'
+// is reachable straight from 'applied', since there's no test stage to gate on.
+//
+// 'rejected' is different, per direct request: a recruiter can close/reject an application at
+// ANY stage — applied, invited, completed — not only after the test. This is the "manually close
+// this application" action described in the applicant list.
 exports.setApplicationOutcome = async (req, res) => {
     try {
         const recruiterId = req?.User.id
@@ -479,11 +609,17 @@ exports.setApplicationOutcome = async (req, res) => {
             })
         }
 
-        if (application.status !== 'completed_test') {
-            return res.status(400).json({
-                success: false,
-                message: 'This candidate has not completed the test yet',
-            })
+        if (status === 'hired') {
+            const jobHasTest = !!application.job.test
+            const eligible = jobHasTest ? application.status === 'completed_test' : application.status === 'applied'
+            if (!eligible) {
+                return res.status(400).json({
+                    success: false,
+                    message: jobHasTest
+                        ? 'This candidate has not completed the test yet'
+                        : 'This candidate cannot be hired from its current status',
+                })
+            }
         }
 
         application.status = status
@@ -524,7 +660,7 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Cannot act on more than 200 applicants at once' })
         }
 
-        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test')
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id title companyName test')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
@@ -532,11 +668,14 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'This job has no test attached yet' })
         }
 
+        const test = await Test.findById(job.test).select('inviteCode timeLimitMinutes')
+
         const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
-        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId })
+        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId }).populate('candidate', 'firstName lastName email')
 
         const invited = []
         const skipped = []
+        const toEmail = []
         for (const application of applications) {
             if (application.status !== 'applied') {
                 skipped.push(String(application._id))
@@ -545,6 +684,24 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
             application.status = 'invited_to_test'
             await application.save()
             invited.push(String(application._id))
+            if (application.candidate?.email) toEmail.push(application.candidate)
+        }
+
+        // best-effort test-invite emails sir — allSettled, same reasoning as deleteJob's
+        // candidate-notification send: one bad address must not stop the rest
+        if (test?.inviteCode) {
+            const frontendUrl = process.env.FRONTEND_URL
+                ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+                : "http://localhost:5173"
+            await Promise.allSettled(toEmail.map((candidate) =>
+                mailSender(
+                    candidate.email,
+                    "You're Invited to a Test — Resumify",
+                    testInviteTemplate(candidate.firstName, job.title, job.companyName, `${frontendUrl}/Test/${test.inviteCode}`, test.timeLimitMinutes)
+                ).catch((mailError) => {
+                    (req.log || logger).error('bulk test invite mail failed', { err: mailError, jobId, candidateId: candidate._id })
+                })
+            ))
         }
 
         return res.status(200).json({
@@ -584,7 +741,7 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Status must be hired or rejected' })
         }
 
-        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id')
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
@@ -592,10 +749,17 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
         const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
         const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId })
 
+        // same rule as the single-application version above sir — 'rejected' works from ANY
+        // status (the manual "close this application" action), 'hired' still needs the test
+        // completed if the job has one, or 'applied' if it doesn't
+        const jobHasTest = !!job.test
         const updated = []
         const skipped = []
         for (const application of applications) {
-            if (application.status !== 'completed_test') {
+            const eligible = status === 'rejected'
+                ? true
+                : jobHasTest ? application.status === 'completed_test' : application.status === 'applied'
+            if (!eligible) {
                 skipped.push(String(application._id))
                 continue
             }
@@ -606,7 +770,7 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `${updated.length} candidate${updated.length === 1 ? '' : 's'} ${status === 'hired' ? 'marked as hired' : 'rejected'}${skipped.length ? `, ${skipped.length} skipped (test not completed)` : ''}`,
+            message: `${updated.length} candidate${updated.length === 1 ? '' : 's'} ${status === 'hired' ? 'marked as hired' : 'rejected'}${skipped.length ? `, ${skipped.length} skipped` : ''}`,
             updated,
             skipped,
         })
@@ -651,7 +815,7 @@ exports.listPublicJobs = async (req, res) => {
 
         const [jobs, total] = await Promise.all([
             Job.find(filter)
-                .select('companyName title location employmentType skills createdAt')
+                .select('companyName title location employmentType skills createdAt expiresAt compensationType ctcMin ctcMax unpaidDurationMonths certificateProvided')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit),
@@ -710,51 +874,72 @@ exports.getPublicJob = async (req, res) => {
 // POST /jobs/:jobId/apply sir — creates the application, blocked on a duplicate by the
 // unique { job, candidate } index rather than a pre-check (closes the same race a
 // check-then-create would leave open)
+// applies with the structured multi-step form sir — multipart/form-data, the JSON fields
+// arriving pre-parsed as req.body (see Routes/Job.js's parseMultipartJson + applyToJobSchema),
+// the resume PDF riding as req.files.resume (<2MB, PDF-only, same validatePdfUpload used by every
+// other resume intake in this app). Replaces the old one-click "attach a saved resume" flow —
+// every new application uploads a real file here instead of picking from the candidate's library.
 exports.applyToJob = async (req, res) => {
     try {
         const candidateId = req?.User.id
         const { jobId } = req.params
-        const { resume, builtResume } = req.body
+        const {
+            experienceLevel, address, expectedSalary,
+            education, currentCtc, workHistory,
+        } = req.body
 
         if (!mongoose.isValidObjectId(jobId)) {
             return res.status(400).json({ success: false, message: 'Invalid job id' })
         }
 
-        // title + recruiter selected here too sir — needed below to email the recruiter once
-        // the application is actually created
-        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id title recruiter')
+        const resumeFile = req.files?.resume
+        const uploadError = validatePdfUpload(resumeFile)
+        if (uploadError) {
+            return res.status(400).json({ success: false, message: uploadError })
+        }
+        if (resumeFile.size > MAX_APPLICATION_RESUME_BYTES) {
+            return res.status(400).json({ success: false, message: 'Resume must be under 2MB' })
+        }
+
+        // title + recruiter selected here too sir — needed below to email the recruiter and to
+        // score the resume against the job's own description once the application is created
+        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id title description recruiter')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
-        // ownership check sir — a candidate could otherwise attach someone else's saved
-        // resume/built-resume to their application just by guessing its ObjectId
-        if (resume) {
-            if (!mongoose.isValidObjectId(resume)) {
-                return res.status(400).json({ success: false, message: 'Invalid resume id' })
+        // extract the resume's plain text sir — same PDFParse call every other resume-intake
+        // controller in this app already uses (controllers/AI.js's Calling), needed below to
+        // feed the AI fit-score
+        const parser = new PDFParse({ data: resumeFile.data })
+        const parsed = await parser.getText()
+        const resumeText = parsed?.text || ''
+
+        // upload the actual PDF to Cloudinary sir — resource_type:'raw' since this is a
+        // non-image file, which every other Cloudinary upload in this app (photos, snapshots)
+        // never needed to set
+        const upload = await cloudinary.uploader.upload(
+            `data:${resumeFile.mimetype};base64,${resumeFile.data.toString('base64')}`,
+            {
+                folder: 'job-application-resumes',
+                resource_type: 'raw',
+                public_id: `${jobId}-${candidateId}-${Date.now()}`,
             }
-            const owns = await Resume.exists({ _id: resume, user: candidateId })
-            if (!owns) {
-                return res.status(403).json({ success: false, message: 'That resume does not belong to you' })
-            }
-        }
-        if (builtResume) {
-            if (!mongoose.isValidObjectId(builtResume)) {
-                return res.status(400).json({ success: false, message: 'Invalid built resume id' })
-            }
-            const owns = await BuiltResume.exists({ _id: builtResume, user: candidateId })
-            if (!owns) {
-                return res.status(403).json({ success: false, message: 'That resume does not belong to you' })
-            }
-        }
+        )
 
         let application
         try {
             application = await JobApplication.create({
                 job: jobId,
                 candidate: candidateId,
-                resume,
-                builtResume,
+                resumeUrl: upload.secure_url,
+                resumePublicId: upload.public_id,
+                experienceLevel,
+                address,
+                expectedSalary,
+                education: experienceLevel === 'fresher' ? education : undefined,
+                currentCtc: experienceLevel === 'experienced' ? currentCtc : undefined,
+                workHistory: experienceLevel === 'experienced' ? workHistory : undefined,
             })
         } catch (createErr) {
             if (createErr.code === 11000) {
@@ -764,6 +949,28 @@ exports.applyToJob = async (req, res) => {
                 })
             }
             throw createErr
+        }
+
+        // AI fit-score sir — best-effort, wrapped in its own try/catch exactly like the
+        // new-applicant email below: a scoring failure or a recruiter out of monthly AI-score
+        // quota must never fail the candidate's application. fitScore stays null either way,
+        // fitScoreSkippedReason explains why to the recruiter.
+        try {
+            const scoreResult = await runFitScore({
+                recruiterId: job.recruiter,
+                jobDescription: job.description,
+                resumeText,
+            })
+            if (scoreResult.ok) {
+                application.fitScore = scoreResult.fitScore
+                application.fitTier = scoreResult.fitTier
+                application.fitScoreReasoning = scoreResult.reasoning
+            } else {
+                application.fitScoreSkippedReason = scoreResult.reason
+            }
+            await application.save()
+        } catch (scoreError) {
+            (req.log || logger).error('fit score failed', { err: scoreError, applicationId: application._id })
         }
 
         // email the recruiter sir — best-effort, wrapped in its own try/catch so a mail relay

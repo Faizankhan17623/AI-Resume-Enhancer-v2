@@ -3,11 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash, FaLock } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaLock, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateTest } from '../../Services/operations/Test'
+import { GenerateInterviewQuestions } from '../../Services/operations/RecruiterAi'
 
 const emptyQuestion = () => ({ prompt: '', type: 'mcq', options: ['', ''], correctAnswer: '', marks: 10 })
 
@@ -25,6 +26,7 @@ const TestBuilder = () => {
   const [maxViolations, setMaxViolations] = useState(4)
   const [questions, setQuestions] = useState([emptyQuestion()])
   const [submitting, setSubmitting] = useState(false)
+  const [generatingAi, setGeneratingAi] = useState(false)
   const { isLocked } = useRecruiterLock()
 
   const marksSum = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0)
@@ -53,6 +55,29 @@ const TestBuilder = () => {
 
   const addQuestion = () => setQuestions((qs) => [...qs, emptyQuestion()])
   const removeQuestion = (index) => setQuestions((qs) => qs.filter((_, i) => i !== index))
+
+  // Pro/ProMax upsell sir — suggests questions grounded in the job's OWN description, the
+  // recruiter accepts/edits/discards each one individually (they land in the normal editable
+  // question list below, nothing is added directly to the test). Metered by
+  // utils/RecruiterPlans.js's recruiterInterviewQGenUsed.
+  const handleGenerateWithAi = async () => {
+    setGeneratingAi(true)
+    const suggestions = await dispatch(GenerateInterviewQuestions(jobId, 8, token))
+    setGeneratingAi(false)
+    if (!suggestions?.length) return
+
+    const asQuestions = suggestions.map((s) => ({
+      prompt: s.prompt || '',
+      type: s.type === 'mcq' ? 'mcq' : 'text',
+      options: s.type === 'mcq' && Array.isArray(s.options) && s.options.length >= 2 ? s.options : ['', ''],
+      correctAnswer: s.type === 'mcq' ? (s.correctAnswer || '') : '',
+      marks: s.suggestedMarks || 10,
+    }))
+
+    // replace the single blank starter question sir, otherwise append after whatever's there
+    setQuestions((qs) => (qs.length === 1 && !qs[0].prompt.trim() ? asQuestions : [...qs, ...asQuestions]))
+    toast.success(`${asQuestions.length} question${asQuestions.length === 1 ? '' : 's'} added — review and edit before creating the test`)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -243,13 +268,23 @@ const TestBuilder = () => {
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={addQuestion}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-richblack-600 py-4 text-sm text-richblack-300 hover:border-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
-          >
-            <FaPlus /> Add question
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-richblack-600 py-4 text-sm text-richblack-300 hover:border-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
+            >
+              <FaPlus /> Add question
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateWithAi}
+              disabled={generatingAi}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-yellow-700/60 py-4 text-sm text-yellow-25 hover:border-yellow-50 hover:text-yellow-5 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FaMagic /> {generatingAi ? 'Generating...' : 'Suggest questions with AI'}
+            </button>
+          </div>
         </div>
 
         {isLocked && (

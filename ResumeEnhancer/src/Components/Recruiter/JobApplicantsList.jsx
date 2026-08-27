@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -11,6 +11,7 @@ import {
   GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome,
   BulkInviteApplicantsToTest, BulkSetApplicationOutcome,
 } from '../../Services/operations/Job'
+import { GenerateCandidateSummary } from '../../Services/operations/RecruiterAi'
 
 const statusBadge = {
   applied: 'bg-richblack-700 text-richblack-200 border-richblack-600',
@@ -28,6 +29,34 @@ const statusLabel = {
   hired: 'Hired',
 }
 
+// a worst-to-best gradient across colors already in this app's palette sir (no purple token
+// exists here) — richblack (neutral/low) through warm (mid) to caribgreen (best), reading as its
+// own distinct signal from the status badges above rather than reusing blue/pink for a different meaning
+const fitTierMeta = {
+  not_a_fit: { label: 'Not a fit', className: 'bg-richblack-700 text-richblack-300 border-richblack-600' },
+  can_get_it_done: { label: 'Can get it done', className: 'bg-warm-700/30 text-warm-25 border-warm-600' },
+  hireable: { label: 'Hireable', className: 'bg-warm-200/20 text-warm-25 border-warm-200' },
+  best_fit: { label: 'Best fit', className: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700' },
+}
+
+const FIT_FILTER_OPTIONS = [
+  { value: '', label: 'All fit scores' },
+  { value: 'best_fit', label: 'Best fit (76-100)' },
+  { value: 'hireable', label: 'Hireable (51-75)' },
+  { value: 'can_get_it_done', label: 'Can get it done (26-50)' },
+  { value: 'not_a_fit', label: 'Not a fit (0-25)' },
+  { value: 'unscored', label: 'Not yet scored' },
+]
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'applied', label: 'Applied' },
+  { value: 'invited_to_test', label: 'Invited to test' },
+  { value: 'completed_test', label: 'Test completed' },
+  { value: 'hired', label: 'Hired' },
+  { value: 'rejected', label: 'Rejected' },
+]
+
 // replaces the old standalone AttemptsList sir — applicants are queried by JOB now, not by
 // test. "Invite to test" is the gate that actually lets THAT candidate start the test (see
 // controllers/Test.js's startAttempt); once they've completed it, the row links through to the
@@ -36,9 +65,11 @@ const JobApplicantsList = () => {
   const { jobId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { jobApplicants, loading } = useSelector((state) => state.job)
+  const { jobApplicants, jobHasTest, loading } = useSelector((state) => state.job)
   const { isLocked } = useRecruiterLock()
   const [selected, setSelected] = useState([])
+  const [statusFilter, setStatusFilter] = useState('')
+  const [fitFilter, setFitFilter] = useState('')
 
   useEffect(() => {
     dispatch(GetJobApplicants(jobId, token))
@@ -53,13 +84,35 @@ const JobApplicantsList = () => {
     dispatch(SetApplicationOutcome(applicationId, status, token))
   }
 
+  // Pro/ProMax upsell sir — on-demand re-request of the AI candidate summary (the automatic one
+  // already ran once at apply time). A full refetch is simplest here since this is a low-
+  // frequency, one-off action, not worth a bespoke local-patch reducer for.
+  const handleRegenerateSummary = async (applicationId) => {
+    const summary = await dispatch(GenerateCandidateSummary(applicationId, token))
+    if (summary) dispatch(GetJobApplicants(jobId, token))
+  }
+
   const toggleSelected = (applicationId) => {
     setSelected((prev) => prev.includes(applicationId) ? prev.filter((id) => id !== applicationId) : [...prev, applicationId])
   }
 
-  const selectableApplied = jobApplicants.filter((a) => a.status === 'applied').map((a) => a._id)
-  const selectableCompleted = jobApplicants.filter((a) => a.status === 'completed_test').map((a) => a._id)
-  const allSelectableIds = [...selectableApplied, ...selectableCompleted]
+  // filtered view sir — the filter bar lets a recruiter narrow down WHO'S selectable before
+  // picking a subset to bulk-invite/hire/reject, per direct request
+  const filteredApplicants = useMemo(() => {
+    return jobApplicants.filter((a) => {
+      if (statusFilter && a.status !== statusFilter) return false
+      if (fitFilter === 'unscored' && a.fitTier) return false
+      if (fitFilter && fitFilter !== 'unscored' && a.fitTier !== fitFilter) return false
+      return true
+    })
+  }, [jobApplicants, statusFilter, fitFilter])
+
+  // hiring straight from 'applied' is only valid when this job has NO test at all sir (Part 4a —
+  // tests are optional now); when it has one, hiring still requires 'completed_test'
+  const selectableApplied = filteredApplicants.filter((a) => a.status === 'applied').map((a) => a._id)
+  const selectableCompleted = filteredApplicants.filter((a) => a.status === 'completed_test').map((a) => a._id)
+  const selectableForHire = jobHasTest ? selectableCompleted : [...selectableApplied, ...selectableCompleted]
+  const allSelectableIds = jobHasTest ? [...selectableApplied, ...selectableCompleted] : selectableForHire
   const allSelected = allSelectableIds.length > 0 && allSelectableIds.every((id) => selected.includes(id))
 
   const toggleSelectAll = () => {
@@ -73,20 +126,21 @@ const JobApplicantsList = () => {
     setSelected([])
   }
 
+  // 'hired' still needs the completed_test/no-test-applied eligibility rule sir; 'rejected' (the
+  // manual "close this application" action) works from ANY selected row, any status
   const handleBulkOutcome = async (status) => {
-    const ids = selected.filter((id) => selectableCompleted.includes(id))
+    const ids = status === 'rejected' ? selected : selected.filter((id) => selectableForHire.includes(id))
     if (ids.length === 0) return
     await dispatch(BulkSetApplicationOutcome(ids, status, jobId, token))
     setSelected([])
   }
 
-  // rank by test score sir — the only real merit signal we have. Applicants who've completed
-  // the test sort highest-score-first (so a recruiter opening this page sees the strongest
-  // candidates up top); everyone else (no score yet) stays grouped below, newest first, same
-  // order the backend already sent them in.
-  const scored = jobApplicants.filter((a) => a.testAttempt?.score !== null && a.testAttempt?.score !== undefined)
-  const unscored = jobApplicants.filter((a) => !(a.testAttempt?.score !== null && a.testAttempt?.score !== undefined))
-  scored.sort((a, b) => b.testAttempt.score - a.testAttempt.score)
+  // rank by AI fit score first sir (the signal available the moment someone applies, before any
+  // test), then by test score once one exists — a recruiter opening this page sees the
+  // strongest-looking candidates up top even for jobs with no test stage at all.
+  const scored = filteredApplicants.filter((a) => typeof a.fitScore === 'number')
+  const unscored = filteredApplicants.filter((a) => typeof a.fitScore !== 'number')
+  scored.sort((a, b) => b.fitScore - a.fitScore)
   const rankedApplicants = [...scored, ...unscored]
 
   return (
@@ -105,6 +159,34 @@ const JobApplicantsList = () => {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* filter bar sir — narrows down who's even selectable before a bulk action, per
+              direct request ("a filter option ... from there he can select to whom we should
+              send the test link") */}
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-lg bg-richblack-800 border border-richblack-600 text-richblack-100 text-xs px-3 py-2 focus:outline-none focus:border-yellow-50 cursor-pointer"
+            >
+              {STATUS_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select
+              value={fitFilter}
+              onChange={(e) => setFitFilter(e.target.value)}
+              className="rounded-lg bg-richblack-800 border border-richblack-600 text-richblack-100 text-xs px-3 py-2 focus:outline-none focus:border-yellow-50 cursor-pointer"
+            >
+              {FIT_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {(statusFilter || fitFilter) && (
+              <button
+                onClick={() => { setStatusFilter(''); setFitFilter('') }}
+                className="text-xs text-richblack-400 hover:text-richblack-5 cursor-pointer"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+
           {allSelectableIds.length > 0 && (
             <label className="flex items-center gap-2 text-xs text-richblack-300 cursor-pointer select-none">
               <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="accent-yellow-50 cursor-pointer" />
@@ -115,7 +197,7 @@ const JobApplicantsList = () => {
           {selected.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-3" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
               <span className="text-sm text-richblack-100 font-medium">{selected.length} selected</span>
-              {selected.some((id) => selectableApplied.includes(id)) && (
+              {jobHasTest && selected.some((id) => selectableApplied.includes(id)) && (
                 <button
                   onClick={handleBulkInvite}
                   disabled={isLocked}
@@ -124,24 +206,24 @@ const JobApplicantsList = () => {
                   Invite selected to test
                 </button>
               )}
-              {selected.some((id) => selectableCompleted.includes(id)) && (
-                <>
-                  <button
-                    onClick={() => handleBulkOutcome('hired')}
-                    disabled={isLocked}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-caribgreen-700/20 text-caribgreen-25 border border-caribgreen-700 hover:bg-caribgreen-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Hire selected
-                  </button>
-                  <button
-                    onClick={() => handleBulkOutcome('rejected')}
-                    disabled={isLocked}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Reject selected
-                  </button>
-                </>
+              {selected.some((id) => selectableForHire.includes(id)) && (
+                <button
+                  onClick={() => handleBulkOutcome('hired')}
+                  disabled={isLocked}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-caribgreen-700/20 text-caribgreen-25 border border-caribgreen-700 hover:bg-caribgreen-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Hire selected
+                </button>
               )}
+              {/* reject/close works from ANY selected status sir — the manual "close this
+                  application" action, per direct request */}
+              <button
+                onClick={() => handleBulkOutcome('rejected')}
+                disabled={isLocked}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Close selected
+              </button>
               <button
                 onClick={() => setSelected([])}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
@@ -153,97 +235,126 @@ const JobApplicantsList = () => {
 
           {scored.length > 0 && (
             <p className="text-xs text-richblack-400 uppercase tracking-wide font-semibold">
-              Ranked by test score
+              Ranked by AI fit score
             </p>
           )}
-          {rankedApplicants.map((app, index) => (
-            <div key={app._id} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-              {index === scored.length && scored.length > 0 && unscored.length > 0 && (
-                <p className="text-xs text-richblack-400 uppercase tracking-wide font-semibold mb-4 -mt-1">
-                  Not yet tested
-                </p>
-              )}
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="min-w-0 flex items-start gap-3">
-                  {allSelectableIds.includes(app._id) && (
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(app._id)}
-                      onChange={() => toggleSelected(app._id)}
-                      className="shrink-0 mt-1 accent-yellow-50 cursor-pointer"
-                    />
-                  )}
-                  {index < scored.length && (
-                    <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-richblack-700 border border-richblack-600 text-richblack-200 text-[11px] font-bold flex items-center justify-center">
-                      #{index + 1}
-                    </span>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-richblack-5 font-semibold truncate">
-                      {app.candidate ? `${app.candidate.firstName} ${app.candidate.lastName}` : 'Deleted candidate'}
-                    </p>
-                    <p className="text-xs text-richblack-400 truncate">{app.candidate?.email}</p>
-                    {(app.resume || app.builtResume) && (
-                      <p className="text-xs text-richblack-500 truncate mt-0.5">
-                        Applied with: {app.resume?.label || app.resume?.originalFilename || app.builtResume?.title}
-                      </p>
+          {rankedApplicants.map((app, index) => {
+            const fitMeta = app.fitTier ? fitTierMeta[app.fitTier] : null
+            // hiring is only reachable from 'applied' when the job has NO test at all sir
+            // (Part 4a) — otherwise it still needs 'completed_test'
+            const canHire = jobHasTest ? app.status === 'completed_test' : app.status === 'applied'
+            return (
+              <div key={app._id} className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
+                {index === scored.length && scored.length > 0 && unscored.length > 0 && (
+                  <p className="text-xs text-richblack-400 uppercase tracking-wide font-semibold mb-4 -mt-1">
+                    Not yet scored
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="min-w-0 flex items-start gap-3">
+                    {allSelectableIds.includes(app._id) && (
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(app._id)}
+                        onChange={() => toggleSelected(app._id)}
+                        className="shrink-0 mt-1 accent-yellow-50 cursor-pointer"
+                      />
                     )}
+                    {index < scored.length && (
+                      <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-richblack-700 border border-richblack-600 text-richblack-200 text-[11px] font-bold flex items-center justify-center">
+                        #{index + 1}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-richblack-5 font-semibold truncate">
+                        {app.candidate ? `${app.candidate.firstName} ${app.candidate.lastName}` : 'Deleted candidate'}
+                      </p>
+                      <p className="text-xs text-richblack-400 truncate">{app.candidate?.email}</p>
+                      {app.resumeUrl && (
+                        <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="text-xs text-yellow-50 hover:underline mt-0.5 inline-block">
+                          View resume
+                        </a>
+                      )}
+                      {app.fitScoreReasoning && (
+                        <p className="text-xs text-richblack-500 mt-1 max-w-md">{app.fitScoreReasoning}</p>
+                      )}
+                      {!app.fitTier && app.fitScoreSkippedReason && (
+                        <p className="text-[11px] text-richblack-500 mt-1 italic">{app.fitScoreSkippedReason}</p>
+                      )}
+                      {app.resumeUrl && (
+                        <button
+                          onClick={() => handleRegenerateSummary(app._id)}
+                          className="flex items-center gap-1 text-[11px] text-richblack-400 hover:text-yellow-50 mt-1 cursor-pointer"
+                        >
+                          <FaMagic className="text-[9px]" /> {app.fitScoreReasoning ? 'Regenerate' : 'Generate'} AI summary
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {app.testAttempt?.violationCount > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-yellow-25">
+                        <FaExclamationTriangle /> {app.testAttempt.violationCount}
+                      </span>
+                    )}
+                    {app.testAttempt?.score !== null && app.testAttempt?.score !== undefined && (
+                      <span className="text-sm font-display text-yellow-50">{app.testAttempt.score} marks</span>
+                    )}
+                    {fitMeta && (
+                      <span className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${fitMeta.className}`}>
+                        <FaBolt className="text-[9px]" /> {fitMeta.label} ({app.fitScore})
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusBadge[app.status]}`}>
+                      {statusLabel[app.status] || app.status}
+                    </span>
+                    {jobHasTest && app.status === 'applied' && (
+                      <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                        <IconBtn
+                          text="Invite to test"
+                          onclick={() => handleInvite(app._id)}
+                          customClasses="text-xs px-3 py-2"
+                          disabled={isLocked}
+                        >
+                          {isLocked ? <FaLock className="text-[10px]" /> : <FaPaperPlane className="text-[10px]" />}
+                        </IconBtn>
+                      </span>
+                    )}
+                    {app.testAttempt && ['invited_to_test', 'completed_test'].includes(app.status) && (
+                      <Link
+                        to={`/Recruiter/Attempts/${app.testAttempt._id}`}
+                        className="px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+                      >
+                        View attempt
+                      </Link>
+                    )}
+                    <span className="flex items-center gap-2" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                      {canHire && (
+                        <button
+                          onClick={() => handleOutcome(app._id, 'hired')}
+                          disabled={isLocked}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-caribgreen-700 text-caribgreen-100 text-xs font-semibold hover:bg-caribgreen-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FaCheck className="text-[10px]" /> Hire
+                        </button>
+                      )}
+                      {/* always visible, any status sir — the manual "close this application"
+                          action requested directly, not gated on test completion */}
+                      {!['rejected', 'hired'].includes(app.status) && (
+                        <button
+                          onClick={() => handleOutcome(app._id, 'rejected')}
+                          disabled={isLocked}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FaTimes className="text-[10px]" /> Close
+                        </button>
+                      )}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {app.testAttempt?.violationCount > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-yellow-25">
-                      <FaExclamationTriangle /> {app.testAttempt.violationCount}
-                    </span>
-                  )}
-                  {app.testAttempt?.score !== null && app.testAttempt?.score !== undefined && (
-                    <span className="text-sm font-display text-yellow-50">{app.testAttempt.score} marks</span>
-                  )}
-                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusBadge[app.status]}`}>
-                    {statusLabel[app.status] || app.status}
-                  </span>
-                  {app.status === 'applied' && (
-                    <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
-                      <IconBtn
-                        text="Invite to test"
-                        onclick={() => handleInvite(app._id)}
-                        customClasses="text-xs px-3 py-2"
-                        disabled={isLocked}
-                      >
-                        {isLocked ? <FaLock className="text-[10px]" /> : <FaPaperPlane className="text-[10px]" />}
-                      </IconBtn>
-                    </span>
-                  )}
-                  {app.testAttempt && ['invited_to_test', 'completed_test'].includes(app.status) && (
-                    <Link
-                      to={`/Recruiter/Attempts/${app.testAttempt._id}`}
-                      className="px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
-                    >
-                      View attempt
-                    </Link>
-                  )}
-                  {app.status === 'completed_test' && (
-                    <span className="flex items-center gap-2" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
-                      <button
-                        onClick={() => handleOutcome(app._id, 'hired')}
-                        disabled={isLocked}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-caribgreen-700 text-caribgreen-100 text-xs font-semibold hover:bg-caribgreen-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <FaCheck className="text-[10px]" /> Hire
-                      </button>
-                      <button
-                        onClick={() => handleOutcome(app._id, 'rejected')}
-                        disabled={isLocked}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <FaTimes className="text-[10px]" /> Reject
-                      </button>
-                    </span>
-                  )}
-                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </RecruiterLayout>
