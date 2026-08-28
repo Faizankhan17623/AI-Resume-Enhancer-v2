@@ -61,11 +61,25 @@ exports.testInviteTemplate = (candidateName, jobTitle, companyName, testUrl, tim
                 ready — quiet space, working webcam, stable connection — before you start.
               </p>
 
-              <div style="text-align:center;">
-                <a href="${testUrl}" style="display:inline-block;background:#FFD60A;color:#111827;
+              <div style="text-align:center;margin:0 0 28px;">
+                <a href="${testUrl}" target="_blank" style="display:inline-block;background:#FFD60A;color:#111827;
                    font-size:14px;font-weight:700;text-decoration:none;padding:14px 28px;
                    border-radius:9999px;">
                   Start the test →
+                </a>
+              </div>
+
+              <!-- Fallback link sir — same reasoning as passwordResetTemplate.js: some mail
+                   clients strip or fail to render a styled button as an obviously-clickable
+                   link, so the raw URL is also printed as plain visible text underneath -->
+              <div style="background:#0D1117;border-radius:12px;padding:16px 20px;
+                          border:1px solid #2C333F;">
+                <p style="margin:0 0 8px;font-size:12px;color:#6B7280;">
+                  Button not working? Paste this link into your browser:
+                </p>
+                <a href="${testUrl}" target="_blank"
+                   style="font-size:12px;color:#10B981;word-break:break-all;text-decoration:none;">
+                  ${testUrl}
                 </a>
               </div>
             </td>
