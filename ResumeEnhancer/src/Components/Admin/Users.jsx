@@ -50,6 +50,16 @@ const Users = () => {
   const [roleFilter, setRoleFilter] = useState('')
   const [selected, setSelected] = useState([])
   const [grantingCredits, setGrantingCredits] = useState(false)
+  // one shared full-screen loader sir for every row-level/bulk mutation on this page (role
+  // change, plan change, credit grant, ban/restore, permanent suspend, delete) — replaces each
+  // action's own toast.loading with the real centered spinner, same withBusyLabel-style pattern
+  // Dashboard/Account.jsx already uses.
+  const [rowBusy, setRowBusy] = useState(false)
+  const [rowBusyLabel, setRowBusyLabel] = useState('Working...')
+  const withRowBusy = (label) => (next) => {
+    if (next) setRowBusyLabel(label)
+    setRowBusy(next)
+  }
   const [searchParams, setSearchParams] = useSearchParams()
   // opens straight to a user's detail drawer sir when arriving from the global admin
   // search (?highlight=<userId>) — the modal fetches by id, so it doesn't matter whether
@@ -133,7 +143,7 @@ const Users = () => {
         confirmButtonColor: '#C1443C',
       })
       if (!isConfirmed) return
-      dispatch(BulkBanUsers(selected, true, value || '', token, page, search, roleFilter))
+      dispatch(BulkBanUsers(selected, true, value || '', token, page, search, roleFilter, withRowBusy('Suspending accounts...')))
     } else {
       const { isConfirmed } = await Swal.fire({
         ...swalDark,
@@ -142,7 +152,7 @@ const Users = () => {
         confirmButtonText: 'Restore all',
       })
       if (!isConfirmed) return
-      dispatch(BulkBanUsers(selected, false, '', token, page, search, roleFilter))
+      dispatch(BulkBanUsers(selected, false, '', token, page, search, roleFilter, withRowBusy('Restoring accounts...')))
     }
     setSelected([])
   }
@@ -157,7 +167,7 @@ const Users = () => {
       confirmButtonText: 'Promote to Support',
     })
     if (!isConfirmed) return
-    dispatch(BulkUpdateUserRole(selected, role, token, page, search, roleFilter))
+    dispatch(BulkUpdateUserRole(selected, role, token, page, search, roleFilter, withRowBusy(`Moving accounts to ${role}...`)))
     setSelected([])
   }
 
@@ -180,7 +190,7 @@ const Users = () => {
         reason: document.getElementById('swal-reason').value,
       }),
     })
-    if (value?.credits > 0) dispatch(AdjustCredits(target._id, value.credits, value.reason, token, page, search, roleFilter))
+    if (value?.credits > 0) dispatch(AdjustCredits(target._id, value.credits, value.reason, token, page, search, roleFilter, withRowBusy('Granting bonus credits...')))
   }
 
   // broadcast a bonus to every User account sir — the strongest confirm dialog in this file,
@@ -233,7 +243,7 @@ const Users = () => {
 
   const handleBan = async (target) => {
     if (target.isBanned) {
-      dispatch(BanUser(target._id, false, '', token, page, search, roleFilter))
+      dispatch(BanUser(target._id, false, '', token, page, search, roleFilter, withRowBusy('Restoring the account...')))
       return
     }
     // Support is one-way sir (see the role <select>'s own disabled state above) — suspension is
@@ -255,7 +265,7 @@ const Users = () => {
       confirmButtonText: 'Suspend',
       confirmButtonColor: '#C1443C',
     })
-    if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter))
+    if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter, withRowBusy('Suspending the account...')))
   }
 
   // standalone permanent-suspend sir — no pending appeal required first, unlike the "Reject
@@ -275,7 +285,7 @@ const Users = () => {
       confirmButtonText: 'Permanently suspend',
       confirmButtonColor: '#C1443C',
     })
-    if (isConfirmed) dispatch(PermanentlySuspendSupport(target._id, value, token, page, search, roleFilter))
+    if (isConfirmed) dispatch(PermanentlySuspendSupport(target._id, value, token, page, search, roleFilter, withRowBusy('Permanently suspending the account...')))
   }
 
   // deliberate, explicit action sir — not a casual dropdown, since this is revenue-adjacent
@@ -292,7 +302,7 @@ const Users = () => {
       showCancelButton: true,
       confirmButtonText: 'Set plan',
     })
-    if (isConfirmed && plan) dispatch(UpdateUserPlan(target._id, plan, token, page, search, roleFilter))
+    if (isConfirmed && plan) dispatch(UpdateUserPlan(target._id, plan, token, page, search, roleFilter, withRowBusy('Updating the plan...')))
   }
 
   // exports just the currently-loaded page sir — matches the current search/role filter,
@@ -322,7 +332,7 @@ const Users = () => {
       confirmButtonText: 'Delete forever',
       confirmButtonColor: '#C1443C',
     }).then((result) => {
-      if (result.isConfirmed) dispatch(DeleteUser(target._id, token, page, search, roleFilter))
+      if (result.isConfirmed) dispatch(DeleteUser(target._id, token, page, search, roleFilter, withRowBusy('Deleting the user...')))
     })
   }
 
@@ -344,6 +354,17 @@ const Users = () => {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
         >
           <Loading text="Granting bonus credits to everyone..." />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+      {rowBusy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={rowBusyLabel} size="compact" />
         </motion.div>
       )}
       </AnimatePresence>
@@ -499,7 +520,7 @@ const Users = () => {
                         <span className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">{row.role}</span>
                         {isAdmin && row.role === 'User' && row._id !== me?.id && (
                           <button
-                            onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter))}
+                            onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter, withRowBusy('Promoting to Support...')))}
                             title="Promote to Support"
                             className="shrink-0 px-2 py-1.5 text-[10px] font-semibold rounded-md bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
                           >
@@ -630,7 +651,7 @@ const Users = () => {
                           <span className="rounded-md bg-richblack-700 border border-richblack-600 px-2 py-1.5 text-xs text-richblack-5">{row.role}</span>
                           {isAdmin && row.role === 'User' && row._id !== me?.id && (
                             <button
-                              onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter))}
+                              onClick={() => dispatch(UpdateUserRole(row._id, 'Support', token, page, search, roleFilter, withRowBusy('Promoting to Support...')))}
                               title="Promote to Support"
                               className="shrink-0 px-2 py-1.5 text-[10px] font-semibold rounded-md bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
                             >

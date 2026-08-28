@@ -11,7 +11,6 @@ const { search } = JobSearchData
 export function SearchJobs(query, token) {
     return async (dispatch) => {
         dispatch(setSearching(true))
-        const toastId = toast.loading("Searching the web for matching jobs...")
         try {
             const response = await apiConnector("POST", search, { query }, {
                 Authorization: `Bearer ${token}`
@@ -37,7 +36,6 @@ export function SearchJobs(query, token) {
             toast.error(message)
         } finally {
             dispatch(setSearching(false))
-            toast.dismiss(toastId)
         }
     }
 }

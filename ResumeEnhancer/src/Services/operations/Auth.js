@@ -155,7 +155,6 @@ export function LoginUser(email, password, navigate, onStatus) {
 export function ForgotPassword(email, setEmailSent) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Sending the reset link...")
         try {
             const response = await apiConnector("POST", forgotpassword, { email })
 
@@ -170,7 +169,6 @@ export function ForgotPassword(email, setEmailSent) {
             toast.error(error?.response?.data?.message || "Could not send the reset link")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -179,7 +177,6 @@ export function ForgotPassword(email, setEmailSent) {
 export function ResetPassword(token, newPassword, confirmNewPassword, navigate) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Resetting your password...")
         try {
             const response = await apiConnector("POST", resetpassword, {
                 token, newPassword, confirmNewPassword
@@ -196,7 +193,6 @@ export function ResetPassword(token, newPassword, confirmNewPassword, navigate) 
             toast.error(error?.response?.data?.message || "Could not reset the password")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }

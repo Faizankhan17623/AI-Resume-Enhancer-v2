@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaPlus, FaTrash } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import { ApplyToJob } from '../../Services/operations/Job'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
@@ -105,14 +106,20 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
         : { currentCtc: Number(currentCtc), workHistory }),
     }
 
-    setSubmitting(true)
-    const success = await dispatch(ApplyToJob(jobId, token, formPayload, resumeFile))
-    setSubmitting(false)
+    const success = await dispatch(ApplyToJob(jobId, token, formPayload, resumeFile, setSubmitting))
     if (success) onSuccess()
   }
 
   return (
     <AnimatePresence>
+      {submitting && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Submitting your application..." size="compact" />
+        </motion.div>
+      )}
       <motion.div
         initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
         className="fixed inset-0 z-[100] bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4 py-8 overflow-y-auto"
@@ -290,7 +297,7 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
             {step < 3 ? (
               <IconBtn text="Next" onclick={handleNext} customClasses="text-sm" />
             ) : (
-              <IconBtn text={submitting ? "Submitting..." : "Submit application"} onclick={handleSubmit} disabled={submitting} loading={submitting} customClasses="text-sm" />
+              <IconBtn text="Submit application" onclick={handleSubmit} disabled={submitting} customClasses="text-sm" />
             )}
           </div>
         </motion.div>

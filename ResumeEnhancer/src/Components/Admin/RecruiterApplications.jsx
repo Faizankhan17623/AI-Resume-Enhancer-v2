@@ -32,6 +32,12 @@ const RecruiterApplications = () => {
   const [statusFilter, setStatusFilter] = useState('pending')
   // shows a real loader for at least 4s on a status-tab switch sir — see Hooks/useMinDurationFlag.js
   const [switchingTab, triggerSwitchingTab] = useMinDurationFlag(4000)
+  const [rowBusy, setRowBusy] = useState(false)
+  const [rowBusyLabel, setRowBusyLabel] = useState('Working...')
+  const withRowBusy = (label) => (next) => {
+    if (next) setRowBusyLabel(label)
+    setRowBusy(next)
+  }
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { recruiterApplications, loading } = useSelector((state) => state.admin)
@@ -55,7 +61,7 @@ const RecruiterApplications = () => {
       showCancelButton: true,
       confirmButtonText: 'Approve',
     })
-    if (isConfirmed) dispatch(ApproveRecruiterApplication(applicant._id, token, statusFilter))
+    if (isConfirmed) dispatch(ApproveRecruiterApplication(applicant._id, token, statusFilter, withRowBusy('Approving...')))
   }
 
   const handleReject = async (applicant) => {
@@ -69,7 +75,7 @@ const RecruiterApplications = () => {
       confirmButtonText: 'Reject',
       confirmButtonColor: '#C1443C',
     })
-    if (isConfirmed) dispatch(RejectRecruiterApplication(applicant._id, value || '', token, statusFilter))
+    if (isConfirmed) dispatch(RejectRecruiterApplication(applicant._id, value || '', token, statusFilter, withRowBusy('Rejecting...')))
   }
 
   return (
@@ -79,6 +85,17 @@ const RecruiterApplications = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      <AnimatePresence>
+      {rowBusy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={rowBusyLabel} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">

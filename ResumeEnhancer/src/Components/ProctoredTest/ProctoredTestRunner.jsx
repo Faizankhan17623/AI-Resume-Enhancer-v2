@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import * as tf from '@tensorflow/tfjs-core'
@@ -76,7 +77,7 @@ const ProctoredTestRunner = () => {
             })
         }
 
-        await dispatch(SubmitTestAnswers(attempt._id, answers, token))
+        await dispatch(SubmitTestAnswers(attempt._id, answers, token, null, setSubmitting))
         dispatch(resetTestAttempt())
         navigate('/Dashboard')
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,9 +224,7 @@ const ProctoredTestRunner = () => {
     }
 
     const handleSubmit = async () => {
-        setSubmitting(true)
         await endTest('manual')
-        setSubmitting(false)
     }
 
     if (cameraError) {
@@ -252,6 +251,17 @@ const ProctoredTestRunner = () => {
             <Helmet>
                 <title>{test.title} | Resumify</title>
             </Helmet>
+
+            <AnimatePresence>
+            {submitting && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+                >
+                    <Loading text="Submitting..." size="compact" />
+                </motion.div>
+            )}
+            </AnimatePresence>
 
             <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
                 {/* camera panel sir — real video underneath, landmark dots drawn on the canvas
@@ -316,7 +326,7 @@ const ProctoredTestRunner = () => {
                     ))}
 
                     <IconBtn
-                        text={submitting ? "Submitting..." : "Submit test"}
+                        text="Submit test"
                         onclick={handleSubmit}
                         disabled={submitting}
                         customClasses="w-full justify-center"

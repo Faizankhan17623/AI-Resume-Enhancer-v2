@@ -11,7 +11,6 @@ const { generate, all, single } = CoverLetterData
 export function GenerateCoverLetter(pdfFile, jd, token) {
     return async (dispatch) => {
         dispatch(setGenerating(true))
-        const toastId = toast.loading("Writing your cover letter...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -37,7 +36,6 @@ export function GenerateCoverLetter(pdfFile, jd, token) {
             toast.error(message)
         } finally {
             dispatch(setGenerating(false))
-            toast.dismiss(toastId)
         }
     }
 }

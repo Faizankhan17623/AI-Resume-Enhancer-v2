@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaLock, FaPaperPlane, FaCheckCircle, FaTimesCircle } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
+import Loading from '../extra/Loading'
 import { fadeUp } from '../../utils/motion'
 import { SubmitSuspensionAppeal } from '../../Services/operations/User'
 
@@ -35,9 +36,7 @@ const SupportSuspended = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!message.trim()) return
-    setSubmitting(true)
-    const ok = await dispatch(SubmitSuspensionAppeal(message.trim(), token))
-    setSubmitting(false)
+    const ok = await dispatch(SubmitSuspensionAppeal(message.trim(), token, setSubmitting))
     if (ok) setMessage('')
   }
 
@@ -46,6 +45,16 @@ const SupportSuspended = () => {
       <Helmet>
         <title>Account Suspended | Resumify</title>
       </Helmet>
+      <AnimatePresence>
+      {submitting && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Sending your appeal..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
       <Navbar />
 
       <div className="max-w-lg mx-auto px-4 lg:px-8 py-16">
@@ -110,7 +119,7 @@ const SupportSuspended = () => {
                   disabled={submitting || !message.trim()}
                   className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  <FaPaperPlane className="text-xs" /> {submitting ? 'Sending...' : 'Submit your one appeal'}
+                  <FaPaperPlane className="text-xs" /> Submit your one appeal
                 </button>
               </form>
             )}

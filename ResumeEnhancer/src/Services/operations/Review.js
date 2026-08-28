@@ -360,8 +360,8 @@ export function GetStreaksLeaderboard(token) {
 }
 
 // downloads the styled PDF sir — blob response, saved through a hidden anchor
-export async function DownloadReviewPdf(reviewId, token) {
-    const toastId = toast.loading("Preparing your PDF...")
+export async function DownloadReviewPdf(reviewId, token, onLoadingChange) {
+    onLoadingChange?.(true)
     try {
         // straight on the instance sir — the connector has no responseType and the PDF needs blob
         const response = await axiosinstance({
@@ -389,6 +389,6 @@ export async function DownloadReviewPdf(reviewId, token) {
             ? "PDF export is a Pro feature, please upgrade your plan"
             : "Could not download the PDF")
     } finally {
-        toast.dismiss(toastId)
+        onLoadingChange?.(false)
     }
 }

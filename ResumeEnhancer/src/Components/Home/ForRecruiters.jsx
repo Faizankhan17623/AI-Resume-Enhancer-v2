@@ -8,6 +8,7 @@ import { FaBriefcase, FaShieldAlt, FaChartLine, FaCheckCircle, FaClock, FaUserPl
 import Navbar from './Navbar'
 import Footer from './Footer'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { ApplyForRecruiter } from '../../Services/operations/User'
 
@@ -110,15 +111,13 @@ const ForRecruiters = () => {
     if (!location.trim()) return toast.error("Please enter your company location")
     if (!hiringNeeds.trim()) return toast.error("Please tell us your hiring needs")
 
-    setSubmitting(true)
     const ok = await dispatch(ApplyForRecruiter({
       companyName: companyName.trim(),
       companyWebsite: companyWebsite.trim(),
       companySize,
       location: location.trim(),
       hiringNeeds: hiringNeeds.trim(),
-    }, token))
-    setSubmitting(false)
+    }, token, setSubmitting))
     if (ok) {
       setCompanyName('')
       setCompanyWebsite('')
@@ -134,6 +133,17 @@ const ForRecruiters = () => {
         <title>For Recruiters | Resumify</title>
       </Helmet>
       <Navbar />
+
+      <AnimatePresence>
+      {submitting && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Submitting your application..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Hero sir — deliberately more of a full landing feel now: badge, headline, then
           an immediate fork so nobody has to read the whole page to know which button is theirs */}
@@ -411,7 +421,7 @@ const ForRecruiters = () => {
                         </div>
                         <IconBtn
                           type="submit"
-                          text={submitting ? "Submitting..." : (isLoggedIn ? "Submit application" : "Log in to apply")}
+                          text={isLoggedIn ? "Submit application" : "Log in to apply"}
                           disabled={submitting}
                           customClasses="w-full justify-center"
                         />

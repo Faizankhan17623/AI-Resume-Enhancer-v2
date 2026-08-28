@@ -10,7 +10,6 @@ const { createchat, allchats, singlechat, sendmessage, deletechat } = ChatData
 export function CreateChat(pdfFile, jd, token, navigate) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Creating your chat...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -32,7 +31,6 @@ export function CreateChat(pdfFile, jd, token, navigate) {
             toast.error(error?.response?.data?.message || "Could not create the chat")
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -186,9 +184,9 @@ export function SendMessage(chatId, message, token, currentChat) {
 // chat sir (see Chat.jsx handleDelete) — so it doubles here as the "was this the open chat"
 // flag. Deleting a different chat from the sidebar should just drop it from the list and
 // leave whatever's currently open alone, not clear it out from under the user.
-export function DeleteChat(chatId, token, navigate) {
+export function DeleteChat(chatId, token, navigate, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Deleting the chat...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("DELETE", `${deletechat}/${chatId}`, null, {
                 Authorization: `Bearer ${token}`
@@ -208,7 +206,7 @@ export function DeleteChat(chatId, token, navigate) {
             logApiError("Error deleting the chat", error)
             toast.error(error?.response?.data?.message || "Could not delete the chat")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

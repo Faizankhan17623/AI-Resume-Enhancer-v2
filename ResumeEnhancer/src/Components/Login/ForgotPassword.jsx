@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { FaEnvelopeOpenText } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { ForgotPassword as SendForgotPassword } from '../../Services/operations/Auth'
 
@@ -32,6 +33,17 @@ const ForgotPassword = () => {
         <title>Forgot password | Resumify</title>
       </Helmet>
       <Navbar />
+
+      <AnimatePresence>
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Sending the reset link..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="w-full max-w-md mx-auto px-6 py-16">
 
@@ -68,7 +80,7 @@ const ForgotPassword = () => {
                   disabled={loading}
                   className="text-yellow-50 font-semibold hover:underline disabled:opacity-50 cursor-pointer"
                 >
-                  {loading ? "Resending..." : "Resend the email"}
+                  Resend the email
                 </button>
               </p>
             </motion.div>
@@ -106,7 +118,7 @@ const ForgotPassword = () => {
 
                 <IconBtn
                   type="submit"
-                  text={loading ? "Sending..." : "Send reset link"}
+                  text="Send reset link"
                   disabled={loading}
                   customClasses="w-full justify-center"
                 />

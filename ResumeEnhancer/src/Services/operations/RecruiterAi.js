@@ -10,9 +10,9 @@ const isUpgradeError = (error) => error?.response?.data?.code === 'UPGRADE_AVAIL
 // three Pro/ProMax AI upsells sir — each returns null on failure so the caller can just check
 // truthiness, same shape as other one-shot AI operations in this app (e.g. GetReferralStats)
 
-export function GenerateJobDescription(title, employmentType, mustHaves, token) {
+export function GenerateJobDescription(title, employmentType, mustHaves, token, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Drafting the description...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", jobDescription, { title, employmentType, mustHaves }, {
                 Authorization: `Bearer ${token}`
@@ -28,14 +28,14 @@ export function GenerateJobDescription(title, employmentType, mustHaves, token) 
             toast.error(error?.response?.data?.message || "Could not draft the description")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function GenerateInterviewQuestions(jobId, questionCount, token) {
+export function GenerateInterviewQuestions(jobId, questionCount, token, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Generating questions...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", interviewQuestions, { jobId, questionCount }, {
                 Authorization: `Bearer ${token}`
@@ -51,14 +51,14 @@ export function GenerateInterviewQuestions(jobId, questionCount, token) {
             toast.error(error?.response?.data?.message || "Could not generate questions")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function GenerateCandidateSummary(applicationId, token) {
+export function GenerateCandidateSummary(applicationId, token, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Summarizing...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("GET", `${candidateSummary}/${applicationId}/summary`, null, {
                 Authorization: `Bearer ${token}`
@@ -74,7 +74,7 @@ export function GenerateCandidateSummary(applicationId, token) {
             toast.error(error?.response?.data?.message || "Could not summarize this candidate")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

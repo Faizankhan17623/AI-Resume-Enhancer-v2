@@ -123,6 +123,17 @@ const Resumes = () => {
         <title>My Resumes | Resumify</title>
       </Helmet>
 
+      <AnimatePresence>
+      {(saving || bulkDeleting) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={saving ? "Saving your resume..." : "Deleting the selected resumes..."} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
       <PageTransition className="h-full overflow-y-auto max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
@@ -130,7 +141,7 @@ const Resumes = () => {
             Save a resume once, then reuse it across reviews, chats and cover letters without re-uploading.
           </p>
           <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
-          <IconBtn text={saving ? "Saving..." : "Upload resume"} onclick={handleUploadClick} disabled={saving} customClasses="text-sm shrink-0 ml-4">
+          <IconBtn text="Upload resume" onclick={handleUploadClick} disabled={saving} customClasses="text-sm shrink-0 ml-4">
             <FaCloudUploadAlt />
           </IconBtn>
         </div>
@@ -161,7 +172,7 @@ const Resumes = () => {
                 disabled={bulkDeleting}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-pink-200 border border-pink-700/40 rounded-full hover:bg-pink-700/10 transition-all duration-200 cursor-pointer disabled:opacity-50"
               >
-                <FaTrash className="text-[10px]" /> {bulkDeleting ? 'Deleting...' : `Delete ${selected.length} selected`}
+                <FaTrash className="text-[10px]" /> Delete {selected.length} selected
               </button>
             )}
           </div>

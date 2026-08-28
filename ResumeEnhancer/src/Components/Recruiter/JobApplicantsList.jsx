@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
@@ -70,6 +71,12 @@ const JobApplicantsList = () => {
   const [selected, setSelected] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
   const [fitFilter, setFitFilter] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [busyLabel, setBusyLabel] = useState('Working...')
+  const withBusy = (label) => (next) => {
+    if (next) setBusyLabel(label)
+    setBusy(next)
+  }
 
   useEffect(() => {
     dispatch(GetJobApplicants(jobId, token))
@@ -77,18 +84,18 @@ const JobApplicantsList = () => {
   }, [jobId])
 
   const handleInvite = (applicationId) => {
-    dispatch(InviteApplicantToTest(applicationId, jobId, token))
+    dispatch(InviteApplicantToTest(applicationId, jobId, token, withBusy('Inviting...')))
   }
 
   const handleOutcome = (applicationId, status) => {
-    dispatch(SetApplicationOutcome(applicationId, status, token))
+    dispatch(SetApplicationOutcome(applicationId, status, token, withBusy(status === 'hired' ? 'Marking as hired...' : 'Rejecting...')))
   }
 
   // Pro/ProMax upsell sir — on-demand re-request of the AI candidate summary (the automatic one
   // already ran once at apply time). A full refetch is simplest here since this is a low-
   // frequency, one-off action, not worth a bespoke local-patch reducer for.
   const handleRegenerateSummary = async (applicationId) => {
-    const summary = await dispatch(GenerateCandidateSummary(applicationId, token))
+    const summary = await dispatch(GenerateCandidateSummary(applicationId, token, withBusy('Summarizing...')))
     if (summary) dispatch(GetJobApplicants(jobId, token))
   }
 
@@ -122,7 +129,7 @@ const JobApplicantsList = () => {
   const handleBulkInvite = async () => {
     const ids = selected.filter((id) => selectableApplied.includes(id))
     if (ids.length === 0) return
-    await dispatch(BulkInviteApplicantsToTest(ids, jobId, token))
+    await dispatch(BulkInviteApplicantsToTest(ids, jobId, token, withBusy('Inviting candidates...')))
     setSelected([])
   }
 
@@ -131,7 +138,7 @@ const JobApplicantsList = () => {
   const handleBulkOutcome = async (status) => {
     const ids = status === 'rejected' ? selected : selected.filter((id) => selectableForHire.includes(id))
     if (ids.length === 0) return
-    await dispatch(BulkSetApplicationOutcome(ids, status, jobId, token))
+    await dispatch(BulkSetApplicationOutcome(ids, status, jobId, token, withBusy(status === 'hired' ? 'Marking as hired...' : 'Rejecting...')))
     setSelected([])
   }
 
@@ -148,6 +155,17 @@ const JobApplicantsList = () => {
       <Helmet>
         <title>Applicants | Resumify Recruiter</title>
       </Helmet>
+
+      <AnimatePresence>
+      {busy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={busyLabel} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <h1 className="font-display text-xl text-richblack-5 mb-6">Applicants</h1>
 

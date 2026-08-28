@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { FaMagic, FaFileUpload, FaLayerGroup, FaCloudUploadAlt, FaFilePdf, FaTimes, FaSwatchbook, FaArrowLeft } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { TEMPLATE_REGISTRY } from './Templates/templateRegistry'
@@ -165,6 +166,17 @@ const BuildResumePicker = () => {
       <Helmet>
         <title>Build Resume | Resumify</title>
       </Helmet>
+
+      <AnimatePresence>
+      {generating && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={mode === 'tailor' ? 'Tailoring your resume to this job...' : 'Drafting your resume...'} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="h-full overflow-y-auto max-w-6xl mx-auto px-4 lg:px-6 py-8">
 

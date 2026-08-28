@@ -30,6 +30,7 @@ const Testimonials = () => {
   // Hooks/useMinDurationFlag.js: the plain {loading && testimonials.length === 0} check never
   // re-fires here since the PREVIOUS tab's list is still populated while the new one loads
   const [switchingTab, triggerSwitchingTab] = useMinDurationFlag(4000)
+  const [rowBusy, setRowBusy] = useState(false)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { testimonials, loading } = useSelector((state) => state.admin)
@@ -52,6 +53,17 @@ const Testimonials = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      <AnimatePresence>
+      {rowBusy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Working..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -109,7 +121,7 @@ const Testimonials = () => {
                       <div className="flex items-center gap-2 shrink-0">
                         {item.status !== 'approved' && (
                           <button
-                            onClick={() => dispatch(ModerateTestimonial(item._id, 'approved', token))}
+                            onClick={() => dispatch(ModerateTestimonial(item._id, 'approved', token, setRowBusy))}
                             title="Approve"
                             className="p-2 rounded-lg text-caribgreen-25 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
                           >
@@ -118,7 +130,7 @@ const Testimonials = () => {
                         )}
                         {item.status !== 'rejected' && (
                           <button
-                            onClick={() => dispatch(ModerateTestimonial(item._id, 'rejected', token))}
+                            onClick={() => dispatch(ModerateTestimonial(item._id, 'rejected', token, setRowBusy))}
                             title="Reject"
                             className="p-2 rounded-lg text-yellow-25 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
                           >

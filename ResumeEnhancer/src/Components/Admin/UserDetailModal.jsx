@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
@@ -6,6 +6,7 @@ import { FaTimes } from 'react-icons/fa'
 import { modalBackdrop } from '../../utils/motion'
 import { GetUserDetail, RejectSupportAppeal } from '../../Services/operations/Admin'
 import { getProviderMeta } from '../../utils/authProvider'
+import Loading from '../extra/Loading'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
 
@@ -18,6 +19,7 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
   const { token, user: me } = useSelector((state) => state.auth)
   const { userDetail, userDetailLoading } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
+  const [rejectingAppeal, setRejectingAppeal] = useState(false)
 
   useEffect(() => {
     if (userId) dispatch(GetUserDetail(userId, token))
@@ -45,7 +47,7 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
       confirmButtonColor: '#C1443C',
     })
     if (isConfirmed) {
-      await dispatch(RejectSupportAppeal(user._id, token, page, search, roleFilter))
+      await dispatch(RejectSupportAppeal(user._id, token, page, search, roleFilter, setRejectingAppeal))
       dispatch(GetUserDetail(userId, token))
     }
   }
@@ -62,6 +64,15 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
             className="fixed inset-0 z-[60] bg-richblack-900/70 backdrop-blur-sm"
             onClick={onClose}
           />
+
+          {rejectingAppeal && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+            >
+              <Loading text="Rejecting the appeal..." size="compact" />
+            </motion.div>
+          )}
           <motion.div
             role="dialog"
             aria-modal="true"

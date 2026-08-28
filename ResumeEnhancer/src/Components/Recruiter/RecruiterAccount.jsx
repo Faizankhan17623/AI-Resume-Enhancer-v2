@@ -164,7 +164,10 @@ const RecruiterAccount = () => {
 
   const handleBuyPlan = async (planKey) => {
     setBuyingPlan(planKey)
-    await dispatch(BuyRecruiterPlan(planKey, token, authUser, () => dispatch(GetProfile(token))))
+    await dispatch(BuyRecruiterPlan(planKey, token, authUser, () => dispatch(GetProfile(token)), (isLoading, label) => {
+      if (label) setBusyLabel(label)
+      setBusy(isLoading)
+    }))
     setBuyingPlan(null)
   }
 

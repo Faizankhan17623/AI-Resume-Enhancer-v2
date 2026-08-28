@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaPlus, FaTrash, FaLock, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateTest } from '../../Services/operations/Test'
 import { GenerateInterviewQuestions } from '../../Services/operations/RecruiterAi'
@@ -61,9 +63,7 @@ const TestBuilder = () => {
   // question list below, nothing is added directly to the test). Metered by
   // utils/RecruiterPlans.js's recruiterInterviewQGenUsed.
   const handleGenerateWithAi = async () => {
-    setGeneratingAi(true)
-    const suggestions = await dispatch(GenerateInterviewQuestions(jobId, 8, token))
-    setGeneratingAi(false)
+    const suggestions = await dispatch(GenerateInterviewQuestions(jobId, 8, token, setGeneratingAi))
     if (!suggestions?.length) return
 
     const asQuestions = suggestions.map((s) => ({
@@ -117,9 +117,7 @@ const TestBuilder = () => {
       })),
     }
 
-    setSubmitting(true)
-    await dispatch(CreateTest(payload, token, navigate))
-    setSubmitting(false)
+    await dispatch(CreateTest(payload, token, navigate, setSubmitting))
   }
 
   return (
@@ -127,6 +125,17 @@ const TestBuilder = () => {
       <Helmet>
         <title>Attach a Test | Resumify Recruiter</title>
       </Helmet>
+
+      <AnimatePresence>
+      {(submitting || generatingAi) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={generatingAi ? "Generating questions..." : "Creating the test..."} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <h1 className="font-display text-xl text-richblack-5 mb-6">Attach a Test</h1>
 
@@ -282,7 +291,7 @@ const TestBuilder = () => {
               disabled={generatingAi}
               className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-yellow-700/60 py-4 text-sm text-yellow-25 hover:border-yellow-50 hover:text-yellow-5 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FaMagic /> {generatingAi ? 'Generating...' : 'Suggest questions with AI'}
+              <FaMagic /> Suggest questions with AI
             </button>
           </div>
         </div>
@@ -294,7 +303,7 @@ const TestBuilder = () => {
         )}
         <IconBtn
           type="submit"
-          text={submitting ? "Creating..." : "Create test"}
+          text="Create test"
           disabled={submitting || !marksMatch || isLocked}
           customClasses="w-full justify-center"
         />

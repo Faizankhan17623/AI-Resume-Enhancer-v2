@@ -257,10 +257,11 @@ export function GetUserDetail(userId, token) {
     }
 }
 
-// one shared helper sir — every user action follows the same toast → call → refresh pattern
-const userAction = (method, url, body, token, page, search, loadingText, roleFilter = "") => {
+// one shared helper sir — every user action follows the same call → refresh pattern.
+// `onLoadingChange` shows the caller's real centered spinner instead of a toast.loading.
+const userAction = (method, url, body, token, page, search, roleFilter = "", onLoadingChange) => {
     return async (dispatch) => {
-        const toastId = toast.loading(loadingText)
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector(method, url, body, {
                 Authorization: `Bearer ${token}`
@@ -276,19 +277,19 @@ const userAction = (method, url, body, token, page, search, loadingText, roleFil
             logApiError("Admin user action failed", error)
             toast.error(error?.response?.data?.message || "The action failed")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export const UpdateUserRole = (userId, role, token, page, search, roleFilter) =>
-    userAction("PATCH", `${updaterole}/${userId}/role`, { role }, token, page, search, "Updating the role...", roleFilter)
+export const UpdateUserRole = (userId, role, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${updaterole}/${userId}/role`, { role }, token, page, search, roleFilter, onLoadingChange)
 
-export const UpdateUserPlan = (userId, plan, token, page, search, roleFilter) =>
-    userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, "Updating the plan...", roleFilter)
+export const UpdateUserPlan = (userId, plan, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${updateplan}/${userId}/plan`, { plan }, token, page, search, roleFilter, onLoadingChange)
 
-export const AdjustCredits = (userId, credits, reason, token, page, search, roleFilter) =>
-    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { credits, ...(reason ? { reason } : {}) }, token, page, search, "Granting bonus credits...", roleFilter)
+export const AdjustCredits = (userId, credits, reason, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${adjustcredits}/${userId}/credits`, { credits, ...(reason ? { reason } : {}) }, token, page, search, roleFilter, onLoadingChange)
 
 // broadcast bonus sir — not a userAction() call like the others: it doesn't target a single row,
 // so there's no page/search/roleFilter to refetch against automatically. Caller (Users.jsx)
@@ -313,29 +314,29 @@ export const GrantCreditsToAll = (credits, reason, token) => async (dispatch) =>
     }
 }
 
-export const BanUser = (userId, banned, reason, token, page, search, roleFilter) =>
-    userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, banned ? "Suspending the account..." : "Restoring the account...", roleFilter)
+export const BanUser = (userId, banned, reason, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${banuser}/${userId}/ban`, { banned, reason }, token, page, search, roleFilter, onLoadingChange)
 
 // marks a Support account's one appeal reviewed/rejected sir — the account STAYS suspended,
 // this just closes out the appeal (see Backend/controllers/Admin.js's rejectSupportAppeal) and
 // fires the "this is final" email to the account holder
-export const RejectSupportAppeal = (userId, token, page, search, roleFilter) =>
-    userAction("PATCH", `${banuser}/${userId}/reject-appeal`, {}, token, page, search, "Rejecting the appeal...", roleFilter)
+export const RejectSupportAppeal = (userId, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${banuser}/${userId}/reject-appeal`, {}, token, page, search, roleFilter, onLoadingChange)
 
 // standalone permanent suspension sir — no pending appeal required first, unlike
 // RejectSupportAppeal above (the OTHER way into the same permanent state, for when an appeal
 // was already filed). Same locked-out-everywhere, no-appeal-possible outcome either way.
-export const PermanentlySuspendSupport = (userId, reason, token, page, search, roleFilter) =>
-    userAction("PATCH", `${banuser}/${userId}/permanent-suspend`, { reason }, token, page, search, "Permanently suspending the account...", roleFilter)
+export const PermanentlySuspendSupport = (userId, reason, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", `${banuser}/${userId}/permanent-suspend`, { reason }, token, page, search, roleFilter, onLoadingChange)
 
-export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter) =>
-    userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, banned ? "Suspending accounts..." : "Restoring accounts...", roleFilter)
+export const BulkBanUsers = (userIds, banned, reason, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", bulkbanusers, { userIds, banned, reason }, token, page, search, roleFilter, onLoadingChange)
 
-export const BulkUpdateUserRole = (userIds, role, token, page, search, roleFilter) =>
-    userAction("PATCH", bulkupdaterole, { userIds, role }, token, page, search, `Moving accounts to ${role}...`, roleFilter)
+export const BulkUpdateUserRole = (userIds, role, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("PATCH", bulkupdaterole, { userIds, role }, token, page, search, roleFilter, onLoadingChange)
 
-export const DeleteUser = (userId, token, page, search, roleFilter) =>
-    userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, "Deleting the user...", roleFilter)
+export const DeleteUser = (userId, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, roleFilter, onLoadingChange)
 
 // plain async call sir, not a thunk — the search bar owns its own result/loading state
 // locally rather than parking transient dropdown results in the shared admin slice
@@ -609,9 +610,9 @@ export function GetTestimonials(token, status = "") {
     }
 }
 
-export function ModerateTestimonial(testimonialId, status, token) {
+export function ModerateTestimonial(testimonialId, status, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading(status === 'approved' ? 'Approving...' : 'Rejecting...')
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${moderatetestimonial}/${testimonialId}`, { status }, {
                 Authorization: `Bearer ${token}`
@@ -627,7 +628,7 @@ export function ModerateTestimonial(testimonialId, status, token) {
             logApiError("Error moderating the testimonial", error)
             toast.error(error?.response?.data?.message || "Could not update")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -679,9 +680,9 @@ export function GetReports(token, type = "", status = "") {
     }
 }
 
-export function UpdateReportStatus(reportId, status, token, type = "", statusFilter = "") {
+export function UpdateReportStatus(reportId, status, token, type = "", statusFilter = "", onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading('Updating...')
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${updatereport}/${reportId}`, { status }, {
                 Authorization: `Bearer ${token}`
@@ -697,7 +698,7 @@ export function UpdateReportStatus(reportId, status, token, type = "", statusFil
             logApiError("Error updating the report", error)
             toast.error(error?.response?.data?.message || "Could not update")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -746,9 +747,9 @@ export function GetRecruiterApplications(token, status = "pending") {
     }
 }
 
-export function ApproveRecruiterApplication(userId, token, statusFilter = "pending") {
+export function ApproveRecruiterApplication(userId, token, statusFilter = "pending", onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Approving...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${approveRecruiterUrl}/${userId}/approve`, null, {
                 Authorization: `Bearer ${token}`
@@ -764,14 +765,14 @@ export function ApproveRecruiterApplication(userId, token, statusFilter = "pendi
             logApiError("Error approving recruiter application", error)
             toast.error(error?.response?.data?.message || "Could not approve the application")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function RejectRecruiterApplication(userId, reason, token, statusFilter = "pending") {
+export function RejectRecruiterApplication(userId, reason, token, statusFilter = "pending", onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Rejecting...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${rejectRecruiterUrl}/${userId}/reject`, { reason }, {
                 Authorization: `Bearer ${token}`
@@ -787,7 +788,7 @@ export function RejectRecruiterApplication(userId, reason, token, statusFilter =
             logApiError("Error rejecting recruiter application", error)
             toast.error(error?.response?.data?.message || "Could not reject the application")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

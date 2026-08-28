@@ -11,7 +11,6 @@ const { start, allsessions, singlesession, answer, deletesession } = MockIntervi
 export function StartMockInterview(pdfFile, jd, token, navigate) {
     return async (dispatch) => {
         dispatch(setLoading(true))
-        const toastId = toast.loading("Preparing your mock interview...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -36,7 +35,6 @@ export function StartMockInterview(pdfFile, jd, token, navigate) {
             toast.error(message)
         } finally {
             dispatch(setLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -114,9 +112,9 @@ export function AnswerMockInterview(sessionId, userAnswer, token, currentSession
 // session sir (see MockInterview.jsx handleDelete) — so it doubles here as the "was this the
 // open session" flag. Deleting a different session from the sidebar should just drop it from
 // the list and leave whatever's currently open alone, not clear it out from under the user.
-export function DeleteMockInterview(sessionId, token, navigate) {
+export function DeleteMockInterview(sessionId, token, navigate, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Deleting the session...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("DELETE", `${deletesession}/${sessionId}`, null, {
                 Authorization: `Bearer ${token}`
@@ -136,7 +134,7 @@ export function DeleteMockInterview(sessionId, token, navigate) {
             logApiError("Error deleting the mock interview session", error)
             toast.error(error?.response?.data?.message || "Could not delete the session")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

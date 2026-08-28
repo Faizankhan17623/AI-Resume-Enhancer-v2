@@ -49,6 +49,7 @@ const Reports = () => {
   // Hooks/useMinDurationFlag.js: one shared flag covers both the type and status tabs, since
   // both trigger the exact same re-fetch
   const [switchingFilter, triggerSwitchingFilter] = useMinDurationFlag(4000)
+  const [rowBusy, setRowBusy] = useState(false)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
   const { reports, loading } = useSelector((state) => state.admin)
@@ -76,6 +77,17 @@ const Reports = () => {
       </Helmet>
       <Navbar />
       <AdminNav />
+
+      <AnimatePresence>
+      {rowBusy && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Updating..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -149,7 +161,7 @@ const Reports = () => {
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <select
                         value={item.status}
-                        onChange={(e) => dispatch(UpdateReportStatus(item._id, e.target.value, token, typeFilter, statusFilter))}
+                        onChange={(e) => dispatch(UpdateReportStatus(item._id, e.target.value, token, typeFilter, statusFilter, setRowBusy))}
                         className="text-xs rounded-lg bg-richblack-700 border border-richblack-600 px-2.5 py-1.5 text-richblack-5 cursor-pointer focus:outline-none focus:border-yellow-50"
                       >
                         {Object.entries(STATUS_LABEL).map(([value, label]) => (

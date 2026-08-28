@@ -215,7 +215,6 @@ export function RestoreBuiltResumeVersion(resumeId, versionId, token) {
 export function GenerateResume(rawInfo, targetRole, templateId, token, navigate, color) {
     return async (dispatch) => {
         dispatch(setGenerating(true))
-        const toastId = toast.loading("Drafting your resume...")
         try {
             const response = await apiConnector("POST", generate, { rawInfo, targetRole, templateId, ...(color ? { color } : {}) }, {
                 Authorization: `Bearer ${token}`
@@ -234,7 +233,6 @@ export function GenerateResume(rawInfo, targetRole, templateId, token, navigate,
             return null
         } finally {
             dispatch(setGenerating(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -243,7 +241,6 @@ export function GenerateResume(rawInfo, targetRole, templateId, token, navigate,
 export function TailorResume(pdfFile, jd, templateId, token, navigate, color) {
     return async (dispatch) => {
         dispatch(setGenerating(true))
-        const toastId = toast.loading("Tailoring your resume to this job...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -268,7 +265,6 @@ export function TailorResume(pdfFile, jd, templateId, token, navigate, color) {
             return null
         } finally {
             dispatch(setGenerating(false))
-            toast.dismiss(toastId)
         }
     }
 }
@@ -278,7 +274,6 @@ export function TailorResume(pdfFile, jd, templateId, token, navigate, color) {
 export function ReviewBuiltResume(resumeId, jd, token, navigate) {
     return async (dispatch) => {
         dispatch(setReviewLoading(true))
-        const toastId = toast.loading("Analyzing your resume — this takes a few seconds...")
         try {
             const response = await apiConnector("POST", `${review}/${resumeId}/review`, { jd }, {
                 Authorization: `Bearer ${token}`
@@ -299,15 +294,14 @@ export function ReviewBuiltResume(resumeId, jd, token, navigate) {
             toast.error(error?.response?.data?.message || "Could not analyze the resume")
         } finally {
             dispatch(setReviewLoading(false))
-            toast.dismiss(toastId)
         }
     }
 }
 
 // uploads/replaces the headshot sir — multipart form, same req.files?.X pattern the PDF uploads use
-export function UploadBuiltResumePhoto(resumeId, file, token) {
+export function UploadBuiltResumePhoto(resumeId, file, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Uploading photo...")
+        onLoadingChange?.(true)
         try {
             const formData = new FormData()
             formData.append("photo", file)
@@ -326,7 +320,7 @@ export function UploadBuiltResumePhoto(resumeId, file, token) {
             logApiError("Error uploading the photo", error)
             toast.error(error?.response?.data?.message || "Could not upload the photo")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -393,8 +387,8 @@ export function GetPublicPortfolio(shareId) {
 }
 
 // downloads the resume as a real .docx file sir — blob response, same pattern as DownloadReviewPdf
-export async function DownloadBuiltResumeDocx(resumeId, title, token) {
-    const toastId = toast.loading("Preparing your DOCX...")
+export async function DownloadBuiltResumeDocx(resumeId, title, token, onLoadingChange) {
+    onLoadingChange?.(true)
     try {
         const response = await axiosinstance({
             method: "GET",
@@ -418,6 +412,6 @@ export async function DownloadBuiltResumeDocx(resumeId, title, token) {
         logApiError("Error downloading the DOCX", error)
         toast.error(error?.response?.data?.message || "Could not download the DOCX")
     } finally {
-        toast.dismiss(toastId)
+        onLoadingChange?.(false)
     }
 }

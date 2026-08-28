@@ -34,11 +34,11 @@ const NewChatModal = ({ onClose }) => {
     setPdfFile(file)
   }
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
     if (!pdfFile) return toast.error("Please upload your resume PDF")
     if (!jd.trim()) return toast.error("Please paste the job description")
-    dispatch(CreateChat(pdfFile, jd.trim(), token, navigate))
+    await dispatch(CreateChat(pdfFile, jd.trim(), token, navigate))
     onClose()
   }
 
@@ -127,6 +127,7 @@ const Chat = () => {
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
   const { allChats, currentChat, loading, replying, streamingReply } = useSelector((state) => state.chat)
+  const [deleting, setDeleting] = useState(false)
 
   // chat-list pane width sir — drag the right edge to resize, same pattern as the main
   // dashboard sidebar in DashboardLayout.jsx (own localStorage key, this is a distinct pane)
@@ -207,7 +208,7 @@ const Chat = () => {
         // only clear the open chat + navigate away if THIS is the chat that's currently open sir —
         // deleting a different chat from the sidebar shouldn't kick the user out of the one they're viewing
         const isOpenChat = id === chatId
-        dispatch(DeleteChat(id, token, isOpenChat ? navigate : null))
+        dispatch(DeleteChat(id, token, isOpenChat ? navigate : null, setDeleting))
       }
     })
   }
@@ -217,6 +218,17 @@ const Chat = () => {
       <Helmet>
         <title>AI Coach | Resumify</title>
       </Helmet>
+
+      <AnimatePresence>
+      {deleting && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Deleting the chat..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <div className={`h-full max-w-7xl mx-auto w-full flex min-h-0 ${resizing ? 'select-none cursor-col-resize' : ''}`}>
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { FaDownload, FaCopy, FaExclamationTriangle, FaLightbulb, FaGraduationCap, FaComments, FaShareAlt, FaCheckCircle, FaSearch, FaExternalLinkAlt, FaSpinner } from 'react-icons/fa'
@@ -123,6 +124,7 @@ const Report = () => {
   const { token } = useSelector((state) => state.auth)
   const { review, loading, isPublic, shareId, shareAudience, formattingCheck } = useSelector((state) => state.review)
   const shareUrl = shareId ? `${window.location.origin}/Shared/${shareId}` : null
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
 
   const handleShareClick = async () => {
     if (isPublic) {
@@ -180,6 +182,17 @@ const Report = () => {
         <title>ATS Report | Resumify</title>
       </Helmet>
 
+      <AnimatePresence>
+      {downloadingPdf && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Preparing your PDF..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
       <PageTransition className="h-full overflow-y-auto max-w-5xl mx-auto px-4 lg:px-6 py-8 space-y-5">
 
         {/* Header row sir — score + verdict + PDF */}
@@ -193,7 +206,7 @@ const Report = () => {
             <div className="mt-5 flex flex-wrap justify-center md:justify-start gap-3">
               <IconBtn
                 text="Download PDF"
-                onclick={() => DownloadReviewPdf(reviewId, token)}
+                onclick={() => DownloadReviewPdf(reviewId, token, setDownloadingPdf)}
                 customClasses="text-sm"
               >
                 <FaDownload />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaPlus, FaUsers, FaCopy, FaCheckCircle } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
@@ -20,6 +21,7 @@ const TestList = () => {
   const { token } = useSelector((state) => state.auth)
   const { myTests, loading } = useSelector((state) => state.test)
   const [copiedId, setCopiedId] = useState(null)
+  const [publishing, setPublishing] = useState(false)
 
   useEffect(() => {
     dispatch(GetMyTests(token))
@@ -27,7 +29,7 @@ const TestList = () => {
   }, [])
 
   const handlePublish = async (testId) => {
-    await dispatch(PublishTest(testId, token))
+    await dispatch(PublishTest(testId, token, setPublishing))
     dispatch(GetMyTests(token))
   }
 
@@ -44,6 +46,17 @@ const TestList = () => {
       <Helmet>
         <title>My Tests | Resumify Recruiter</title>
       </Helmet>
+
+      <AnimatePresence>
+      {publishing && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Publishing..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-xl text-richblack-5">My Tests</h1>

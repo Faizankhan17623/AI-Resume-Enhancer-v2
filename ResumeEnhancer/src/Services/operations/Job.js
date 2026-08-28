@@ -28,9 +28,9 @@ const {
 // recruiter-side sir
 // ---------------------------------------------------------------------------
 
-export function CreateJob(jobPayload, token, navigate) {
+export function CreateJob(jobPayload, token, navigate, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Creating the job...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", createJob, jobPayload, {
                 Authorization: `Bearer ${token}`
@@ -48,7 +48,7 @@ export function CreateJob(jobPayload, token, navigate) {
             toast.error(error?.response?.data?.message || "Could not create the job")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -97,9 +97,9 @@ export function GetJob(jobId, token) {
     }
 }
 
-export function UpdateJob(jobId, jobPayload, token) {
+export function UpdateJob(jobId, jobPayload, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Saving...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${updateJob}/${jobId}`, jobPayload, {
                 Authorization: `Bearer ${token}`
@@ -115,14 +115,14 @@ export function UpdateJob(jobId, jobPayload, token) {
             logApiError("Error updating the job", error)
             toast.error(error?.response?.data?.message || "Could not update the job")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function PublishJob(jobId, token) {
+export function PublishJob(jobId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Publishing...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${publishJob}/${jobId}/publish`, null, {
                 Authorization: `Bearer ${token}`
@@ -140,14 +140,14 @@ export function PublishJob(jobId, token) {
             toast.error(error?.response?.data?.message || "Could not publish the job")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function CloseJob(jobId, token) {
+export function CloseJob(jobId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Closing the job...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${closeJob}/${jobId}/close`, null, {
                 Authorization: `Bearer ${token}`
@@ -163,7 +163,7 @@ export function CloseJob(jobId, token) {
             logApiError("Error closing the job", error)
             toast.error(error?.response?.data?.message || "Could not close the job")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -171,9 +171,9 @@ export function CloseJob(jobId, token) {
 // a mistake sir — deletes the job outright, every applicant gets an email that it was withdrawn
 // (best-effort, backend-side, see controllers/Job.js's deleteJob). Confirmation dialog lives in
 // the calling component (JobList.jsx), same pattern as every other destructive action here.
-export function DeleteJob(jobId, token, navigate) {
+export function DeleteJob(jobId, token, navigate, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Deleting the job...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("DELETE", `${deleteJob}/${jobId}`, null, {
                 Authorization: `Bearer ${token}`
@@ -192,7 +192,7 @@ export function DeleteJob(jobId, token, navigate) {
             toast.error(error?.response?.data?.message || "Could not delete the job")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -265,9 +265,9 @@ export function GetRecruiterOverviewAnalytics(token) {
     }
 }
 
-export function SetApplicationOutcome(applicationId, status, token) {
+export function SetApplicationOutcome(applicationId, status, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading(status === 'hired' ? "Marking as hired..." : "Rejecting...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${setApplicationOutcome}/${applicationId}/status`, { status }, {
                 Authorization: `Bearer ${token}`
@@ -285,16 +285,16 @@ export function SetApplicationOutcome(applicationId, status, token) {
             toast.error(error?.response?.data?.message || "Could not update the application")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
 // invites several 'applied' candidates to the job's test at once sir — same skipped-vs-invited
 // message shape the backend returns, applicants list patched in place, no full refetch needed
-export function BulkInviteApplicantsToTest(applicationIds, jobId, token) {
+export function BulkInviteApplicantsToTest(applicationIds, jobId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Inviting candidates...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${bulkInviteApplicants}/${jobId}/applicants/bulk-invite`, { applicationIds }, {
                 Authorization: `Bearer ${token}`
@@ -312,15 +312,15 @@ export function BulkInviteApplicantsToTest(applicationIds, jobId, token) {
             toast.error(error?.response?.data?.message || "Could not invite the selected candidates")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
 // hires/rejects several 'completed_test' candidates at once sir — same shape as above
-export function BulkSetApplicationOutcome(applicationIds, status, jobId, token) {
+export function BulkSetApplicationOutcome(applicationIds, status, jobId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading(status === 'hired' ? "Marking as hired..." : "Rejecting...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${bulkApplicationOutcome}/${jobId}/applicants/bulk-status`, { applicationIds, status }, {
                 Authorization: `Bearer ${token}`
@@ -338,14 +338,14 @@ export function BulkSetApplicationOutcome(applicationIds, status, jobId, token) 
             toast.error(error?.response?.data?.message || "Could not update the selected candidates")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function InviteApplicantToTest(applicationId, jobId, token) {
+export function InviteApplicantToTest(applicationId, jobId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Inviting...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${inviteApplicantToTest}/${applicationId}/invite`, null, {
                 Authorization: `Bearer ${token}`
@@ -361,7 +361,7 @@ export function InviteApplicantToTest(applicationId, jobId, token) {
             logApiError("Error inviting the candidate", error)
             toast.error(error?.response?.data?.message || "Could not invite the candidate")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -419,9 +419,9 @@ export function GetPublicJob(jobId) {
 // education/currentCtc/workHistory) is JSON-stringified into one 'data' field, parsed back into
 // an object server-side (Routes/Job.js's parseMultipartJson) before Zod ever validates it —
 // mixing a file upload with a nested-object payload doesn't work as plain multipart fields.
-export function ApplyToJob(jobId, token, formPayload, resumeFile) {
+export function ApplyToJob(jobId, token, formPayload, resumeFile, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Submitting your application...")
+        onLoadingChange?.(true)
         try {
             const formData = new FormData()
             formData.append("data", JSON.stringify(formPayload))
@@ -442,7 +442,7 @@ export function ApplyToJob(jobId, token, formPayload, resumeFile) {
             toast.error(error?.response?.data?.message || "Could not apply to the job")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

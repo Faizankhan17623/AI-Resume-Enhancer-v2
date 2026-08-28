@@ -2,8 +2,10 @@ import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link, useParams } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
 import { ResetPassword as SubmitResetPassword } from '../../Services/operations/Auth'
@@ -29,6 +31,17 @@ const ResetPassword = () => {
         <title>Reset password | Resumify</title>
       </Helmet>
       <Navbar />
+
+      <AnimatePresence>
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Resetting your password..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="w-full max-w-md mx-auto px-6 py-16">
 
@@ -73,7 +86,7 @@ const ResetPassword = () => {
 
           <IconBtn
             type="submit"
-            text={loading ? "Resetting..." : "Reset password"}
+            text="Reset password"
             disabled={loading}
             customClasses="w-full justify-center"
           />

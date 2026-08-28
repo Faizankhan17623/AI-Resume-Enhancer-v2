@@ -50,6 +50,7 @@ const BuilderEditor = () => {
   const [scoreModalOpen, setScoreModalOpen] = useState(false)
   const [scoreJd, setScoreJd] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [downloadingDocx, setDownloadingDocx] = useState(false)
   const photoInputRef = useRef(null)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [versions, setVersions] = useState([])
@@ -129,9 +130,7 @@ const BuilderEditor = () => {
       toast.error("The file must be under 5 MB")
       return
     }
-    setUploadingPhoto(true)
-    await dispatch(UploadBuiltResumePhoto(resumeId, file, token))
-    setUploadingPhoto(false)
+    await dispatch(UploadBuiltResumePhoto(resumeId, file, token, setUploadingPhoto))
   }
 
   const handleRemovePhoto = () => {
@@ -231,7 +230,7 @@ const BuilderEditor = () => {
   const handleDownloadDocx = async () => {
     cancelScheduledSave()
     await dispatch(SaveBuiltResume(resumeId, current, token, { silent: true }))
-    DownloadBuiltResumeDocx(resumeId, current.title, token)
+    await DownloadBuiltResumeDocx(resumeId, current.title, token, setDownloadingDocx)
   }
 
   // Pro/ProMax only sir — Basic gets the upgrade nudge instead of the modal, matching the
@@ -286,6 +285,20 @@ const BuilderEditor = () => {
           #resume-print-area { position: absolute; top: 0; left: 0; margin: 0 !important; box-shadow: none !important; }
         }
       `}</style>
+
+      <AnimatePresence>
+      {(uploadingPhoto || downloadingDocx || reviewLoading) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading
+            text={uploadingPhoto ? "Uploading photo..." : downloadingDocx ? "Preparing your DOCX..." : "Analyzing your resume — this takes a few seconds..."}
+            size="compact"
+          />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <PageTransition className="h-full overflow-y-auto px-4 lg:px-6 py-6">
         <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
@@ -590,7 +603,7 @@ const BuilderEditor = () => {
                       disabled={uploadingPhoto}
                       className="text-xs font-semibold text-yellow-50 cursor-pointer hover:opacity-80 disabled:opacity-50"
                     >
-                      {uploadingPhoto ? 'Uploading...' : current.photoUrl ? 'Change photo' : 'Add photo (optional)'}
+                      {current.photoUrl ? 'Change photo' : 'Add photo (optional)'}
                     </button>
                     {current.photoUrl && (
                       <button onClick={handleRemovePhoto} className="block text-xs text-richblack-400 hover:text-pink-200 cursor-pointer mt-0.5">

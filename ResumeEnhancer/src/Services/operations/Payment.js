@@ -42,9 +42,9 @@ export function GetAllPlans() {
 // returns a promise that resolves once the razorpay window is open (or the setup step failed) sir,
 // so the caller's `buying` state only needs to stay true for THIS setup phase — not the whole
 // checkout, which can otherwise sit open for minutes waiting on the user to pay
-export function BuyPlan(plan, token, user, navigate) {
+export function BuyPlan(plan, token, user, navigate, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Setting up the payment...")
+        onLoadingChange?.(true, "Setting up the payment...")
         try {
             const scriptLoaded = await loadRazorpayScript()
             if (!scriptLoaded) {
@@ -76,7 +76,7 @@ export function BuyPlan(plan, token, user, navigate) {
                 theme: { color: "#FFD60A" },
                 handler: async function (razorpayResponse) {
                     // verify on our server sir — signature + the session cookie must both match
-                    const verifyToast = toast.loading("Verifying your payment...")
+                    onLoadingChange?.(true, "Verifying your payment...")
                     try {
                         const verifyResponse = await apiConnector("POST", verifypayment, {
                             razorpay_order_id: razorpayResponse.razorpay_order_id,
@@ -102,7 +102,7 @@ export function BuyPlan(plan, token, user, navigate) {
                         logApiError("Error verifying the payment", error)
                         toast.error(error?.response?.data?.message || "Payment verification failed")
                     } finally {
-                        toast.dismiss(verifyToast)
+                        onLoadingChange?.(false)
                     }
                 }
             }
@@ -116,7 +116,7 @@ export function BuyPlan(plan, token, user, navigate) {
             logApiError("Error starting the payment", error)
             toast.error(error?.response?.data?.message || "Could not start the payment")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

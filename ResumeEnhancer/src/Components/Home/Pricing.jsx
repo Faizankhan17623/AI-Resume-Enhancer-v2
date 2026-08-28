@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaCheck, FaHeart, FaStar, FaTimes, FaCrown } from 'react-icons/fa'
 import Navbar from './Navbar'
@@ -70,6 +70,7 @@ const Pricing = () => {
   // tracks which plan's buy button is mid-flight sir — keyed by plan.key so only the
   // clicked card's button disables/spins, not every "Get X" button on the page
   const [buyingPlan, setBuyingPlan] = useState(null)
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     dispatch(GetAllPlans())
@@ -93,7 +94,9 @@ const Pricing = () => {
     }
     setBuyingPlan(planKey)
     try {
-      await dispatch(BuyPlan(planKey, token, user, navigate))
+      await dispatch(BuyPlan(planKey, token, user, navigate, (isLoading, label) => {
+        if (label === "Verifying your payment...") setVerifying(isLoading)
+      }))
     } finally {
       setBuyingPlan(null)
     }
@@ -105,6 +108,17 @@ const Pricing = () => {
         <title>Pricing | Resumify</title>
       </Helmet>
       <Navbar />
+
+      <AnimatePresence>
+      {verifying && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Verifying your payment..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}

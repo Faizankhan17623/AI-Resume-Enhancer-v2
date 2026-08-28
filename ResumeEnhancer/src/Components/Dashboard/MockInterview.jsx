@@ -34,11 +34,11 @@ const NewSessionModal = ({ onClose }) => {
     setPdfFile(file)
   }
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
     if (!pdfFile) return toast.error("Please upload your resume PDF")
     if (!jd.trim()) return toast.error("Please paste the job description")
-    dispatch(StartMockInterview(pdfFile, jd.trim(), token, navigate))
+    await dispatch(StartMockInterview(pdfFile, jd.trim(), token, navigate))
     onClose()
   }
 
@@ -180,6 +180,7 @@ const MockInterview = () => {
   const navigate = useNavigate()
   const { token, user } = useSelector((state) => state.auth)
   const { allSessions, currentSession, loading, scoring } = useSelector((state) => state.mockInterview)
+  const [deleting, setDeleting] = useState(false)
 
   const isProMax = user?.SubType === 'ProMax'
 
@@ -248,7 +249,7 @@ const MockInterview = () => {
         // open sir — deleting a different one from the sidebar shouldn't kick the user out of
         // the session they're viewing
         const isOpenSession = id === sessionId
-        dispatch(DeleteMockInterview(id, token, isOpenSession ? navigate : null))
+        dispatch(DeleteMockInterview(id, token, isOpenSession ? navigate : null, setDeleting))
       }
     })
   }
@@ -278,6 +279,17 @@ const MockInterview = () => {
       <Helmet>
         <title>Mock Interview | Resumify</title>
       </Helmet>
+
+      <AnimatePresence>
+      {deleting && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text="Deleting the session..." size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <div className={`h-full max-w-7xl mx-auto w-full flex min-h-0 ${resizing ? 'select-none cursor-col-resize' : ''}`}>
 

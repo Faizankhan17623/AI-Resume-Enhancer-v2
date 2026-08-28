@@ -24,9 +24,9 @@ const {
 // recruiter-side sir
 // ---------------------------------------------------------------------------
 
-export function CreateTest(testPayload, token, navigate) {
+export function CreateTest(testPayload, token, navigate, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Creating the test...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", createTest, testPayload, {
                 Authorization: `Bearer ${token}`
@@ -44,7 +44,7 @@ export function CreateTest(testPayload, token, navigate) {
             logApiError("Error creating the test", error)
             toast.error(error?.response?.data?.message || "Could not create the test")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -93,9 +93,9 @@ export function GetTest(testId, token) {
     }
 }
 
-export function UpdateTest(testId, testPayload, token) {
+export function UpdateTest(testId, testPayload, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Saving...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("PATCH", `${updateTest}/${testId}`, testPayload, {
                 Authorization: `Bearer ${token}`
@@ -111,14 +111,14 @@ export function UpdateTest(testId, testPayload, token) {
             logApiError("Error updating the test", error)
             toast.error(error?.response?.data?.message || "Could not update the test")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
 
-export function PublishTest(testId, token) {
+export function PublishTest(testId, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Publishing...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", `${publishTest}/${testId}/publish`, null, {
                 Authorization: `Bearer ${token}`
@@ -136,7 +136,7 @@ export function PublishTest(testId, token) {
             toast.error(error?.response?.data?.message || "Could not publish the test")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -214,9 +214,9 @@ export function StartAttempt(inviteCode, token, navigate) {
 
 // answersMap sir — { [questionId]: answer } from testAttemptSlice, converted to the array shape
 // the backend expects
-export function SubmitTestAnswers(attemptId, answersMap, token, navigate) {
+export function SubmitTestAnswers(attemptId, answersMap, token, navigate, onLoadingChange) {
     return async () => {
-        const toastId = toast.loading("Submitting...")
+        onLoadingChange?.(true)
         try {
             const answers = Object.entries(answersMap).map(([questionId, answer]) => ({ questionId, answer }))
             const response = await apiConnector("POST", `${submitAnswers}/${attemptId}/answers`, { answers }, {
@@ -235,7 +235,7 @@ export function SubmitTestAnswers(attemptId, answersMap, token, navigate) {
             toast.error(error?.response?.data?.message || "Could not submit the test")
             return null
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

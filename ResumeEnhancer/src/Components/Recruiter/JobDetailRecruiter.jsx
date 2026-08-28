@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash } from 'react-icons/fa'
@@ -35,6 +36,12 @@ const JobDetailRecruiter = () => {
   const [unpaidDurationMonths, setUnpaidDurationMonths] = useState('')
   const [certificateProvided, setCertificateProvided] = useState(false)
   const [savingComp, setSavingComp] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [busyLabel, setBusyLabel] = useState('Working...')
+  const withBusy = (label) => (next) => {
+    if (next) setBusyLabel(label)
+    setBusy(next)
+  }
 
   useEffect(() => {
     dispatch(GetJob(jobId, token))
@@ -54,12 +61,12 @@ const JobDetailRecruiter = () => {
   }, [job?._id])
 
   const handlePublish = async () => {
-    const ok = await dispatch(PublishJob(jobId, token))
+    const ok = await dispatch(PublishJob(jobId, token, withBusy('Publishing...')))
     if (ok) dispatch(GetJob(jobId, token))
   }
 
   const handleClose = async () => {
-    await dispatch(CloseJob(jobId, token))
+    await dispatch(CloseJob(jobId, token, withBusy('Closing the job...')))
   }
 
   const handleCopyLink = () => {
@@ -74,15 +81,13 @@ const JobDetailRecruiter = () => {
     if (compensationType === 'paid' && (!ctcMin || !ctcMax)) return toast.error("Enter both a minimum and maximum CTC")
     if (compensationType === 'unpaid' && !unpaidDurationMonths) return toast.error("Enter the internship/unpaid duration")
 
-    setSavingComp(true)
     await dispatch(UpdateJob(jobId, {
       compensationType,
       ctcMin: compensationType === 'paid' ? Number(ctcMin) : undefined,
       ctcMax: compensationType === 'paid' ? Number(ctcMax) : undefined,
       unpaidDurationMonths: compensationType === 'unpaid' ? Number(unpaidDurationMonths) : undefined,
       certificateProvided: compensationType === 'unpaid' ? certificateProvided : undefined,
-    }, token))
-    setSavingComp(false)
+    }, token, setSavingComp))
   }
 
   // a mistake sir, per direct request — deletes the job outright, every applicant gets an email
@@ -97,7 +102,7 @@ const JobDetailRecruiter = () => {
       confirmButtonText: 'Delete job',
       confirmButtonColor: '#C1443C',
     }).then((result) => {
-      if (result.isConfirmed) dispatch(DeleteJob(jobId, token, navigate))
+      if (result.isConfirmed) dispatch(DeleteJob(jobId, token, navigate, withBusy('Deleting the job...')))
     })
   }
 
@@ -114,6 +119,17 @@ const JobDetailRecruiter = () => {
       <Helmet>
         <title>{job.title} | Resumify Recruiter</title>
       </Helmet>
+
+      <AnimatePresence>
+      {(busy || savingComp) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={savingComp ? "Saving compensation..." : busyLabel} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <div className="max-w-3xl space-y-6">
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
@@ -239,7 +255,7 @@ const JobDetailRecruiter = () => {
           )}
 
           {compensationType && (
-            <IconBtn text={savingComp ? "Saving..." : "Save compensation"} onclick={handleSaveCompensation} disabled={savingComp} customClasses="text-sm" />
+            <IconBtn text="Save compensation" onclick={handleSaveCompensation} disabled={savingComp} customClasses="text-sm" />
           )}
         </div>
 

@@ -165,9 +165,9 @@ export const UpdateNumber = (number, token, onLoadingChange) => updateProfileFie
 // self-signup request to become a Recruiter sir — role stays 'User' until an Admin approves
 // it (see Admin/RecruiterApplications.jsx). Reuses the same profile-merge action as the other
 // account-field edits, since recruiterApplication is just another field on the profile's user.
-export function ApplyForRecruiter(payload, token) {
+export function ApplyForRecruiter(payload, token, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Submitting your application...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", applyForRecruiterUrl, payload, {
                 Authorization: `Bearer ${token}`
@@ -185,7 +185,7 @@ export function ApplyForRecruiter(payload, token) {
             toast.error(error?.response?.data?.message || "Could not submit your application")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
@@ -195,9 +195,9 @@ export function ApplyForRecruiter(payload, token) {
 // Merges suspensionAppealStatus into the cached auth user directly, same object shape
 // publicUser() sends at login, so DashboardLayout's sidebar lock picks the change up at once
 // with no extra /profile round-trip (which a banned user couldn't reach anyway).
-export function SubmitSuspensionAppeal(message, token) {
+export function SubmitSuspensionAppeal(message, token, onLoadingChange) {
     return async (dispatch, getState) => {
-        const toastId = toast.loading("Sending your appeal...")
+        onLoadingChange?.(true)
         try {
             const response = await apiConnector("POST", appealSuspensionUrl, { message }, {
                 Authorization: `Bearer ${token}`
@@ -216,7 +216,7 @@ export function SubmitSuspensionAppeal(message, token) {
             toast.error(error?.response?.data?.message || "Could not submit your appeal")
             return false
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }

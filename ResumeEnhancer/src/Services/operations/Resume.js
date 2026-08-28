@@ -10,7 +10,6 @@ const { save, all, update, remove } = ResumeData
 export function SaveResume(pdfFile, label, token) {
     return async (dispatch) => {
         dispatch(setSaving(true))
-        const toastId = toast.loading("Saving your resume...")
         try {
             const formData = new FormData()
             formData.append("PDf", pdfFile)
@@ -33,7 +32,6 @@ export function SaveResume(pdfFile, label, token) {
             return null
         } finally {
             dispatch(setSaving(false))
-            toast.dismiss(toastId)
         }
     }
 }

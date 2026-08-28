@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaLock, FaMagic } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
+import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { CreateJob } from '../../Services/operations/Job'
 import { GetProfile } from '../../Services/operations/User'
@@ -55,9 +57,7 @@ const JobBuilder = () => {
       skills: skillsInput.split(',').map((s) => s.trim()).filter(Boolean),
     }
 
-    setSubmitting(true)
-    const job = await dispatch(CreateJob(payload, token, navigate))
-    setSubmitting(false)
+    const job = await dispatch(CreateJob(payload, token, navigate, setSubmitting))
     if (!job) return
   }
 
@@ -67,9 +67,7 @@ const JobBuilder = () => {
     if (!title.trim()) return toast.error("Enter a job title first")
     if (!mustHaves.trim()) return toast.error("Give the AI a few must-have requirements to work from")
 
-    setDraftingAi(true)
-    const drafted = await dispatch(GenerateJobDescription(title.trim(), employmentType, mustHaves.trim(), token))
-    setDraftingAi(false)
+    const drafted = await dispatch(GenerateJobDescription(title.trim(), employmentType, mustHaves.trim(), token, setDraftingAi))
     if (drafted) setDescription(drafted)
   }
 
@@ -78,6 +76,17 @@ const JobBuilder = () => {
       <Helmet>
         <title>New Job | Resumify Recruiter</title>
       </Helmet>
+
+      <AnimatePresence>
+      {(submitting || draftingAi) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+        >
+          <Loading text={draftingAi ? "Drafting the description..." : "Creating the job..."} size="compact" />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <h1 className="font-display text-xl text-richblack-5 mb-6">Post a Job</h1>
 
@@ -121,7 +130,7 @@ const JobBuilder = () => {
               disabled={draftingAi}
               className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-yellow-50 text-richblack-900 hover:brightness-95 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FaMagic className="text-[10px]" /> {draftingAi ? 'Drafting...' : 'Draft description with AI'}
+              <FaMagic className="text-[10px]" /> Draft description with AI
             </button>
           </div>
           <div>
@@ -178,7 +187,7 @@ const JobBuilder = () => {
             <FaLock /> Locked until an admin approves your recruiter account
           </p>
         )}
-        <IconBtn type="submit" text={submitting ? "Creating..." : "Create job"} disabled={submitting || isLocked} customClasses="w-full justify-center" />
+        <IconBtn type="submit" text="Create job" disabled={submitting || isLocked} customClasses="w-full justify-center" />
       </form>
     </RecruiterLayout>
   )

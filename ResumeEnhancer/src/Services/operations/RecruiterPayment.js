@@ -38,9 +38,9 @@ export function GetAllRecruiterPlans() {
     }
 }
 
-export function BuyRecruiterPlan(plan, token, user, onSuccess) {
+export function BuyRecruiterPlan(plan, token, user, onSuccess, onLoadingChange) {
     return async (dispatch) => {
-        const toastId = toast.loading("Setting up the payment...")
+        onLoadingChange?.(true, "Setting up the payment...")
         try {
             const scriptLoaded = await loadRazorpayScript()
             if (!scriptLoaded) {
@@ -70,7 +70,7 @@ export function BuyRecruiterPlan(plan, token, user, onSuccess) {
                 },
                 theme: { color: "#FFD60A" },
                 handler: async function (razorpayResponse) {
-                    const verifyToast = toast.loading("Verifying your payment...")
+                    onLoadingChange?.(true, "Verifying your payment...")
                     try {
                         const verifyResponse = await apiConnector("POST", verifypayment, {
                             razorpay_order_id: razorpayResponse.razorpay_order_id,
@@ -94,7 +94,7 @@ export function BuyRecruiterPlan(plan, token, user, onSuccess) {
                         logApiError("Error verifying the payment", error)
                         toast.error(error?.response?.data?.message || "Payment verification failed")
                     } finally {
-                        toast.dismiss(verifyToast)
+                        onLoadingChange?.(false)
                     }
                 }
             }
@@ -108,7 +108,7 @@ export function BuyRecruiterPlan(plan, token, user, onSuccess) {
             logApiError("Error starting the payment", error)
             toast.error(error?.response?.data?.message || "Could not start the payment")
         } finally {
-            toast.dismiss(toastId)
+            onLoadingChange?.(false)
         }
     }
 }
