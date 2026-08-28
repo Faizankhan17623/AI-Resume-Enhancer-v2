@@ -66,7 +66,7 @@ const JobApplicantsList = () => {
   const { jobId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { jobApplicants, jobHasTest, loading } = useSelector((state) => state.job)
+  const { jobApplicants, jobHasTest, testPublished, loading } = useSelector((state) => state.job)
   const { isLocked } = useRecruiterLock()
   const [selected, setSelected] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
@@ -169,6 +169,17 @@ const JobApplicantsList = () => {
 
       <h1 className="font-display text-xl text-richblack-5 mb-6">Applicants</h1>
 
+      {jobHasTest && !testPublished && !loading && (
+        <div className="mb-6 rounded-xl bg-warm-700/10 border border-warm-600 px-5 py-4 flex items-start gap-3">
+          <FaExclamationTriangle className="text-warm-25 mt-0.5 shrink-0" />
+          <p className="text-sm text-warm-25">
+            This job's test is still a draft — <strong>publish it from the test builder</strong> before
+            you can invite candidates. Inviting to an unpublished test used to silently mark
+            candidates as invited without ever emailing them a link; that's now blocked.
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <Loading text="Loading applicants..." />
       ) : jobApplicants.length === 0 ? (
@@ -218,7 +229,8 @@ const JobApplicantsList = () => {
               {jobHasTest && selected.some((id) => selectableApplied.includes(id)) && (
                 <button
                   onClick={handleBulkInvite}
-                  disabled={isLocked}
+                  disabled={isLocked || !testPublished}
+                  title={!testPublished ? "Publish this job's test before inviting candidates to it" : undefined}
                   className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-700/20 text-yellow-25 border border-yellow-700 hover:bg-yellow-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Invite selected to test
@@ -327,12 +339,16 @@ const JobApplicantsList = () => {
                       {statusLabel[app.status] || app.status}
                     </span>
                     {jobHasTest && app.status === 'applied' && (
-                      <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                      <span title={isLocked
+                        ? 'Locked until an admin approves your recruiter account'
+                        : !testPublished
+                          ? "Publish this job's test before inviting candidates to it"
+                          : undefined}>
                         <IconBtn
                           text="Invite to test"
                           onclick={() => handleInvite(app._id)}
                           customClasses="text-xs px-3 py-2"
-                          disabled={isLocked}
+                          disabled={isLocked || !testPublished}
                         >
                           {isLocked ? <FaLock className="text-[10px]" /> : <FaPaperPlane className="text-[10px]" />}
                         </IconBtn>

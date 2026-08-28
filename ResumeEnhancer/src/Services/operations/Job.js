@@ -209,7 +209,7 @@ export function GetJobApplicants(jobId, token) {
                 throw new Error(response.data.message)
             }
 
-            dispatch(setJobApplicants({ applicants: response.data.applicants, jobHasTest: response.data.jobHasTest }))
+            dispatch(setJobApplicants({ applicants: response.data.applicants, jobHasTest: response.data.jobHasTest, testPublished: response.data.testPublished }))
         } catch (error) {
             logApiError("Error fetching applicants", error)
             toast.error(error?.response?.data?.message || "Could not load the applicants")

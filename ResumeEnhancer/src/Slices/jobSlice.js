@@ -10,6 +10,10 @@ const initialState = {
     // whether the CURRENT job (whichever one jobApplicants is for) has a proctored test attached
     // sir — tests are optional now, this drives whether "Invite to test" even shows
     jobHasTest: false,
+    // whether that attached test has actually been PUBLISHED sir — a test can be attached but
+    // still sitting in draft (no inviteCode yet), in which case invite must be blocked with an
+    // explanation rather than silently flipping status and sending no email
+    testPublished: false,
     jobAnalytics: null,
     recruiterOverview: null,
 
@@ -41,6 +45,7 @@ const jobSlice = createSlice({
         setJobApplicants(state, value) {
             state.jobApplicants = value.payload.applicants
             state.jobHasTest = value.payload.jobHasTest
+            state.testPublished = value.payload.testPublished
         },
         setJobAnalytics(state, value) {
             state.jobAnalytics = value.payload

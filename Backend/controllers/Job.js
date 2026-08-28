@@ -302,6 +302,16 @@ exports.getJobApplicants = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
+        // testPublished sir — distinct from jobHasTest (a test can be ATTACHED but still sitting
+        // in draft, with no inviteCode yet — see inviteApplicantToTest's publish guard). The
+        // frontend uses this to show "publish the test first" instead of a button that silently
+        // does nothing.
+        let testPublished = false
+        if (job.test) {
+            const test = await Test.findById(job.test).select('inviteCode')
+            testPublished = !!test?.inviteCode
+        }
+
         const applicants = await JobApplication.find({ job: jobId })
             .populate('candidate', 'firstName lastName email')
             .populate('testAttempt', 'status score violationCount')
@@ -309,7 +319,7 @@ exports.getJobApplicants = async (req, res) => {
             .populate('builtResume', 'title')
             .sort({ createdAt: -1 })
 
-        return res.status(200).json({ success: true, applicants, jobHasTest: !!job.test })
+        return res.status(200).json({ success: true, applicants, jobHasTest: !!job.test, testPublished })
     } catch (error) {
         (req.log || logger).error('get job applicants failed', { err: error })
         return res.status(500).json({
@@ -533,13 +543,25 @@ exports.inviteApplicantToTest = async (req, res) => {
             })
         }
 
+        // the test must actually be PUBLISHED sir — publishTest is what generates inviteCode
+        // (controllers/Test.js), and a draft test has none. Without this check the application
+        // still flipped to invited_to_test and the mail block below silently no-op'd on
+        // `test?.inviteCode` being falsy — the recruiter saw a false "invited" success with no
+        // email ever sent and no way to know why. Block it up front with a clear message instead.
+        const test = await Test.findById(application.job.test).select('inviteCode timeLimitMinutes status')
+        if (!test?.inviteCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Publish this job\'s test before inviting candidates to it',
+            })
+        }
+
         application.status = 'invited_to_test'
         await application.save()
 
         // best-effort test-invite email sir — same pattern as every other non-critical mail
         // send in this file, wrapped so a relay hiccup never fails the invite itself
         try {
-            const test = await Test.findById(application.job.test).select('inviteCode timeLimitMinutes')
             if (test?.inviteCode && application.candidate?.email) {
                 const frontendUrl = process.env.FRONTEND_URL
                     ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
@@ -669,6 +691,15 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
         }
 
         const test = await Test.findById(job.test).select('inviteCode timeLimitMinutes')
+
+        // same publish check as the single-invite path above sir — without this a draft test's
+        // applications still flip to invited_to_test with zero emails ever sent, silently
+        if (!test?.inviteCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Publish this job\'s test before inviting candidates to it',
+            })
+        }
 
         const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
         const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId }).populate('candidate', 'firstName lastName email')
@@ -917,13 +948,20 @@ exports.applyToJob = async (req, res) => {
 
         // upload the actual PDF to Cloudinary sir — resource_type:'raw' since this is a
         // non-image file, which every other Cloudinary upload in this app (photos, snapshots)
-        // never needed to set
+        // never needed to set.
+        //
+        // public_id MUST end in .pdf sir — a raw resource with no extension on its public_id
+        // gets served with no reliable Content-Type, so the browser can't tell it's a PDF and
+        // downloads it instead of opening it inline (the "View resume" button forcing a
+        // download instead of a preview). Every other Cloudinary asset in this app is an
+        // image (resource_type:'auto'), which doesn't hit this — raw delivery is the one place
+        // the extension has to be explicit.
         const upload = await cloudinary.uploader.upload(
             `data:${resumeFile.mimetype};base64,${resumeFile.data.toString('base64')}`,
             {
                 folder: 'job-application-resumes',
                 resource_type: 'raw',
-                public_id: `${jobId}-${candidateId}-${Date.now()}`,
+                public_id: `${jobId}-${candidateId}-${Date.now()}.pdf`,
             }
         )
 
