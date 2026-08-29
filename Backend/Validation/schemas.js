@@ -187,7 +187,12 @@ const notificationPrefsSchema = z.object({
 // payment sir — the amount is NEVER taken from the client, only the plan key
 // ---------------------------------------------------------------------------
 
-const createOrderSchema = z.object({ plan: planKey })
+// billingCycle sir — new for the monthly/yearly toggle, per direct request. The amount itself
+// still ALWAYS comes from utils/Plans.js's server-side config (createOrder), this only says
+// which of the plan's two cycles to charge.
+const billingCycle = z.enum(['monthly', 'yearly'], { error: 'Please pick monthly or yearly billing' })
+
+const createOrderSchema = z.object({ plan: planKey, billingCycle })
 
 const verifyPaymentSchema = z.object({
     razorpay_order_id: z.string().min(1, 'Order id is required'),

@@ -30,6 +30,7 @@ const ForgotPassword = lazy(() => import('./Components/Login/ForgotPassword'))
 const ResetPassword = lazy(() => import('./Components/Login/ResetPassword'))
 const OAuthComplete = lazy(() => import('./Components/Login/OAuthComplete'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
+const PlanCheckout = lazy(() => import('./Components/Home/PlanCheckout'))
 const DashboardHome = lazy(() => import('./Components/Dashboard/DashboardHome'))
 const NewReview = lazy(() => import('./Components/Dashboard/NewReview'))
 const TemplatePicker = lazy(() => import('./Components/ResumeBuilder/TemplatePicker'))
@@ -190,6 +191,7 @@ function App() {
             {/* Public sir */}
             <Route path="/" element={<Homelayout />} />
             <Route path="/Pricing" element={<Pricing />} />
+            <Route path="/Checkout/:planKey" element={<PrivateRoute><PlanCheckout /></PrivateRoute>} />
             <Route path="/Shared/:shareId" element={<SharedReport />} />
             <Route path="/Portfolio/:shareId" element={<SharedPortfolio />} />
             <Route path="/Privacy-Policy" element={<PrivacyPolicy />} />

@@ -551,13 +551,17 @@ exports.updateUserPlan = async (req, res) => {
             })
         }
 
-        // Basic means clearing the subscription sir; paid plans get the full validity window + a fresh credit count
+        // Basic means clearing the subscription sir; paid plans get a fresh credit count and a
+        // full validity window. This manual grant always uses the MONTHLY cycle's validityDays
+        // sir — an Admin giveaway/refund-goodwill grant isn't a real yearly purchase, and
+        // PLANS[plan] no longer has one fixed validityDays now that Pro/ProMax each have two
+        // (monthly/yearly) billingCycles (see utils/Plans.js).
         const update = plan === 'Basic'
             ? { Subscription: false, SubType: 'Basic', SubscriptionExpires: null }
             : {
                 Subscription: true,
                 SubType: plan,
-                SubscriptionExpires: new Date(Date.now() + PLANS[plan].validityDays * 24 * 60 * 60 * 1000),
+                SubscriptionExpires: new Date(Date.now() + PLANS[plan].billingCycles.monthly.validityDays * 24 * 60 * 60 * 1000),
                 count: 0,
             }
 

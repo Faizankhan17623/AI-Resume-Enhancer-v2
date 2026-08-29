@@ -4,18 +4,44 @@ const logger = require('./logger')
 // single source of truth for the three plans sir — change prices/limits ONLY here
 // price is in paise because razorpay wants paise (19900 = Rs 199)
 // credits / maxMessagesPerChat set to null means UNLIMITED sir
+//
+// billingCycles sir, per direct request — Pro/ProMax now come in monthly AND yearly, each with
+// its own base price + 18% GST baked into `price` (paise, what Razorpay actually charges).
+// `basePrice`/`gst` are kept alongside `price` purely for the checkout review page's line-item
+// breakdown (Order details: base + GST = total, matching the reference screenshots) — `price` is
+// still the one number createOrder ever trusts for what to actually charge.
+//
+// Yearly is a single lump-sum charge for the full year (not 12 recurring charges) — same as the
+// reference pricing page: the "/month" figure shown is a display rate only, matching Razorpay's
+// one-time-order flow this app already uses (no Razorpay Subscriptions/auto-charge involved).
+const round2 = (n) => Math.round(n * 100) / 100
+
+const buildCycle = (baseRupees, validityDays) => {
+    const gstRupees = round2(baseRupees * 0.18)
+    const totalRupees = round2(baseRupees + gstRupees)
+    return {
+        basePrice: Math.round(baseRupees * 100),   // paise
+        gst: Math.round(gstRupees * 100),          // paise
+        price: Math.round(totalRupees * 100),      // paise — what Razorpay actually charges
+        validityDays,
+    }
+}
+
 const PLANS = {
     Basic: {
         key: 'Basic',
         name: 'Basic',
         price: 0,
         credits: 5,
-        maxMessagesPerChat: 60,
-        contextWindow: 10,
+        maxMessagesPerChat: 50,
+        contextWindow: 120,
         validityDays: null,
+        // Basic has no billingCycles sir — it's free, nothing to choose between. Its 5 credits
+        // still reset monthly though (see creditCycleStart on the User model + this file's
+        // resetCreditCycleIfNeeded), just via a rolling cycle instead of a plan purchase.
         features: [
-            '5 free AI uses (ATS reviews + new chats)',
-            'Up to 60 messages per chat',
+            '5 free AI uses per month (ATS reviews + new chats)',
+            'Up to 50 messages per chat',
             'Core ATS review with top 3 fixes',
             'Standard response speed',
         ]
@@ -23,35 +49,39 @@ const PLANS = {
     Pro: {
         key: 'Pro',
         name: 'Pro',
-        price: 19900,
         credits: 100,
-        maxMessagesPerChat: 200,
-        contextWindow: 20,
-        validityDays: 30,
+        maxMessagesPerChat: 250,
+        contextWindow: 100,
+        // per direct request sir — ₹1,200/mo, ₹1,000/mo-equivalent billed yearly, both + 18% GST
+        billingCycles: {
+            monthly: buildCycle(1200, 30),
+            yearly: buildCycle(1000 * 12, 365),
+        },
         features: [
             '100 AI uses per month (ATS reviews + new chats)',
-            'Up to 200 messages per chat',
+            'Up to 250 messages per chat',
             'Deep ATS review: keyword analysis, section feedback, quick wins',
             'Full bullet/section rewrites and cover letters in chat',
             'Faster response speed',
-            'Valid for 30 days',
         ]
     },
     ProMax: {
         key: 'ProMax',
         name: 'Pro Max',
-        price: 49900,
         credits: 300,
         maxMessagesPerChat: 500,
         contextWindow: 30,
-        validityDays: 30,
+        // per direct request sir — ₹1,500/mo, ₹1,300/mo-equivalent billed yearly, both + 18% GST
+        billingCycles: {
+            monthly: buildCycle(1500, 30),
+            yearly: buildCycle(1300 * 12, 365),
+        },
         features: [
             '300 AI uses per month (ATS reviews + new chats)',
             'Up to 500 messages per chat',
             'Everything in Pro + interview prep, red flags, learning roadmap',
             'Full career coach in chat: mock interviews, salary negotiation, LinkedIn',
             'Fastest response speed, no wait',
-            'Valid for 30 days',
         ]
     },
 }
@@ -77,6 +107,38 @@ const getUserPlan = async (userId) => {
     return getEffectivePlan(user)
 }
 
+// Basic-tier credit reset sir — lazy rolling monthly cycle, same discipline as
+// RecruiterPlans.js's resetRecruiterCycleIfNeeded: checked/applied the moment a credit spend is
+// actually attempted, no cron needed. Only ever touches a Basic-effective account — a paid
+// Pro/ProMax user's credits reset via SubscriptionExpires + the reconcile cron instead, so this
+// must never fire for them (an active paid subscriber mid-cycle should never have `count` reset
+// early just because creditCycleStart happens to be stale from before they upgraded).
+const CREDIT_CYCLE_MS = 30 * 24 * 60 * 60 * 1000
+
+const resetCreditCycleIfNeeded = async (user) => {
+    const isBasic = getEffectivePlan(user).key === 'Basic'
+    if (!isBasic) return user
+
+    if (!user.creditCycleStart) {
+        const updated = await User.findOneAndUpdate(
+            { _id: user._id, creditCycleStart: user.creditCycleStart },
+            { $set: { creditCycleStart: new Date() } },
+            { returnDocument: 'after' }
+        )
+        return updated || user
+    }
+
+    const elapsed = Date.now() - new Date(user.creditCycleStart).getTime()
+    if (elapsed < CREDIT_CYCLE_MS) return user
+
+    const updated = await User.findOneAndUpdate(
+        { _id: user._id, creditCycleStart: user.creditCycleStart },
+        { $set: { creditCycleStart: new Date(), count: 0 } },
+        { returnDocument: 'after' }
+    )
+    return updated || user
+}
+
 // spend one AI credit sir — returns { ok, message, plan }
 // used by the ATS review and by creating a new chat
 //
@@ -85,10 +147,15 @@ const getUserPlan = async (userId) => {
 // increment but before the artifact save silently burned a paying user's credit with nothing
 // to show for it. Callers that aren't in a transaction just omit it and behave as before.
 const consumeCredit = async (userId, session) => {
-    const user = await User.findById(userId).session(session)
+    let user = await User.findById(userId).session(session)
     if (!user) {
         return { ok: false, message: 'User not found, please log in again' }
     }
+
+    // Basic's monthly reset sir — deliberately OUTSIDE the session param above: this is a
+    // lazy maintenance write (like the recruiter cycle reset), not part of the credit-spend
+    // transaction itself, same reasoning RecruiterPlans.js's own reset uses
+    user = await resetCreditCycleIfNeeded(user)
 
     const plan = getEffectivePlan(user)
 
@@ -135,7 +202,7 @@ const consumeCredit = async (userId, session) => {
     const message = isTopPlan
         ? `Your ${plan.name} plan credits for this month are over, they will refresh when your plan renews`
         : plan.key === 'Basic'
-            ? 'The Free tier for using this project is over, please make the purchase'
+            ? 'Your free monthly AI uses are over for now — they refresh next month, or upgrade for a lot more today'
             : `Your ${plan.name} plan credits are over, please upgrade to Pro Max`
     return { ok: false, message, plan: plan.key, code: isTopPlan ? 'CREDITS_RENEW' : 'UPGRADE_AVAILABLE' }
 }
@@ -169,4 +236,4 @@ const refundCredit = async (userId, session) => {
     }
 }
 
-module.exports = { PLANS, getEffectivePlan, getUserPlan, consumeCredit, refundCredit }
+module.exports = { PLANS, getEffectivePlan, getUserPlan, consumeCredit, refundCredit, resetCreditCycleIfNeeded }

@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { motion, AnimatePresence } from 'motion/react'
-import toast from 'react-hot-toast'
+import { motion } from 'motion/react'
 import { FaCheck, FaHeart, FaStar, FaTimes, FaCrown } from 'react-icons/fa'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import Loading from '../extra/Loading'
-import IconBtn from '../extra/IconBtn'
-import { GetAllPlans, BuyPlan } from '../../Services/operations/Payment'
+import { GetAllPlans } from '../../Services/operations/Payment'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 
 // full capability matrix sir — one row per real capability across ALL plans, so every
@@ -45,13 +43,13 @@ const REASON_BANNERS = {
 const PLAN_META = {
   Basic: {
     tagline: 'Enough to try it for real, no card needed.',
-    credits: '5 AI uses',
-    messages: '60 messages / chat',
+    credits: '5 AI uses / month',
+    messages: '50 messages / chat',
   },
   Pro: {
     tagline: 'For an active job search — go deep on every application.',
     credits: '100 AI uses / month',
-    messages: '200 messages / chat',
+    messages: '250 messages / chat',
   },
   ProMax: {
     tagline: 'Our highest limits, plus a full career coach.',
@@ -66,40 +64,29 @@ const Pricing = () => {
   const location = useLocation()
   const reasonBanner = REASON_BANNERS[location.state?.reason]
   const { plans, loading } = useSelector((state) => state.payment)
-  const { token, user, isLoggedIn } = useSelector((state) => state.auth)
-  // tracks which plan's buy button is mid-flight sir — keyed by plan.key so only the
-  // clicked card's button disables/spins, not every "Get X" button on the page
-  const [buyingPlan, setBuyingPlan] = useState(null)
-  const [verifying, setVerifying] = useState(false)
+  const { user, isLoggedIn } = useSelector((state) => state.auth)
+  // 'monthly' | 'yearly' sir — per direct request, same toggle pattern as the reference pricing
+  // page. Basic ignores this entirely (it's free, no billingCycles at all).
+  const [cycle, setCycle] = useState('monthly')
 
   useEffect(() => {
     dispatch(GetAllPlans())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleBuy = async (planKey) => {
-    // not logged in sir — the purchase needs an account first. isLoggedIn, not token: token is
-    // deliberately memory-only (see Slices/authSlice.js) and is null right after a page reload
-    // even for a genuinely logged-in user — the httpOnly cookie is what actually authenticates
-    // the /payment/create-order call BuyPlan makes below, token is just a header fallback.
+  // sends the candidate to the new pre-payment review page instead of straight to Razorpay sir —
+  // per direct request, matching the reference screenshots' separate Order-details/checkout
+  // step. The actual purchase (BuyPlan) now lives entirely in PlanCheckout.jsx; this page's job
+  // is just picking a plan + cycle and handing that choice off.
+  const handleBuy = (planKey) => {
+    // not logged in sir — same "go log in first" pattern as everywhere else in this app that
+    // gates an action behind login (e.g. Jobs/JobDetail.jsx's Apply click); this app's login
+    // flow has no generic "return to where you came from" redirect, so plain /Login it is
     if (!isLoggedIn) {
       navigate("/Login")
       return
     }
-    // Admin/Support accounts have no plan concept sir — the backend already blocks this
-    // (isUser on /payment/create-order), this just avoids the round-trip
-    if (user?.role !== 'User') {
-      toast.error("Only a normal user account can purchase a plan")
-      return
-    }
-    setBuyingPlan(planKey)
-    try {
-      await dispatch(BuyPlan(planKey, token, user, navigate, (isLoading, label) => {
-        if (label === "Verifying your payment...") setVerifying(isLoading)
-      }))
-    } finally {
-      setBuyingPlan(null)
-    }
+    navigate(`/Checkout/${planKey}?cycle=${cycle}`)
   }
 
   return (
@@ -108,17 +95,6 @@ const Pricing = () => {
         <title>Pricing | Resumify</title>
       </Helmet>
       <Navbar />
-
-      <AnimatePresence>
-      {verifying && (
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
-        >
-          <Loading text="Verifying your payment..." size="compact" />
-        </motion.div>
-      )}
-      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -144,6 +120,37 @@ const Pricing = () => {
           </h1>
           <p className="mt-3 text-richblack-200 text-lg">Start free. Upgrade when your job hunt gets serious.</p>
         </div>
+
+        {/* Monthly/Yearly toggle sir — one shared choice for every paid plan on the page, same
+            idea as the reference pricing page's per-card toggle, just placed once above the
+            cards instead of duplicated in each. Basic ignores this (it's free either way). */}
+        {!loading && plans.length > 0 && (
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center gap-1 bg-richblack-800 border border-richblack-700 rounded-full p-1">
+              <button
+                onClick={() => setCycle('monthly')}
+                className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors duration-200 cursor-pointer ${
+                  cycle === 'monthly' ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setCycle('yearly')}
+                className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors duration-200 cursor-pointer flex items-center gap-2 ${
+                  cycle === 'yearly' ? 'bg-yellow-50 text-richblack-900' : 'text-richblack-300 hover:text-richblack-5'
+                }`}
+              >
+                Yearly
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                  cycle === 'yearly' ? 'bg-richblack-900/20 text-richblack-900' : 'bg-caribgreen-700/30 text-caribgreen-100'
+                }`}>
+                  Save up to 17%
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <Loading text="Loading the plans..." />
@@ -172,6 +179,10 @@ const Pricing = () => {
               // real plan, never mark any tier as "current" for them
               const isCurrent = isLoggedIn && user?.role === 'User' && (user?.SubType || 'Basic') === plan.key
               const meta = PLAN_META[plan.key] || {}
+              // Basic has no billingCycles at all sir (it's free) — everything below falls back
+              // to the plain priceInRupees:0 shape getPlans returns for it
+              const activeCycle = plan.billingCycles?.[cycle]
+              const isFree = !plan.billingCycles
 
               return (
                 <motion.div
@@ -204,12 +215,20 @@ const Pricing = () => {
 
                   <div className="mt-4 flex items-end gap-1">
                     <span className="text-4xl font-extrabold text-richblack-5 font-mono">
-                      {plan.priceInRupees === 0 ? 'Free' : `₹${plan.priceInRupees}`}
+                      {isFree ? 'Free' : `₹${activeCycle?.priceInRupees.toLocaleString('en-IN')}`}
                     </span>
-                    {plan.validityDays && (
-                      <span className="text-sm text-richblack-300 mb-1">/ {plan.validityDays} days</span>
+                    {!isFree && (
+                      <span className="text-sm text-richblack-300 mb-1">
+                        / {cycle === 'yearly' ? 'year' : 'month'}
+                      </span>
                     )}
                   </div>
+                  {!isFree && (
+                    <p className="mt-1 text-[11px] text-richblack-400">
+                      ₹{activeCycle?.basePriceInRupees.toLocaleString('en-IN')} + ₹{activeCycle?.gstInRupees.toLocaleString('en-IN')} GST
+                      {cycle === 'yearly' ? ', billed once a year' : ', billed monthly'}
+                    </p>
+                  )}
 
                   {/* Credits + message-cap chips sir — the two numbers people actually compare plans on */}
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -251,7 +270,7 @@ const Pricing = () => {
                       <button className="w-full py-2.5 text-sm font-bold rounded-full bg-richblack-700 text-caribgreen-100 border border-richblack-600 cursor-default">
                         Your current plan
                       </button>
-                    ) : plan.priceInRupees === 0 ? (
+                    ) : isFree ? (
                       <button
                         onClick={() => navigate(isLoggedIn ? "/Dashboard" : "/Signup")}
                         className="w-full py-2.5 text-sm font-semibold rounded-full text-richblack-100 border border-richblack-600 hover:bg-richblack-700 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
@@ -259,13 +278,12 @@ const Pricing = () => {
                         {isLoggedIn ? "Included free" : "Start free"}
                       </button>
                     ) : (
-                      <IconBtn
-                        text={buyingPlan === plan.key ? 'Setting up...' : `Get ${plan.name}`}
-                        onclick={() => handleBuy(plan.key)}
-                        loading={buyingPlan === plan.key}
-                        disabled={buyingPlan !== null}
-                        customClasses="w-full justify-center"
-                      />
+                      <button
+                        onClick={() => handleBuy(plan.key)}
+                        className="w-full py-2.5 text-sm font-bold rounded-full bg-yellow-50 text-richblack-900 hover:brightness-110 transition-all duration-200 cursor-pointer"
+                      >
+                        Get {plan.name}
+                      </button>
                     )}
                   </div>
                 </motion.div>

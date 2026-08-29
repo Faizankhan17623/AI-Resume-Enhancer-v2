@@ -60,6 +60,17 @@ const UserCreation = new mongoose.Schema(
             type:Number,
             default:0
         },
+        // Basic-tier credit reset sir — Basic has no SubscriptionExpires (validityDays: null), so
+        // SubscriptionReconcileCron.js never touches it; a Basic user's 5 free credits used to be
+        // a lifetime cap with no reset at all, unless they later bought a paid plan (which resets
+        // `count` to 0 as a side effect of activatePaidOrder). Per direct request, Basic's credits
+        // are meant to refresh monthly like everything else — this is the lazy-rolling-cycle start
+        // timestamp for that, same pattern as recruiterCycleStart in RecruiterPlans.js. Only
+        // consulted for Basic-tier accounts (see utils/Plans.js's resetCreditCycleIfNeeded) — a
+        // paid plan's own SubscriptionExpires/reconcile-cron already covers the same job for Pro/ProMax.
+        creditCycleStart: {
+            type: Date,
+        },
         // stacks ON TOP of the plan's normal credit allowance sir — admin grants (Admin.js's
         // adjustCredits/grantCreditsToAll) and referral rewards (controllers/user.js's
         // grantReferralBonus) both add here instead of decrementing `count`, so a bonus never
@@ -189,6 +200,15 @@ const UserCreation = new mongoose.Schema(
         // when the paid plan runs out sir — past this date the user is Basic again
         SubscriptionExpires:{
             type:Date
+        },
+        // which expiry-reminder milestones have already been emailed for the CURRENT
+        // SubscriptionExpires sir — see utils/PlanExpiryReminderCron.js. Tracks '7'/'3'/'1'/'0'
+        // (days-before, '0' = expired-today) so the hourly cron never double-sends a milestone,
+        // and a fresh purchase (activatePaidOrder sets a new SubscriptionExpires) naturally
+        // resets this to [] again since it's overwritten alongside SubscriptionExpires there.
+        planExpiryRemindersSent: {
+            type: [String],
+            default: [],
         },
         // consecutive-day activity streak sir — bumped by any review or chat message
         currentStreak: {

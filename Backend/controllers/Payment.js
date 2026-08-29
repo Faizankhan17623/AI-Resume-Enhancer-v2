@@ -60,8 +60,13 @@ const activatePaidOrder = async (orderId, paymentId, signature) => {
             return { payment: existing, plan: PLANS[existing.plan], expires: existing.updatedAt, alreadyPaid: true }
         }
 
+        // billingCycle sir — which of the plan's two cycles (monthly/yearly) this Payment
+        // record was actually created for (see createOrder below); validityDays now lives on
+        // that cycle sub-object, not on the plan itself, since a plan no longer has one fixed
+        // duration
         const plan = PLANS[payment.plan]
-        const expires = new Date(Date.now() + plan.validityDays * 24 * 60 * 60 * 1000)
+        const cycle = plan.billingCycles[payment.billingCycle]
+        const expires = new Date(Date.now() + cycle.validityDays * 24 * 60 * 60 * 1000)
 
         // unlock the plan sir — count goes back to 0 so the new credits start fresh
         await User.findByIdAndUpdate(
@@ -70,7 +75,10 @@ const activatePaidOrder = async (orderId, paymentId, signature) => {
                 Subscription: true,
                 SubType: payment.plan,
                 SubscriptionExpires: expires,
-                count: 0
+                count: 0,
+                // fresh SubscriptionExpires sir — none of the old reminder milestones apply to
+                // this new cycle, see PlanExpiryReminderCron.js
+                planExpiryRemindersSent: [],
             },
             { session }
         )
@@ -79,16 +87,34 @@ const activatePaidOrder = async (orderId, paymentId, signature) => {
     })
 }
 
-// GET /payment/plans — public list of the three plans for the pricing page sir
+// GET /payment/plans — public list of the three plans for the pricing page sir.
+// Basic has no billingCycles (it's free); Pro/ProMax each carry both — the frontend's
+// Monthly/Yearly toggle switches which one it reads, same numbers either way (never trust a
+// client-computed price, createOrder re-derives the amount server-side regardless).
 exports.getPlans = (req, res) => {
     try {
         const plans = Object.values(PLANS).map((p) => ({
             key: p.key,
             name: p.name,
-            price: p.price,
-            priceInRupees: p.price / 100,
-            validityDays: p.validityDays,
-            features: p.features
+            credits: p.credits,
+            maxMessagesPerChat: p.maxMessagesPerChat,
+            contextWindow: p.contextWindow,
+            features: p.features,
+            ...(p.billingCycles
+                ? {
+                    billingCycles: Object.fromEntries(
+                        Object.entries(p.billingCycles).map(([cycleKey, cycle]) => [
+                            cycleKey,
+                            {
+                                basePriceInRupees: cycle.basePrice / 100,
+                                gstInRupees: cycle.gst / 100,
+                                priceInRupees: cycle.price / 100,
+                                validityDays: cycle.validityDays,
+                            },
+                        ])
+                    ),
+                }
+                : { priceInRupees: 0 }),
         }))
 
         return res.status(200).json({
@@ -104,28 +130,39 @@ exports.getPlans = (req, res) => {
     }
 }
 
-// POST /payment/create-order — make a razorpay order for Pro or ProMax sir
+// POST /payment/create-order — make a razorpay order for Pro or ProMax sir.
+// billingCycle ('monthly' | 'yearly') picks WHICH of the plan's two prices to charge — still
+// entirely server-resolved, the frontend's toggle only ever sends which one the user picked,
+// never an amount.
 exports.createOrder = async (req, res) => {
     try {
         const id = req?.User.id
-        const { plan } = req.body
+        const { plan, billingCycle } = req.body
 
-        // the amount ALWAYS comes from the server config, never from the frontend sir
-        if (!plan || !PLANS[plan] || PLANS[plan].price === 0) {
+        if (!plan || !PLANS[plan] || !PLANS[plan].billingCycles) {
             return res.status(400).json({
                 success: false,
                 message: 'Please pick a valid plan to purchase (Pro or ProMax)',
             })
         }
 
+        const cycle = PLANS[plan].billingCycles[billingCycle]
+        if (!cycle) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please pick monthly or yearly billing',
+            })
+        }
+
         const order = await RazorpayInstance.orders.create({
-            amount: PLANS[plan].price,
+            amount: cycle.price,
             currency: 'INR',
             // razorpay caps receipt at 40 chars sir — id (24) + timestamp (13) alone is already 37, so drop the prefix/separators
             receipt: `${id}${Date.now()}`,
             notes: {
                 userId: String(id),
-                plan
+                plan,
+                billingCycle,
             }
         })
 
@@ -133,14 +170,15 @@ exports.createOrder = async (req, res) => {
         await Payment.create({
             user: id,
             plan,
-            amount: PLANS[plan].price,
+            billingCycle,
+            amount: cycle.price,
             orderId: order.id,
             status: 'created'
         })
 
         // start the payment session sir — a 30-minute signed cookie tying THIS order to THIS user's browser
         const sessionToken = jwt.sign(
-            { orderId: order.id, userId: String(id), plan },
+            { orderId: order.id, userId: String(id), plan, billingCycle },
             process.env.JWT_PRIVATE_KEY,
             { expiresIn: `${PAYMENT_SESSION_MINUTES}m` }
         )

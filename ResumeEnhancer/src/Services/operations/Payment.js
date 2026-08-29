@@ -42,7 +42,7 @@ export function GetAllPlans() {
 // returns a promise that resolves once the razorpay window is open (or the setup step failed) sir,
 // so the caller's `buying` state only needs to stay true for THIS setup phase — not the whole
 // checkout, which can otherwise sit open for minutes waiting on the user to pay
-export function BuyPlan(plan, token, user, navigate, onLoadingChange) {
+export function BuyPlan(plan, token, user, navigate, onLoadingChange, billingCycle = 'monthly') {
     return async (dispatch) => {
         onLoadingChange?.(true, "Setting up the payment...")
         try {
@@ -52,7 +52,7 @@ export function BuyPlan(plan, token, user, navigate, onLoadingChange) {
             }
 
             // create the order sir — this also sets the 30-minute payment session cookie
-            const orderResponse = await apiConnector("POST", createorder, { plan }, {
+            const orderResponse = await apiConnector("POST", createorder, { plan, billingCycle }, {
                 Authorization: `Bearer ${token}`
             })
 
