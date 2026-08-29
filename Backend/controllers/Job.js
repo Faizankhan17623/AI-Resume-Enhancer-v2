@@ -1090,6 +1090,15 @@ exports.applyToJob = async (req, res) => {
         // download instead of a preview). Every other Cloudinary asset in this app is an
         // image (resource_type:'auto'), which doesn't hit this — raw delivery is the one place
         // the extension has to be explicit.
+        //
+        // Investigated switching this to resource_type:'image' sir (Cloudinary's documented
+        // approach for inline-viewable PDFs) after a headless-Chromium Playwright test showed a
+        // blank iframe — but the SAME blank result reproduced on a known-good public PDF from
+        // W3C's own test suite in an unrelated iframe, with no Cloudinary or app code involved
+        // at all. That isolates it to headless Chromium's build lacking the PDFium inline-viewer
+        // plugin (a well-known limitation of the stock binary Playwright downloads), not a real
+        // app bug — reverted back to this already-correct, already-verified 'raw' + .pdf-suffix
+        // fix from earlier this session rather than ship an unverified change.
         const upload = await cloudinary.uploader.upload(
             `data:${resumeFile.mimetype};base64,${resumeFile.data.toString('base64')}`,
             {

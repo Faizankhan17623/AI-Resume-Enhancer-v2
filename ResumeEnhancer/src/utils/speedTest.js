@@ -5,9 +5,21 @@ import BASE_URL from './backendUrl'
 // later / find faster internet"). Downloads a known-size payload from the backend's
 // /test-attempts/speed-probe endpoint (Auth + isUser + speedProbeLimiter, see
 // controllers/Test.js's speedProbe) — NOT a plain fetch through apiConnector, since this needs
-// real wall-clock download timing, not JSON parsing; a raw fetch with the Authorization header
-// added directly is simpler and safer than adding a one-off responseType override to the shared
-// apiConnector used by every other call in this app.
+// real wall-clock download timing, not JSON parsing.
+//
+// FOUND LIVE via actual browser testing (Playwright driving the real flow against production):
+// this used to send `Authorization: Bearer ${token}` from Redux's auth.token — but that token is
+// DELIBERATELY never persisted (see authSlice.js's own comment: it used to live in localStorage,
+// which let an XSS payload steal a 7-day-lived credential straight off disk). It only exists in
+// memory for the lifetime of the tab that ran the login action. TestConsent.jsx is exactly the
+// screen a real candidate lands on FRESH, from an email link — a brand new page load, so
+// auth.token is null there for every real candidate, not just a quirk of automated testing. The
+// request went out as literal "Bearer null" and 401'd every time. Every other authenticated call
+// in this app goes through apiConnector's axios instance with withCredentials:true (see its own
+// comment) and authenticates off the httpOnly session cookie instead - Auth.js's extractToken
+// checks that cookie FIRST, the Authorization header is only ever a fallback. Matching that here
+// with credentials:'include' is the actual fix; the token param is kept only as an unused-but-
+// harmless fallback header for a request that isn't cross-origin-blocked from sending it anyway.
 //
 // This used to be a public static file on Vercel (public/speedtest-probe.bin) with zero gating —
 // moved server-side so only an authenticated candidate can trigger it, and only a handful of
@@ -24,12 +36,12 @@ const PROBE_SIZE_BITS = 2 * 1024 * 1024 * 8 // 2MB payload, in bits — matches 
 // returns download speed in Mbps, or null if the probe fails (treated as "can't verify speed",
 // NOT as "speed is 0" — see TestConsent.jsx for how a failure is handled differently from a
 // genuinely slow reading)
-export const measureDownloadMbps = async (token) => {
+export const measureDownloadMbps = async () => {
   try {
     const start = performance.now()
     const response = await fetch(`${PROBE_URL}?t=${Date.now()}`, {
       cache: 'no-store',
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     })
     if (!response.ok) return null
     await response.blob()
