@@ -206,7 +206,7 @@ const verifyPaymentSchema = z.object({
 // shape has nothing plan-specific in it (just the three Razorpay fields), so it's reused as-is —
 // see controllers/RecruiterPayment.js.
 const recruiterPlanKey = z.enum(['Pro', 'ProMax'], { error: 'Please pick a valid plan' })
-const recruiterCreateOrderSchema = z.object({ plan: recruiterPlanKey })
+const recruiterCreateOrderSchema = z.object({ plan: recruiterPlanKey, billingCycle })
 
 // ---------------------------------------------------------------------------
 // admin sir — these endpoints change roles and money, so their inputs are the

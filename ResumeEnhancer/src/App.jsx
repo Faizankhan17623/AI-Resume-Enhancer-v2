@@ -74,6 +74,8 @@ const RecruiterJobAnalytics = lazy(() => import('./Components/Recruiter/JobAnaly
 const RecruiterOverview = lazy(() => import('./Components/Recruiter/RecruiterOverview'))
 const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/AttemptDetail'))
 const RecruiterAccount = lazy(() => import('./Components/Recruiter/RecruiterAccount'))
+const RecruiterPricing = lazy(() => import('./Components/Recruiter/RecruiterPricing'))
+const RecruiterPlanCheckout = lazy(() => import('./Components/Recruiter/RecruiterPlanCheckout'))
 const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
 const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
 const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
@@ -255,6 +257,8 @@ function App() {
             <Route path="/Recruiter/Jobs/:jobId/analytics" element={<RecruiterRoute><RecruiterJobAnalytics /></RecruiterRoute>} />
             <Route path="/Recruiter/Attempts/:attemptId" element={<RecruiterRoute><RecruiterAttemptDetail /></RecruiterRoute>} />
             <Route path="/Recruiter/Account" element={<RecruiterRoute><RecruiterAccount /></RecruiterRoute>} />
+            <Route path="/Recruiter/Pricing" element={<RecruiterRoute><RecruiterPricing /></RecruiterRoute>} />
+            <Route path="/Recruiter/Checkout/:planKey" element={<RecruiterRoute><RecruiterPlanCheckout /></RecruiterRoute>} />
 
             {/* Admin-only sir — strictly, see AdminRoute.jsx. A Support user hitting any of
                 these gets redirected to their OWN dashboard at /Support, never let through. */}

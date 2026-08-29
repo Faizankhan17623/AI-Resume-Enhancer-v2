@@ -38,7 +38,7 @@ export function GetAllRecruiterPlans() {
     }
 }
 
-export function BuyRecruiterPlan(plan, token, user, onSuccess, onLoadingChange) {
+export function BuyRecruiterPlan(plan, token, user, onSuccess, onLoadingChange, billingCycle = 'monthly') {
     return async (dispatch) => {
         onLoadingChange?.(true, "Setting up the payment...")
         try {
@@ -47,7 +47,7 @@ export function BuyRecruiterPlan(plan, token, user, onSuccess, onLoadingChange) 
                 throw new Error("Could not load the payment window, check your connection")
             }
 
-            const orderResponse = await apiConnector("POST", createorder, { plan }, {
+            const orderResponse = await apiConnector("POST", createorder, { plan, billingCycle }, {
                 Authorization: `Bearer ${token}`
             })
 

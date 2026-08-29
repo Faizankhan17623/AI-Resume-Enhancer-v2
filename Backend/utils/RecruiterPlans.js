@@ -4,6 +4,24 @@ const logger = require('./logger')
 // single source of truth for Recruiter plans sir — completely separate table from
 // utils/Plans.js's PLANS. Change Recruiter prices/limits ONLY here. null means unlimited.
 // price is in paise (razorpay convention), same as utils/Plans.js.
+
+const round2 = (n) => Math.round(n * 100) / 100
+
+// same helper as utils/Plans.js's buildCycle sir, duplicated on purpose rather than shared/
+// imported — per direct request, the Recruiter plan system must never share a code path with
+// the User one, even a pure-function pricing helper, so the two can never accidentally drift
+// into touching each other.
+const buildCycle = (baseRupees, validityDays) => {
+    const gstRupees = round2(baseRupees * 0.18)
+    const totalRupees = round2(baseRupees + gstRupees)
+    return {
+        basePrice: Math.round(baseRupees * 100),   // paise
+        gst: Math.round(gstRupees * 100),          // paise
+        price: Math.round(totalRupees * 100),      // paise — what Razorpay actually charges
+        validityDays,
+    }
+}
+
 const RECRUITER_PLANS = {
     Basic: {
         key: 'Basic',
@@ -24,13 +42,18 @@ const RECRUITER_PLANS = {
     Pro: {
         key: 'Pro',
         name: 'Pro',
-        price: 29900,
         jobPostings: 100,
         aiScores: 1000,
         jdWrites: 20,
         interviewQGen: 20,
         summaries: 100,
-        validityDays: 30,
+        // monthly Rs 1500, yearly Rs 1300/mo rate billed as one lump sum (Rs 15600/yr), both +18%
+        // GST sir, same one-time-Razorpay-order architecture as utils/Plans.js — no recurring
+        // Subscriptions API here either
+        billingCycles: {
+            monthly: buildCycle(1500, 30),
+            yearly: buildCycle(1300 * 12, 365),
+        },
         features: [
             '100 active job postings per month',
             '1000 AI-scored applicants per month',
@@ -43,13 +66,16 @@ const RECRUITER_PLANS = {
     ProMax: {
         key: 'ProMax',
         name: 'Pro Max',
-        price: 79900,
         jobPostings: null,
         aiScores: null,
         jdWrites: 100,
         interviewQGen: 100,
         summaries: 1000,
-        validityDays: 30,
+        // monthly Rs 2000, yearly Rs 1600/mo rate billed as one lump sum (Rs 19200/yr), both +18% GST
+        billingCycles: {
+            monthly: buildCycle(2000, 30),
+            yearly: buildCycle(1600 * 12, 365),
+        },
         features: [
             'Unlimited active job postings',
             'Unlimited AI-scored applicants',

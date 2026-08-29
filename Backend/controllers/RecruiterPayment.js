@@ -42,7 +42,8 @@ const activateRecruiterOrder = async (orderId, paymentId, signature) => {
         }
 
         const plan = RECRUITER_PLANS[payment.plan]
-        const expires = new Date(Date.now() + plan.validityDays * 24 * 60 * 60 * 1000)
+        const cycle = plan.billingCycles[payment.billingCycle]
+        const expires = new Date(Date.now() + cycle.validityDays * 24 * 60 * 60 * 1000)
 
         // recruiterPlan/recruiterPlanExpiresAt ONLY sir — never Subscription/SubType/
         // SubscriptionExpires, those belong solely to the User plan system (utils/Plans.js)
@@ -56,16 +57,35 @@ const activateRecruiterOrder = async (orderId, paymentId, signature) => {
     })
 }
 
-// GET /recruiter/payment/plans — public list of the Recruiter plans for the recruiter pricing page
+// GET /recruiter/payment/plans — public list of the Recruiter plans for the recruiter pricing page.
+// Basic has no billingCycles (it's free); Pro/ProMax each carry both, same shape as
+// controllers/Payment.js's getPlans — priceInRupees always the GST-inclusive total actually charged.
 exports.getRecruiterPlans = (req, res) => {
     try {
         const plans = Object.values(RECRUITER_PLANS).map((p) => ({
             key: p.key,
             name: p.name,
-            price: p.price,
-            priceInRupees: p.price / 100,
-            validityDays: p.validityDays,
+            jobPostings: p.jobPostings,
+            aiScores: p.aiScores,
+            jdWrites: p.jdWrites,
+            interviewQGen: p.interviewQGen,
+            summaries: p.summaries,
             features: p.features,
+            ...(p.billingCycles
+                ? {
+                    billingCycles: Object.fromEntries(
+                        Object.entries(p.billingCycles).map(([cycleKey, cycle]) => [
+                            cycleKey,
+                            {
+                                basePriceInRupees: cycle.basePrice / 100,
+                                gstInRupees: cycle.gst / 100,
+                                priceInRupees: cycle.price / 100,
+                                validityDays: cycle.validityDays,
+                            },
+                        ])
+                    ),
+                }
+                : { priceInRupees: 0 }),
         }))
 
         return res.status(200).json({ success: true, plans })
@@ -78,26 +98,37 @@ exports.getRecruiterPlans = (req, res) => {
     }
 }
 
-// POST /recruiter/payment/create-order — make a razorpay order for Recruiter Pro or ProMax
+// POST /recruiter/payment/create-order — make a razorpay order for Recruiter Pro or ProMax.
+// billingCycle ('monthly' | 'yearly') picks WHICH of the plan's two prices to charge — still
+// entirely server-resolved from utils/RecruiterPlans.js, never trusts a client-supplied amount.
 exports.createRecruiterOrder = async (req, res) => {
     try {
         const id = req?.User.id
-        const { plan } = req.body
+        const { plan, billingCycle } = req.body
 
-        if (!plan || !RECRUITER_PLANS[plan] || RECRUITER_PLANS[plan].price === 0) {
+        if (!plan || !RECRUITER_PLANS[plan] || !RECRUITER_PLANS[plan].billingCycles) {
             return res.status(400).json({
                 success: false,
                 message: 'Please pick a valid plan to purchase (Pro or ProMax)',
             })
         }
 
+        const cycle = RECRUITER_PLANS[plan].billingCycles[billingCycle]
+        if (!cycle) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please pick monthly or yearly billing',
+            })
+        }
+
         const order = await RazorpayInstance.orders.create({
-            amount: RECRUITER_PLANS[plan].price,
+            amount: cycle.price,
             currency: 'INR',
             receipt: `rec${id}${Date.now()}`.slice(0, 40),
             notes: {
                 userId: String(id),
                 plan,
+                billingCycle,
                 context: 'recruiter',
             }
         })
@@ -105,13 +136,14 @@ exports.createRecruiterOrder = async (req, res) => {
         await RecruiterPayment.create({
             user: id,
             plan,
-            amount: RECRUITER_PLANS[plan].price,
+            billingCycle,
+            amount: cycle.price,
             orderId: order.id,
             status: 'created'
         })
 
         const sessionToken = jwt.sign(
-            { orderId: order.id, userId: String(id), plan },
+            { orderId: order.id, userId: String(id), plan, billingCycle },
             process.env.JWT_PRIVATE_KEY,
             { expiresIn: `${PAYMENT_SESSION_MINUTES}m` }
         )

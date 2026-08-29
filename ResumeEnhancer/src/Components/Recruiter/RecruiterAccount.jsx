@@ -17,7 +17,6 @@ import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats } from '../../Services/operations/User'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
-import { BuyRecruiterPlan } from '../../Services/operations/RecruiterPayment'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
 
 // one usage meter row sir — "X of Y used this month", null limit renders as "Unlimited"
@@ -106,7 +105,6 @@ const RecruiterAccount = () => {
   const navigate = useNavigate()
   const { token, user: authUser } = useSelector((state) => state.auth)
   const { profile, loading } = useSelector((state) => state.profile)
-  const [buyingPlan, setBuyingPlan] = useState(null)
   const [changingPassword, setChangingPassword] = useState(false)
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
@@ -162,13 +160,10 @@ const RecruiterAccount = () => {
 
   const { user, recruiterPlan } = profile
 
-  const handleBuyPlan = async (planKey) => {
-    setBuyingPlan(planKey)
-    await dispatch(BuyRecruiterPlan(planKey, token, authUser, () => dispatch(GetProfile(token)), (isLoading, label) => {
-      if (label) setBusyLabel(label)
-      setBusy(isLoading)
-    }))
-    setBuyingPlan(null)
+  // sends the recruiter to the review/checkout page instead of buying inline sir — same
+  // "pick a plan here, review + pay there" split as the User side's Pricing.jsx → PlanCheckout.jsx
+  const handleBuyPlan = (planKey) => {
+    navigate(`/Recruiter/Checkout/${planKey}`)
   }
 
   return (
@@ -221,9 +216,17 @@ const RecruiterAccount = () => {
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-lg text-richblack-5">Your Plan</h2>
-              <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/15 text-yellow-100">
-                <FaCrown /> {recruiterPlan.name}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate('/Recruiter/Pricing')}
+                  className="text-xs font-semibold text-richblack-300 hover:text-richblack-5 underline decoration-richblack-600 transition-colors duration-200 cursor-pointer"
+                >
+                  Compare plans
+                </button>
+                <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/15 text-yellow-100">
+                  <FaCrown /> {recruiterPlan.name}
+                </span>
+              </div>
             </div>
 
             <UsageBar label="Active job postings" used={recruiterPlan.usage.jobPostings.used} limit={recruiterPlan.usage.jobPostings.limit} />
@@ -234,7 +237,9 @@ const RecruiterAccount = () => {
 
             {recruiterPlan.expiresAt && (
               <p className="mt-4 text-xs text-richblack-300">
-                Valid until <span className="text-richblack-5 font-medium">{new Date(recruiterPlan.expiresAt).toDateString()}</span>
+                Valid until <span className="text-richblack-5 font-medium">
+                  {new Date(recruiterPlan.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
               </p>
             )}
 
@@ -242,16 +247,14 @@ const RecruiterAccount = () => {
               <div className="mt-5 flex flex-wrap gap-3">
                 {recruiterPlan.key === 'Basic' && (
                   <IconBtn
-                    text={buyingPlan === 'Pro' ? 'Processing...' : 'Upgrade to Pro'}
+                    text="Upgrade to Pro"
                     onclick={() => handleBuyPlan('Pro')}
-                    disabled={!!buyingPlan}
                     customClasses="text-sm"
                   />
                 )}
                 <IconBtn
-                  text={buyingPlan === 'ProMax' ? 'Processing...' : 'Upgrade to Pro Max'}
+                  text="Upgrade to Pro Max"
                   onclick={() => handleBuyPlan('ProMax')}
-                  disabled={!!buyingPlan}
                   customClasses="text-sm"
                   outline={recruiterPlan.key === 'Basic'}
                 />

@@ -21,6 +21,15 @@ const recruiterPaymentSchema = new mongoose.Schema(
             enum: ['Pro', 'ProMax'],
             required: true
         },
+        // monthly vs yearly sir — decides which of the plan's two billingCycles
+        // (utils/RecruiterPlans.js) activateRecruiterOrder grants the validityDays from. Same
+        // reasoning as Models/Payment.js's own billingCycle field — required going forward, no
+        // backfill needed since old rows predate this field ever having a choice.
+        billingCycle: {
+            type: String,
+            enum: ['monthly', 'yearly'],
+            required: true
+        },
         amount: {
             type: Number,
             required: true
