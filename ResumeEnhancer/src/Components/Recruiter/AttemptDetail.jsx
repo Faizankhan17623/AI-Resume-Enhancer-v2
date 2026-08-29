@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useParams } from 'react-router'
+import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaExclamationTriangle } from 'react-icons/fa'
+import { FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import Loading from '../extra/Loading'
 import { GetAttemptDetail } from '../../Services/operations/Test'
@@ -43,6 +43,17 @@ const AttemptDetail = () => {
       </Helmet>
 
       <div className="max-w-3xl space-y-6">
+        {/* no way back to the applicants list before this sir — attempt.test.job is populated
+            specifically so this link exists (see controllers/Test.js's getAttemptDetail) */}
+        {attempt.test?.job?._id && (
+          <Link
+            to={`/Recruiter/Jobs/${attempt.test.job._id}/applicants`}
+            className="inline-flex items-center gap-2 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
+          >
+            <FaArrowLeft className="text-xs" /> Back to {attempt.test.job.title || 'applicants'}
+          </Link>
+        )}
+
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <h1 className="font-display text-xl text-richblack-5 mb-1">
             {attempt.candidate ? `${attempt.candidate.firstName} ${attempt.candidate.lastName}` : 'Deleted candidate'}

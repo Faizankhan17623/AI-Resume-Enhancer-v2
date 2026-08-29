@@ -261,8 +261,11 @@ exports.getAttemptDetail = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid attempt id' })
         }
 
+        // test.job populated (title only) sir — AttemptDetail.jsx's back button needs the job id
+        // to link to /Recruiter/Jobs/:jobId/Applicants; the title just makes that link readable
+        // instead of a bare "Back"
         const attempt = await TestAttempt.findById(attemptId)
-            .populate('test')
+            .populate({ path: 'test', populate: { path: 'job', select: 'title' } })
             .populate('candidate', 'firstName lastName email')
 
         if (!attempt || !attempt.test) {

@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
-import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash } from 'react-icons/fa'
+import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash, FaArrowLeft } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -149,6 +149,14 @@ const JobDetailRecruiter = () => {
       </AnimatePresence>
 
       <div className="max-w-3xl space-y-6">
+        {/* no way back to My Jobs before this sir, per direct request */}
+        <Link
+          to="/Recruiter"
+          className="inline-flex items-center gap-2 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer"
+        >
+          <FaArrowLeft className="text-xs" /> Back to My Jobs
+        </Link>
+
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
             <div>

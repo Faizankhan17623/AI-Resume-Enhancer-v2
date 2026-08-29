@@ -12,6 +12,7 @@ const mailSender = require('../utils/Nodemailer')
 const { newApplicantAlertTemplate } = require('../Templates/NewApplicantAlert')
 const { jobWithdrawnTemplate } = require('../Templates/JobWithdrawn')
 const { testInviteTemplate } = require('../Templates/TestInvite')
+const { applicationOutcomeTemplate } = require('../Templates/ApplicationOutcome')
 const { validatePdfUpload } = require('../utils/pdfUpload')
 const { runFitScore } = require('../services/fitScoreService')
 
@@ -319,7 +320,7 @@ exports.getJobApplicants = async (req, res) => {
 
         const applicants = await JobApplication.find({ job: jobId })
             .populate('candidate', 'firstName lastName email')
-            .populate('testAttempt', 'status score violationCount')
+            .populate({ path: 'testAttempt', select: 'status score violationCount test', populate: { path: 'test', select: 'totalMarks' } })
             .populate('resume', 'label originalFilename')
             .populate('builtResume', 'title')
             .sort({ createdAt: -1 })
@@ -624,7 +625,7 @@ exports.setApplicationOutcome = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Status must be hired or rejected' })
         }
 
-        const application = await JobApplication.findById(applicationId).populate('job')
+        const application = await JobApplication.findById(applicationId).populate('job').populate('candidate', 'firstName lastName email')
         if (!application || !application.job) {
             return res.status(404).json({ success: false, message: 'Application not found' })
         }
@@ -651,6 +652,22 @@ exports.setApplicationOutcome = async (req, res) => {
 
         application.status = status
         await application.save()
+
+        // best-effort hire/reject email sir — same pattern as every other non-critical mail send
+        // in this file (test invites, job-withdrawn notices), wrapped so a relay hiccup never
+        // fails the recruiter's action itself. Previously NOTHING was ever sent for this outcome
+        // at all — a candidate had no way to find out except by checking the dashboard themselves.
+        try {
+            if (application.candidate?.email) {
+                await mailSender(
+                    application.candidate.email,
+                    status === 'hired' ? "You're Hired! — Resumify" : 'Application Update — Resumify',
+                    applicationOutcomeTemplate(application.candidate.firstName, application.job.title, application.job.companyName, status === 'hired')
+                )
+            }
+        } catch (mailError) {
+            (req.log || logger).error('application outcome mail failed', { err: mailError, applicationId })
+        }
 
         return res.status(200).json({
             success: true,
@@ -777,13 +794,13 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Status must be hired or rejected' })
         }
 
-        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test')
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).select('_id test title companyName')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
         const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
-        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId })
+        const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId }).populate('candidate', 'firstName lastName email')
 
         // same rule as the single-application version above sir — 'rejected' works from ANY
         // status (the manual "close this application" action), 'hired' still needs the test
@@ -791,6 +808,7 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
         const jobHasTest = !!job.test
         const updated = []
         const skipped = []
+        const toEmail = []
         for (const application of applications) {
             const eligible = status === 'rejected'
                 ? true
@@ -802,6 +820,21 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
             application.status = status
             await application.save()
             updated.push(String(application._id))
+            if (application.candidate?.email) toEmail.push(application.candidate)
+        }
+
+        // best-effort hire/reject emails sir — allSettled, same reasoning as bulkInviteApplicantsToTest's
+        // own mail send above: one bad address must not stop the rest
+        if (toEmail.length) {
+            await Promise.allSettled(toEmail.map((candidate) =>
+                mailSender(
+                    candidate.email,
+                    status === 'hired' ? "You're Hired! — Resumify" : 'Application Update — Resumify',
+                    applicationOutcomeTemplate(candidate.firstName, job.title, job.companyName, status === 'hired')
+                ).catch((mailError) => {
+                    (req.log || logger).error('bulk application outcome mail failed', { err: mailError, jobId, candidateId: candidate._id })
+                })
+            ))
         }
 
         return res.status(200).json({

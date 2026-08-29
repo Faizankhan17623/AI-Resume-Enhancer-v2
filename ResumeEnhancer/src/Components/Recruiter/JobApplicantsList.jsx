@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -167,6 +167,13 @@ const JobApplicantsList = () => {
       )}
       </AnimatePresence>
 
+      <Link
+        to={`/Recruiter/Jobs/${jobId}`}
+        className="inline-flex items-center gap-2 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer mb-4"
+      >
+        <FaArrowLeft className="text-xs" /> Back to job
+      </Link>
+
       <h1 className="font-display text-xl text-richblack-5 mb-6">Applicants</h1>
 
       {jobHasTest && !testPublished && !loading && (
@@ -252,7 +259,7 @@ const JobApplicantsList = () => {
                 disabled={isLocked}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Close selected
+                Reject selected
               </button>
               <button
                 onClick={() => setSelected([])}
@@ -328,7 +335,16 @@ const JobApplicantsList = () => {
                       </span>
                     )}
                     {app.testAttempt?.score !== null && app.testAttempt?.score !== undefined && (
-                      <span className="text-sm font-display text-yellow-50">{app.testAttempt.score} marks</span>
+                      <span className="flex items-center gap-1.5 text-sm" title={app.testAttempt.test?.totalMarks ? `${app.testAttempt.score} marks scored out of ${app.testAttempt.test.totalMarks} total marks` : undefined}>
+                        <span className="font-display text-yellow-50">
+                          {app.testAttempt.score}{app.testAttempt.test?.totalMarks ? `/${app.testAttempt.test.totalMarks}` : ''}
+                        </span>
+                        {app.testAttempt.test?.totalMarks && (
+                          <span className="text-[11px] text-richblack-400">
+                            ({app.testAttempt.score} marks gotten, {app.testAttempt.test.totalMarks} total marks)
+                          </span>
+                        )}
+                      </span>
                     )}
                     {fitMeta && (
                       <span className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${fitMeta.className}`}>
@@ -380,7 +396,7 @@ const JobApplicantsList = () => {
                           disabled={isLocked}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-pink-700 text-pink-100 text-xs font-semibold hover:bg-pink-700/20 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <FaTimes className="text-[10px]" /> Close
+                          <FaTimes className="text-[10px]" /> Rejected
                         </button>
                       )}
                     </span>

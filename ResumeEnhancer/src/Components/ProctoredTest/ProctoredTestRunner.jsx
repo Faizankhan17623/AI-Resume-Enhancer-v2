@@ -4,11 +4,10 @@ import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import Swal from 'sweetalert2'
 import * as tf from '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection'
-import { FaExclamationTriangle, FaClock } from 'react-icons/fa'
+import { FaExclamationTriangle, FaClock, FaCheckCircle, FaEnvelopeOpenText } from 'react-icons/fa'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import { LogViolation, SubmitTestAnswers } from '../../Services/operations/Test'
@@ -47,6 +46,15 @@ const ProctoredTestRunner = () => {
     const [warningCount, setWarningCount] = useState(0)
     const [secondsLeft, setSecondsLeft] = useState(null)
     const [submitting, setSubmitting] = useState(false)
+    // shown once the submit call actually succeeds sir, per direct request — the old flow
+    // navigated straight to /Dashboard the instant SubmitTestAnswers resolved, no confirmation
+    // at all that the test actually went through. handleContinue below is what does the real
+    // navigate now; this only flips to true, it never redirects on its own.
+    const [submitted, setSubmitted] = useState(false)
+    // 'manual' | 'timeout' | 'violations' sir — lets the submitted screen below say WHY it ended
+    // when it wasn't the candidate's own Submit click, instead of a separate Swal alert stacked
+    // in front of the same confirmation
+    const [endReason, setEndReason] = useState('manual')
 
     // consent must have happened on the previous screen sir — a direct link to /run without it
     // (bookmark, back button after declining) bounces to the consent screen instead of ever
@@ -61,27 +69,30 @@ const ProctoredTestRunner = () => {
     const endTest = useCallback(async (reason) => {
         if (endedRef.current) return
         endedRef.current = true
-        clearInterval(detectionTimerRef.current)
+        clearTimeout(detectionTimerRef.current)
 
         if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+        setEndReason(reason)
 
-        if (reason === 'violations') {
-            await Swal.fire({
-                title: 'Test ended',
-                text: 'You received too many warnings for looking away from the screen. Your answers so far have been submitted.',
-                icon: 'error',
-                confirmButtonText: 'OK',
-                background: '#1F1C16',
-                color: '#F3EFE6',
-                confirmButtonColor: '#C1443C',
-            })
+        const result = await dispatch(SubmitTestAnswers(attempt._id, answers, token, null, setSubmitting))
+        if (result) {
+            // real confirmation screen sir, replacing the old silent instant-redirect to
+            // /Dashboard AND the separate Swal alert that used to stack in front of it for the
+            // violations case — one unified screen now, its copy varies by endReason below
+            setSubmitted(true)
+        } else {
+            // submit genuinely failed (network/server error) sir — SubmitTestAnswers already
+            // toasted the reason. Nothing was recorded, so falling back to the dashboard would
+            // hide that failure; staying put lets the candidate retry via the Submit button.
+            endedRef.current = false
         }
-
-        await dispatch(SubmitTestAnswers(attempt._id, answers, token, null, setSubmitting))
-        dispatch(resetTestAttempt())
-        navigate('/Dashboard')
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [attempt?._id, answers, token])
+
+    const handleContinue = () => {
+        dispatch(resetTestAttempt())
+        navigate('/Dashboard')
+    }
 
     // server-anchored countdown sir — endsAt came from the backend when the attempt started, so
     // a page refresh or a tampered local clock can't extend it. The backend independently
@@ -196,52 +207,71 @@ const ProctoredTestRunner = () => {
 
     // the detection loop sir — draws the video frame + landmark dots onto the visible canvas
     // (so the candidate sees their REAL face being tracked, not an abstract render), and checks
-    // yaw against the threshold to decide if a sustained look-away should fire a violation
+    // yaw against the threshold to decide if a sustained look-away should fire a violation.
+    //
+    // this is a self-rescheduling setTimeout, NOT setInterval sir — setInterval fires on a fixed
+    // wall-clock cadence regardless of whether the previous tick finished, but
+    // detector.estimateFaces() is a real ML inference call that can take longer than
+    // DETECTION_INTERVAL_MS on a mid-range machine (WebGL warmup, CPU contention from the rest of
+    // the page). With setInterval, a slow tick doesn't push the next one back — a second
+    // estimateFaces call fires before the first one's GPU/CPU work is even done, they pile up,
+    // and it compounds: this was the actual cause of "loads late and then lags very much", not
+    // just DETECTION_INTERVAL_MS being too aggressive. Rescheduling only AFTER each tick finishes
+    // guarantees passes never overlap, at the cost of a slightly uneven cadence on a slow device —
+    // a fair trade for not stacking inference calls.
     useEffect(() => {
         if (!modelReady) return
+        let stopped = false
 
-        detectionTimerRef.current = setInterval(async () => {
+        const tick = async () => {
             const video = videoRef.current
             const canvas = canvasRef.current
             const detector = detectorRef.current
-            if (!video || !canvas || !detector || video.readyState < 2) return
 
-            const ctx = canvas.getContext('2d')
-            canvas.width = video.videoWidth
-            canvas.height = video.videoHeight
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            if (video && canvas && detector && video.readyState >= 2) {
+                const ctx = canvas.getContext('2d')
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-            const faces = await detector.estimateFaces(video, { flipHorizontal: false })
+                const faces = await detector.estimateFaces(video, { flipHorizontal: false })
 
-            if (!faces.length) {
-                // no face in frame at all sir — treated the same as looking away
-                if (!lookAwaySinceRef.current) lookAwaySinceRef.current = Date.now()
-            } else {
-                const face = faces[0]
-                ctx.fillStyle = '#FFD60A'
-                for (const kp of face.keypoints) {
-                    ctx.beginPath()
-                    ctx.arc(kp.x, kp.y, 1.2, 0, 2 * Math.PI)
-                    ctx.fill()
-                }
-
-                const yaw = estimateYawRatio(face.keypoints)
-                const isAway = yaw === null || Math.abs(yaw) > YAW_AWAY_THRESHOLD
-
-                if (isAway) {
+                if (!faces.length) {
+                    // no face in frame at all sir — treated the same as looking away
                     if (!lookAwaySinceRef.current) lookAwaySinceRef.current = Date.now()
                 } else {
-                    lookAwaySinceRef.current = null
+                    const face = faces[0]
+                    ctx.fillStyle = '#FFD60A'
+                    for (const kp of face.keypoints) {
+                        ctx.beginPath()
+                        ctx.arc(kp.x, kp.y, 1.2, 0, 2 * Math.PI)
+                        ctx.fill()
+                    }
+
+                    const yaw = estimateYawRatio(face.keypoints)
+                    const isAway = yaw === null || Math.abs(yaw) > YAW_AWAY_THRESHOLD
+
+                    if (isAway) {
+                        if (!lookAwaySinceRef.current) lookAwaySinceRef.current = Date.now()
+                    } else {
+                        lookAwaySinceRef.current = null
+                    }
+                }
+
+                if (lookAwaySinceRef.current && Date.now() - lookAwaySinceRef.current >= LOOK_AWAY_GRACE_MS) {
+                    reportViolation()
+                    lookAwaySinceRef.current = null // grace period restarts sir, cooldown still applies inside reportViolation
                 }
             }
 
-            if (lookAwaySinceRef.current && Date.now() - lookAwaySinceRef.current >= LOOK_AWAY_GRACE_MS) {
-                reportViolation()
-                lookAwaySinceRef.current = null // grace period restarts sir, cooldown still applies inside reportViolation
-            }
-        }, DETECTION_INTERVAL_MS)
+            if (!stopped) detectionTimerRef.current = setTimeout(tick, DETECTION_INTERVAL_MS)
+        }
 
-        return () => clearInterval(detectionTimerRef.current)
+        detectionTimerRef.current = setTimeout(tick, DETECTION_INTERVAL_MS)
+        return () => {
+            stopped = true
+            clearTimeout(detectionTimerRef.current)
+        }
     }, [modelReady, reportViolation])
 
     const handleAnswerChange = (questionId, value) => {
@@ -266,6 +296,64 @@ const ProctoredTestRunner = () => {
 
     if (!attempt || !test) {
         return <Loading text="Loading..." />
+    }
+
+    // final confirmation screen sir, per direct request — replaces the old silent instant-redirect
+    // to /Dashboard the moment the submit call resolved. Same full-screen icon-card shape as
+    // LoginStatusOverlay.jsx (this app's established "important terminal state" pattern), just a
+    // standalone screen here since there's nothing left underneath worth keeping visible (the
+    // camera/canvas are already torn down by endTest at this point).
+    if (submitted) {
+        const endedEarly = endReason === 'violations'
+        return (
+            <div className="min-h-screen bg-richblack-900 flex items-center justify-center px-4">
+                <Helmet>
+                    <title>Test Submitted | Resumify</title>
+                </Helmet>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="w-full max-w-md rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl p-8 flex flex-col items-center gap-4 text-center"
+                >
+                    <motion.div
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+                        className={`w-16 h-16 rounded-full flex items-center justify-center border-2 ${
+                            endedEarly ? 'bg-pink-700/30 border-pink-700' : 'bg-caribgreen-700/30 border-caribgreen-700'
+                        }`}
+                    >
+                        {endedEarly
+                            ? <FaExclamationTriangle className="text-pink-100 text-3xl" />
+                            : <FaCheckCircle className="text-caribgreen-25 text-3xl" />}
+                    </motion.div>
+
+                    <p className="text-xl font-bold text-richblack-5">
+                        {endedEarly ? 'Test ended — too many warnings' : 'Test submitted'}
+                    </p>
+
+                    {endedEarly && (
+                        <p className="text-sm text-pink-100 -mt-2">
+                            You received too many warnings for looking away from the screen, so the
+                            test ended automatically.
+                        </p>
+                    )}
+
+                    <p className="text-sm text-richblack-200 leading-relaxed">
+                        Your answers {endedEarly ? 'so far have' : 'have'} been recorded. The recruiter
+                        will review them and you'll get the outcome — hired or not — on your
+                        registered email, so keep an eye on your inbox.
+                    </p>
+
+                    <div className="flex items-center gap-2 text-xs text-richblack-400 bg-richblack-900/60 rounded-lg px-4 py-2.5 mt-1">
+                        <FaEnvelopeOpenText className="shrink-0" /> Keep checking your email for the recruiter's decision
+                    </div>
+
+                    <IconBtn text="Back to Dashboard" onclick={handleContinue} customClasses="w-full justify-center mt-2" />
+                </motion.div>
+            </div>
+        )
     }
 
     const minutes = secondsLeft === null ? '--' : String(Math.floor(secondsLeft / 60)).padStart(2, '0')
