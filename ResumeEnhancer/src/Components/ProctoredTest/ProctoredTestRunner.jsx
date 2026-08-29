@@ -105,21 +105,32 @@ const ProctoredTestRunner = () => {
 
         const setup = async () => {
             try {
-                await tf.setBackend('webgl')
-                await tf.ready()
+                // camera + ML model load IN PARALLEL sir — these used to run serially (backend
+                // init -> model download -> only THEN getUserMedia), which meant the browser's
+                // permission prompt and camera light didn't appear until the face-mesh model had
+                // fully downloaded and initialized. On a slow connection or an uncached first
+                // load that's several extra seconds of the candidate staring at a blank screen
+                // with no camera activity at all, before it suddenly turns on — reads exactly
+                // like "it's taking forever" / "is something wrong". Kicking both off at once
+                // means the camera prompt shows up immediately; the detection loop below already
+                // waits on `modelReady` regardless of which finishes first.
+                const modelPromise = (async () => {
+                    await tf.setBackend('webgl')
+                    await tf.ready()
+                    return faceLandmarksDetection.createDetector(
+                        faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
+                        { runtime: 'tfjs', refineLandmarks: false, maxFaces: 1 }
+                    )
+                })()
 
-                const detector = await faceLandmarksDetection.createDetector(
-                    faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-                    { runtime: 'tfjs', refineLandmarks: false, maxFaces: 1 }
-                )
-                if (cancelled) return
-                detectorRef.current = detector
+                const streamPromise = navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false })
 
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false })
+                const [detector, stream] = await Promise.all([modelPromise, streamPromise])
                 if (cancelled) {
                     stream.getTracks().forEach((t) => t.stop())
                     return
                 }
+                detectorRef.current = detector
                 streamRef.current = stream
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream
