@@ -24,6 +24,12 @@ const testAttemptSlice = createSlice({
             state.attempt = value.payload.attempt
             state.attemptError = null
         },
+        // PreviewTest sir — same as setTestAndAttempt but leaves `attempt` untouched, since
+        // previewTest (controllers/Test.js) deliberately never creates one
+        setPreviewTest(state, value) {
+            state.test = value.payload
+            state.attemptError = null
+        },
         setAnswer(state, value) {
             state.answers[value.payload.questionId] = value.payload.answer
         },
@@ -54,6 +60,7 @@ const testAttemptSlice = createSlice({
 
 export const {
     setTestAndAttempt,
+    setPreviewTest,
     setAnswer,
     setAttemptError,
     setCameraConsent,

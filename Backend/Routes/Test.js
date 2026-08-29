@@ -16,6 +16,7 @@ const {
     publishTest,
     getTestAttempts,
     getAttemptDetail,
+    previewTest,
     startAttempt,
     submitAnswers,
     logViolation,
@@ -37,6 +38,9 @@ route.get('/tests/:testId/attempts', Auth, isRecruiter, isApprovedRecruiter, get
 route.get('/test-attempts/:attemptId', Auth, isRecruiter, isApprovedRecruiter, getAttemptDetail)
 
 // candidate attempt flow
+// preview MUST be registered before start sir — no route conflict here since one's GET and one's
+// POST, just keeping the read-only check next to the state-changing one for clarity
+route.get('/test-attempts/preview/:inviteCode', Auth, isUser, previewTest)
 route.post('/test-attempts/start/:inviteCode', Auth, isUser, startAttempt)
 route.post('/test-attempts/:attemptId/answers', Auth, isUser, validate({ body: submitAnswersSchema }), submitAnswers)
 // multipart upload (snapshot image) sir — no JSON body schema to validate, controller checks the file itself

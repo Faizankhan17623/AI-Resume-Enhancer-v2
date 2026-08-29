@@ -1,13 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
-import { FaVideo, FaExclamationTriangle, FaClock, FaTimesCircle, FaHourglassEnd } from 'react-icons/fa'
+import { FaVideo, FaExclamationTriangle, FaClock, FaTimesCircle, FaHourglassEnd, FaWifi, FaCheckCircle } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
-import { StartAttempt } from '../../Services/operations/Test'
+import { PreviewTest, StartAttempt } from '../../Services/operations/Test'
 import { setCameraConsent, resetTestAttempt } from '../../Slices/testAttemptSlice'
+import { measureDownloadMbps, MIN_REQUIRED_MBPS } from '../../utils/speedTest'
 
 // one message per StartAttempt failure code sir (controllers/Test.js) — a candidate re-clicking
 // an old email link after already finishing, or after the 5-hour invite window lapsed, are both
@@ -15,48 +16,145 @@ import { setCameraConsent, resetTestAttempt } from '../../Slices/testAttemptSlic
 const ERROR_SCREEN = {
   ALREADY_COMPLETED: {
     icon: FaTimesCircle,
-    color: 'pink',
     title: 'Test already given',
     body: "You've already given this test — it can only be attempted once.",
   },
   INVITE_EXPIRED: {
     icon: FaHourglassEnd,
-    color: 'pink',
     title: 'Test has expired',
     body: 'Better luck next time — this test invite is no longer valid.',
   },
   NOT_INVITED: {
     icon: FaTimesCircle,
-    color: 'pink',
     title: 'Not invited to this test',
     body: "You need to be invited by the recruiter to take this test — apply to the job first.",
   },
   UNKNOWN: {
     icon: FaTimesCircle,
-    color: 'pink',
     title: 'Could not start the test',
     body: 'Something went wrong. Please try again from your dashboard.',
   },
 }
 
-// the explicit consent step sir — nothing about the camera happens until the candidate reads
-// this and clicks through. StartAttempt already ran (creates/resumes the attempt + fetches the
-// sanitized question set), but the webcam itself only turns on once ProctoredTestRunner mounts,
-// which only happens after this page navigates there.
+// 'rules' -> 'camera' -> 'speed' -> (StartAttempt fires, clock starts) -> navigate to /run sir.
+// Per direct request: camera + speed checks happen BEFORE the exam clock starts, so neither one
+// eats into the candidate's actual answering time — today's flow used to call StartAttempt (which
+// sets endsAt) the moment "I understand, start the test" was clicked, before any of this existed.
+const STEP = { RULES: 'rules', CAMERA: 'camera', SPEED: 'speed' }
+
 const TestConsent = () => {
   const { inviteCode } = useParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { test, attempt, loading, attemptError } = useSelector((state) => state.testAttempt)
+  const { test, loading, attemptError } = useSelector((state) => state.testAttempt)
 
+  const [step, setStep] = useState(STEP.RULES)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraError, setCameraError] = useState(null)
+  const [speedStatus, setSpeedStatus] = useState('checking') // 'checking' | 'ok' | 'slow' | 'failed'
+  const [measuredMbps, setMeasuredMbps] = useState(null)
+  const [startingTest, setStartingTest] = useState(false)
+  // bumped on "Check again" sir — setStep(STEP.SPEED) while ALREADY on STEP.SPEED is a no-op
+  // (React bails out of re-rendering on an unchanged state value), so the effect below needs its
+  // own always-changing dependency to actually re-run the measurement
+  const [speedCheckAttempt, setSpeedCheckAttempt] = useState(0)
+  // same reasoning as speedCheckAttempt above sir, for the camera step's own "Try again"
+  const [cameraCheckAttempt, setCameraCheckAttempt] = useState(0)
+
+  // PreviewTest (read-only, no clock) replaces StartAttempt on mount sir — catches
+  // NOT_INVITED/ALREADY_COMPLETED/INVITE_EXPIRED and loads the test's title/rules up front without
+  // creating an attempt. `resuming: true` means a mid-test refresh (an attempt is already
+  // in-progress) — skip straight past the camera/speed checks in that case, they already happened
+  // once for this attempt and re-running them would eat further into a clock that's already ticking.
   useEffect(() => {
     dispatch(resetTestAttempt())
-    dispatch(StartAttempt(inviteCode, token, navigate))
+    dispatch(PreviewTest(inviteCode, token)).then((result) => {
+      if (result?.resuming) handleAllChecksPassed()
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inviteCode])
 
-  const handleBegin = () => {
+  // camera preview sir — a real getUserMedia call so the candidate actually sees their own face
+  // before the clock starts, per direct request. Stopped again once they continue past this step;
+  // ProctoredTestRunner re-acquires its own stream once the real test starts (permission is
+  // already granted by then, so that second call is effectively instant, no new prompt).
+  // Keyed on cameraCheckAttempt too, same reasoning as the speed check's own retry counter below.
+  useEffect(() => {
+    if (step !== STEP.CAMERA) return
+    let cancelled = false
+    setCameraError(null)
+    setCameraReady(false)
+
+    navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.play()
+        }
+        setCameraReady(true)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setCameraError(
+          err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError'
+            ? 'Camera access was denied. Please allow camera access and try again.'
+            : 'Could not start the camera. Please check your webcam and try again.'
+        )
+      })
+
+    return () => {
+      cancelled = true
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+    }
+  }, [step, cameraCheckAttempt])
+
+  // speed check sir — runs once on entering this step, and again each time speedCheckAttempt
+  // is bumped by "Check again"
+  useEffect(() => {
+    if (step !== STEP.SPEED) return
+    let cancelled = false
+    setSpeedStatus('checking')
+
+    measureDownloadMbps().then((mbps) => {
+      if (cancelled) return
+      if (mbps === null) {
+        setSpeedStatus('failed')
+      } else {
+        setMeasuredMbps(mbps)
+        setSpeedStatus(mbps >= MIN_REQUIRED_MBPS ? 'ok' : 'slow')
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [step, speedCheckAttempt])
+
+  const handleBeginChecks = () => setStep(STEP.CAMERA)
+
+  const handleCameraContinue = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setStep(STEP.SPEED)
+  }
+
+  const retrySpeedCheck = () => setSpeedCheckAttempt((n) => n + 1)
+
+  // both checks passed sir — THIS is when the clock actually starts (StartAttempt sets endsAt)
+  const handleAllChecksPassed = async () => {
+    setStartingTest(true)
+    await dispatch(StartAttempt(inviteCode, token, null))
     dispatch(setCameraConsent(true))
     navigate(`/Test/${inviteCode}/run`)
   }
@@ -97,10 +195,112 @@ const TestConsent = () => {
     )
   }
 
-  if (loading || !test || !attempt) {
-    return <Loading text="Loading the test..." />
+  if (startingTest || loading || !test) {
+    return <Loading text={startingTest ? 'Starting your test...' : 'Loading the test...'} />
   }
 
+  // step 2 sir — camera preview, candidate sees their own face before continuing
+  if (step === STEP.CAMERA) {
+    return (
+      <div className="min-h-screen bg-richblack-900 flex items-center justify-center px-4">
+        <Helmet>
+          <title>Camera Check | Resumify</title>
+        </Helmet>
+        <div className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-8 text-center">
+          <h1 className="font-display text-xl text-richblack-5 mb-2">Check your camera</h1>
+          <p className="text-sm text-richblack-300 mb-6">
+            Make sure your face is clearly visible before continuing.
+          </p>
+
+          <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] mb-6 mx-auto max-w-sm">
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+            {!cameraReady && !cameraError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-richblack-900/80">
+                <p className="text-xs text-richblack-200">Starting camera...</p>
+              </div>
+            )}
+          </div>
+
+          {cameraError ? (
+            <div className="mb-6">
+              <p className="text-sm text-pink-100 mb-4 flex items-center justify-center gap-2">
+                <FaExclamationTriangle /> {cameraError}
+              </p>
+              <IconBtn text="Try again" onclick={() => setCameraCheckAttempt((n) => n + 1)} customClasses="w-full justify-center" />
+            </div>
+          ) : (
+            <IconBtn
+              text="My camera looks good, continue"
+              onclick={handleCameraContinue}
+              disabled={!cameraReady}
+              customClasses="w-full justify-center"
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // step 3 sir — internet speed check, minimum MIN_REQUIRED_MBPS to proceed
+  if (step === STEP.SPEED) {
+    return (
+      <div className="min-h-screen bg-richblack-900 flex items-center justify-center px-4">
+        <Helmet>
+          <title>Connection Check | Resumify</title>
+        </Helmet>
+        <div className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-8 text-center">
+          <h1 className="font-display text-xl text-richblack-5 mb-2">Checking your internet speed</h1>
+          <p className="text-sm text-richblack-300 mb-6">
+            This test needs a stable connection of at least {MIN_REQUIRED_MBPS} Mbps.
+          </p>
+
+          <div className="rounded-xl bg-richblack-900/60 border border-richblack-700 p-6 mb-6 flex flex-col items-center gap-3">
+            {speedStatus === 'checking' && (
+              <>
+                <FaWifi className="text-3xl text-yellow-50 animate-pulse" />
+                <p className="text-sm text-richblack-200">Measuring your connection...</p>
+              </>
+            )}
+            {speedStatus === 'ok' && (
+              <>
+                <FaCheckCircle className="text-3xl text-caribgreen-25" />
+                <p className="text-sm text-richblack-100">
+                  Looks good — about {measuredMbps.toFixed(1)} Mbps.
+                </p>
+              </>
+            )}
+            {speedStatus === 'slow' && (
+              <>
+                <FaExclamationTriangle className="text-3xl text-pink-100" />
+                <p className="text-sm text-pink-100">
+                  Your connection is about {measuredMbps.toFixed(1)} Mbps, below the {MIN_REQUIRED_MBPS} Mbps
+                  needed for this test.
+                </p>
+                <p className="text-xs text-richblack-300">
+                  Please move somewhere with a faster, more stable connection (or switch networks)
+                  and take the test later, before your invite expires.
+                </p>
+              </>
+            )}
+            {speedStatus === 'failed' && (
+              <>
+                <FaExclamationTriangle className="text-3xl text-pink-100" />
+                <p className="text-sm text-pink-100">Could not measure your connection speed.</p>
+              </>
+            )}
+          </div>
+
+          {speedStatus === 'ok' ? (
+            <IconBtn text="Start the test" onclick={handleAllChecksPassed} customClasses="w-full justify-center" />
+          ) : (speedStatus === 'slow' || speedStatus === 'failed') ? (
+            <IconBtn text="Check again" onclick={retrySpeedCheck} customClasses="w-full justify-center" />
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
+  // step 1 sir — the rules screen, unchanged copy from before
   return (
     <div className="min-h-screen bg-richblack-900 flex items-center justify-center px-4">
       <Helmet>
@@ -115,7 +315,8 @@ const TestConsent = () => {
             <FaClock className="text-yellow-50 mt-1 shrink-0" />
             <p className="text-sm text-richblack-200">
               You will have a time limit for this test, scored out of {test.totalMarks} marks. It
-              auto-submits when time runs out — plan accordingly.
+              auto-submits when time runs out — plan accordingly. The clock starts once you've
+              passed the camera and connection checks on the next screens, not before.
             </p>
           </div>
           <div className="flex items-start gap-3">
@@ -139,7 +340,7 @@ const TestConsent = () => {
           By continuing, you agree to allow camera access for the duration of this test.
         </p>
 
-        <IconBtn text="I understand, start the test" onclick={handleBegin} customClasses="w-full justify-center" />
+        <IconBtn text="I understand, continue" onclick={handleBeginChecks} customClasses="w-full justify-center" />
       </div>
     </div>
   )

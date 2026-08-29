@@ -11,6 +11,7 @@ export const TestData = {
     getAttemptDetail: BASE_URL + "/test-attempts", // + /:attemptId
 
     // candidate attempt flow
+    previewTest: BASE_URL + "/test-attempts/preview", // + /:inviteCode
     startAttempt: BASE_URL + "/test-attempts/start", // + /:inviteCode
     submitAnswers: BASE_URL + "/test-attempts",      // + /:attemptId/answers
     logViolation: BASE_URL + "/test-attempts",       // + /:attemptId/violations

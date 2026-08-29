@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import * as tf from '@tensorflow/tfjs-core'
 import '@tensorflow/tfjs-backend-webgl'
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection'
+import * as faceDetection from '@tensorflow-models/face-detection'
 import { FaExclamationTriangle, FaClock, FaCheckCircle, FaEnvelopeOpenText } from 'react-icons/fa'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -133,12 +133,18 @@ const ProctoredTestRunner = () => {
                 // like "it's taking forever" / "is something wrong". Kicking both off at once
                 // means the camera prompt shows up immediately; the detection loop below already
                 // waits on `modelReady` regardless of which finishes first.
+                // face-detection sir, NOT face-landmarks-detection's full FaceMesh — this feature
+                // only ever needed 3 of FaceMesh's 468 points (nose + two eyes, see
+                // utils/facePose.js) for a 2D yaw ratio, never the mesh itself. The lighter
+                // 6-keypoint bounding-box detector solves a smaller problem than a full facial
+                // mesh, so it loads faster and runs faster per frame with no accuracy loss for
+                // this specific "is the candidate facing the screen" check.
                 const modelPromise = (async () => {
                     await tf.setBackend('webgl')
                     await tf.ready()
-                    return faceLandmarksDetection.createDetector(
-                        faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-                        { runtime: 'tfjs', refineLandmarks: false, maxFaces: 1 }
+                    return faceDetection.createDetector(
+                        faceDetection.SupportedModels.MediaPipeFaceDetector,
+                        { runtime: 'tfjs', modelType: 'short', maxFaces: 1 }
                     )
                 })()
 
@@ -241,10 +247,18 @@ const ProctoredTestRunner = () => {
                     if (!lookAwaySinceRef.current) lookAwaySinceRef.current = Date.now()
                 } else {
                     const face = faces[0]
+                    // face-detection sir gives a bounding box AND only 6 keypoints (vs FaceMesh's
+                    // 468) — drawing just 6 tiny 1.2px dots would look nearly empty compared to
+                    // before, so the box outline is drawn too, giving the candidate the same
+                    // "yes, tracking is active" visual confirmation as the denser mesh did
+                    ctx.strokeStyle = '#FFD60A'
+                    ctx.lineWidth = 2
+                    ctx.strokeRect(face.box.xMin, face.box.yMin, face.box.width, face.box.height)
+
                     ctx.fillStyle = '#FFD60A'
                     for (const kp of face.keypoints) {
                         ctx.beginPath()
-                        ctx.arc(kp.x, kp.y, 1.2, 0, 2 * Math.PI)
+                        ctx.arc(kp.x, kp.y, 3, 0, 2 * Math.PI)
                         ctx.fill()
                     }
 

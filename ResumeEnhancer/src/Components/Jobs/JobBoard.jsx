@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
-import { FaSearch, FaMapMarkerAlt, FaBriefcase } from 'react-icons/fa'
+import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import { staggerContainer, fadeUp } from '../../utils/motion'
-import { GetPublicJobs } from '../../Services/operations/Job'
+import { GetPublicJobs, GetMyApplications } from '../../Services/operations/Job'
 import { formatJobDate } from '../../utils/formatDate'
 
 const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
@@ -17,7 +17,8 @@ const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship'
 // Tavily web-search feature). This lists real jobs posted by recruiters on this site.
 const JobBoard = () => {
   const dispatch = useDispatch()
-  const { publicJobs, publicJobsPagination, loading } = useSelector((state) => state.job)
+  const { isLoggedIn, token } = useSelector((state) => state.auth)
+  const { publicJobs, publicJobsPagination, myApplications, loading } = useSelector((state) => state.job)
   const [search, setSearch] = useState('')
   const [location, setLocation] = useState('')
   const [employmentType, setEmploymentType] = useState('')
@@ -27,6 +28,21 @@ const JobBoard = () => {
     dispatch(GetPublicJobs({ page, search, location, employmentType }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, employmentType])
+
+  // per direct request sir — the board should show "Applied" for jobs the candidate has already
+  // applied to instead of nothing. listPublicJobs/getPublicJob are genuinely public routes (no
+  // Auth middleware, since anyone browsing the board isn't necessarily logged in yet), so this
+  // can't come from the backend response itself — fetched separately here (only when logged in)
+  // and cross-referenced client-side against the public job list.
+  useEffect(() => {
+    if (isLoggedIn) dispatch(GetMyApplications(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn])
+
+  const appliedJobIds = useMemo(
+    () => new Set(myApplications.map((a) => a.job?._id).filter(Boolean)),
+    [myApplications]
+  )
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -108,7 +124,14 @@ const JobBoard = () => {
                 >
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="min-w-0">
-                      <h3 className="text-lg font-semibold text-richblack-5">{job.title}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-richblack-5">{job.title}</h3>
+                        {appliedJobIds.has(job._id) && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-caribgreen-700/30 text-caribgreen-100 border border-caribgreen-700 shrink-0">
+                            <FaCheckCircle className="text-[9px]" /> Applied
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-warm-200 mt-0.5">{job.companyName}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs text-richblack-300 flex-wrap">
                         {job.location && (

@@ -11,6 +11,7 @@ import {
 } from '../../Slices/testSlice.js'
 import {
     setTestAndAttempt,
+    setPreviewTest,
     setViolationState,
     setAttemptError,
     setLoading as setAttemptLoading,
@@ -18,7 +19,7 @@ import {
 
 const {
     createTest, listMyTests, getTest, updateTest, publishTest, getTestAttempts, getAttemptDetail,
-    startAttempt, submitAnswers, logViolation,
+    previewTest, startAttempt, submitAnswers, logViolation,
 } = TestData
 
 // ---------------------------------------------------------------------------
@@ -189,6 +190,38 @@ export function GetAttemptDetail(attemptId, token) {
 // ---------------------------------------------------------------------------
 // candidate-side sir
 // ---------------------------------------------------------------------------
+
+// read-only sir — runs the same NOT_INVITED/ALREADY_COMPLETED/INVITE_EXPIRED checks as
+// StartAttempt below but creates nothing (controllers/Test.js's previewTest), so
+// TestConsent.jsx can show the rules/camera/speed screens without starting the exam clock.
+// Returns the response data directly (not just a dispatch) so the caller can read `resuming`
+// synchronously and decide whether to skip straight to StartAttempt for an in-progress attempt.
+export function PreviewTest(inviteCode, token) {
+    return async (dispatch) => {
+        dispatch(setAttemptLoading(true))
+        try {
+            const response = await apiConnector("GET", `${previewTest}/${inviteCode}`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setPreviewTest(response.data.test))
+            return response.data
+        } catch (error) {
+            logApiError("Error loading the test", error)
+            dispatch(setAttemptError({
+                code: error?.response?.data?.code || 'UNKNOWN',
+                message: error?.response?.data?.message || "Could not load the test",
+            }))
+            return null
+        } finally {
+            dispatch(setAttemptLoading(false))
+        }
+    }
+}
 
 // `navigate` is unused now sir — kept as a param so existing call sites don't need updating, but
 // TestConsent.jsx no longer bounces to /Dashboard on failure. NOT_INVITED / ALREADY_COMPLETED /

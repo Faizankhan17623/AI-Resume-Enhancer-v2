@@ -1,25 +1,30 @@
-// Estimates head yaw (left/right turn) from MediaPipe FaceMesh keypoints sir — a cheap
+// Estimates head yaw (left/right turn) from MediaPipe FaceDetector keypoints sir — a cheap
 // geometric heuristic, not a full 3D pose solve, but plenty for "is this candidate facing the
 // screen or turned away" over a webcam feed.
 //
-// Uses 3 fixed FaceMesh landmark indices: the nose tip (1) and the two outer eye corners
-// (33 = right eye outer, 263 = left eye outer, as seen from the CAMERA's perspective on an
-// unmirrored frame). When the face is centered, the nose sits roughly midway between the two
-// eyes on the x axis. Turning the head shifts the nose toward one eye and away from the other —
-// that ratio, not the absolute pixel distance, is what stays reasonably stable across face
-// sizes and camera distances.
-const NOSE_TIP = 1
-const RIGHT_EYE_OUTER = 33
-const LEFT_EYE_OUTER = 263
+// Switched from face-landmarks-detection's 468-point FaceMesh to face-detection's lighter 6-point
+// model (per direct request, chasing camera startup time + per-frame lag): FaceMesh solves a much
+// harder problem (a full 3D facial mesh) than this feature actually needs — all it ever used was
+// 3 of those 468 points for a 2D ratio. FaceDetector gives the same 3 points directly (named, not
+// indexed) from a much lighter bounding-box-plus-6-keypoints model, so this is a right-sizing of
+// the tool, not an accuracy tradeoff — same geometric math as before, just fed by a cheaper
+// detector. See ProctoredTestRunner.jsx for the model swap itself.
+//
+// Uses 3 named keypoints: 'noseTip', 'rightEye', 'leftEye' (as seen from the CAMERA's perspective
+// on an unmirrored frame). When the face is centered, the nose sits roughly midway between the
+// two eyes on the x axis. Turning the head shifts the nose toward one eye and away from the
+// other — that ratio, not the absolute pixel distance, is what stays reasonably stable across
+// face sizes and camera distances.
 
 // returns a signed ratio roughly in [-1, 1] sir — 0 is centered, positive/negative is turned
 // toward one side. Returns null if the expected keypoints aren't present.
 export const estimateYawRatio = (keypoints) => {
-    if (!keypoints || keypoints.length <= LEFT_EYE_OUTER) return null
+    if (!keypoints?.length) return null
 
-    const nose = keypoints[NOSE_TIP]
-    const rightEye = keypoints[RIGHT_EYE_OUTER]
-    const leftEye = keypoints[LEFT_EYE_OUTER]
+    const byName = (name) => keypoints.find((kp) => kp.name === name)
+    const nose = byName('noseTip')
+    const rightEye = byName('rightEye')
+    const leftEye = byName('leftEye')
     if (!nose || !rightEye || !leftEye) return null
 
     const eyeSpan = leftEye.x - rightEye.x

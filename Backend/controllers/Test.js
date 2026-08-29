@@ -294,34 +294,95 @@ exports.getAttemptDetail = async (req, res) => {
 // product feature (see Middlewares/Auth.js)
 // ---------------------------------------------------------------------------
 
+// shared by previewTest and startAttempt below sir — same invite-validity checks either way
+// (test exists+published, candidate was invited, not already done, invite not expired). Returns
+// { error: {status, body} } on failure, or { test, application, attemptRecord } on success.
+// attemptRecord is included so startAttempt doesn't have to re-query it.
+const validateTestAccess = async (inviteCode, candidateId) => {
+    const test = await Test.findOne({ inviteCode, status: 'published' })
+    if (!test) {
+        return { error: { status: 404, body: { success: false, message: 'This test link is invalid or no longer active' } } }
+    }
+
+    // apply-then-invite gate sir — a candidate can only access THIS job's test once the
+    // recruiter has explicitly invited them (JobApplication.status === 'invited_to_test', set by
+    // controllers/Job.js's inviteApplicantToTest). Having a valid invite code alone is no longer
+    // enough; it identifies the test, this identifies who's allowed to take it.
+    const application = await JobApplication.findOne({ job: test.job, candidate: candidateId })
+    if (!application || !['invited_to_test', 'completed_test'].includes(application.status)) {
+        return { error: { status: 403, body: { success: false, code: 'NOT_INVITED', message: 'You need to be invited by the recruiter to take this test — apply to the job first' } } }
+    }
+
+    // one query covers resume/already-done/expired below sir
+    const attemptRecord = await TestAttempt.findOne({ test: test._id, candidate: candidateId })
+
+    if (attemptRecord && attemptRecord.status !== 'in-progress') {
+        return { error: { status: 400, body: { success: false, code: 'ALREADY_COMPLETED', message: 'You have already completed this test' } } }
+    }
+
+    // the 5-hour invite window sir, per direct request — only relevant if no attempt exists at
+    // all yet (an in-progress attempt takes priority: a slow connection mid-test shouldn't
+    // retroactively expire it). `code` lets the frontend show a dedicated "this test has expired"
+    // screen instead of a generic error.
+    const inviteExpired = !attemptRecord
+        && application.status === 'invited_to_test'
+        && application.testInviteExpiresAt
+        && application.testInviteExpiresAt < new Date()
+    if (inviteExpired) {
+        return { error: { status: 410, body: { success: false, code: 'INVITE_EXPIRED', message: 'This test invite has expired — better luck next time' } } }
+    }
+
+    return { test, application, attemptRecord }
+}
+
+// GET /test-attempts/preview/:inviteCode sir — read-only, runs the exact same validity checks as
+// startAttempt below but creates NOTHING: no TestAttempt, no endsAt clock. Lets TestConsent.jsx
+// show the rules/camera-check/speed-check screens (and catch NOT_INVITED/ALREADY_COMPLETED/
+// INVITE_EXPIRED up front) without starting the exam timer — that only happens once startAttempt
+// itself is called, at the end of TestConsent's flow.
+exports.previewTest = async (req, res) => {
+    try {
+        const candidateId = req?.User.id
+        const { inviteCode } = req.params
+
+        const result = await validateTestAccess(inviteCode, candidateId)
+        if (result.error) return res.status(result.error.status).json(result.error.body)
+
+        const { test, attemptRecord } = result
+        return res.status(200).json({
+            success: true,
+            test: {
+                title: test.title,
+                description: test.description,
+                totalMarks: test.totalMarks,
+                maxViolations: test.maxViolations,
+            },
+            // tells TestConsent.jsx to skip straight to StartAttempt (which will itself resume
+            // this attempt) rather than run the camera/speed checks again for a refresh mid-test
+            resuming: attemptRecord?.status === 'in-progress',
+        })
+    } catch (error) {
+        (req.log || logger).error('preview test failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while loading the test',
+        })
+    }
+}
+
 // POST /test-attempts/start/:inviteCode sir — creates the attempt and computes the
 // server-side deadline (endsAt) that the countdown timer and the submit-timeout check below
-// both trust over anything the client reports
+// both trust over anything the client reports. Called only once TestConsent.jsx's camera + speed
+// checks have both passed — this is genuinely where the exam clock starts, per direct request.
 exports.startAttempt = async (req, res) => {
     try {
         const candidateId = req?.User.id
         const { inviteCode } = req.params
 
-        const test = await Test.findOne({ inviteCode, status: 'published' })
-        if (!test) {
-            return res.status(404).json({
-                success: false,
-                message: 'This test link is invalid or no longer active',
-            })
-        }
+        const result = await validateTestAccess(inviteCode, candidateId)
+        if (result.error) return res.status(result.error.status).json(result.error.body)
 
-        // apply-then-invite gate sir — a candidate can only start THIS job's test once the
-        // recruiter has explicitly invited them (JobApplication.status === 'invited_to_test',
-        // set by controllers/Job.js's inviteApplicantToTest). Having a valid invite code alone
-        // is no longer enough; it identifies the test, this identifies who's allowed to take it.
-        const application = await JobApplication.findOne({ job: test.job, candidate: candidateId })
-        if (!application || !['invited_to_test', 'completed_test'].includes(application.status)) {
-            return res.status(403).json({
-                success: false,
-                code: 'NOT_INVITED',
-                message: 'You need to be invited by the recruiter to take this test — apply to the job first',
-            })
-        }
+        const { test, application, attemptRecord } = result
 
         const testPayload = {
             title: test.title,
@@ -331,10 +392,6 @@ exports.startAttempt = async (req, res) => {
             maxViolations: test.maxViolations,
         }
 
-        // one query covers resume/already-done/expired below sir — was three separate
-        // TestAttempt.findOne calls before, now a single fetch reused for all three checks
-        const attemptRecord = await TestAttempt.findOne({ test: test._id, candidate: candidateId })
-
         // resume an existing in-progress attempt sir rather than letting a refresh start a
         // second clock — same "one active session" shape as MockInterview's status check
         if (attemptRecord?.status === 'in-progress') {
@@ -343,29 +400,6 @@ exports.startAttempt = async (req, res) => {
                 message: 'Resuming your in-progress attempt',
                 attempt: attemptRecord,
                 test: testPayload,
-            })
-        }
-
-        if (attemptRecord) {
-            return res.status(400).json({
-                success: false,
-                code: 'ALREADY_COMPLETED',
-                message: 'You have already completed this test',
-            })
-        }
-
-        // the 5-hour invite window sir, per direct request — only checked once we know no attempt
-        // exists at all (an in-progress or already-finished attempt above takes priority: a slow
-        // connection mid-test shouldn't retroactively expire it). `code` lets the frontend show a
-        // dedicated "this test has expired" screen instead of a generic error.
-        const inviteExpired = application.status === 'invited_to_test'
-            && application.testInviteExpiresAt
-            && application.testInviteExpiresAt < new Date()
-        if (inviteExpired) {
-            return res.status(410).json({
-                success: false,
-                code: 'INVITE_EXPIRED',
-                message: 'This test invite has expired — better luck next time',
             })
         }
 

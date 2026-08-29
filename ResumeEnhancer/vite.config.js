@@ -1,10 +1,18 @@
 import { defineConfig } from 'vite'
+import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      // see src/stubs/mediapipeFaceDetectionStub.js sir — @tensorflow-models/face-detection's
+      // dead 'mediapipe' runtime import path otherwise hard-fails the production build
+      '@mediapipe/face_detection': fileURLToPath(new URL('./src/stubs/mediapipeFaceDetectionStub.js', import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
