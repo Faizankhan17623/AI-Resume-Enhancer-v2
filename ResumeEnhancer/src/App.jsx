@@ -56,6 +56,7 @@ const AdminCreditGrants = lazy(() => import('./Components/Admin/CreditGrants'))
 const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements'))
 const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
+const AdminRecruiterDataHealth = lazy(() => import('./Components/Admin/RecruiterDataHealth'))
 const SupportSuspended = lazy(() => import('./Components/Admin/SupportSuspended'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
@@ -263,6 +264,7 @@ function App() {
             <Route path="/Admin/Announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
             <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
             <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+            <Route path="/Admin/Recruiter-Data-Health" element={<AdminRoute><AdminRecruiterDataHealth /></AdminRoute>} />
             <Route path="/Admin/Recruiter-Applications" element={<AdminRoute><AdminRecruiterApplications /></AdminRoute>} />
             <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 

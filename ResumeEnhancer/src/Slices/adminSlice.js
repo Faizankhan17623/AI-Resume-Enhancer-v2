@@ -28,6 +28,7 @@ const initialState = {
     testimonials: [],
     reports: [],
     recruiterApplications: [],
+    recruiterDataHealth: null,
     loading: false
 };
 
@@ -107,6 +108,9 @@ const adminSlice = createSlice({
         setRecruiterApplications(state, value) {
             state.recruiterApplications = value.payload
         },
+        setRecruiterDataHealth(state, value) {
+            state.recruiterDataHealth = value.payload
+        },
         setLoading(state, value) {
             state.loading = value.payload
         }
@@ -115,6 +119,6 @@ const adminSlice = createSlice({
 
 export const {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading
 } = adminSlice.actions
 export default adminSlice.reducer

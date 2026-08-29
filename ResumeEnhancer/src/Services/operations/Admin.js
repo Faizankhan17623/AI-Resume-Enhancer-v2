@@ -3,9 +3,9 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications, AdminRecruiterDataHealth } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
@@ -15,6 +15,7 @@ const { getsettings, updatesetting } = AdminSettings
 const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
 const { allreports, updatereport, deletereport } = AdminReports
 const { list: recruiterApplicationsUrl, approve: approveRecruiterUrl, reject: rejectRecruiterUrl } = AdminRecruiterApplications
+const { get: recruiterDataHealthUrl } = AdminRecruiterDataHealth
 
 // ---------- overview sir ----------
 
@@ -741,6 +742,32 @@ export function GetRecruiterApplications(token, status = "pending") {
         } catch (error) {
             logApiError("Error fetching recruiter applications", error)
             toast.error(error?.response?.data?.message || "Could not load recruiter applications")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// ---------- recruiter data health sir — surfaces exactly what this session's own debugging kept
+// turning up by hand: published jobs with an unpublished test, and applications stuck past their
+// invite window that TestInviteExpiryCron.js hasn't caught yet ----------
+
+export function GetRecruiterDataHealth(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", recruiterDataHealthUrl, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setRecruiterDataHealth(response.data.health))
+        } catch (error) {
+            logApiError("Error fetching recruiter data health", error)
+            toast.error(error?.response?.data?.message || "Could not load recruiter data health")
         } finally {
             dispatch(setLoading(false))
         }

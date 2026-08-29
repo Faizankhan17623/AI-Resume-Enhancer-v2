@@ -6,6 +6,8 @@ const User = require('../Models/User')
 const Chat = require('../Models/Chat')
 const Review = require('../Models/Review')
 const Payment = require('../Models/Payment')
+const Job = require('../Models/Job')
+const JobApplication = require('../Models/JobApplication')
 const { PLANS, getEffectivePlan } = require('../utils/Plans')
 const { logAction } = require('../utils/AdminLog')
 const mailSender = require('../utils/Nodemailer.js')
@@ -1284,6 +1286,66 @@ exports.getChatDetail = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the chat',
+        })
+    }
+}
+
+// GET /admin/recruiter-data-health sir — surfaces exactly the kind of thing this session's own
+// debugging kept turning up by hand: a published job whose attached test is still a draft (so
+// "Invite to test" silently can't work for it), and applications stuck at invited_to_test whose
+// 5-hour window has already passed but TestInviteExpiryCron.js hasn't run yet (a same-hour gap,
+// or the cron itself failing) — instead of an Admin having to SSH in and write a Mongo query
+// each time to spot these. Read-only, no writes, cheap enough to run on every page load.
+exports.getRecruiterDataHealth = async (req, res) => {
+    try {
+        const [publishedJobsWithTest, staleInvites] = await Promise.all([
+            // published jobs with a test attached sir, need the test's own status/inviteCode to
+            // know if it's actually usable — same distinction as getJobApplicants' testPublished
+            Job.find({ status: 'published', test: { $ne: null } })
+                .select('title companyName test recruiter')
+                .populate('test', 'status inviteCode')
+                .populate('recruiter', 'firstName lastName email')
+                .lean(),
+            // invited_to_test rows whose window has already passed sir — these SHOULD have been
+            // flipped to invite_expired by the hourly cron already; still showing up here past a
+            // reasonable grace window (30 min) means the cron missed a run, not just "about to expire"
+            JobApplication.find({
+                status: 'invited_to_test',
+                testInviteExpiresAt: { $ne: null, $lt: new Date(Date.now() - 30 * 60 * 1000) },
+            })
+                .select('job candidate testInviteExpiresAt')
+                .populate('job', 'title companyName')
+                .populate('candidate', 'firstName lastName email')
+                .lean(),
+        ])
+
+        const unpublishedTests = publishedJobsWithTest
+            .filter((job) => job.test && job.test.status !== 'published')
+            .map((job) => ({
+                jobId: job._id,
+                jobTitle: job.title,
+                companyName: job.companyName,
+                recruiterEmail: job.recruiter?.email || null,
+            }))
+
+        return res.status(200).json({
+            success: true,
+            health: {
+                unpublishedTests,
+                staleInvites: staleInvites.map((app) => ({
+                    applicationId: app._id,
+                    jobTitle: app.job?.title || 'Deleted job',
+                    companyName: app.job?.companyName,
+                    candidateEmail: app.candidate?.email || 'Deleted candidate',
+                    expiredAt: app.testInviteExpiresAt,
+                })),
+            },
+        })
+    } catch (error) {
+        (req.log || logger).error('get recruiter data health failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while checking recruiter data health',
         })
     }
 }

@@ -65,6 +65,10 @@ export const AdminRecruiterApplications = {
     reject: BASE_URL + "/admin/recruiter-applications"     // + /:userId/reject
 }
 
+export const AdminRecruiterDataHealth = {
+    get: BASE_URL + "/admin/recruiter-data-health"
+}
+
 export const AdminReports = {
     allreports: BASE_URL + "/admin/reports",
     updatereport: BASE_URL + "/admin/reports",   // + /:reportId

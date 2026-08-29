@@ -34,7 +34,8 @@ const {
     getChatDetail,
     getRecruiterApplications,
     approveRecruiterApplication,
-    rejectRecruiterApplication
+    rejectRecruiterApplication,
+    getRecruiterDataHealth
 } = require('../controllers/Admin.js')
 const {
     getPayments,
@@ -97,6 +98,7 @@ route.patch('/admin/users/:userId/role', Auth, isAdmin, adminWriteLimiter, valid
 // recruiter self-signup approval queue sir — Admin-only, NOT isSupport: promoting someone to
 // Recruiter is the same class of judgment call as any other role change above
 route.get('/admin/recruiter-applications', Auth, isAdmin, adminReadLimiter, getRecruiterApplications)
+route.get('/admin/recruiter-data-health', Auth, isAdmin, adminReadLimiter, getRecruiterDataHealth)
 route.post('/admin/recruiter-applications/:userId/approve', Auth, isAdmin, adminWriteLimiter, approveRecruiterApplication)
 route.post('/admin/recruiter-applications/:userId/reject', Auth, isAdmin, adminWriteLimiter, validate({ body: rejectRecruiterApplicationSchema }), rejectRecruiterApplication)
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserPlanSchema }), updateUserPlan)

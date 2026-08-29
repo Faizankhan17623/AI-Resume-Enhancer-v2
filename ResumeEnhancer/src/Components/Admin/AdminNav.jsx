@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaCoins, FaBullhorn, FaSlidersH, FaSearch, FaSpinner, FaCommentDots, FaBug, FaUserTie } from 'react-icons/fa'
+import { FaChartPie, FaUsers, FaRupeeSign, FaClipboardList, FaCoins, FaBullhorn, FaSlidersH, FaSearch, FaSpinner, FaCommentDots, FaBug, FaUserTie, FaHeartbeat } from 'react-icons/fa'
 import { GlobalSearch } from '../../Services/operations/Admin'
 
 // two entirely separate tab sets sir — Admin gets /Admin/*, Support gets its OWN /Support/*
@@ -19,6 +19,7 @@ const adminTabs = [
   { name: 'Testimonials', path: '/Admin/Testimonials', icon: <FaCommentDots /> },
   { name: 'Reports', path: '/Admin/Reports', icon: <FaBug /> },
   { name: 'Recruiter Applications', path: '/Admin/Recruiter-Applications', icon: <FaUserTie /> },
+  { name: 'Recruiter Data Health', path: '/Admin/Recruiter-Data-Health', icon: <FaHeartbeat /> },
   { name: 'Settings', path: '/Admin/Settings', icon: <FaSlidersH /> },
 ]
 
