@@ -11,6 +11,7 @@ const statusBadge = {
   applied: 'bg-richblack-700 text-richblack-200 border-richblack-600',
   invited_to_test: 'bg-yellow-700/30 text-yellow-25 border-yellow-700',
   completed_test: 'bg-blue-700/30 text-blue-100 border-blue-700',
+  invite_expired: 'bg-warm-700/30 text-warm-25 border-warm-600',
   rejected: 'bg-pink-700/30 text-pink-100 border-pink-700',
   hired: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700',
 }
@@ -18,7 +19,8 @@ const statusBadge = {
 const statusLabel = {
   applied: 'Applied',
   invited_to_test: 'Invited to test',
-  completed_test: 'Test completed',
+  completed_test: 'Under review',
+  invite_expired: 'Invite expired',
   rejected: 'Not selected',
   hired: 'Hired',
 }
@@ -73,6 +75,21 @@ const MyApplications = () => {
                 {app.status === 'invited_to_test' && app.job?.status === 'published' && (
                   <p className="text-xs text-yellow-25 mt-3">
                     You've been invited to take this job's test — check your email or ask the recruiter for the test link.
+                  </p>
+                )}
+                {/* per direct request sir — a candidate who finished the test had no explicit
+                    signal that they're now just waiting, distinct from "applied" (nothing has
+                    happened yet) or a final outcome (hired/rejected) */}
+                {app.status === 'completed_test' && (
+                  <p className="text-xs text-blue-100 mt-3">
+                    You've completed this job's test. The recruiter is reviewing it — you'll get
+                    the outcome by email once they decide.
+                  </p>
+                )}
+                {app.status === 'invite_expired' && (
+                  <p className="text-xs text-warm-25 mt-3">
+                    Your test invite for this job expired before you started it. The recruiter can
+                    still send you a new one if they choose to.
                   </p>
                 )}
               </div>
