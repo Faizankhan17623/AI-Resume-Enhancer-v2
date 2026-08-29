@@ -1,7 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const { Auth, isRecruiter, isApprovedRecruiter, isUser } = require('../Middlewares/Auth.js')
-const { violationLimiter } = require('../Middlewares/RateLimit.js')
+const { violationLimiter, speedProbeLimiter } = require('../Middlewares/RateLimit.js')
 const { validate } = require('../Middlewares/Validate.js')
 const {
     createTestSchema,
@@ -17,6 +17,7 @@ const {
     getTestAttempts,
     getAttemptDetail,
     previewTest,
+    speedProbe,
     startAttempt,
     submitAnswers,
     logViolation,
@@ -40,6 +41,7 @@ route.get('/test-attempts/:attemptId', Auth, isRecruiter, isApprovedRecruiter, g
 // candidate attempt flow
 // preview MUST be registered before start sir — no route conflict here since one's GET and one's
 // POST, just keeping the read-only check next to the state-changing one for clarity
+route.get('/test-attempts/speed-probe', Auth, isUser, speedProbeLimiter, speedProbe)
 route.get('/test-attempts/preview/:inviteCode', Auth, isUser, previewTest)
 route.post('/test-attempts/start/:inviteCode', Auth, isUser, startAttempt)
 route.post('/test-attempts/:attemptId/answers', Auth, isUser, validate({ body: submitAnswersSchema }), submitAnswers)

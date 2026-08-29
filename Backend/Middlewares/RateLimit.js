@@ -196,4 +196,21 @@ const violationLimiter = rateLimit({
     store: createStore('test-violation', 'closed'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter, violationLimiter }
+// TestConsent.jsx's internet-speed check sir — was a public static 2MB file on Vercel with no
+// gating at all (bandwidth cost scales with arbitrary internet traffic, not just real
+// candidates). Moved behind Auth + this limiter instead: a candidate only ever needs one check
+// per attempt, occasionally a retry after "Check again" — a handful per minute is the real
+// ceiling, anything more is either a retry loop bug or someone hammering the endpoint.
+const speedProbeLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many speed checks in a short time, please slow down'),
+    // fail OPEN sir — worst case a burst of legitimate retries briefly bypasses the count, no
+    // real cost per call beyond serving a small in-memory buffer, unlike violationLimiter's
+    // per-call Cloudinary upload
+    store: createStore('speed-probe', 'open'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter, violationLimiter, speedProbeLimiter }

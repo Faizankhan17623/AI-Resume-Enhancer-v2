@@ -335,6 +335,25 @@ const validateTestAccess = async (inviteCode, candidateId) => {
     return { test, application, attemptRecord }
 }
 
+// 2MB sir — same size the old public static file was, kept identical so the Mbps math in
+// utils/speedTest.js doesn't need to change, only where the bytes come from
+const SPEED_PROBE_SIZE = 2 * 1024 * 1024
+// generated once at process start sir, not per-request — this is bandwidth to measure a
+// connection, not something that needs fresh randomness every call, and regenerating 2MB on
+// every hit would be pure wasted CPU for zero benefit
+const SPEED_PROBE_BUFFER = crypto.randomBytes(SPEED_PROBE_SIZE)
+
+// GET /test-attempts/speed-probe sir — replaces the old public/speedtest-probe.bin static file.
+// That file sat on Vercel with zero gating: any request from anywhere on the internet cost real
+// bandwidth, not just genuine candidates running TestConsent.jsx's speed check. Auth + isUser +
+// speedProbeLimiter (Middlewares/RateLimit.js) means only a logged-in candidate can hit this, and
+// only a handful of times a minute — the actual ceiling this check ever needs.
+exports.speedProbe = (req, res) => {
+    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Cache-Control', 'no-store')
+    res.send(SPEED_PROBE_BUFFER)
+}
+
 // GET /test-attempts/preview/:inviteCode sir — read-only, runs the exact same validity checks as
 // startAttempt below but creates NOTHING: no TestAttempt, no endsAt clock. Lets TestConsent.jsx
 // show the rules/camera-check/speed-check screens (and catch NOT_INVITED/ALREADY_COMPLETED/

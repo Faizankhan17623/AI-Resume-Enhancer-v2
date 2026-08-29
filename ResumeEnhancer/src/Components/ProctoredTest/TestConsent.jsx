@@ -126,7 +126,7 @@ const TestConsent = () => {
     let cancelled = false
     setSpeedStatus('checking')
 
-    measureDownloadMbps().then((mbps) => {
+    measureDownloadMbps(token).then((mbps) => {
       if (cancelled) return
       if (mbps === null) {
         setSpeedStatus('failed')
