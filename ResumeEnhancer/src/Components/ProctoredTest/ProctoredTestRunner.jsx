@@ -81,7 +81,7 @@ const ProctoredTestRunner = () => {
         dispatch(resetTestAttempt())
         navigate('/Dashboard')
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [attempt, answers, token])
+    }, [attempt?._id, answers, token])
 
     // server-anchored countdown sir — endsAt came from the backend when the attempt started, so
     // a page refresh or a tampered local clock can't extend it. The backend independently
@@ -98,9 +98,17 @@ const ProctoredTestRunner = () => {
         return () => clearInterval(timer)
     }, [attempt?.endsAt, endTest])
 
-    // load the model + start the camera once sir
+    // load the model + start the camera once sir — keyed on attempt._id, NOT the attempt object
+    // itself. `attempt` gets a brand-new object reference from Immer on every setViolationState
+    // dispatch (reportViolation below fires that on every logged violation), even though the
+    // reducer only mutates violationCount/status on it. With `[attempt]` as the dependency, EVERY
+    // violation during the test tore down the stream + detector and re-ran getUserMedia from
+    // scratch — the camera visibly turning off and back on mid-test, worse the more violations
+    // logged. attemptId is a primitive and stays stable for the whole attempt, so this now only
+    // ever runs once.
+    const attemptId = attempt?._id
     useEffect(() => {
-        if (!attempt) return
+        if (!attemptId) return
         let cancelled = false
 
         const setup = async () => {
@@ -156,8 +164,14 @@ const ProctoredTestRunner = () => {
             cancelled = true
             if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
         }
-    }, [attempt])
+    }, [attemptId])
 
+    // same attemptId/maxViolations-not-whole-object reasoning as the camera effect above sir —
+    // depending on `attempt`/`test` here recreated this callback on every violation (since
+    // `attempt` gets a new reference each time), which in turn tore down and restarted the
+    // detection loop's setInterval below (it depends on `reportViolation`). Not a camera restart,
+    // but the same class of bug from the same cause, so closing it here too.
+    const maxViolations = test?.maxViolations
     const reportViolation = useCallback(async () => {
         const now = Date.now()
         if (now - lastViolationAtRef.current < VIOLATION_COOLDOWN_MS) return
@@ -168,7 +182,7 @@ const ProctoredTestRunner = () => {
 
         canvas.toBlob(async (blob) => {
             if (!blob || endedRef.current) return
-            const result = await dispatch(LogViolation(attempt._id, blob, token))
+            const result = await dispatch(LogViolation(attemptId, blob, token))
             if (!result) return
 
             setWarningCount(result.violationCount)
@@ -176,9 +190,9 @@ const ProctoredTestRunner = () => {
                 endTest('violations')
                 return
             }
-            toast(`Warning ${result.violationCount}/${test.maxViolations} — please face the camera`, { icon: '⚠️' })
+            toast(`Warning ${result.violationCount}/${maxViolations} — please face the camera`, { icon: '⚠️' })
         }, 'image/jpeg', 0.8)
-    }, [attempt, token, test, dispatch, endTest])
+    }, [attemptId, token, maxViolations, dispatch, endTest])
 
     // the detection loop sir — draws the video frame + landmark dots onto the visible canvas
     // (so the candidate sees their REAL face being tracked, not an abstract render), and checks
