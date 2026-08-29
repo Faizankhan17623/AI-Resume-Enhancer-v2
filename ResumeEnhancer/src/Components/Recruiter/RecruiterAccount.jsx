@@ -103,7 +103,7 @@ const ReferralCard = ({ token }) => {
 const RecruiterAccount = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { token, user: authUser } = useSelector((state) => state.auth)
+  const { token } = useSelector((state) => state.auth)
   const { profile, loading } = useSelector((state) => state.profile)
   const [changingPassword, setChangingPassword] = useState(false)
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()

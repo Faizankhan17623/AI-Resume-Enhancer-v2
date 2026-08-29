@@ -34,6 +34,10 @@ const PlanCheckout = () => {
   const [agreed, setAgreed] = useState(false)
   const [buying, setBuying] = useState(false)
   const [buyingText, setBuyingText] = useState('')
+  // "now" snapshotted once via useState's lazy initializer sir, not read inline during render —
+  // Date.now() called directly in a render body (even inside useMemo) is an impure call the React
+  // Compiler rejects; a lazy initializer runs exactly once at mount, which it accepts
+  const [nowMs] = useState(() => Date.now())
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -48,11 +52,11 @@ const PlanCheckout = () => {
   const cycleData = plan?.billingCycles?.[cycle]
 
   // next-renewal date sir, per direct request — "17 August 2026" style (day, full month name,
-  // year), computed as today + this cycle's validityDays. Same format the backend's
-  // PlanExpiryReminderCron.js emails use (en-GB with these options renders exactly this way), so
-  // the date shown here always matches what the reminder emails will later say.
+  // year), computed as the snapshotted `nowMs` + this cycle's validityDays. Same format the
+  // backend's PlanExpiryReminderCron.js emails use (en-GB with these options renders exactly this
+  // way), so the date shown here always matches what the reminder emails will later say.
   const renewalDateFormatted = cycleData
-    ? new Date(Date.now() + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
+    ? new Date(nowMs + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',

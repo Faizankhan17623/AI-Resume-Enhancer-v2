@@ -32,6 +32,10 @@ const RecruiterPlanCheckout = () => {
   const [agreed, setAgreed] = useState(false)
   const [buying, setBuying] = useState(false)
   const [buyingText, setBuyingText] = useState('')
+  // "now" snapshotted once via useState's lazy initializer sir, same reasoning as
+  // Home/PlanCheckout.jsx's nowMs — Date.now() read directly during render (even inside useMemo)
+  // is an impure call the React Compiler rejects
+  const [nowMs] = useState(() => Date.now())
 
   // RecruiterRoute already guarantees a logged-in Recruiter got this far sir, see RecruiterPricing.jsx
   useEffect(() => {
@@ -48,7 +52,7 @@ const RecruiterPlanCheckout = () => {
   const cycleData = plan?.billingCycles?.[cycle]
 
   const renewalDateFormatted = cycleData
-    ? new Date(Date.now() + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
+    ? new Date(nowMs + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
