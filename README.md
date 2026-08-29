@@ -33,12 +33,21 @@ candidates with proctored tests — with a full admin/support back office runnin
   automatic "genericness" score to flag cliché phrasing
 - **Job Search** (Pro+) — live web search for matching job postings via Tavily, plus a way to
   tailor one of your built resumes against a real job-search result
-- **Public Job Board** — no login required to browse; apply directly with a resume from your
-  library, track status (applied → invited to test → completed → hired/rejected) from a
-  dedicated dashboard page
-- **Proctored Screening Tests** — a TF.js face-landmark-detection test runner tracking tab-switch
-  and away-from-camera violations during a timed test, with the violation count and score
-  surfaced to the recruiter reviewing the attempt
+- **Public Job Board** — no login required to browse; an "Applied" badge shows on the board and
+  the job page itself once you have (cross-referenced client-side, since the board is a genuinely
+  public route). Applying is a real multi-step form (fresher vs. experienced, address, expected
+  salary, education or work history, a PDF resume upload), not a one-click apply
+- **My Applications** — track status (applied → invited to test → under review → hired/rejected,
+  plus an invite-expired state if a test invite went unused) from a dedicated dashboard page, with
+  a plain-language hint under each row explaining what that status actually means
+- **Proctored Screening Tests** — before the exam clock starts, the candidate passes a camera
+  check (a live self-preview, so a broken webcam is caught before the timer runs) and an internet
+  speed check (≥5 Mbps, checked against a small backend-served probe, not a public file). Once
+  running, a TF.js face-detection model tracks look-away violations in-browser (nothing is ever
+  uploaded except a snapshot at the moment of an actual violation) and auto-submits the test if the
+  candidate exceeds the job's configured warning limit. A test invite is only valid for 5 hours —
+  the candidate gets a reminder email with about an hour left, and an expired invite can be
+  re-sent by the recruiter with one click
 - **Application Tracker** — a personal Kanban board (Applied/Interview/Offer/Rejected), separate
   from the job-board application flow, with outcome-linked analytics bucketed by ATS score
 - **Gamification** — a consecutive-day activity streak and an anonymized leaderboard of top ATS
@@ -72,13 +81,19 @@ candidates with proctored tests — with a full admin/support back office runnin
 - **AI Fit-Scoring** — every application is scored automatically against the job description
   (0-100, tiered not-a-fit / can-get-it-done / hireable / best-fit), so recruiters can filter and
   rank applicants by fit before reading a single resume
-- **Applicant Management** — filter by status or fit tier, review applicants ranked by AI fit
-  score (then test score once available), invite to test (single or bulk — sends the candidate a
-  real email with their test link), close/reject an application at any stage, and record
-  hire/reject outcomes (single or bulk)
+- **Applicant Management** — filter by status, fit tier, or your own shortlist flag; review
+  applicants ranked by AI fit score (then test score once available); a sequential resume viewer
+  (cycle through every applicant's PDF, ranked order, without opening one tab per candidate); a
+  "Candidate detail" panel with the full structured application (experience level, address,
+  salary, education/work history); invite to test (single or bulk — sends a real email with the
+  test link, plus a reminder before it expires) — a test must be published before it can be
+  invited to, and an expired invite can be re-sent with one click; close/reject an application at
+  any stage; record hire/reject outcomes (single or bulk), each emailed to the candidate
 - **Per-Job Analytics** — a full funnel (views → applications → invited → completed →
-  hired/rejected), conversion-rate cards, and test performance stats
-- **Cross-Job Analytics** — totals across every posting, ranked by hires
+  hired/rejected), conversion-rate cards, test performance stats, and a fit-tier-vs-hiring
+  breakdown (which tier of applicant actually converts to a hire, for this job)
+- **Cross-Job Analytics** — totals across every posting, ranked by hires, with each job's average
+  applicant fit score
 - **Job Deletion** — withdraw a posting outright; every applicant is emailed that it was withdrawn
 - **New-Applicant Email Alerts** — an email the moment a candidate applies to one of your jobs,
   opt-out from your Account page
@@ -105,6 +120,10 @@ candidates with proctored tests — with a full admin/support back office runnin
   through the recruiter-application approval flow; Admin access is never reachable from this page
   at all. Bulk actions follow the same rule
 - **Recruiter Applications** — a dedicated approval queue, separate from the general role editor
+- **Recruiter Data Health** — a read-only view surfacing exactly the kind of thing that otherwise
+  needs a manual database query to spot: published jobs whose attached test is still a draft
+  (silently blocking "invite to test"), and test invites stuck past their expiry window because a
+  scheduled job missed a run
 - **Support Suspension** — a Support account can be suspended (one appeal allowed) or escalated to
   a distinct, harsher **permanent suspension** with no appeal path at all; a ban takes effect on
   the account's very next request, not just its next page navigation
@@ -123,10 +142,11 @@ candidates with proctored tests — with a full admin/support back office runnin
 - React Router for routing
 - Tailwind CSS 4 for styling
 - Axios for API calls
-- TensorFlow.js (`@tensorflow-models/face-landmarks-detection`) for in-browser proctored-test
-  violation detection
-- `vite-plugin-pwa` — installable PWA with a service worker, prompts the user to reload when a
-  new deployment is available instead of silently updating mid-session
+- TensorFlow.js (`@tensorflow-models/face-detection`) for in-browser proctored-test violation
+  detection — the lighter 6-keypoint face detector, not the full 468-point face mesh; this
+  feature only ever needed nose + eye positions for a 2D "looking away" check
+- `vite-plugin-pwa` — installable PWA with a service worker; a new deployment is picked up on the
+  next natural reload rather than an in-session update prompt
 
 **Backend**
 - Node.js + Express 5
