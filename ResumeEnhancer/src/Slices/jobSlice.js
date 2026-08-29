@@ -60,6 +60,13 @@ const jobSlice = createSlice({
             const app = state.jobApplicants.find((a) => a._id === applicationId)
             if (app) app.status = status
         },
+        // ToggleShortlist sir — same in-place-patch shape as patchJobApplicant above, kept as its
+        // own reducer rather than generalizing that one since shortlisted is unrelated to status
+        patchJobApplicantShortlist(state, value) {
+            const { applicationId, shortlisted } = value.payload
+            const app = state.jobApplicants.find((a) => a._id === applicationId)
+            if (app) app.shortlisted = shortlisted
+        },
         // same in-place patch as patchJobApplicant above sir, just for many rows at once after
         // a bulk invite/hire/reject — avoids a full applicants refetch for the common case
         patchJobApplicantsBulk(state, value) {
@@ -93,6 +100,7 @@ export const {
     setJobAnalytics,
     setRecruiterOverview,
     patchJobApplicant,
+    patchJobApplicantShortlist,
     patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,

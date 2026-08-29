@@ -22,6 +22,7 @@ const {
     getJobAnalytics,
     getRecruiterOverviewAnalytics,
     inviteApplicantToTest,
+    toggleShortlist,
     setApplicationOutcome,
     bulkInviteApplicantsToTest,
     bulkSetApplicationOutcome,
@@ -76,6 +77,7 @@ route.get('/public/jobs/:jobId', getPublicJob)
 route.post('/jobs/:jobId/apply', Auth, isUser, parseMultipartJson, validate({ body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
+route.patch('/job-applications/:applicationId/shortlist', Auth, isRecruiter, isApprovedRecruiter, toggleShortlist)
 route.patch('/job-applications/:applicationId/status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: setApplicationOutcomeSchema }), setApplicationOutcome)
 
 module.exports = route

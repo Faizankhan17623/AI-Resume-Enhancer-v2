@@ -10,6 +10,7 @@ import {
     setJobAnalytics,
     setRecruiterOverview,
     patchJobApplicant,
+    patchJobApplicantShortlist,
     patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,
@@ -19,7 +20,7 @@ import {
 
 const {
     createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, deleteJob, getJobApplicants,
-    getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, setApplicationOutcome,
+    getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, toggleShortlist, setApplicationOutcome,
     bulkInviteApplicants, bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob,
     listMyApplications,
 } = JobData
@@ -362,6 +363,27 @@ export function InviteApplicantToTest(applicationId, jobId, token, onLoadingChan
             toast.error(error?.response?.data?.message || "Could not invite the candidate")
         } finally {
             onLoadingChange?.(false)
+        }
+    }
+}
+
+// recruiter's own "flag for later" sir, per direct request — no loading state param, this is a
+// quick in-place toggle (a small icon click), not a busy-overlay-worthy action like invite/hire
+export function ToggleShortlist(applicationId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", `${toggleShortlist}/${applicationId}/shortlist`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(patchJobApplicantShortlist({ applicationId, shortlisted: response.data.shortlisted }))
+        } catch (error) {
+            logApiError("Error updating the shortlist", error)
+            toast.error(error?.response?.data?.message || "Could not update the shortlist")
         }
     }
 }

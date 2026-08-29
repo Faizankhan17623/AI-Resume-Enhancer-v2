@@ -41,6 +41,7 @@ const { startSubscriptionReconcileCron } = require('./utils/SubscriptionReconcil
 const { startCreditReconcileCron } = require('./utils/CreditReconcileCron.js')
 const { startJobExpiryCron } = require('./utils/JobExpiryCron.js')
 const { startTestInviteExpiryCron } = require('./utils/TestInviteExpiryCron.js')
+const { startTestInviteReminderCron } = require('./utils/TestInviteReminderCron.js')
 
 // one list sir — adding a job means adding it here and nowhere else
 const jobs = [
@@ -53,6 +54,7 @@ const jobs = [
     startCreditReconcileCron,
     startJobExpiryCron,
     startTestInviteExpiryCron,
+    startTestInviteReminderCron,
 ]
 
 const start = async () => {

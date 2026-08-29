@@ -653,6 +653,49 @@ exports.inviteApplicantToTest = async (req, res) => {
     }
 }
 
+// PATCH /job-applications/:applicationId/shortlist sir — the recruiter's own "flag for later",
+// per direct request. Deliberately separate from setApplicationOutcome below: shortlisting isn't
+// a final outcome, it works at ANY status (including already hired/rejected — a recruiter might
+// still want to flag one for their own reference), and toggles rather than sets a specific value
+// since the frontend only ever needs "flip it".
+exports.toggleShortlist = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { applicationId } = req.params
+
+        if (!mongoose.isValidObjectId(applicationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid application id' })
+        }
+
+        const application = await JobApplication.findById(applicationId).populate('job', 'recruiter')
+        if (!application || !application.job) {
+            return res.status(404).json({ success: false, message: 'Application not found' })
+        }
+
+        if (!application.job.recruiter.equals(recruiterId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have access to this application',
+            })
+        }
+
+        application.shortlisted = !application.shortlisted
+        await application.save()
+
+        return res.status(200).json({
+            success: true,
+            message: application.shortlisted ? 'Added to shortlist' : 'Removed from shortlist',
+            shortlisted: application.shortlisted,
+        })
+    } catch (error) {
+        (req.log || logger).error('toggle shortlist failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating the shortlist',
+        })
+    }
+}
+
 // PATCH /job-applications/:applicationId/status sir — the recruiter recording an outcome.
 //
 // 'hired' still requires the candidate to have actually finished the job's test (if it has

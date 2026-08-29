@@ -102,6 +102,21 @@ const jobApplicationSchema = new mongoose.Schema(
         testInviteExpiresAt: {
             type: Date,
         },
+        // set once the 1-hour-remaining reminder email fires sir (utils/TestInviteReminderCron.js)
+        // — a plain boolean flag so the cron's query can find "not yet reminded" rows without
+        // needing a second timestamp to compare against
+        testInviteReminderSent: {
+            type: Boolean,
+            default: false,
+        },
+        // recruiter's own "flag for later" sir, per direct request — deliberately separate from
+        // status (hired/rejected are final outcomes; this is just "come back to this one"),
+        // works at ANY status so a recruiter reviewing 50 applicants isn't forced to decide
+        // hire/reject on first pass through.
+        shortlisted: {
+            type: Boolean,
+            default: false,
+        },
         // AI fit-score sir — computed automatically right after the application is created (see
         // controllers/Job.js's applyToJob + services/fitScoreService.js), best-effort: null means
         // either "not scored yet" or "the recruiter was out of AI-score quota this month", the
