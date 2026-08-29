@@ -318,6 +318,7 @@ exports.startAttempt = async (req, res) => {
         if (!application || !['invited_to_test', 'completed_test'].includes(application.status)) {
             return res.status(403).json({
                 success: false,
+                code: 'NOT_INVITED',
                 message: 'You need to be invited by the recruiter to take this test — apply to the job first',
             })
         }
@@ -330,23 +331,41 @@ exports.startAttempt = async (req, res) => {
             maxViolations: test.maxViolations,
         }
 
+        // one query covers resume/already-done/expired below sir — was three separate
+        // TestAttempt.findOne calls before, now a single fetch reused for all three checks
+        const attemptRecord = await TestAttempt.findOne({ test: test._id, candidate: candidateId })
+
         // resume an existing in-progress attempt sir rather than letting a refresh start a
         // second clock — same "one active session" shape as MockInterview's status check
-        const existing = await TestAttempt.findOne({ test: test._id, candidate: candidateId, status: 'in-progress' })
-        if (existing) {
+        if (attemptRecord?.status === 'in-progress') {
             return res.status(200).json({
                 success: true,
                 message: 'Resuming your in-progress attempt',
-                attempt: existing,
+                attempt: attemptRecord,
                 test: testPayload,
             })
         }
 
-        const alreadyDone = await TestAttempt.findOne({ test: test._id, candidate: candidateId, status: { $ne: 'in-progress' } })
-        if (alreadyDone) {
+        if (attemptRecord) {
             return res.status(400).json({
                 success: false,
+                code: 'ALREADY_COMPLETED',
                 message: 'You have already completed this test',
+            })
+        }
+
+        // the 5-hour invite window sir, per direct request — only checked once we know no attempt
+        // exists at all (an in-progress or already-finished attempt above takes priority: a slow
+        // connection mid-test shouldn't retroactively expire it). `code` lets the frontend show a
+        // dedicated "this test has expired" screen instead of a generic error.
+        const inviteExpired = application.status === 'invited_to_test'
+            && application.testInviteExpiresAt
+            && application.testInviteExpiresAt < new Date()
+        if (inviteExpired) {
+            return res.status(410).json({
+                success: false,
+                code: 'INVITE_EXPIRED',
+                message: 'This test invite has expired — better luck next time',
             })
         }
 
@@ -369,6 +388,7 @@ exports.startAttempt = async (req, res) => {
             if (createErr.code === 11000) {
                 return res.status(400).json({
                     success: false,
+                    code: 'ALREADY_COMPLETED',
                     message: 'You have already completed this test',
                 })
             }

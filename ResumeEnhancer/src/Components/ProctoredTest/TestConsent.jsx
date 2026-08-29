@@ -2,11 +2,42 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaVideo, FaExclamationTriangle, FaClock } from 'react-icons/fa'
+import { motion } from 'motion/react'
+import { FaVideo, FaExclamationTriangle, FaClock, FaTimesCircle, FaHourglassEnd } from 'react-icons/fa'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import { StartAttempt } from '../../Services/operations/Test'
 import { setCameraConsent, resetTestAttempt } from '../../Slices/testAttemptSlice'
+
+// one message per StartAttempt failure code sir (controllers/Test.js) — a candidate re-clicking
+// an old email link after already finishing, or after the 5-hour invite window lapsed, are both
+// real expected outcomes now, not just a generic toast + silent bounce to /Dashboard
+const ERROR_SCREEN = {
+  ALREADY_COMPLETED: {
+    icon: FaTimesCircle,
+    color: 'pink',
+    title: 'Test already given',
+    body: "You've already given this test — it can only be attempted once.",
+  },
+  INVITE_EXPIRED: {
+    icon: FaHourglassEnd,
+    color: 'pink',
+    title: 'Test has expired',
+    body: 'Better luck next time — this test invite is no longer valid.',
+  },
+  NOT_INVITED: {
+    icon: FaTimesCircle,
+    color: 'pink',
+    title: 'Not invited to this test',
+    body: "You need to be invited by the recruiter to take this test — apply to the job first.",
+  },
+  UNKNOWN: {
+    icon: FaTimesCircle,
+    color: 'pink',
+    title: 'Could not start the test',
+    body: 'Something went wrong. Please try again from your dashboard.',
+  },
+}
 
 // the explicit consent step sir — nothing about the camera happens until the candidate reads
 // this and clicks through. StartAttempt already ran (creates/resumes the attempt + fetches the
@@ -17,7 +48,7 @@ const TestConsent = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { test, attempt, loading } = useSelector((state) => state.testAttempt)
+  const { test, attempt, loading, attemptError } = useSelector((state) => state.testAttempt)
 
   useEffect(() => {
     dispatch(resetTestAttempt())
@@ -28,6 +59,42 @@ const TestConsent = () => {
   const handleBegin = () => {
     dispatch(setCameraConsent(true))
     navigate(`/Test/${inviteCode}/run`)
+  }
+
+  // dedicated full-screen outcome sir — an old email link re-clicked after already finishing, or
+  // after the 5-hour invite window lapsed, are real expected states now, not a generic toast +
+  // silent bounce to /Dashboard. Centered, animated, red for all three (all are "you can't take
+  // this test" outcomes), per direct request.
+  if (attemptError) {
+    const screen = ERROR_SCREEN[attemptError.code] || ERROR_SCREEN.UNKNOWN
+    const Icon = screen.icon
+    return (
+      <div className="min-h-screen bg-richblack-900 flex items-center justify-center px-4">
+        <Helmet>
+          <title>{screen.title} | Resumify</title>
+        </Helmet>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="w-full max-w-md rounded-2xl bg-richblack-800 border border-richblack-700 shadow-2xl p-8 flex flex-col items-center gap-4 text-center"
+        >
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
+            className="w-16 h-16 rounded-full bg-pink-700/30 border-2 border-pink-700 flex items-center justify-center"
+          >
+            <Icon className="text-pink-100 text-3xl" />
+          </motion.div>
+
+          <p className="text-xl font-bold text-richblack-5">{screen.title}</p>
+          <p className="text-sm text-richblack-200 leading-relaxed">{screen.body}</p>
+
+          <IconBtn text="Back to Dashboard" onclick={() => navigate('/Dashboard')} customClasses="w-full justify-center mt-2" />
+        </motion.div>
+      </div>
+    )
   }
 
   if (loading || !test || !attempt) {

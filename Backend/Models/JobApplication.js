@@ -87,6 +87,15 @@ const jobApplicationSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'TestAttempt',
         },
+        // set the moment the recruiter invites this candidate (inviteApplicantToTest /
+        // bulkInviteApplicantsToTest, controllers/Job.js) sir — now + 5 hours, per direct
+        // request. Distinct from Test.timeLimitMinutes: that's how long an ATTEMPT lasts once
+        // started, this is the deadline to START one at all before the invite itself goes stale.
+        // startAttempt (controllers/Test.js) checks this and returns a dedicated "expired"
+        // response instead of silently letting a week-old invite link still work.
+        testInviteExpiresAt: {
+            type: Date,
+        },
         // AI fit-score sir — computed automatically right after the application is created (see
         // controllers/Job.js's applyToJob + services/fitScoreService.js), best-effort: null means
         // either "not scored yet" or "the recruiter was out of AI-score quota this month", the

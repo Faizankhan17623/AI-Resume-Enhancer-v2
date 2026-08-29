@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -58,6 +58,16 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'rejected', label: 'Rejected' },
 ]
 
+// month/year only sir — the structured apply form only ever collects a month+year for
+// education/work-history date ranges, so a full utcDateToIstDisplay timestamp (built for
+// precise UTC->IST moments like violation logs) would be misleadingly precise here
+const formatMonthYear = (dateStr) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
 // replaces the old standalone AttemptsList sir — applicants are queried by JOB now, not by
 // test. "Invite to test" is the gate that actually lets THAT candidate start the test (see
 // controllers/Test.js's startAttempt); once they've completed it, the row links through to the
@@ -73,6 +83,9 @@ const JobApplicantsList = () => {
   const [fitFilter, setFitFilter] = useState('')
   const [busy, setBusy] = useState(false)
   const [busyLabel, setBusyLabel] = useState('Working...')
+  // which applicant's Candidate Detail panel is open sir — one at a time, per direct request
+  // ("a button... when we close the button it will open a section... x to close")
+  const [expandedId, setExpandedId] = useState(null)
   const withBusy = (label) => (next) => {
     if (next) setBusyLabel(label)
     setBusy(next)
@@ -318,14 +331,22 @@ const JobApplicantsList = () => {
                       {!app.fitTier && app.fitScoreSkippedReason && (
                         <p className="text-[11px] text-richblack-500 mt-1 italic">{app.fitScoreSkippedReason}</p>
                       )}
-                      {app.resumeUrl && (
+                      <div className="flex items-center gap-3 mt-1.5">
                         <button
-                          onClick={() => handleRegenerateSummary(app._id)}
-                          className="flex items-center gap-1 text-[11px] text-richblack-400 hover:text-yellow-50 mt-1 cursor-pointer"
+                          onClick={() => setExpandedId(expandedId === app._id ? null : app._id)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-richblack-100 hover:text-yellow-50 cursor-pointer"
                         >
-                          <FaMagic className="text-[9px]" /> {app.fitScoreReasoning ? 'Regenerate' : 'Generate'} AI summary
+                          <FaIdCard className="text-[9px]" /> Candidate detail
                         </button>
-                      )}
+                        {app.resumeUrl && (
+                          <button
+                            onClick={() => handleRegenerateSummary(app._id)}
+                            className="flex items-center gap-1 text-[11px] text-richblack-400 hover:text-yellow-50 cursor-pointer"
+                          >
+                            <FaMagic className="text-[9px]" /> {app.fitScoreReasoning ? 'Regenerate' : 'Generate'} AI summary
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
@@ -402,6 +423,98 @@ const JobApplicantsList = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Candidate detail sir — the structured apply-form data (experience level,
+                    address, salary, education/work history) already comes back from
+                    getJobApplicants but was never shown anywhere; this surfaces it on demand
+                    instead of cluttering the row by default. One panel open at a time. */}
+                <AnimatePresence>
+                  {expandedId === app._id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 pt-4 border-t border-richblack-700 relative">
+                        <button
+                          onClick={() => setExpandedId(null)}
+                          className="absolute top-0 right-0 text-richblack-400 hover:text-richblack-5 cursor-pointer p-1"
+                          aria-label="Close candidate detail"
+                        >
+                          <FaTimes />
+                        </button>
+
+                        <h3 className="text-sm font-semibold text-richblack-5 mb-3 pr-8">Candidate detail</h3>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                          <div>
+                            <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-0.5">Experience level</p>
+                            <p className="text-richblack-100 capitalize">{app.experienceLevel || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-0.5">Expected salary</p>
+                            <p className="text-richblack-100">{app.expectedSalary ? `₹${app.expectedSalary.toLocaleString('en-IN')}` : 'Not provided'}</p>
+                          </div>
+
+                          {app.experienceLevel === 'experienced' && (
+                            <div>
+                              <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-0.5">Current CTC</p>
+                              <p className="text-richblack-100">{app.currentCtc ? `₹${app.currentCtc.toLocaleString('en-IN')}` : 'Not provided'}</p>
+                            </div>
+                          )}
+
+                          <div className="sm:col-span-2">
+                            <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-0.5">Address</p>
+                            <p className="text-richblack-100">
+                              {app.address?.line || app.address?.city || app.address?.state || app.address?.pincode
+                                ? [app.address.line, app.address.city, app.address.state, app.address.pincode].filter(Boolean).join(', ')
+                                : 'Not provided'}
+                            </p>
+                          </div>
+
+                          {app.experienceLevel === 'fresher' && (
+                            <div className="sm:col-span-2">
+                              <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-1">Education</p>
+                              {app.education?.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {app.education.map((edu, i) => (
+                                    <p key={i} className="text-richblack-100">
+                                      <span className="capitalize font-medium">{edu.degree}</span>
+                                      {edu.institution ? ` — ${edu.institution}` : ''}
+                                      {' '}({formatMonthYear(edu.startDate)} – {edu.currentlyStudying ? 'Present' : formatMonthYear(edu.endDate)})
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-richblack-100">Not provided</p>
+                              )}
+                            </div>
+                          )}
+
+                          {app.experienceLevel === 'experienced' && (
+                            <div className="sm:col-span-2">
+                              <p className="text-richblack-400 uppercase tracking-wide font-semibold mb-1">Work history</p>
+                              {app.workHistory?.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {app.workHistory.map((job, i) => (
+                                    <p key={i} className="text-richblack-100">
+                                      <span className="font-medium">{job.companyName}</span>
+                                      {' '}({formatMonthYear(job.startDate)} – {job.currentlyWorking ? 'Present' : formatMonthYear(job.endDate)})
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-richblack-100">Not provided</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )
           })}

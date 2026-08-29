@@ -19,6 +19,11 @@ const { runFitScore } = require('../services/fitScoreService')
 // 2MB sir, per direct request — an application resume, not a full portfolio
 const MAX_APPLICATION_RESUME_BYTES = 2 * 1024 * 1024
 
+// how long a candidate has to START the test once invited sir, per direct request — distinct
+// from Test.timeLimitMinutes (how long an in-progress ATTEMPT itself runs once started). Checked
+// by Test.js's startAttempt.
+const TEST_INVITE_WINDOW_MS = 5 * 60 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // recruiter-side sir
 // ---------------------------------------------------------------------------
@@ -563,6 +568,7 @@ exports.inviteApplicantToTest = async (req, res) => {
         }
 
         application.status = 'invited_to_test'
+        application.testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
         await application.save()
 
         // best-effort test-invite email sir — same pattern as every other non-critical mail
@@ -735,6 +741,7 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
                 continue
             }
             application.status = 'invited_to_test'
+            application.testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
             await application.save()
             invited.push(String(application._id))
             if (application.candidate?.email) toEmail.push(application.candidate)

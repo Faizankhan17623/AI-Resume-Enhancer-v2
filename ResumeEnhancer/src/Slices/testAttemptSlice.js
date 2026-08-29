@@ -9,6 +9,10 @@ const initialState = {
     answers: {},           // questionId -> answer, kept locally until submit
     cameraConsent: false,
     loading: false,
+    // set when StartAttempt fails with a real, expected outcome sir (NOT_INVITED /
+    // ALREADY_COMPLETED / INVITE_EXPIRED) — TestConsent.jsx renders a dedicated full-screen
+    // message per code instead of the old toast + silent redirect to /Dashboard
+    attemptError: null,   // { code, message }
 };
 
 const testAttemptSlice = createSlice({
@@ -18,9 +22,13 @@ const testAttemptSlice = createSlice({
         setTestAndAttempt(state, value) {
             state.test = value.payload.test
             state.attempt = value.payload.attempt
+            state.attemptError = null
         },
         setAnswer(state, value) {
             state.answers[value.payload.questionId] = value.payload.answer
+        },
+        setAttemptError(state, value) {
+            state.attemptError = value.payload
         },
         setCameraConsent(state, value) {
             state.cameraConsent = value.payload
@@ -47,6 +55,7 @@ const testAttemptSlice = createSlice({
 export const {
     setTestAndAttempt,
     setAnswer,
+    setAttemptError,
     setCameraConsent,
     setViolationState,
     setAttemptStatus,

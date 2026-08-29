@@ -12,6 +12,7 @@ import {
 import {
     setTestAndAttempt,
     setViolationState,
+    setAttemptError,
     setLoading as setAttemptLoading,
 } from '../../Slices/testAttemptSlice.js'
 
@@ -189,6 +190,12 @@ export function GetAttemptDetail(attemptId, token) {
 // candidate-side sir
 // ---------------------------------------------------------------------------
 
+// `navigate` is unused now sir — kept as a param so existing call sites don't need updating, but
+// TestConsent.jsx no longer bounces to /Dashboard on failure. NOT_INVITED / ALREADY_COMPLETED /
+// INVITE_EXPIRED (controllers/Test.js's startAttempt) are real, expected outcomes a candidate can
+// hit just by re-clicking an old email link — a toast + silent redirect gave no explanation at
+// all. setAttemptError stores the code so TestConsent can render a dedicated full-screen message
+// per outcome instead.
 export function StartAttempt(inviteCode, token, navigate) {
     return async (dispatch) => {
         dispatch(setAttemptLoading(true))
@@ -204,8 +211,10 @@ export function StartAttempt(inviteCode, token, navigate) {
             dispatch(setTestAndAttempt({ test: response.data.test, attempt: response.data.attempt }))
         } catch (error) {
             logApiError("Error starting the test", error)
-            toast.error(error?.response?.data?.message || "Could not start the test")
-            if (navigate) navigate("/Dashboard")
+            dispatch(setAttemptError({
+                code: error?.response?.data?.code || 'UNKNOWN',
+                message: error?.response?.data?.message || "Could not start the test",
+            }))
         } finally {
             dispatch(setAttemptLoading(false))
         }
