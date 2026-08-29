@@ -19,10 +19,16 @@ const jobApplicationSchema = new mongoose.Schema(
             index: true,
         },
         // 'invited_to_test' is what unlocks startAttempt for this candidate+job sir — set by
-        // the recruiter from the applicants list, never by the candidate themselves
+        // the recruiter from the applicants list, never by the candidate themselves.
+        // 'invite_expired' sir — flipped automatically by utils/TestInviteExpiryCron.js once
+        // testInviteExpiresAt passes with the candidate never having started an attempt. Without
+        // this, an application just sat at 'invited_to_test' forever with no recruiter action
+        // available (the Invite-to-test button only ever showed for 'applied'), a dead end the
+        // recruiter had no way to recover from. From 'invite_expired' the recruiter can re-invite
+        // (see inviteApplicantToTest's eligibility check) same as a fresh 'applied' row.
         status: {
             type: String,
-            enum: ['applied', 'invited_to_test', 'completed_test', 'rejected', 'hired'],
+            enum: ['applied', 'invited_to_test', 'completed_test', 'invite_expired', 'rejected', 'hired'],
             default: 'applied',
             index: true,
         },

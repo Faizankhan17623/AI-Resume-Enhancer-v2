@@ -361,10 +361,20 @@ exports.getRecruiterOverviewAnalytics = async (req, res) => {
         }
 
         const jobIds = jobs.map((j) => j._id)
-        const perJobCounts = await JobApplication.aggregate([
-            { $match: { job: { $in: jobIds } } },
-            { $group: { _id: { job: '$job', status: '$status' }, count: { $sum: 1 } } },
+        const [perJobCounts, perJobFitScore] = await Promise.all([
+            JobApplication.aggregate([
+                { $match: { job: { $in: jobIds } } },
+                { $group: { _id: { job: '$job', status: '$status' }, count: { $sum: 1 } } },
+            ]),
+            // per direct request sir — "average fit score by job", cross-job comparison. Only
+            // scored applications count toward the average (fitScore null means unscored/quota-
+            // skipped, see fitScoreService.js), same reasoning as getJobAnalytics' own fitBreakdown.
+            JobApplication.aggregate([
+                { $match: { job: { $in: jobIds }, fitScore: { $ne: null } } },
+                { $group: { _id: '$job', avgFitScore: { $avg: '$fitScore' } } },
+            ]),
         ])
+        const avgFitScoreByJob = new Map(perJobFitScore.map((r) => [String(r._id), Math.round(r.avgFitScore)]))
 
         // job._id -> { applied, invited_to_test, completed_test, rejected, hired } sir
         const countsByJob = new Map()
@@ -399,6 +409,7 @@ exports.getRecruiterOverviewAnalytics = async (req, res) => {
                 hired,
                 rejected,
                 hireRate: applications ? Number(((hired / applications) * 100).toFixed(1)) : 0,
+                avgFitScore: avgFitScoreByJob.get(String(job._id)) ?? null,
             }
         })
 
@@ -447,7 +458,7 @@ exports.getJobAnalytics = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
-        const [statusCounts, testStats] = await Promise.all([
+        const [statusCounts, testStats, fitBreakdownRaw] = await Promise.all([
             JobApplication.aggregate([
                 { $match: { job: job._id } },
                 { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -468,7 +479,37 @@ exports.getJobAnalytics = async (req, res) => {
                     },
                 ])
                 : Promise.resolve([]),
+            // per direct request sir — "which fit-tier actually converts to hires" for this job.
+            // Grouped by fitTier (null included, as 'not scored yet'/quota-skipped) with a
+            // per-tier hired count, so the recruiter can see e.g. "80% of best_fit got hired" vs
+            // "only 5% of not_a_fit did" instead of the fit score being disconnected from outcomes.
+            JobApplication.aggregate([
+                { $match: { job: job._id } },
+                {
+                    $group: {
+                        _id: '$fitTier',
+                        count: { $sum: 1 },
+                        hired: { $sum: { $cond: [{ $eq: ['$status', 'hired'] }, 1, 0] } },
+                    },
+                },
+            ]),
         ])
+
+        const FIT_TIER_ORDER = ['best_fit', 'hireable', 'can_get_it_done', 'not_a_fit']
+        const fitBreakdown = FIT_TIER_ORDER.map((tier) => {
+            const row = fitBreakdownRaw.find((r) => r._id === tier)
+            return {
+                tier,
+                count: row?.count || 0,
+                hired: row?.hired || 0,
+                hireRate: row?.count ? Number(((row.hired / row.count) * 100).toFixed(1)) : 0,
+            }
+        })
+        const unscoredRow = fitBreakdownRaw.find((r) => r._id === null || r._id === undefined)
+        const unscored = {
+            count: unscoredRow?.count || 0,
+            hired: unscoredRow?.hired || 0,
+        }
 
         const countFor = (status) => statusCounts.find((s) => s._id === status)?.count || 0
         const totalApplications = statusCounts.reduce((sum, s) => sum + s.count, 0)
@@ -504,6 +545,8 @@ exports.getJobAnalytics = async (req, res) => {
                     avgScore: stats?.avgScore != null ? Math.round(stats.avgScore) : null,
                     avgViolations: stats?.avgViolations != null ? Number(stats.avgViolations.toFixed(1)) : 0,
                 } : null,
+                fitBreakdown,
+                unscored,
             },
         })
     } catch (error) {
@@ -546,11 +589,13 @@ exports.inviteApplicantToTest = async (req, res) => {
         }
 
         // same guard the bulk version already had sir — re-inviting an already-hired/rejected/
-        // completed applicant makes no sense, only a fresh 'applied' row can be invited
-        if (application.status !== 'applied') {
+        // completed applicant makes no sense. 'invite_expired' IS eligible though — that's the
+        // whole point of TestInviteExpiryCron.js flipping it there instead of leaving the
+        // recruiter stuck with no path back to inviting this candidate again.
+        if (!['applied', 'invite_expired'].includes(application.status)) {
             return res.status(400).json({
                 success: false,
-                message: 'Only a newly-applied candidate can be invited to test',
+                message: 'Only a newly-applied or expired-invite candidate can be invited to test',
             })
         }
 
@@ -736,7 +781,8 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
         const skipped = []
         const toEmail = []
         for (const application of applications) {
-            if (application.status !== 'applied') {
+            // 'invite_expired' is eligible too sir — same reasoning as the single-invite path above
+            if (!['applied', 'invite_expired'].includes(application.status)) {
                 skipped.push(String(application._id))
                 continue
             }
