@@ -2,10 +2,19 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaEye, FaFileAlt, FaPaperPlane, FaClipboardCheck, FaTrophy, FaTimesCircle, FaArrowLeft } from 'react-icons/fa'
+import { FaEye, FaFileAlt, FaPaperPlane, FaClipboardCheck, FaTrophy, FaTimesCircle, FaArrowLeft, FaBolt } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import Loading from '../extra/Loading'
 import { GetJobAnalytics } from '../../Services/operations/Job'
+
+// same convention as JobApplicantsList.jsx's fitTierMeta sir — kept in sync manually since this
+// is the only other place fit tiers get a label/color (no shared file for it yet)
+const fitTierMeta = {
+  best_fit: { label: 'Best fit', className: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700' },
+  hireable: { label: 'Hireable', className: 'bg-warm-200/20 text-warm-25 border-warm-200' },
+  can_get_it_done: { label: 'Can get it done', className: 'bg-warm-700/30 text-warm-25 border-warm-600' },
+  not_a_fit: { label: 'Not a fit', className: 'bg-richblack-700 text-richblack-300 border-richblack-600' },
+}
 
 // one funnel stage sir — width is proportional to the FIRST stage (views), not to the
 // previous stage, so the bars visually shrink left-to-right the way a real funnel does
@@ -60,7 +69,8 @@ const JobAnalytics = () => {
     )
   }
 
-  const { funnel, rates, test } = data
+  const { funnel, rates, test, fitBreakdown, unscored } = data
+  const totalScored = fitBreakdown?.reduce((sum, t) => sum + t.count, 0) || 0
 
   return (
     <RecruiterLayout>
@@ -127,6 +137,39 @@ const JobAnalytics = () => {
                 <p className="font-display text-xl text-richblack-5">{test.terminatedViolations + test.terminatedTimeout}</p>
                 <p className="text-[11px] text-richblack-400 mt-1">Terminated early</p>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* per direct request sir — "which fit-tier actually converts to hires" for this job,
+            so the AI fit score's usefulness is visible, not just displayed and forgotten */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="text-sm font-semibold text-richblack-5 mb-1">Fit score vs. hiring</h2>
+          <p className="text-xs text-richblack-400 mb-4">
+            How each AI fit tier actually converts to a hire for this job.
+          </p>
+          {totalScored === 0 ? (
+            <p className="text-sm text-richblack-300">No applicants have been AI-scored for this job yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {fitBreakdown.filter((t) => t.count > 0).map((t) => {
+                const meta = fitTierMeta[t.tier]
+                return (
+                  <div key={t.tier} className="flex items-center justify-between gap-4">
+                    <span className={`shrink-0 flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${meta.className}`}>
+                      <FaBolt className="text-[9px]" /> {meta.label}
+                    </span>
+                    <span className="text-xs text-richblack-300">{t.count} applicant{t.count === 1 ? '' : 's'}</span>
+                    <span className="text-xs text-richblack-5 font-semibold">{t.hired} hired ({t.hireRate}%)</span>
+                  </div>
+                )
+              })}
+              {unscored?.count > 0 && (
+                <p className="text-[11px] text-richblack-500 italic pt-1 border-t border-richblack-700 mt-3">
+                  {unscored.count} applicant{unscored.count === 1 ? '' : 's'} not yet scored
+                  {unscored.hired > 0 ? ` (${unscored.hired} hired anyway)` : ''}.
+                </p>
+              )}
             </div>
           )}
         </div>

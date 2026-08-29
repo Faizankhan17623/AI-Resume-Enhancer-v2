@@ -91,6 +91,7 @@ const RecruiterOverview = () => {
                         </div>
                         <p className="text-xs text-richblack-400">
                           {job.views} views · {job.applications} applications · {job.hired} hired
+                          {job.avgFitScore !== null && ` · avg fit score ${job.avgFitScore}`}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
