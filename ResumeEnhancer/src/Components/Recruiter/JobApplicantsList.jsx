@@ -170,9 +170,9 @@ const JobApplicantsList = () => {
       <h1 className="font-display text-xl text-richblack-5 mb-6">Applicants</h1>
 
       {jobHasTest && !testPublished && !loading && (
-        <div className="mb-6 rounded-xl bg-warm-700/10 border border-warm-600 px-5 py-4 flex items-start gap-3">
-          <FaExclamationTriangle className="text-warm-25 mt-0.5 shrink-0" />
-          <p className="text-sm text-warm-25">
+        <div className="mb-6 rounded-xl bg-pink-700/10 border border-pink-700 px-5 py-4 flex items-start gap-3">
+          <FaExclamationTriangle className="text-pink-100 mt-0.5 shrink-0" />
+          <p className="text-sm text-pink-100">
             This job's test is still a draft — <strong>publish it from the test builder</strong> before
             you can invite candidates. Inviting to an unpublished test used to silently mark
             candidates as invited without ever emailing them a link; that's now blocked.

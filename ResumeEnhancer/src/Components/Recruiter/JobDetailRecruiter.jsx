@@ -11,6 +11,7 @@ import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import { GetJob, PublishJob, CloseJob, UpdateJob, DeleteJob } from '../../Services/operations/Job'
+import { PublishTest } from '../../Services/operations/Test'
 import { swalDark } from '../../utils/accountShared'
 
 const statusBadge = {
@@ -67,6 +68,22 @@ const JobDetailRecruiter = () => {
 
   const handleClose = async () => {
     await dispatch(CloseJob(jobId, token, withBusy('Closing the job...')))
+  }
+
+  // a test attached to a job is still its OWN separate document with its own draft/published
+  // state sir — publishing the JOB never publishes its test (they're independent on purpose,
+  // since a test can be edited further after the job itself already went live). Without a
+  // Publish action reachable from here, a recruiter had to already know to visit the unrelated
+  // "My Tests" page to find it — this button, plus the populated job.test status below, closes
+  // that gap directly on the page the recruiter naturally lands on after creating the test.
+  const handlePublishTest = async () => {
+    await dispatch(PublishTest(job.test._id, token, withBusy('Publishing the test...')))
+    dispatch(GetJob(jobId, token))
+  }
+
+  const handleCopyTestLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/Test/${job.test.inviteCode}`)
+    toast.success("Test invite link copied")
   }
 
   const handleCopyLink = () => {
@@ -266,10 +283,48 @@ const JobDetailRecruiter = () => {
             applicants straight from their application and AI fit score.
           </p>
           {job.test ? (
-            <p className="text-sm text-richblack-300">
-              A test is attached to this job. Manage its questions from the applicants list once
-              candidates start applying, or revisit it while it's still a draft.
-            </p>
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${
+                  job.test.status === 'published'
+                    ? 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700'
+                    : 'bg-richblack-700 text-richblack-200 border-richblack-600'
+                }`}>
+                  {job.test.status}
+                </span>
+                <span className="text-sm text-richblack-300 truncate">{job.test.title}</span>
+              </div>
+
+              {job.test.status === 'draft' ? (
+                <div>
+                  <p className="text-sm text-pink-100 mb-3">
+                    This test is still a draft — candidates can't be invited to it until you publish it.
+                  </p>
+                  <span title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
+                    <IconBtn
+                      text="Publish this test"
+                      onclick={handlePublishTest}
+                      customClasses="text-sm px-4 py-2"
+                      disabled={isLocked}
+                    />
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-richblack-300 mb-3">
+                    Manage its questions from the applicants list once candidates start applying.
+                  </p>
+                  {job.test.inviteCode && (
+                    <button
+                      onClick={handleCopyTestLink}
+                      className="px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+                    >
+                      <FaCopy className="inline mr-1.5" /> Copy invite link
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div>
               <p className="text-sm text-richblack-300 mb-4">No test attached yet.</p>

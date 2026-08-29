@@ -86,7 +86,12 @@ exports.getJob = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid job id' })
         }
 
-        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId })
+        // populate test's status/inviteCode sir — JobDetailRecruiter.jsx's "Proctored Test" card
+        // needs to show whether an attached test is still a draft (and let the recruiter publish
+        // it right there) instead of leaving that entirely undiscoverable outside of the separate
+        // My Tests page (see the invite-blocking fix this unblocks: a job can be "published" while
+        // its attached test is still a draft with no inviteCode — those are two independent states)
+        const job = await Job.findOne({ _id: jobId, recruiter: recruiterId }).populate('test', 'title status inviteCode timeLimitMinutes')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
