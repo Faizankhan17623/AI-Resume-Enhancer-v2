@@ -18,6 +18,9 @@ const statusBadge = {
   applied: 'bg-richblack-700 text-richblack-200 border-richblack-600',
   invited_to_test: 'bg-yellow-700/30 text-yellow-25 border-yellow-700',
   completed_test: 'bg-blue-700/30 text-blue-100 border-blue-700',
+  // reuses the warm palette sir — not quite "rejected" (pink, a recruiter's own decision) and not
+  // "applied" (neutral) either; a distinct "this expired on its own" signal
+  invite_expired: 'bg-warm-700/30 text-warm-25 border-warm-600',
   rejected: 'bg-pink-700/30 text-pink-100 border-pink-700',
   hired: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700',
 }
@@ -26,6 +29,7 @@ const statusLabel = {
   applied: 'Applied',
   invited_to_test: 'Invited to test',
   completed_test: 'Test completed',
+  invite_expired: 'Invite expired',
   rejected: 'Rejected',
   hired: 'Hired',
 }
@@ -54,6 +58,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'applied', label: 'Applied' },
   { value: 'invited_to_test', label: 'Invited to test' },
   { value: 'completed_test', label: 'Test completed' },
+  { value: 'invite_expired', label: 'Invite expired' },
   { value: 'hired', label: 'Hired' },
   { value: 'rejected', label: 'Rejected' },
 ]
@@ -128,11 +133,15 @@ const JobApplicantsList = () => {
   }, [jobApplicants, statusFilter, fitFilter])
 
   // hiring straight from 'applied' is only valid when this job has NO test at all sir (Part 4a —
-  // tests are optional now); when it has one, hiring still requires 'completed_test'
+  // tests are optional now); when it has one, hiring still requires 'completed_test'.
+  // 'invite_expired' is invite-eligible (same as 'applied') but deliberately NOT hire-eligible —
+  // an expired invite was never even started, let alone completed, so hiring from it makes no sense.
   const selectableApplied = filteredApplicants.filter((a) => a.status === 'applied').map((a) => a._id)
+  const selectableExpiredInvite = filteredApplicants.filter((a) => a.status === 'invite_expired').map((a) => a._id)
+  const selectableForInvite = [...selectableApplied, ...selectableExpiredInvite]
   const selectableCompleted = filteredApplicants.filter((a) => a.status === 'completed_test').map((a) => a._id)
   const selectableForHire = jobHasTest ? selectableCompleted : [...selectableApplied, ...selectableCompleted]
-  const allSelectableIds = jobHasTest ? [...selectableApplied, ...selectableCompleted] : selectableForHire
+  const allSelectableIds = [...selectableForInvite, ...selectableCompleted]
   const allSelected = allSelectableIds.length > 0 && allSelectableIds.every((id) => selected.includes(id))
 
   const toggleSelectAll = () => {
@@ -140,7 +149,7 @@ const JobApplicantsList = () => {
   }
 
   const handleBulkInvite = async () => {
-    const ids = selected.filter((id) => selectableApplied.includes(id))
+    const ids = selected.filter((id) => selectableForInvite.includes(id))
     if (ids.length === 0) return
     await dispatch(BulkInviteApplicantsToTest(ids, jobId, token, withBusy('Inviting candidates...')))
     setSelected([])
@@ -246,7 +255,7 @@ const JobApplicantsList = () => {
           {selected.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-richblack-800 border border-richblack-600 px-4 py-3" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
               <span className="text-sm text-richblack-100 font-medium">{selected.length} selected</span>
-              {jobHasTest && selected.some((id) => selectableApplied.includes(id)) && (
+              {jobHasTest && selected.some((id) => selectableForInvite.includes(id)) && (
                 <button
                   onClick={handleBulkInvite}
                   disabled={isLocked || !testPublished}
@@ -375,14 +384,14 @@ const JobApplicantsList = () => {
                     <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusBadge[app.status]}`}>
                       {statusLabel[app.status] || app.status}
                     </span>
-                    {jobHasTest && app.status === 'applied' && (
+                    {jobHasTest && ['applied', 'invite_expired'].includes(app.status) && (
                       <span title={isLocked
                         ? 'Locked until an admin approves your recruiter account'
                         : !testPublished
                           ? "Publish this job's test before inviting candidates to it"
                           : undefined}>
                         <IconBtn
-                          text="Invite to test"
+                          text={app.status === 'invite_expired' ? 'Re-invite to test' : 'Invite to test'}
                           onclick={() => handleInvite(app._id)}
                           customClasses="text-xs px-3 py-2"
                           disabled={isLocked || !testPublished}
