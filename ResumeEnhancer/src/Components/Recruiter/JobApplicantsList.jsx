@@ -3,14 +3,15 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard, FaBookmark, FaRegBookmark, FaFileAlt } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import ResumeViewerModal from './ResumeViewerModal'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import {
   GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome,
-  BulkInviteApplicantsToTest, BulkSetApplicationOutcome,
+  BulkInviteApplicantsToTest, BulkSetApplicationOutcome, ToggleShortlist,
 } from '../../Services/operations/Job'
 import { GenerateCandidateSummary } from '../../Services/operations/RecruiterAi'
 
@@ -86,11 +87,18 @@ const JobApplicantsList = () => {
   const [selected, setSelected] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
   const [fitFilter, setFitFilter] = useState('')
+  // "flag for later" sir, per direct request — a recruiter reviewing many applicants shouldn't
+  // be forced to decide hire/reject on first pass. Client-side filter, same convention as
+  // statusFilter/fitFilter above.
+  const [shortlistedOnly, setShortlistedOnly] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyLabel, setBusyLabel] = useState('Working...')
   // which applicant's Candidate Detail panel is open sir — one at a time, per direct request
   // ("a button... when we close the button it will open a section... x to close")
   const [expandedId, setExpandedId] = useState(null)
+  // index into rankedApplicants sir — null means the resume viewer modal is closed. Per direct
+  // request: cycling through resumes one at a time instead of one PDF link per tab.
+  const [viewerIndex, setViewerIndex] = useState(null)
   const withBusy = (label) => (next) => {
     if (next) setBusyLabel(label)
     setBusy(next)
@@ -107,6 +115,11 @@ const JobApplicantsList = () => {
 
   const handleOutcome = (applicationId, status) => {
     dispatch(SetApplicationOutcome(applicationId, status, token, withBusy(status === 'hired' ? 'Marking as hired...' : 'Rejecting...')))
+  }
+
+  // no busy overlay sir — a quick icon toggle, not worth a full-screen loader for
+  const handleToggleShortlist = (applicationId) => {
+    dispatch(ToggleShortlist(applicationId, token))
   }
 
   // Pro/ProMax upsell sir — on-demand re-request of the AI candidate summary (the automatic one
@@ -128,9 +141,10 @@ const JobApplicantsList = () => {
       if (statusFilter && a.status !== statusFilter) return false
       if (fitFilter === 'unscored' && a.fitTier) return false
       if (fitFilter && fitFilter !== 'unscored' && a.fitTier !== fitFilter) return false
+      if (shortlistedOnly && !a.shortlisted) return false
       return true
     })
-  }, [jobApplicants, statusFilter, fitFilter])
+  }, [jobApplicants, statusFilter, fitFilter, shortlistedOnly])
 
   // hiring straight from 'applied' is only valid when this job has NO test at all sir (Part 4a —
   // tests are optional now); when it has one, hiring still requires 'completed_test'.
@@ -196,7 +210,25 @@ const JobApplicantsList = () => {
         <FaArrowLeft className="text-xs" /> Back to job
       </Link>
 
-      <h1 className="font-display text-xl text-richblack-5 mb-6">Applicants</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+        <h1 className="font-display text-xl text-richblack-5">Applicants</h1>
+        {rankedApplicants.some((a) => a.resumeUrl) && (
+          <button
+            onClick={() => setViewerIndex(0)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer"
+          >
+            <FaFileAlt className="text-xs" /> View top resumes
+          </button>
+        )}
+      </div>
+
+      {viewerIndex !== null && (
+        <ResumeViewerModal
+          applicants={rankedApplicants}
+          startIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
 
       {jobHasTest && !testPublished && !loading && (
         <div className="mb-6 rounded-xl bg-pink-700/10 border border-pink-700 px-5 py-4 flex items-start gap-3">
@@ -235,9 +267,19 @@ const JobApplicantsList = () => {
             >
               {FIT_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(statusFilter || fitFilter) && (
+            <button
+              onClick={() => setShortlistedOnly((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg border text-xs px-3 py-2 cursor-pointer transition-colors duration-200 ${
+                shortlistedOnly
+                  ? 'bg-yellow-700/20 text-yellow-25 border-yellow-700'
+                  : 'bg-richblack-800 border-richblack-600 text-richblack-100 hover:border-richblack-400'
+              }`}
+            >
+              {shortlistedOnly ? <FaBookmark className="text-[10px]" /> : <FaRegBookmark className="text-[10px]" />} Shortlisted only
+            </button>
+            {(statusFilter || fitFilter || shortlistedOnly) && (
               <button
-                onClick={() => { setStatusFilter(''); setFitFilter('') }}
+                onClick={() => { setStatusFilter(''); setFitFilter(''); setShortlistedOnly(false) }}
                 className="text-xs text-richblack-400 hover:text-richblack-5 cursor-pointer"
               >
                 Clear filters
@@ -330,9 +372,12 @@ const JobApplicantsList = () => {
                       </p>
                       <p className="text-xs text-richblack-400 truncate">{app.candidate?.email}</p>
                       {app.resumeUrl && (
-                        <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="text-xs text-yellow-50 hover:underline mt-0.5 inline-block">
+                        <button
+                          onClick={() => setViewerIndex(index)}
+                          className="text-xs text-yellow-50 hover:underline mt-0.5 cursor-pointer"
+                        >
                           View resume
-                        </a>
+                        </button>
                       )}
                       {app.fitScoreReasoning && (
                         <p className="text-xs text-richblack-500 mt-1 max-w-md">{app.fitScoreReasoning}</p>
@@ -384,6 +429,15 @@ const JobApplicantsList = () => {
                     <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusBadge[app.status]}`}>
                       {statusLabel[app.status] || app.status}
                     </span>
+                    <button
+                      onClick={() => handleToggleShortlist(app._id)}
+                      title={app.shortlisted ? 'Remove from shortlist' : 'Shortlist for later'}
+                      className={`p-1.5 rounded-full cursor-pointer transition-colors duration-200 ${
+                        app.shortlisted ? 'text-yellow-25 hover:text-yellow-50' : 'text-richblack-500 hover:text-richblack-200'
+                      }`}
+                    >
+                      {app.shortlisted ? <FaBookmark className="text-xs" /> : <FaRegBookmark className="text-xs" />}
+                    </button>
                     {jobHasTest && ['applied', 'invite_expired'].includes(app.status) && (
                       <span title={isLocked
                         ? 'Locked until an admin approves your recruiter account'
