@@ -242,7 +242,12 @@ const Account = () => {
   const { profile, loading } = useSelector((state) => state.profile)
   const { history } = useSelector((state) => state.payment)
   const [changingPassword, setChangingPassword] = useState(false)
-  const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
+  // getValues (not watch) sir for the cross-field password checks below — watch() returns a
+  // live-subscribing function the React Compiler can't safely memoize around ("incompatible
+  // library" warning); getValues() reads the current value on-demand with no subscription, which
+  // is react-hook-form's own recommended shape for a one-off "compare to another field" validate
+  // check like this (as opposed to something that needs to re-render as the other field changes)
+  const { register: registerPassword, handleSubmit: handlePasswordSubmit, getValues: getPasswordValues, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
   // one shared full-screen loader sir for every field-level action on this page (name/email/
   // phone edits, notification toggles, password change, data export) — replaces each action's
@@ -545,7 +550,7 @@ const Account = () => {
                 validation={{
                   required: "New password is required",
                   minLength: { value: 8, message: "Minimum 8 characters" },
-                  validate: (value) => value !== watchPassword("oldPassword") || "New password cannot be the same as your current password"
+                  validate: (value) => value !== getPasswordValues("oldPassword") || "New password cannot be the same as your current password"
                 }}
               />
               {passwordErrors.newPassword && <p className={passwordErrorClass}>{passwordErrors.newPassword.message}</p>}
@@ -559,7 +564,7 @@ const Account = () => {
                 name="confirmNewPassword"
                 validation={{
                   required: "Please confirm the new password",
-                  validate: (value) => value === watchPassword("newPassword") || "Passwords do not match"
+                  validate: (value) => value === getPasswordValues("newPassword") || "Passwords do not match"
                 }}
               />
               {passwordErrors.confirmNewPassword && <p className={passwordErrorClass}>{passwordErrors.confirmNewPassword.message}</p>}

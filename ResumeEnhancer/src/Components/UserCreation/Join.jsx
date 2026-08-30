@@ -28,7 +28,8 @@ const sectionLabelClass = "text-xs font-bold uppercase tracking-wider text-richb
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']
 
 const Join = () => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm()
+  // getValues (not watch) sir — see Dashboard/Account.jsx's identical fix for why
+  const { register, handleSubmit, getValues, formState: { errors } } = useForm()
   const [accountType, setAccountType] = useState('User')
   const [searchParams] = useSearchParams()
   const dispatch = useDispatch()
@@ -276,7 +277,7 @@ const Join = () => {
                       name="confirmpassword"
                       validation={{
                         required: "Please confirm the password",
-                        validate: (value) => value === watch("password") || "Passwords do not match"
+                        validate: (value) => value === getValues("password") || "Passwords do not match"
                       }}
                     />
                     {errors.confirmpassword && <p className={errorClass}>{errors.confirmpassword.message}</p>}

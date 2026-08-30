@@ -15,7 +15,8 @@ const labelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
 const errorClass = "mt-1 text-xs text-pink-200"
 
 const ResetPassword = () => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm()
+  // getValues (not watch) sir — see Dashboard/Account.jsx's identical fix for why
+  const { register, handleSubmit, getValues, formState: { errors } } = useForm()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useParams()
@@ -78,7 +79,7 @@ const ResetPassword = () => {
               name="confirmNewPassword"
               validation={{
                 required: "Please confirm the new password",
-                validate: (value) => value === watch("newPassword") || "Passwords do not match"
+                validate: (value) => value === getValues("newPassword") || "Passwords do not match"
               }}
             />
             {errors.confirmNewPassword && <p className={errorClass}>{errors.confirmNewPassword.message}</p>}

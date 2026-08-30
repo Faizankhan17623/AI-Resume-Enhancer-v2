@@ -106,7 +106,8 @@ const RecruiterAccount = () => {
   const { token } = useSelector((state) => state.auth)
   const { profile, loading } = useSelector((state) => state.profile)
   const [changingPassword, setChangingPassword] = useState(false)
-  const { register: registerPassword, handleSubmit: handlePasswordSubmit, watch: watchPassword, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
+  // getValues (not watch) sir — see Dashboard/Account.jsx's identical fix for why
+  const { register: registerPassword, handleSubmit: handlePasswordSubmit, getValues: getPasswordValues, reset: resetPasswordForm, formState: { errors: passwordErrors } } = useForm()
 
   // same shared full-screen loader pattern as Dashboard/Account.jsx sir
   const [busy, setBusy] = useState(false)
@@ -356,7 +357,7 @@ const RecruiterAccount = () => {
                 validation={{
                   required: "New password is required",
                   minLength: { value: 8, message: "Minimum 8 characters" },
-                  validate: (value) => value !== watchPassword("oldPassword") || "New password cannot be the same as your current password"
+                  validate: (value) => value !== getPasswordValues("oldPassword") || "New password cannot be the same as your current password"
                 }}
               />
               {passwordErrors.newPassword && <p className={passwordErrorClass}>{passwordErrors.newPassword.message}</p>}
@@ -370,7 +371,7 @@ const RecruiterAccount = () => {
                 name="confirmNewPassword"
                 validation={{
                   required: "Please confirm the new password",
-                  validate: (value) => value === watchPassword("newPassword") || "Passwords do not match"
+                  validate: (value) => value === getPasswordValues("newPassword") || "Passwords do not match"
                 }}
               />
               {passwordErrors.confirmNewPassword && <p className={passwordErrorClass}>{passwordErrors.confirmNewPassword.message}</p>}
