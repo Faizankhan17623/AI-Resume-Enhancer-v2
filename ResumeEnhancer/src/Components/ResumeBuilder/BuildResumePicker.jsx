@@ -35,7 +35,9 @@ const BuildResumePicker = () => {
   const [step, setStep] = useState('choose')
   const [mode, setMode] = useState('blank')
   const [selectedTemplate, setSelectedTemplate] = useState(incomingTemplate)
-  const [selectedColor, setSelectedColor] = useState(incomingColor || null)
+  // color is picked upstream on the Templates page and only ever carried through here read-only
+  // via ?color= sir — no setter needed on this screen, confirmed intentional
+  const [selectedColor] = useState(incomingColor || null)
   const [rawInfo, setRawInfo] = useState('')
   const [targetRole, setTargetRole] = useState('')
   const [jd, setJd] = useState('')

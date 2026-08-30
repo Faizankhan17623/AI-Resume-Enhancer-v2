@@ -229,6 +229,7 @@ export function PreviewTest(inviteCode, token) {
 // hit just by re-clicking an old email link — a toast + silent redirect gave no explanation at
 // all. setAttemptError stores the code so TestConsent can render a dedicated full-screen message
 // per outcome instead.
+// eslint-disable-next-line no-unused-vars
 export function StartAttempt(inviteCode, token, navigate) {
     return async (dispatch) => {
         dispatch(setAttemptLoading(true))

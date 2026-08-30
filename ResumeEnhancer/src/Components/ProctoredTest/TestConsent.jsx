@@ -64,6 +64,19 @@ const TestConsent = () => {
   // same reasoning as speedCheckAttempt above sir, for the camera step's own "Try again"
   const [cameraCheckAttempt, setCameraCheckAttempt] = useState(0)
 
+  // both checks passed sir — THIS is when the clock actually starts (StartAttempt sets endsAt).
+  // Hoisted above the mount effect below (it used to sit further down, after its first use) —
+  // referencing a function before its declaration works at runtime here since the effect's .then()
+  // callback only ever fires after the whole component body has finished running, but the lint
+  // rule doesn't know that and flags the ordering. No dependency cycle: everything this closes
+  // over is declared above it already.
+  const handleAllChecksPassed = async () => {
+    setStartingTest(true)
+    await dispatch(StartAttempt(inviteCode, token, null))
+    dispatch(setCameraConsent(true))
+    navigate(`/Test/${inviteCode}/run`)
+  }
+
   // PreviewTest (read-only, no clock) replaces StartAttempt on mount sir — catches
   // NOT_INVITED/ALREADY_COMPLETED/INVITE_EXPIRED and loads the test's title/rules up front without
   // creating an attempt. `resuming: true` means a mid-test refresh (an attempt is already
@@ -85,6 +98,10 @@ const TestConsent = () => {
   useEffect(() => {
     if (step !== STEP.CAMERA) return
     let cancelled = false
+    // deliberate: reset to a clean "checking" state before the async getUserMedia call starts, so
+    // the UI doesn't flash a stale error/ready state from a previous attempt while this one is in
+    // flight — removing this would be a real behavior regression, not just a lint fix
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCameraError(null)
     setCameraReady(false)
 
@@ -124,6 +141,9 @@ const TestConsent = () => {
   useEffect(() => {
     if (step !== STEP.SPEED) return
     let cancelled = false
+    // deliberate reset before the async measurement starts sir, same reasoning as the camera
+    // effect above
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpeedStatus('checking')
 
     measureDownloadMbps().then((mbps) => {
@@ -150,14 +170,6 @@ const TestConsent = () => {
   }
 
   const retrySpeedCheck = () => setSpeedCheckAttempt((n) => n + 1)
-
-  // both checks passed sir — THIS is when the clock actually starts (StartAttempt sets endsAt)
-  const handleAllChecksPassed = async () => {
-    setStartingTest(true)
-    await dispatch(StartAttempt(inviteCode, token, null))
-    dispatch(setCameraConsent(true))
-    navigate(`/Test/${inviteCode}/run`)
-  }
 
   // dedicated full-screen outcome sir — an old email link re-clicked after already finishing, or
   // after the 5-hour invite window lapsed, are real expected states now, not a generic toast +

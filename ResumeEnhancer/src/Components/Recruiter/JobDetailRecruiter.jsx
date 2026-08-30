@@ -51,14 +51,19 @@ const JobDetailRecruiter = () => {
 
   // seed the compensation form from the job once it loads sir — only while the recruiter hasn't
   // started editing (mirrors JobBuilder.jsx's companyNameOverride pattern), so a background
-  // refetch after publish doesn't clobber an in-progress edit
+  // refetch after publish doesn't clobber an in-progress edit. Deliberately keyed on job?._id
+  // rather than job itself — widening this to satisfy exhaustive-deps would re-run the seed on
+  // every refetch of the SAME job (e.g. after handlePublish's own GetJob call below) and clobber
+  // whatever the recruiter is mid-editing, which is exactly what this narrow key exists to avoid.
   useEffect(() => {
     if (!job) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompensationType(job.compensationType || '')
     setCtcMin(job.ctcMin ?? '')
     setCtcMax(job.ctcMax ?? '')
     setUnpaidDurationMonths(job.unpaidDurationMonths ?? '')
     setCertificateProvided(!!job.certificateProvided)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?._id])
 
   const handlePublish = async () => {

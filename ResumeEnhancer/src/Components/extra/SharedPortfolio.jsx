@@ -24,7 +24,6 @@ const SharedPortfolio = () => {
       setLoading(false)
     })
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareId])
 
   const template = resume ? getTemplateById(resume.templateId) : null

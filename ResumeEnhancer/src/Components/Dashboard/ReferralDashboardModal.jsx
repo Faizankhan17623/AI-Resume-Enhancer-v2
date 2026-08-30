@@ -29,8 +29,25 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
     setLoading(false)
   }
 
+  // inlined rather than calling load() sir — load is an async function, and its first synchronous
+  // statement (setLoading(true), before any await) got flagged as a setState-in-effect violation
+  // when called from here. A plain .then() chain with no async-function boundary avoids the
+  // indirection, same shape as SharedPortfolio.jsx's mount fetch. The setLoading(true) reset
+  // itself is still synchronous and still needed — it's what shows the spinner the instant the
+  // modal opens, same deliberate-reset-before-async-op reasoning as TestConsent.jsx's camera/speed
+  // effects, so it's scoped-disabled rather than removed. load() itself is kept as-is below for
+  // handleApplyCustomRange's click-handler use, where the rule doesn't apply.
   useEffect(() => {
-    if (open) load()
+    if (!open) return
+    let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true)
+    GetReferralHistory(token)().then((result) => {
+      if (cancelled) return
+      setData(result)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
