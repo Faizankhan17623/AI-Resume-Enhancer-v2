@@ -45,16 +45,19 @@ const PLAN_META = {
     tagline: 'Enough to try it for real, no card needed.',
     credits: '5 AI uses / month',
     messages: '50 messages / chat',
+    aiModel: 'gpt-oss-20b',
   },
   Pro: {
     tagline: 'For an active job search — go deep on every application.',
     credits: '100 AI uses / month',
     messages: '250 messages / chat',
+    aiModel: 'gpt-oss-20b',
   },
   ProMax: {
     tagline: 'Our highest limits, plus a full career coach.',
     credits: '300 AI uses / month',
     messages: '500 messages / chat',
+    aiModel: 'gpt-oss-120b',
   },
 }
 
@@ -240,6 +243,11 @@ const Pricing = () => {
                     {meta.messages && (
                       <span className="px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-blue-100">
                         {meta.messages}
+                      </span>
+                    )}
+                    {meta.aiModel && (
+                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-richblack-700 text-warm-200">
+                        AI model: {meta.aiModel}
                       </span>
                     )}
                   </div>
