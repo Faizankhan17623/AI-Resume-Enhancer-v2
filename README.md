@@ -14,9 +14,9 @@ candidates with proctored tests — with a full admin/support back office runnin
   session cookie, never persisted client-side), per-account brute-force lockout (5 failed
   attempts locks the account for 15 minutes), and Google/GitHub OAuth
 - **AI Resume Review** — upload a resume (PDF) + job description for an ATS-style AI review via
-  Groq (`openai/gpt-oss-120b`); score breakdown, strengths, missing keywords, before/after
-  rewrites. Pro adds keyword analysis and a learning roadmap; ProMax adds a recruiter
-  first-impression read, red flags, and interview prep
+  Groq (`openai/gpt-oss-20b` for Basic/Pro, `openai/gpt-oss-120b` for ProMax); score breakdown,
+  strengths, missing keywords, before/after rewrites. Pro adds keyword analysis and a learning
+  roadmap; ProMax adds a recruiter first-impression read, red flags, and interview prep
 - **ATS Formatting Scan** — a deterministic structural check (multi-column layouts, embedded
   images, missing text layer, non-standard fonts) independent of the AI's subjective review
 - **Free Grammar/Spelling Check** — no AI credit spent
@@ -153,8 +153,9 @@ candidates with proctored tests — with a full admin/support back office runnin
 - MongoDB with Mongoose 9 (**requires a replica set in production** — see below)
 - JWT authentication (httpOnly cookie as the real credential, revoked instantly via a per-account
   `tokenVersion` counter on logout/password-change/account-deletion), bcrypt password hashing
-- Groq SDK for AI-generated resume feedback — model is `openai/gpt-oss-120b`, set once in
-  `Backend/utils/AiModel.js` and overridable via the `GROQ_MODEL` env var
+- Groq SDK for AI-generated resume feedback — model is chosen per plan (`openai/gpt-oss-20b` for
+  Basic/Pro, `openai/gpt-oss-120b` for ProMax), set in `Backend/utils/AiModel.js` and overridable
+  per plan via `GROQ_MODEL_BASIC` / `GROQ_MODEL_PRO` / `GROQ_MODEL_PROMAX`
 - pdfkit (PDF) & docx (DOCX) for resume/report file generation
 - Cloudinary for file storage
 - Razorpay for payments, with idempotent webhook + client-verify activation (a MongoDB
