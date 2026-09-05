@@ -177,7 +177,7 @@ exports.updateShareAudience = async (req, res) => {
         const review = await Review.findOneAndUpdate(
             { _id: reviewId, user: id, isPublic: true },
             { shareAudience: audience },
-            { new: true }
+            { returnDocument: 'after' }
         )
 
         if (!review) {

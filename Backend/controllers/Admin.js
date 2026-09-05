@@ -565,7 +565,7 @@ exports.updateUserPlan = async (req, res) => {
                 count: 0,
             }
 
-        const user = await User.findByIdAndUpdate(userId, update, { new: true })
+        const user = await User.findByIdAndUpdate(userId, update, { returnDocument: 'after' })
             .select('firstName lastName email SubType Subscription SubscriptionExpires count')
 
         if (!user) {
@@ -1051,7 +1051,7 @@ exports.adjustCredits = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             userId,
             { $inc: { bonusCredits: credits } },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('firstName lastName email count bonusCredits')
 
         if (!user) {

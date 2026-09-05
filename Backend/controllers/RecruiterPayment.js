@@ -6,6 +6,7 @@ const User = require('../Models/User')
 const { RECRUITER_PLANS } = require('../utils/RecruiterPlans')
 const { withTransaction } = require('../utils/withTransaction')
 const logger = require('../utils/logger')
+const { safeSignatureEqual } = require('../utils/safeSignatureEqual')
 
 // mirrors controllers/Payment.js's checkout/webhook mechanics EXACTLY (same Razorpay SDK
 // instance, same payment-session-cookie pattern, same HMAC verify, same idempotent-activation-
@@ -221,7 +222,7 @@ exports.verifyRecruiterPayment = async (req, res) => {
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex')
 
-        if (expectedSignature !== razorpay_signature) {
+        if (!safeSignatureEqual(expectedSignature, razorpay_signature)) {
             await RecruiterPayment.findOneAndUpdate(
                 { orderId: razorpay_order_id, user: id },
                 { status: 'failed' }
@@ -289,7 +290,7 @@ exports.recruiterPaymentWebhook = async (req, res) => {
             .update(req.body)
             .digest('hex')
 
-        if (expectedSignature !== signature) {
+        if (!safeSignatureEqual(expectedSignature, signature)) {
             logger.warn('recruiter payment webhook signature mismatch, rejecting')
             return res.status(400).json({ success: false, message: 'Invalid signature' })
         }

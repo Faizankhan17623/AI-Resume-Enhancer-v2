@@ -597,7 +597,7 @@ exports.logViolation = async (req, res) => {
                 $push: { violations: { type: 'look-away', snapshotUrl: upload.secure_url } },
                 $inc: { violationCount: 1 },
             },
-            { new: true }
+            { returnDocument: 'after' }
         )
 
         if (!updated) {

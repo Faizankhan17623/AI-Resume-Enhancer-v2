@@ -222,7 +222,7 @@ exports.closeJob = async (req, res) => {
         const job = await Job.findOneAndUpdate(
             { _id: jobId, recruiter: recruiterId },
             { status: 'closed' },
-            { new: true }
+            { returnDocument: 'after' }
         )
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
@@ -1016,7 +1016,7 @@ exports.getPublicJob = async (req, res) => {
         const job = await Job.findOneAndUpdate(
             { _id: jobId, status: 'published' },
             { $inc: { views: 1 } },
-            { new: true }
+            { returnDocument: 'after' }
         )
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })

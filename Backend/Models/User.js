@@ -338,6 +338,8 @@ const UserCreation = new mongoose.Schema(
             sparse: true,
             index: true,
         },
+        // public Career Copilot profile token; never expose private account fields through it
+        careerShareId: { type: String, unique: true, sparse: true, index: true },
         referredBy: {
             type: mongoose.Schema.ObjectId,
             ref: 'User',

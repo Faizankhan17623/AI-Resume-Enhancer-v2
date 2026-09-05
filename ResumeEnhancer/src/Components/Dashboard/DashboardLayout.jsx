@@ -44,6 +44,7 @@ const navSections = [
       { name: 'Mock Interview', path: '/Dashboard/Mock-Interview', icon: FaMicrophoneAlt, matchPrefix: '/Dashboard/Mock-Interview' },
       { name: 'Applications', path: '/Dashboard/Applications', icon: FaBriefcase },
       { name: 'My Job Applications', path: '/Dashboard/My-Applications', icon: FaClipboardCheck },
+      { name: 'Career Copilot', path: '/Dashboard/Career-Copilot', icon: FaMagic },
     ],
   },
   {

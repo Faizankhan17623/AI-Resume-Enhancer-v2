@@ -190,7 +190,7 @@ exports.updateAnnouncement = async (req, res) => {
         const announcement = await Announcement.findByIdAndUpdate(
             announcementId,
             changes,
-            { new: true }
+            { returnDocument: 'after' }
         )
 
         logAction(adminId, 'ANNOUNCEMENT_UPDATE', announcement, { changes })

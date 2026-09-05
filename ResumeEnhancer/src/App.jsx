@@ -62,6 +62,7 @@ const SupportSuspended = lazy(() => import('./Components/Admin/SupportSuspended'
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
 const SharedPortfolio = lazy(() => import('./Components/extra/SharedPortfolio'))
+const PublicCareerProfile = lazy(() => import('./Components/extra/PublicCareerProfile'))
 const PrivacyPolicy = lazy(() => import('./Components/extra/PrivacyPolicy'))
 const TermsAndConditions = lazy(() => import('./Components/extra/TermsAndConditions'))
 const RefundPolicy = lazy(() => import('./Components/extra/RefundPolicy'))
@@ -76,11 +77,13 @@ const RecruiterAttemptDetail = lazy(() => import('./Components/Recruiter/Attempt
 const RecruiterAccount = lazy(() => import('./Components/Recruiter/RecruiterAccount'))
 const RecruiterPricing = lazy(() => import('./Components/Recruiter/RecruiterPricing'))
 const RecruiterPlanCheckout = lazy(() => import('./Components/Recruiter/RecruiterPlanCheckout'))
+const CandidateMatches = lazy(() => import('./Components/Recruiter/CandidateMatches'))
 const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestConsent'))
 const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
 const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
 const JobDetail = lazy(() => import('./Components/Jobs/JobDetail'))
 const MyApplications = lazy(() => import('./Components/Dashboard/MyApplications'))
+const CareerCopilot = lazy(() => import('./Components/Dashboard/CareerCopilot'))
 const ForRecruiters = lazy(() => import('./Components/Home/ForRecruiters'))
 const AdminRecruiterApplications = lazy(() => import('./Components/Admin/RecruiterApplications'))
 
@@ -196,6 +199,7 @@ function App() {
             <Route path="/Checkout/:planKey" element={<PrivateRoute><PlanCheckout /></PrivateRoute>} />
             <Route path="/Shared/:shareId" element={<SharedReport />} />
             <Route path="/Portfolio/:shareId" element={<SharedPortfolio />} />
+            <Route path="/Career/:shareId" element={<PublicCareerProfile />} />
             <Route path="/Privacy-Policy" element={<PrivacyPolicy />} />
             <Route path="/Terms-And-Conditions" element={<TermsAndConditions />} />
             <Route path="/Refund-Policy" element={<RefundPolicy />} />
@@ -237,6 +241,7 @@ function App() {
             {/* candidate's own real job-board applications sir — distinct from
                 /Dashboard/Applications (the pre-existing personal Kanban tracker) */}
             <Route path="/Dashboard/My-Applications" element={<PrivateRoute><MyApplications /></PrivateRoute>} />
+            <Route path="/Dashboard/Career-Copilot" element={<PrivateRoute><CareerCopilot /></PrivateRoute>} />
 
             {/* candidate-facing proctored test flow sir — plain 'User' accounts only, same
                 PrivateRoute as every other Dashboard feature. Not under /Dashboard/* itself since
@@ -254,6 +259,7 @@ function App() {
             <Route path="/Recruiter/Jobs/:jobId" element={<RecruiterRoute><RecruiterJobDetail /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/Test" element={<RecruiterRoute><RecruiterTestBuilder /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/applicants" element={<RecruiterRoute><RecruiterJobApplicantsList /></RecruiterRoute>} />
+            <Route path="/Recruiter/Jobs/:jobId/matches" element={<RecruiterRoute><CandidateMatches /></RecruiterRoute>} />
             <Route path="/Recruiter/Jobs/:jobId/analytics" element={<RecruiterRoute><RecruiterJobAnalytics /></RecruiterRoute>} />
             <Route path="/Recruiter/Attempts/:attemptId" element={<RecruiterRoute><RecruiterAttemptDetail /></RecruiterRoute>} />
             <Route path="/Recruiter/Account" element={<RecruiterRoute><RecruiterAccount /></RecruiterRoute>} />

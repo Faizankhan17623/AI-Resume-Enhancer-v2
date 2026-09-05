@@ -48,6 +48,7 @@ const domains = [
     // collision check below proves they don't overlap with Admin.js's paths.
     { name: 'testimonial', owns: ['/testimonials', '/admin/testimonials'], router: require('./Testimonial.js') },
     { name: 'report', owns: ['/reports', '/admin/reports'], router: require('./Report.js') },
+    { name: 'career', owns: ['/career', '/public/career', '/jobs/*/candidate-matches'], router: require('./Career.js') },
 ]
 
 // walks a router's own stack to recover every method+path it actually declares sir — reading the

@@ -120,7 +120,7 @@ exports.updateReportStatus = async (req, res) => {
         const report = await Report.findByIdAndUpdate(
             reportId,
             { status, reviewedBy: adminId, ...(adminNote !== undefined && { adminNote: adminNote?.trim()?.slice(0, 1000) }) },
-            { new: true }
+            { returnDocument: 'after' }
         ).populate('user', 'firstName lastName email')
 
         if (!report) {

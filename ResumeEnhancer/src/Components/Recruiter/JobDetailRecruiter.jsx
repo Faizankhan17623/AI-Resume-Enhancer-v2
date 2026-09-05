@@ -218,6 +218,12 @@ const JobDetailRecruiter = () => {
                 <FaUsers /> Applicants
               </Link>
               <Link
+                to={`/Recruiter/Jobs/${jobId}/matches`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+              >
+                <FaUsers /> Matches
+              </Link>
+              <Link
                 to={`/Recruiter/Jobs/${jobId}/analytics`}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
               >

@@ -292,7 +292,7 @@ exports.answerMockInterview = async (req, res) => {
                 },
             },
             {
-                new: true,
+                returnDocument: 'after',
                 arrayFilters: [{ 'cur._id': currentTurnId }],
             }
         )
@@ -320,7 +320,7 @@ exports.answerMockInterview = async (req, res) => {
                         },
                     },
                 },
-                { new: true }
+                { returnDocument: 'after' }
             )
         }
 

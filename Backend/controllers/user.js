@@ -208,7 +208,7 @@ const grantReferralBonus = async (referredUser, referrerId) => {
     const claimed = await User.findOneAndUpdate(
         { _id: referredUser._id, referralBonusGranted: false },
         { referralBonusGranted: true },
-        { new: true }
+        { returnDocument: 'after' }
     ).select('count')
     if (!claimed) return // sir — another concurrent call already paid this account out
 
@@ -563,7 +563,7 @@ exports.updateFirstName = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { firstName: firstName },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password');
 
         if (!updatedUser) {
@@ -618,7 +618,7 @@ exports.updateLastName = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { lastName: lastName },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password');
 
         if (!updatedUser) {
@@ -773,7 +773,7 @@ exports.updateEmail = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { email: email },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password');
 
         if (!updatedUser) {
@@ -837,7 +837,7 @@ exports.updateNumber = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { number: number },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password');
 
         if (!updatedUser) {
@@ -1350,7 +1350,7 @@ exports.updateNotificationPrefs = async (req, res) => {
             });
         }
 
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, { returnDocument: 'after' })
             .select('notifyStreak notifyWinBack notifyDigest notifyHealthCheck notifyInterviewPrep notifyNewApplicant');
 
         if (!updatedUser) {
@@ -1386,7 +1386,7 @@ exports.completeOnboarding = async (req, res) => {
     try {
         const userId = req.User.id;
 
-        const updatedUser = await User.findByIdAndUpdate(userId, { onboardingCompleted: true }, { new: true })
+        const updatedUser = await User.findByIdAndUpdate(userId, { onboardingCompleted: true }, { returnDocument: 'after' })
             .select('onboardingCompleted');
 
         if (!updatedUser) {

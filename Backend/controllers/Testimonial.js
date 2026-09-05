@@ -128,7 +128,7 @@ exports.moderateTestimonial = async (req, res) => {
         const testimonial = await Testimonial.findByIdAndUpdate(
             testimonialId,
             { status, reviewedBy: adminId },
-            { new: true }
+            { returnDocument: 'after' }
         ).populate('user', 'firstName lastName email')
 
         if (!testimonial) {

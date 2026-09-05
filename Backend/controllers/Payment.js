@@ -6,6 +6,7 @@ const User = require('../Models/User')
 const { PLANS } = require('../utils/Plans')
 const { withTransaction } = require('../utils/withTransaction')
 const logger = require('../utils/logger')
+const { safeSignatureEqual } = require('../utils/safeSignatureEqual')
 
 // the payment session cookie sir — set at order time, demanded back at verify time
 // signed httpOnly cookie, so the browser that STARTED the checkout must be the one that finishes it
@@ -264,7 +265,7 @@ exports.verifyPayment = async (req, res) => {
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex')
 
-        if (expectedSignature !== razorpay_signature) {
+        if (!safeSignatureEqual(expectedSignature, razorpay_signature)) {
             // mark our record failed so we can see fake/broken attempts sir
             await Payment.findOneAndUpdate(
                 { orderId: razorpay_order_id, user: id },
@@ -354,7 +355,7 @@ exports.paymentWebhook = async (req, res) => {
             .update(req.body)
             .digest('hex')
 
-        if (expectedSignature !== signature) {
+        if (!safeSignatureEqual(expectedSignature, signature)) {
             logger.warn('payment webhook signature mismatch, rejecting')
             return res.status(400).json({ success: false, message: 'Invalid signature' })
         }

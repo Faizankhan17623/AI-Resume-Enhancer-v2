@@ -63,7 +63,7 @@ exports.updateKeywordStatus = async (req, res) => {
         const item = await KeywordBankItem.findOneAndUpdate(
             { _id: itemId, user: id },
             { status },
-            { new: true }
+            { returnDocument: 'after' }
         )
 
         if (!item) {

@@ -102,7 +102,7 @@ exports.upsertSetting = async (req, res) => {
         const setting = await Settings.findOneAndUpdate(
             { key },
             update,
-            { new: true, upsert: true }
+            { returnDocument: 'after', upsert: true }
         )
 
         invalidateFeatureFlagCache(key)
