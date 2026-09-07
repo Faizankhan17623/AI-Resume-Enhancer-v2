@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const crypto = require('crypto')
 const User = require('../Models/User')
 const Resume = require('../Models/Resume')
+const BuiltResume = require('../Models/BuiltResume')
 const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
 const CareerPlan = require('../Models/CareerPlan')
@@ -40,6 +41,76 @@ exports.getOverview = async (req, res) => {
     const matches = applications.filter(a => a.job).map(a => ({ applicationId: a._id, job: a.job, match: match(resume?.resumeText, `${a.job.title} ${a.job.description}`) }))
     return res.json({ success: true, resume, matches, plans, followUps })
   } catch (error) { logger.error('career overview failed', { err: error }); return res.status(500).json({ success: false, message: 'Could not load Career Copilot' }) }
+}
+
+// One job-focused response for the Application Copilot page sir. It composes data that already
+// exists in the product (saved resumes, built resumes, job-board applications and keyword match)
+// without spending an AI credit. The downstream tailor/review/cover-letter actions remain the
+// existing plan-gated flows, so this endpoint is safe to call while a user is comparing jobs.
+exports.applicationCopilot = async (req, res) => {
+  try {
+    const userId = req.User.id
+    const { jobId, resumeId, jobText } = req.body
+    let job = null
+    if (jobId) {
+      if (!mongoose.isValidObjectId(jobId)) return res.status(400).json({ success: false, message: 'Job is invalid' })
+      job = await Job.findOne({ _id: jobId, status: 'published' }).select('title companyName description skills location employmentType compensationType ctcMin ctcMax expiresAt')
+      if (!job) return res.status(404).json({ success: false, message: 'Published job not found' })
+    }
+    const selectedResume = resumeId
+      ? await Resume.findOne({ _id: resumeId, user: userId }).select('label resumeText formattingCheck')
+      : await Resume.findOne({ user: userId, isDefault: true }).select('label resumeText formattingCheck')
+    if (resumeId && !selectedResume) return res.status(404).json({ success: false, message: 'Saved resume not found' })
+    if (!selectedResume?.resumeText) return res.status(400).json({ success: false, message: 'Save a resume before using Application Copilot' })
+
+    const targetText = job
+      ? `${job.title} ${job.description} ${(job.skills || []).join(' ')}`
+      : jobText
+    if (!targetText?.trim()) return res.status(400).json({ success: false, message: 'A job description is required' })
+    const fit = match(selectedResume.resumeText, targetText)
+
+    const builtResumes = await BuiltResume.find({ user: userId }).select('title templateId updatedAt personalInfo summary experience education skills projects certifications')
+    const rankedBuiltResumes = builtResumes.map((built) => {
+      const builtText = [
+        built.personalInfo?.fullName,
+        built.summary,
+        ...(built.skills || []),
+        ...(built.experience || []).flatMap((item) => [item.role, item.company, ...(item.bullets || [])]),
+        ...(built.education || []).flatMap((item) => [item.degree, item.field, item.school]),
+        ...(built.projects || []).flatMap((item) => [item.name, item.description, ...(item.bullets || [])]),
+      ].filter(Boolean).join(' ')
+      const score = match(builtText, targetText)
+      return { _id: built._id, title: built.title, templateId: built.templateId, updatedAt: built.updatedAt, score: score.score, tier: score.tier }
+    }).sort((a, b) => b.score - a.score)
+
+    const application = job
+      ? await JobApplication.findOne({ job: job._id, candidate: userId }).select('status fitScore fitTier shortlisted createdAt updatedAt')
+      : null
+    const hasBuiltResume = rankedBuiltResumes.length > 0
+    const hasApplication = !!application
+    const checklist = [
+      { key: 'resume', label: 'Choose a saved resume', complete: true, action: '/Dashboard/Resumes' },
+      { key: 'fit', label: 'Review your job fit', complete: true, action: '/Dashboard/Career-Copilot' },
+      { key: 'tailor', label: hasBuiltResume ? 'Tailor your recommended resume' : 'Create a resume for this job', complete: false, action: '/Dashboard/Build-Resume' },
+      { key: 'cover-letter', label: 'Prepare a matching cover letter', complete: false, action: '/Dashboard/Cover-Letter' },
+      { key: 'interview', label: 'Practice interview questions', complete: false, action: '/Dashboard/Mock-Interview' },
+      { key: 'track', label: 'Track the application', complete: hasApplication, action: '/Dashboard/Applications' },
+    ]
+    return res.json({
+      success: true,
+      job: job ? { ...job.toObject(), description: job.description?.slice(0, 4000) } : { title: 'Pasted job description' },
+      resume: { _id: selectedResume._id, label: selectedResume.label, formattingCheck: selectedResume.formattingCheck },
+      fit,
+      recommendedResume: rankedBuiltResumes[0] || null,
+      otherBuiltResumes: rankedBuiltResumes.slice(1, 5),
+      application,
+      checklist,
+      nextSteps: fit.missing.slice(0, 5).map((skill) => `Add evidence for ${skill} before applying`),
+    })
+  } catch (error) {
+    logger.error('application copilot failed', { err: error, userId: req?.User?.id })
+    return res.status(500).json({ success: false, message: 'Could not prepare your application plan' })
+  }
 }
 
 exports.smartMatch = async (req, res) => {
