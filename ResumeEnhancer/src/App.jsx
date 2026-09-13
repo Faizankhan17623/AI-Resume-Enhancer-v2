@@ -28,6 +28,7 @@ const OTP = lazy(() => import('./Components/UserCreation/OTP'))
 const Login = lazy(() => import('./Components/Login/User'))
 const ForgotPassword = lazy(() => import('./Components/Login/ForgotPassword'))
 const ResetPassword = lazy(() => import('./Components/Login/ResetPassword'))
+const DeviceAlertConfirm = lazy(() => import('./Components/Login/DeviceAlertConfirm'))
 const OAuthComplete = lazy(() => import('./Components/Login/OAuthComplete'))
 const Pricing = lazy(() => import('./Components/Home/Pricing'))
 const PlanCheckout = lazy(() => import('./Components/Home/PlanCheckout'))
@@ -216,6 +217,10 @@ function App() {
             <Route path="/Login" element={<OpenRoute><Login /></OpenRoute>} />
             <Route path="/Forgot-Password" element={<OpenRoute><ForgotPassword /></OpenRoute>} />
             <Route path="/reset-password/:token" element={<OpenRoute><ResetPassword /></OpenRoute>} />
+            {/* deliberately NOT OpenRoute sir — the person clicking "that wasn't me" from the
+                new-device alert email may still have a live session on the device that IS
+                compromised, and must be able to reach this page regardless of login state */}
+            <Route path="/device-confirm" element={<DeviceAlertConfirm />} />
 
             {/* Only for the logged-IN sir */}
             <Route path="/Dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />

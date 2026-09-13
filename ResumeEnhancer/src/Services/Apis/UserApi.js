@@ -72,3 +72,10 @@ export const Referral = {
 }
 
 export const CreditHistory = BASE_URL + "/credit-history"
+
+// the confirm/deny click from the new-device login alert email sir — deliberately unauthenticated
+// (see Backend/controllers/user.js's resolveDeviceAlert), the single-use token in the link IS
+// the identity proof here
+export const DeviceAlert = {
+    resolve: BASE_URL + "/device-alert/resolve"
+}

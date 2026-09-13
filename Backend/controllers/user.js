@@ -18,6 +18,7 @@ const { otpEmail } = require('../Templates/OTP.js')
 const { referralSuccessTemplate } = require('../Templates/ReferralSuccess.js')
 const { supportAppealSubmittedTemplate } = require('../Templates/SupportAppealSubmitted.js')
 const { issueSession, publicUser, buildClearAuthCookie } = require('../utils/session.js')
+const { checkAndAlertNewDevice, resolveDeviceAlert } = require('../services/deviceAlertService.js')
 const logger = require('../utils/logger.js')
 // ============================================================
 // CREATE USER (Register)
@@ -408,6 +409,14 @@ exports.loginUser = async (req, res) => {
             ip: req.ip,
             userAgent: req.headers['user-agent'],
         }).catch((err) => logger.error('login log failed', { err: err }))
+
+        // fire-and-forget sir — see services/deviceAlertService.js's own header comment for why
+        // this must never be awaited into the response: an alert-check hiccup must not delay or
+        // block a real login. Uses `existingUser` (has the role/email this needs) rather than
+        // re-fetching.
+        checkAndAlertNewDevice(existingUser, req).catch((err) =>
+            logger.error('new-device alert failed', { err, userId: existingUser._id })
+        )
 
         return res.status(200).json({
             success: true,
@@ -1701,3 +1710,29 @@ exports.getCreditHistory = async (req, res) => {
 // hand-rolled copy that can silently drift out of sync with this one
 exports.resolveReferralCode = resolveReferralCode
 exports.grantReferralBonus = grantReferralBonus
+
+// ============================================================
+// NEW-DEVICE ALERT — confirm / deny click from the email
+// ============================================================
+// Deliberately unauthenticated sir — the person clicking this link from their inbox does not
+// necessarily have a live session (this is often exactly WHY they're clicking: a device they
+// don't control is the one currently logged in). The single-use token in the link IS the proof
+// of identity here, same trust model as resetPassword's token-in-URL flow.
+exports.resolveDeviceAlert = async (req, res) => {
+    try {
+        const { token, action } = req.body
+        const result = await resolveDeviceAlert(token, action)
+
+        if (!result.ok) {
+            return res.status(result.status).json({ success: false, message: result.message })
+        }
+
+        return res.status(200).json({ success: true, action: result.action, message: result.message })
+    } catch (error) {
+        (req.log || logger).error('resolve device alert failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong, please try again',
+        })
+    }
+}
