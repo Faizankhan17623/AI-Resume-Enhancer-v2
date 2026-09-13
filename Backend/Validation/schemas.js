@@ -513,6 +513,14 @@ const applicationCopilotSchema = z.object({
     path: ['jobText'],
 })
 
+// new-device login alert sir — the confirm/deny link in the alert email carries this token
+// (see services/deviceAlertService.js), not a user id, so the action can't be aimed at an
+// arbitrary account by guessing/editing the query string
+const deviceAlertResolveSchema = z.object({
+    token: z.string({ error: 'A token is required' }).trim().min(1, 'A token is required'),
+    action: z.enum(['confirm', 'deny'], { error: 'Action must be confirm or deny' }),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -581,4 +589,7 @@ module.exports = {
 
     // application copilot
     applicationCopilotSchema,
+
+    // new-device login alert
+    deviceAlertResolveSchema,
 }

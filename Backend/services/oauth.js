@@ -18,6 +18,7 @@ const User = require('../Models/User')
 const LoginLog = require('../Models/LoginLog')
 const { createExchangeCode, redeemExchangeCode } = require('../utils/oauthExchange')
 const { signSessionToken, buildAuthCookie, publicUser } = require('../utils/session')
+const { checkAndAlertNewDevice } = require('./deviceAlertService')
 const logger = require('../utils/logger')
 const { resolveReferralCode, grantReferralBonus } = require('../controllers/user')
 
@@ -197,6 +198,14 @@ const createOAuthController = (config) => {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
             }).catch((err) => logger.warn('login log failed', { err }))
+
+            // fire-and-forget sir — same reasoning as controllers/user.js's loginUser: this is
+            // the OTHER place a session gets minted (all four OAuth providers funnel through
+            // this one function), so it needs the identical device-check hook or the whole
+            // feature would have a hole any OAuth sign-in walks straight through
+            checkAndAlertNewDevice(user, req).catch((err) =>
+                logger.error('new-device alert failed', { err, userId: user._id })
+            )
 
             // never put the live JWT in a URL sir (browser history, proxy logs, Referer header) —
             // hand back a short-lived single-use code the frontend immediately trades for the

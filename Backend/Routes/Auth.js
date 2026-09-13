@@ -18,6 +18,7 @@ const {
     notificationPrefsSchema,
     recruiterApplicationSchema,
     appealSuspensionSchema,
+    deviceAlertResolveSchema,
 } = require('../Validation/schemas.js')
 const {
     createUser,
@@ -40,7 +41,8 @@ const {
     submitSuspensionAppeal,
     getReferralStats,
     getReferralHistory,
-    getCreditHistory
+    getCreditHistory,
+    resolveDeviceAlert
 } = require('../controllers/user.js')
 const { googleLogin, googleCallback, exchangeGoogleCode } = require('../controllers/GoogleAuth.js')
 const { githubLogin, githubCallback, exchangeGitHubCode } = require('../controllers/GitHubAuth.js')
@@ -78,6 +80,9 @@ route.post('/forgot-password',authLimiter,validate({ body: forgotPasswordSchema 
 // the reset path now enforces the SAME password policy as signup sir — it previously had none,
 // so a reset could set a weaker password than registration would ever have accepted
 route.post('/reset-password',authLimiter,validate({ body: resetPasswordSchema }),resetPassword)
+// deliberately unauthenticated sir — see controllers/user.js's resolveDeviceAlert for why.
+// authLimiter still applies so the token can't be brute-forced from the outside
+route.post('/device-alert/resolve',authLimiter,validate({ body: deviceAlertResolveSchema }),resolveDeviceAlert)
 route.put('/change-password',Auth,validate({ body: changePasswordSchema }),updatePassword)
 route.delete('/delete-account',Auth,deleteAccount)
 
