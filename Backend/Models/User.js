@@ -148,6 +148,15 @@ const UserCreation = new mongoose.Schema(
             type:String,
             trim:true
         },
+        // internal Admin/Support-only note sir — never shown to the user themselves anywhere,
+        // purely for "called them, seemed strong" / "flagged twice for X" type context between
+        // whoever's handling this account next. Deliberately a single freeform field, not a log
+        // of entries — this is a sticky note, not an audit trail (AuditLog already covers that).
+        adminNote:{
+            type:String,
+            trim:true,
+            maxlength:2000
+        },
         // Support-only sir — a distinct third state beyond plain isBanned. A regular suspended
         // Support account can still log in and submit their one appeal (Auth.js's ban-exempt
         // path); permanentlySuspended additionally blocks even THAT — no appeal, no exceptions,
@@ -370,7 +379,11 @@ const UserCreation = new mongoose.Schema(
             reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
             reviewedAt: { type: Date },
             rejectionReason: { type: String, trim: true, maxlength: 500 },
-        }
+        },
+        // User's own bookmarked jobs sir, per direct request — a plain array of refs, no separate
+        // collection needed (bounded by however many a person realistically pins, unlike
+        // JobApplication which needs its own document per application anyway)
+        savedJobs: [{ type: mongoose.Schema.ObjectId, ref: 'Job' }],
     }, { timestamps: true }
 )
 

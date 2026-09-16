@@ -5,12 +5,12 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
-import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash, FaArrowLeft } from 'react-icons/fa'
+import { FaUsers, FaCopy, FaCheckCircle, FaPlus, FaLock, FaChartBar, FaTrash, FaArrowLeft, FaEnvelope, FaEyeSlash } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
-import { GetJob, PublishJob, CloseJob, UpdateJob, UpdateInterviewEligibility, DeleteJob } from '../../Services/operations/Job'
+import { GetJob, PublishJob, CloseJob, UpdateJob, UpdateInterviewEligibility, DeleteJob, SendJobInvite, GetJobInvites } from '../../Services/operations/Job'
 import { PublishTest } from '../../Services/operations/Test'
 import { swalDark } from '../../utils/accountShared'
 
@@ -39,6 +39,11 @@ const JobDetailRecruiter = () => {
   const [savingComp, setSavingComp] = useState(false)
   const [interviewMinScore, setInterviewMinScore] = useState('')
   const [savingInterviewThreshold, setSavingInterviewThreshold] = useState(false)
+  const [savingVisibility, setSavingVisibility] = useState(false)
+  const [invites, setInvites] = useState([])
+  const [loadingInvites, setLoadingInvites] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyLabel, setBusyLabel] = useState('Working...')
   const withBusy = (label) => (next) => {
@@ -68,6 +73,34 @@ const JobDetailRecruiter = () => {
     setInterviewMinScore(job.interviewEligibilityMinScore ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?._id])
+
+  const loadInvites = async () => {
+    const result = await dispatch(GetJobInvites(jobId, token, setLoadingInvites))
+    if (result) setInvites(result)
+  }
+
+  useEffect(() => {
+    if (job?.visibility === 'invite_only') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadInvites()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?._id, job?.visibility])
+
+  const handleToggleVisibility = async () => {
+    const nextVisibility = job.visibility === 'invite_only' ? 'public' : 'invite_only'
+    await dispatch(UpdateJob(jobId, { visibility: nextVisibility }, token, setSavingVisibility))
+  }
+
+  const handleSendInvite = async (e) => {
+    e.preventDefault()
+    if (!inviteEmail.trim()) return toast.error("Enter the candidate's email")
+    const invite = await dispatch(SendJobInvite(jobId, inviteEmail.trim(), token, setSendingInvite))
+    if (invite) {
+      setInviteEmail('')
+      loadInvites()
+    }
+  }
 
   const handlePublish = async () => {
     const ok = await dispatch(PublishJob(jobId, token, withBusy('Publishing...')))
@@ -209,6 +242,7 @@ const JobDetailRecruiter = () => {
               </button>
               {job.status === 'published' && (
                 <>
+                  {job.visibility !== 'invite_only' && (
                   <button
                     onClick={handleCopyLink}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
@@ -216,6 +250,7 @@ const JobDetailRecruiter = () => {
                     {copied ? <FaCheckCircle className="text-caribgreen-100" /> : <FaCopy />}
                     {copied ? 'Copied' : 'Copy public link'}
                   </button>
+                  )}
                   <button
                     onClick={handleClose}
                     disabled={isLocked}
@@ -255,6 +290,71 @@ const JobDetailRecruiter = () => {
 
           <p className="text-sm text-richblack-200 whitespace-pre-wrap">{job.description}</p>
         </div>
+
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="text-sm font-semibold text-richblack-5 mb-1">Visibility</h2>
+          <p className="text-xs text-richblack-400 mb-3">
+            An invite-only job never appears on the public board — only candidates you directly
+            invite can view and apply to it. This can only be changed while the job is a draft.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => job.status === 'draft' && handleToggleVisibility()}
+              disabled={job.status !== 'draft' || savingVisibility}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-200 ${
+                job.visibility === 'invite_only' ? 'bg-yellow-50 text-richblack-900 border-yellow-50' : 'border-richblack-600 text-richblack-200'
+              } ${job.status !== 'draft' ? 'opacity-60 cursor-not-allowed' : 'hover:border-richblack-400 cursor-pointer'}`}
+            >
+              <FaEyeSlash className="text-xs" />
+              {job.visibility === 'invite_only' ? 'Invite-only' : 'Public'}
+            </button>
+            {job.status !== 'draft' && (
+              <span className="text-[11px] text-richblack-400">Locked once the job leaves draft</span>
+            )}
+          </div>
+        </div>
+
+        {job.visibility === 'invite_only' && (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+            <h2 className="text-sm font-semibold text-richblack-5 mb-3">Invites</h2>
+            <form onSubmit={handleSendInvite} className="flex gap-2 mb-4">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="candidate@example.com"
+                className="flex-1 rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-2.5 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+              />
+              <IconBtn type="submit" text="Send invite" disabled={sendingInvite} customClasses="text-sm px-4 whitespace-nowrap">
+                <FaEnvelope className="text-[10px]" />
+              </IconBtn>
+            </form>
+
+            {loadingInvites ? (
+              <p className="text-xs text-richblack-400">Loading invites...</p>
+            ) : invites.length === 0 ? (
+              <p className="text-xs text-richblack-400">No invites sent yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {invites.map((inv) => (
+                  <div key={inv._id} className="flex items-center justify-between gap-3 rounded-lg bg-richblack-900/40 border border-richblack-700 px-4 py-2.5">
+                    <span className="text-sm text-richblack-100 truncate">{inv.email}</span>
+                    <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${
+                      inv.status === 'applied'
+                        ? 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700'
+                        : inv.status === 'expired'
+                        ? 'bg-pink-700/30 text-pink-100 border-pink-700'
+                        : 'bg-richblack-700 text-richblack-200 border-richblack-600'
+                    }`}>
+                      {inv.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
           <h2 className="text-sm font-semibold text-richblack-5 mb-3">Compensation</h2>

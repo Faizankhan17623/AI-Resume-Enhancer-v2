@@ -7,6 +7,7 @@ import {
     removeMyJob,
     setCurrentJob,
     setJobApplicants,
+    patchJobApplicantNotes,
     setJobAnalytics,
     setRecruiterOverview,
     patchJobApplicant,
@@ -15,14 +16,16 @@ import {
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
+    setSavedJobs,
+    patchSavedJobId,
     setLoading,
 } from '../../Slices/jobSlice.js'
 
 const {
-    createJob, listMyJobs, getJob, updateJob, updateInterviewEligibility, publishJob, closeJob, deleteJob, getJobApplicants,
-    getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, toggleShortlist, setApplicationOutcome,
-    bulkInviteApplicants, bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob,
-    listMyApplications,
+    createJob, listMyJobs, closeExpiredJobs, getJob, updateJob, updateInterviewEligibility, publishJob, closeJob, deleteJob, getJobApplicants,
+    getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, toggleShortlist, updateApplicantNotes, setApplicationOutcome,
+    bulkInviteApplicants, bulkApplicationOutcome, sendJobInvite, listJobInvites, listPublicJobs, getPublicJob, getJobInviteByToken, applyToJob,
+    listMyApplications, toggleSavedJob, listSavedJobs,
 } = JobData
 
 // ---------------------------------------------------------------------------
@@ -48,6 +51,32 @@ export function CreateJob(jobPayload, token, navigate, onLoadingChange) {
             logApiError("Error creating the job", error)
             toast.error(error?.response?.data?.message || "Could not create the job")
             return null
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
+// manual on-demand trigger of the exact same matching logic utils/JobExpiryCron.js's
+// closeExpiredJobs already runs hourly sir, per direct request — scoped to just this
+// recruiter's own jobs, doesn't wait on the next cron run
+export function CloseExpiredJobs(token, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("POST", closeExpiredJobs, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetMyJobs(token))
+        } catch (error) {
+            logApiError("Error closing expired jobs", error)
+            toast.error(error?.response?.data?.message || "Could not close expired jobs")
         } finally {
             onLoadingChange?.(false)
         }
@@ -414,9 +443,101 @@ export function ToggleShortlist(applicationId, token) {
     }
 }
 
+// recruiter's PRIVATE notes on one applicant sir, per direct request — never shown to the
+// candidate anywhere. onLoadingChange is optional so the caller can show a per-row "saving..."
+// state without a full-screen loader for something this low-stakes.
+export function UpdateApplicantNotes(applicationId, notes, token, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("PATCH", `${updateApplicantNotes}/${applicationId}/notes`, { notes }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Notes saved")
+            dispatch(patchJobApplicantNotes({ applicationId, recruiterNotes: response.data.recruiterNotes }))
+        } catch (error) {
+            logApiError("Error saving the notes", error)
+            toast.error(error?.response?.data?.message || "Could not save these notes")
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
+// invite-only jobs sir, per direct request — sends (or re-sends) one direct invite to a
+// candidate's email; see Models/JobInvite.js. No slice state — the invite list is just kept as
+// local component state on JobDetailRecruiter.jsx, same "self-contained, no global state needed"
+// call as CannedResponses.jsx elsewhere in Admin.
+export function SendJobInvite(jobId, email, token, onLoadingChange) {
+    return async () => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("POST", `${sendJobInvite}/${jobId}/invite`, { email }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            return response.data.invite
+        } catch (error) {
+            logApiError("Error sending the invite", error)
+            toast.error(error?.response?.data?.message || "Could not send this invite")
+            return null
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
+export function GetJobInvites(jobId, token, onLoadingChange) {
+    return async () => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("GET", `${listJobInvites}/${jobId}/invites`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            return response.data.invites
+        } catch (error) {
+            logApiError("Error loading invites", error)
+            toast.error(error?.response?.data?.message || "Could not load invites")
+            return null
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // public sir — no auth required
 // ---------------------------------------------------------------------------
+
+// the candidate's invite-landing page sir — token-gated, no auth needed to VIEW the job (see
+// controllers/JobInvite.js's getJobInviteByToken); applying still requires login same as any
+// other job
+export function GetJobInviteByToken(inviteToken) {
+    return async () => {
+        try {
+            const response = await apiConnector("GET", `${getJobInviteByToken}/${inviteToken}`)
+            return response.data
+        } catch (error) {
+            logApiError("Error loading this invite", error)
+            return error?.response?.data || { success: false, message: "Could not load this invite" }
+        }
+    }
+}
 
 export function GetPublicJobs(params = {}) {
     return async (dispatch) => {
@@ -511,6 +632,50 @@ export function GetMyApplications(token) {
         } catch (error) {
             logApiError("Error fetching your applications", error)
             toast.error(error?.response?.data?.message || "Could not load your applications")
+        } finally {
+            dispatch(setLoading(false))
+        }
+    }
+}
+
+// bookmark a job sir, per direct request — no loading state param, this is a quick in-place
+// icon click on the board/detail page, not a busy-overlay-worthy action
+export function ToggleSavedJob(jobId, token) {
+    return async (dispatch) => {
+        try {
+            const response = await apiConnector("PATCH", `${toggleSavedJob}/${jobId}/save`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(patchSavedJobId({ jobId, saved: response.data.saved }))
+            toast.success(response.data.saved ? "Job saved" : "Removed from saved jobs")
+        } catch (error) {
+            logApiError("Error saving the job", error)
+            toast.error(error?.response?.data?.message || "Could not save this job")
+        }
+    }
+}
+
+export function GetSavedJobs(token) {
+    return async (dispatch) => {
+        dispatch(setLoading(true))
+        try {
+            const response = await apiConnector("GET", listSavedJobs, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            dispatch(setSavedJobs(response.data.jobs))
+        } catch (error) {
+            logApiError("Error fetching your saved jobs", error)
+            toast.error(error?.response?.data?.message || "Could not load your saved jobs")
         } finally {
             dispatch(setLoading(false))
         }

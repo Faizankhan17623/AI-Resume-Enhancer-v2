@@ -217,6 +217,11 @@ const roleSchema = z.enum(['User', 'Support', 'Admin', 'Recruiter'], { error: 'I
 
 const updateUserRoleSchema = z.object({ role: roleSchema })
 
+// internal Admin/Support-only sticky note sir — see Models/User.js's own comment on adminNote
+const updateAdminNoteSchema = z.object({
+    note: z.string().trim().max(2000).optional(),
+})
+
 const bulkUpdateRoleSchema = z.object({
     userIds: z.array(objectId, { error: 'userIds must be a non-empty array' })
         .min(1, 'userIds must be a non-empty array')
@@ -245,6 +250,25 @@ const bulkBanSchema = z.object({
         .max(200, 'Cannot act on more than 200 users at once'),
     banned: z.boolean({ error: "'banned' must be true or false" }),
     reason: z.string().trim().max(500).optional(),
+})
+
+const bulkUserIdsSchema = z.object({
+    userIds: z.array(objectId, { error: 'userIds must be a non-empty array' })
+        .min(1, 'userIds must be a non-empty array')
+        .max(200, 'Cannot act on more than 200 users at once'),
+})
+
+// ---------------------------------------------------------------------------
+// canned responses sir — see Models/CannedResponse.js
+// ---------------------------------------------------------------------------
+const createCannedResponseSchema = z.object({
+    title: z.string({ error: 'A title is required' }).trim().min(1, 'A title is required').max(100),
+    body: z.string({ error: 'A body is required' }).trim().min(1, 'A body is required').max(2000),
+})
+
+const updateCannedResponseSchema = z.object({
+    title: z.string().trim().min(1).max(100).optional(),
+    body: z.string().trim().min(1).max(2000).optional(),
 })
 
 // `credits` sir, a positive bonus amount to grant a single user — this endpoint is bonus-only
@@ -398,6 +422,9 @@ const updateJobSchema = compensationRefinements(z.object({
     employmentType: employmentType.optional(),
     skills: z.array(z.string().trim().max(60)).max(30).optional(),
     interviewEligibilityMinScore,
+    // only meaningful while still a draft sir — same reason this whole schema only applies to a
+    // draft job (see controllers/Job.js's updateJob): visibility must be locked in before publish
+    visibility: z.enum(['public', 'invite_only']).optional(),
     ...compensationFields,
 }))
 
@@ -457,6 +484,16 @@ const applyToJobSchema = z.object({
 
 const setApplicationOutcomeSchema = z.object({
     status: z.enum(['hired', 'rejected'], { error: 'Status must be hired or rejected' }),
+})
+
+// recruiter's PRIVATE notes on one applicant sir — see Models/JobApplication.js's own comment
+const updateApplicantNotesSchema = z.object({
+    notes: z.string().trim().max(2000).optional(),
+})
+
+// recruiter inviting one email to an invite_only job sir — see controllers/JobInvite.js
+const sendJobInviteSchema = z.object({
+    email: z.string().trim().toLowerCase().email({ error: 'Enter a valid email address' }).max(254),
 })
 
 // ---------------------------------------------------------------------------
@@ -616,10 +653,14 @@ module.exports = {
 
     // admin
     updateUserRoleSchema,
+    updateAdminNoteSchema,
     bulkUpdateRoleSchema,
     banUserSchema,
     permanentSuspendSchema,
     bulkBanSchema,
+    bulkUserIdsSchema,
+    createCannedResponseSchema,
+    updateCannedResponseSchema,
     adjustCreditsSchema,
     grantCreditsToAllSchema,
     updateUserPlanSchema,
@@ -641,6 +682,8 @@ module.exports = {
     generateJobDescriptionSchema,
     generateInterviewQuestionsSchema,
     setApplicationOutcomeSchema,
+    updateApplicantNotesSchema,
+    sendJobInviteSchema,
     bulkInviteApplicantsSchema,
     bulkApplicationOutcomeSchema,
 

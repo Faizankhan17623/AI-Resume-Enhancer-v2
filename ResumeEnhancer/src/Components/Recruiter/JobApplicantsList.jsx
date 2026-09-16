@@ -13,7 +13,7 @@ import MessageThreadModal from '../extra/MessageThreadModal'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import {
   GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome,
-  BulkInviteApplicantsToTest, BulkSetApplicationOutcome, ToggleShortlist,
+  BulkInviteApplicantsToTest, BulkSetApplicationOutcome, ToggleShortlist, UpdateApplicantNotes,
 } from '../../Services/operations/Job'
 import { GenerateCandidateSummary } from '../../Services/operations/RecruiterAi'
 
@@ -105,6 +105,11 @@ const JobApplicantsList = () => {
   const [scheduleFor, setScheduleFor] = useState(null)
   // applicationId of the row whose message thread modal is open sir, null when closed
   const [messagingFor, setMessagingFor] = useState(null)
+  // per-applicant notes draft sir, keyed by applicationId — lets each row's textarea hold its
+  // own in-progress edit independently, seeded from app.recruiterNotes the first time its
+  // panel is opened rather than on every render
+  const [notesDrafts, setNotesDrafts] = useState({})
+  const [savingNotesFor, setSavingNotesFor] = useState(null)
   const withBusy = (label) => (next) => {
     if (next) setBusyLabel(label)
     setBusy(next)
@@ -126,6 +131,11 @@ const JobApplicantsList = () => {
   // no busy overlay sir — a quick icon toggle, not worth a full-screen loader for
   const handleToggleShortlist = (applicationId) => {
     dispatch(ToggleShortlist(applicationId, token))
+  }
+
+  const handleSaveNotes = (applicationId) => {
+    const draft = notesDrafts[applicationId] ?? ''
+    dispatch(UpdateApplicantNotes(applicationId, draft.trim(), token, (busy) => setSavingNotesFor(busy ? applicationId : null)))
   }
 
   // Pro/ProMax upsell sir — on-demand re-request of the AI candidate summary (the automatic one
@@ -617,6 +627,25 @@ const JobApplicantsList = () => {
                               )}
                             </div>
                           )}
+                        </div>
+
+                        {/* recruiter's own PRIVATE notes sir, per direct request — never shown
+                            to the candidate anywhere */}
+                        <div className="mt-4 pt-4 border-t border-richblack-700">
+                          <p className="text-xs text-richblack-400 uppercase tracking-wide font-semibold mb-1.5">Private notes (only you can see this)</p>
+                          <textarea
+                            value={notesDrafts[app._id] ?? app.recruiterNotes ?? ''}
+                            onChange={(e) => setNotesDrafts((prev) => ({ ...prev, [app._id]: e.target.value }))}
+                            placeholder="e.g. Strong on system design, weak on communication"
+                            className="w-full min-h-16 rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-500 focus:outline-none focus:border-yellow-50 resize-none"
+                          />
+                          <button
+                            onClick={() => handleSaveNotes(app._id)}
+                            disabled={savingNotesFor === app._id || (notesDrafts[app._id] ?? app.recruiterNotes ?? '').trim() === (app.recruiterNotes || '')}
+                            className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {savingNotesFor === app._id ? 'Saving...' : 'Save notes'}
+                          </button>
                         </div>
                       </div>
                     </motion.div>

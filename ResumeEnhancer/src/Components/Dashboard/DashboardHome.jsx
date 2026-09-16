@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes, FaCrown } from 'react-icons/fa'
+import { FaFileAlt, FaTrophy, FaBolt, FaArrowUp, FaArrowDown, FaPlus, FaCheckCircle, FaRegCircle, FaTimes, FaCrown, FaClock } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
@@ -49,6 +49,33 @@ const DashboardHome = () => {
   const showOnboarding = activity && onboardingCompleted === false && completedSteps < onboardingSteps.length
 
   const dismissOnboarding = () => dispatch(CompleteOnboarding(token))
+
+  // "come back and re-check your resume" nudge sir, per direct request — allReviews is already
+  // sorted newest-first by the backend (controllers/Review.js's getReviews), so [0] is the last
+  // review. Only shown once at least one review exists (a brand-new user gets the onboarding
+  // checklist above instead, not this). Dismissal is keyed to THAT review's id rather than a flat
+  // localStorage boolean, so dismissing it now doesn't suppress the nudge forever — once the user
+  // runs a new review, staleness resets and the banner is eligible to show again after another
+  // long gap.
+  // Date.now() called directly in a render body (even inside useMemo) is an impure call the React
+  // Compiler flags sir — same nowMs-in-useState escape hatch as Home/PlanCheckout.jsx
+  const [nowMs] = useState(() => Date.now())
+  const lastReview = allReviews[0]
+  const daysSinceLastReview = lastReview
+    ? Math.floor((nowMs - new Date(lastReview.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const NUDGE_THRESHOLD_DAYS = 7
+  const NUDGE_DISMISSED_KEY = 'lastReviewNudgeDismissedFor'
+  const [nudgeDismissedFor, setNudgeDismissedFor] = useState(() => localStorage.getItem(NUDGE_DISMISSED_KEY))
+
+  const showReviewNudge = lastReview
+    && daysSinceLastReview >= NUDGE_THRESHOLD_DAYS
+    && nudgeDismissedFor !== lastReview._id
+
+  const dismissReviewNudge = () => {
+    localStorage.setItem(NUDGE_DISMISSED_KEY, lastReview._id)
+    setNudgeDismissedFor(lastReview._id)
+  }
 
   const stats = progress?.stats
   // the graph wants friendly labels sir
@@ -177,6 +204,39 @@ const DashboardHome = () => {
                     <span className={step.done ? 'line-through' : ''}>{step.label}</span>
                   </Link>
                 ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Days-since-last-review nudge sir, per direct request — dismissible, re-eligible after
+            the next review (see dismissReviewNudge's own comment above) */}
+        <AnimatePresence>
+          {showReviewNudge && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4 overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center text-sm text-yellow-100 shrink-0">
+                    <FaClock />
+                  </div>
+                  <p className="text-sm text-richblack-100 min-w-0">
+                    It's been <span className="font-semibold text-richblack-5">{daysSinceLastReview} days</span> since
+                    your last resume review — <Link to="/Dashboard/New-Review" className="text-yellow-50 hover:underline">run a fresh one</Link> to keep your score current.
+                  </p>
+                </div>
+                <button
+                  onClick={dismissReviewNudge}
+                  className="text-richblack-400 hover:text-richblack-5 transition-colors duration-200 cursor-pointer p-1 shrink-0"
+                  title="Dismiss"
+                >
+                  <FaTimes />
+                </button>
               </div>
             </motion.div>
           )}

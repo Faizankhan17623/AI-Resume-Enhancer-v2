@@ -60,6 +60,8 @@ const AdminAnnouncements = lazy(() => import('./Components/Admin/Announcements')
 const AdminTestimonials = lazy(() => import('./Components/Admin/Testimonials'))
 const AdminReports = lazy(() => import('./Components/Admin/Reports'))
 const AdminRecruiterDataHealth = lazy(() => import('./Components/Admin/RecruiterDataHealth'))
+const AdminCannedResponses = lazy(() => import('./Components/Admin/CannedResponses'))
+const AdminMyActivity = lazy(() => import('./Components/Admin/MyActivity'))
 const SupportSuspended = lazy(() => import('./Components/Admin/SupportSuspended'))
 const AdminSettings = lazy(() => import('./Components/Admin/Settings'))
 const SharedReport = lazy(() => import('./Components/extra/SharedReport'))
@@ -84,6 +86,8 @@ const ProctoredTestConsent = lazy(() => import('./Components/ProctoredTest/TestC
 const ProctoredTestRunner = lazy(() => import('./Components/ProctoredTest/ProctoredTestRunner'))
 const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
 const JobDetail = lazy(() => import('./Components/Jobs/JobDetail'))
+const JobInviteLanding = lazy(() => import('./Components/Jobs/JobInviteLanding'))
+const SavedJobs = lazy(() => import('./Components/Jobs/SavedJobs'))
 const MyApplications = lazy(() => import('./Components/Dashboard/MyApplications'))
 const CareerCopilot = lazy(() => import('./Components/Dashboard/CareerCopilot'))
 const MyInterviews = lazy(() => import('./Components/Dashboard/MyInterviews'))
@@ -213,6 +217,8 @@ function App() {
             {/* public job board sir — deliberately NOT /Dashboard/Job-Search, that's the
                 unrelated private Tavily web-search feature. Anyone can browse without logging in. */}
             <Route path="/Jobs" element={<JobBoard />} />
+            <Route path="/Jobs/Saved" element={<SavedJobs />} />
+            <Route path="/Jobs/invite/:token" element={<JobInviteLanding />} />
             <Route path="/Jobs/:jobId" element={<JobDetail />} />
             <Route path="/For-Recruiters" element={<ForRecruiters />} />
 
@@ -289,6 +295,8 @@ function App() {
             <Route path="/Admin/Testimonials" element={<AdminRoute><AdminTestimonials /></AdminRoute>} />
             <Route path="/Admin/Reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
             <Route path="/Admin/Recruiter-Data-Health" element={<AdminRoute><AdminRecruiterDataHealth /></AdminRoute>} />
+            <Route path="/Admin/Canned-Responses" element={<AdminRoute><AdminCannedResponses /></AdminRoute>} />
+            <Route path="/Admin/My-Activity" element={<AdminRoute><AdminMyActivity /></AdminRoute>} />
             <Route path="/Admin/Recruiter-Applications" element={<AdminRoute><AdminRecruiterApplications /></AdminRoute>} />
             <Route path="/Admin/Settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
@@ -302,6 +310,8 @@ function App() {
             <Route path="/Support/Announcements" element={<SupportRoute><AdminAnnouncements /></SupportRoute>} />
             <Route path="/Support/Testimonials" element={<SupportRoute><AdminTestimonials /></SupportRoute>} />
             <Route path="/Support/Reports" element={<SupportRoute><AdminReports /></SupportRoute>} />
+            <Route path="/Support/Canned-Responses" element={<SupportRoute><AdminCannedResponses /></SupportRoute>} />
+            <Route path="/Support/My-Activity" element={<SupportRoute><AdminMyActivity /></SupportRoute>} />
             {/* the one page a suspended Support account can reach sir — see SupportRoute.jsx,
                 same rule PrivateRoute.jsx already enforces for a regular User's /Dashboard/Suspended */}
             <Route path="/Support/Suspended" element={<SupportRoute><SupportSuspended /></SupportRoute>} />

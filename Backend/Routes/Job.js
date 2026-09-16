@@ -7,9 +7,11 @@ const {
     updateJobSchema,
     applyToJobSchema,
     setApplicationOutcomeSchema,
+    updateApplicantNotesSchema,
     bulkInviteApplicantsSchema,
     bulkApplicationOutcomeSchema,
     updateInterviewEligibilitySchema,
+    sendJobInviteSchema,
 } = require('../Validation/schemas.js')
 const {
     createJob,
@@ -18,12 +20,14 @@ const {
     updateJob,
     publishJob,
     closeJob,
+    closeExpiredJobsForRecruiter,
     deleteJob,
     getJobApplicants,
     getJobAnalytics,
     getRecruiterOverviewAnalytics,
     inviteApplicantToTest,
     toggleShortlist,
+    updateApplicantNotes,
     setApplicationOutcome,
     bulkInviteApplicantsToTest,
     bulkSetApplicationOutcome,
@@ -32,7 +36,14 @@ const {
     applyToJob,
     listMyApplications,
     updateInterviewEligibilityThreshold,
+    toggleSavedJob,
+    listSavedJobs,
 } = require('../controllers/Job.js')
+const {
+    sendJobInvite,
+    listJobInvites,
+    getJobInviteByToken,
+} = require('../controllers/JobInvite.js')
 
 // applyToJob is multipart/form-data sir (the resume PDF rides as req.files.resume, alongside the
 // structured form fields) — express-fileupload puts the OTHER form fields on req.body as plain
@@ -60,6 +71,7 @@ const parseMultipartJson = (req, res, next) => {
 // cleared them (see Middlewares/Auth.js). A locked (pending/rejected) Recruiter 403s here.
 route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createJobSchema }), createJob)
 route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
+route.post('/jobs/close-expired', Auth, isRecruiter, isApprovedRecruiter, closeExpiredJobsForRecruiter)
 route.get('/jobs/analytics-overview', Auth, isRecruiter, isApprovedRecruiter, getRecruiterOverviewAnalytics)
 route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
 route.post('/jobs/:jobId/applicants/bulk-invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkInviteApplicantsSchema }), bulkInviteApplicantsToTest)
@@ -72,10 +84,23 @@ route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ b
 // works regardless of draft/published status sir — see controllers/Job.js's own comment on why
 // this can't just be folded into updateJob above
 route.patch('/jobs/:jobId/interview-eligibility', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateInterviewEligibilitySchema }), updateInterviewEligibilityThreshold)
+// candidate's saved jobs sir — MUST be declared before 'GET /jobs/:jobId' below, otherwise
+// Express matches :jobId='saved' first and this route is silently unreachable (verified: Express
+// matches path patterns in REGISTRATION order regardless of role-check middleware differences)
+route.get('/jobs/saved', Auth, isUser, listSavedJobs)
 route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, getJob)
+
+route.patch('/jobs/:jobId/save', Auth, isUser, toggleSavedJob)
+
+// invite-only job invites sir — recruiter-managed, see Models/Job.js's visibility field and
+// controllers/JobInvite.js. Declared before '/jobs/:jobId' above already covers these since
+// they're all sub-paths of a specific :jobId, so no route-order conflict.
+route.post('/jobs/:jobId/invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: sendJobInviteSchema }), sendJobInvite)
+route.get('/jobs/:jobId/invites', Auth, isRecruiter, isApprovedRecruiter, listJobInvites)
 
 // public — no auth required
 route.get('/public/jobs', listPublicJobs)
+route.get('/public/jobs/invite/:token', getJobInviteByToken)
 route.get('/public/jobs/:jobId', getPublicJob)
 
 // candidate side
@@ -83,6 +108,7 @@ route.post('/jobs/:jobId/apply', Auth, isUser, parseMultipartJson, validate({ bo
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
 route.patch('/job-applications/:applicationId/shortlist', Auth, isRecruiter, isApprovedRecruiter, toggleShortlist)
+route.patch('/job-applications/:applicationId/notes', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateApplicantNotesSchema }), updateApplicantNotes)
 route.patch('/job-applications/:applicationId/status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: setApplicationOutcomeSchema }), setApplicationOutcome)
 
 module.exports = route

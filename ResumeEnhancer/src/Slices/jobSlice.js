@@ -24,6 +24,10 @@ const initialState = {
 
     // candidate-side sir
     myApplications: [],
+    // just the ids sir — cheap to carry on every board/detail page for an instant "is this saved"
+    // check, without needing the full populated job on pages that don't show the Saved Jobs list
+    savedJobIds: [],
+    savedJobs: [],
 
     loading: false,
 };
@@ -67,6 +71,13 @@ const jobSlice = createSlice({
             const app = state.jobApplicants.find((a) => a._id === applicationId)
             if (app) app.shortlisted = shortlisted
         },
+        // same in-place patch shape as patchJobApplicantShortlist above sir, for the
+        // recruiter's private notes field
+        patchJobApplicantNotes(state, value) {
+            const { applicationId, recruiterNotes } = value.payload
+            const app = state.jobApplicants.find((a) => a._id === applicationId)
+            if (app) app.recruiterNotes = recruiterNotes
+        },
         // same in-place patch as patchJobApplicant above sir, just for many rows at once after
         // a bulk invite/hire/reject — avoids a full applicants refetch for the common case
         patchJobApplicantsBulk(state, value) {
@@ -86,6 +97,18 @@ const jobSlice = createSlice({
         setMyApplications(state, value) {
             state.myApplications = value.payload
         },
+        setSavedJobs(state, value) {
+            state.savedJobs = value.payload
+            state.savedJobIds = value.payload.map((job) => job._id)
+        },
+        // ToggleSavedJob sir — in-place patch of just the id list, no refetch of the full saved
+        // list needed for a save/unsave click on the board or detail page
+        patchSavedJobId(state, value) {
+            const { jobId, saved } = value.payload
+            state.savedJobIds = saved
+                ? [...state.savedJobIds, jobId]
+                : state.savedJobIds.filter((id) => id !== jobId)
+        },
         setLoading(state, value) {
             state.loading = value.payload
         },
@@ -101,10 +124,13 @@ export const {
     setRecruiterOverview,
     patchJobApplicant,
     patchJobApplicantShortlist,
+    patchJobApplicantNotes,
     patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
+    setSavedJobs,
+    patchSavedJobId,
     setLoading,
 } = jobSlice.actions
 export default jobSlice.reducer

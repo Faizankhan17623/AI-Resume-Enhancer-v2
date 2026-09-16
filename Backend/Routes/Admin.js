@@ -5,10 +5,12 @@ const { adminWriteLimiter, adminReadLimiter } = require('../Middlewares/RateLimi
 const { validate } = require('../Middlewares/Validate.js')
 const {
     updateUserRoleSchema,
+    updateAdminNoteSchema,
     bulkUpdateRoleSchema,
     banUserSchema,
     permanentSuspendSchema,
     bulkBanSchema,
+    bulkUserIdsSchema,
     adjustCreditsSchema,
     grantCreditsToAllSchema,
     updateUserPlanSchema,
@@ -24,6 +26,7 @@ const {
     deleteUser,
     banUser,
     bulkBanUsers,
+    bulkSendWinBackEmail,
     rejectSupportAppeal,
     permanentlySuspendSupport,
     adjustCredits,
@@ -35,7 +38,10 @@ const {
     getRecruiterApplications,
     approveRecruiterApplication,
     rejectRecruiterApplication,
-    getRecruiterDataHealth
+    getRecruiterDataHealth,
+    forceExpireJob,
+    updateUserAdminNote,
+    resendPasswordReset
 } = require('../controllers/Admin.js')
 const {
     getPayments,
@@ -46,6 +52,7 @@ const {
     getHealth,
     getInsights,
     getAuditLogs,
+    getMyActivity,
     getCreditGrants,
     getTraffic,
     getDeletions,
@@ -95,14 +102,19 @@ route.get('/admin/announcements', Auth, isSupport, adminReadLimiter, getAnnounce
 // ---------- admin-only sir ----------
 route.patch('/admin/users/bulk-role', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkUpdateRoleSchema }), bulkUpdateUserRole)
 route.patch('/admin/users/:userId/role', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserRoleSchema }), updateUserRole)
+// Admin AND Support sir, per direct request — same "isSupport allows both" gate as adjustCredits above
+route.patch('/admin/users/:userId/note', Auth, isSupport, adminWriteLimiter, validate({ body: updateAdminNoteSchema }), updateUserAdminNote)
+route.post('/admin/users/:userId/resend-reset', Auth, isSupport, adminWriteLimiter, resendPasswordReset)
 // recruiter self-signup approval queue sir — Admin-only, NOT isSupport: promoting someone to
 // Recruiter is the same class of judgment call as any other role change above
 route.get('/admin/recruiter-applications', Auth, isAdmin, adminReadLimiter, getRecruiterApplications)
 route.get('/admin/recruiter-data-health', Auth, isAdmin, adminReadLimiter, getRecruiterDataHealth)
+route.post('/admin/jobs/:jobId/force-expire', Auth, isAdmin, adminWriteLimiter, forceExpireJob)
 route.post('/admin/recruiter-applications/:userId/approve', Auth, isAdmin, adminWriteLimiter, approveRecruiterApplication)
 route.post('/admin/recruiter-applications/:userId/reject', Auth, isAdmin, adminWriteLimiter, validate({ body: rejectRecruiterApplicationSchema }), rejectRecruiterApplication)
 route.patch('/admin/users/:userId/plan', Auth, isAdmin, adminWriteLimiter, validate({ body: updateUserPlanSchema }), updateUserPlan)
 route.patch('/admin/users/bulk-ban', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkBanSchema }), bulkBanUsers)
+route.post('/admin/users/bulk-resend-nudge', Auth, isAdmin, adminWriteLimiter, validate({ body: bulkUserIdsSchema }), bulkSendWinBackEmail)
 route.patch('/admin/users/:userId/ban', Auth, isAdmin, adminWriteLimiter, validate({ body: banUserSchema }), banUser)
 route.patch('/admin/users/:userId/reject-appeal', Auth, isAdmin, adminWriteLimiter, rejectSupportAppeal)
 route.patch('/admin/users/:userId/permanent-suspend', Auth, isAdmin, adminWriteLimiter, validate({ body: permanentSuspendSchema }), permanentlySuspendSupport)
@@ -112,6 +124,10 @@ route.post('/admin/users/:userId/impersonate', Auth, isAdmin, adminWriteLimiter,
 route.post('/admin/users/grant-credits-all', Auth, isAdmin, adminWriteLimiter, validate({ body: grantCreditsToAllSchema }), grantCreditsToAll)
 route.delete('/admin/users/:userId', Auth, isAdmin, adminWriteLimiter, deleteUser)
 route.get('/admin/audit', Auth, isAdmin, adminReadLimiter, getAuditLogs)
+// isSupport allows both roles sir — hard-scoped to the caller's own actions/today only, see
+// controllers/AdminSystem.js's getMyActivity for why this is safe to expose more broadly than
+// the full audit log above
+route.get('/admin/my-activity', Auth, isSupport, adminReadLimiter, getMyActivity)
 route.get('/admin/credit-grants', Auth, isAdmin, adminReadLimiter, getCreditGrants)
 route.get('/admin/settings', Auth, isAdmin, adminReadLimiter, getSettings)
 route.patch('/admin/settings/:key', Auth, isAdmin, adminWriteLimiter, upsertSetting)

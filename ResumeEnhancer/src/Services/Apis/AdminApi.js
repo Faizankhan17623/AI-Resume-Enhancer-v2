@@ -25,10 +25,13 @@ export const AdminUsers = {
     updateplan: BASE_URL + "/admin/users",        // + /:userId/plan
     banuser: BASE_URL + "/admin/users",           // + /:userId/ban
     bulkbanusers: BASE_URL + "/admin/users/bulk-ban",
+    bulkresendnudge: BASE_URL + "/admin/users/bulk-resend-nudge",
     adjustcredits: BASE_URL + "/admin/users",     // + /:userId/credits
     grantcreditsall: BASE_URL + "/admin/users/grant-credits-all",
     impersonate: BASE_URL + "/admin/users",       // + /:userId/impersonate
-    deleteuser: BASE_URL + "/admin/users"         // + /:userId
+    deleteuser: BASE_URL + "/admin/users",        // + /:userId
+    updatenote: BASE_URL + "/admin/users",        // + /:userId/note
+    resendreset: BASE_URL + "/admin/users"        // + /:userId/resend-reset
 }
 
 export const AdminPayments = {
@@ -66,11 +69,19 @@ export const AdminRecruiterApplications = {
 }
 
 export const AdminRecruiterDataHealth = {
-    get: BASE_URL + "/admin/recruiter-data-health"
+    get: BASE_URL + "/admin/recruiter-data-health",
+    forceExpireJob: BASE_URL + "/admin/jobs"   // + /:jobId/force-expire
 }
 
 export const AdminReports = {
     allreports: BASE_URL + "/admin/reports",
     updatereport: BASE_URL + "/admin/reports",   // + /:reportId
     deletereport: BASE_URL + "/admin/reports"    // + /:reportId
+}
+
+export const AdminCannedResponses = {
+    list: BASE_URL + "/admin/canned-responses",
+    create: BASE_URL + "/admin/canned-responses",
+    update: BASE_URL + "/admin/canned-responses",   // + /:responseId
+    remove: BASE_URL + "/admin/canned-responses"    // + /:responseId
 }

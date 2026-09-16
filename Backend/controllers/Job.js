@@ -4,6 +4,7 @@ const { PDFParse } = require('pdf-parse')
 
 const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
+const JobInvite = require('../Models/JobInvite')
 const Test = require('../Models/Test')
 const TestAttempt = require('../Models/TestAttempt')
 const User = require('../Models/User')
@@ -135,7 +136,7 @@ exports.updateJob = async (req, res) => {
             })
         }
 
-        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore } = req.body
+        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore, visibility } = req.body
         if (companyName !== undefined) job.companyName = companyName
         if (title !== undefined) job.title = title
         if (description !== undefined) job.description = description
@@ -148,6 +149,7 @@ exports.updateJob = async (req, res) => {
         if (unpaidDurationMonths !== undefined) job.unpaidDurationMonths = unpaidDurationMonths
         if (certificateProvided !== undefined) job.certificateProvided = certificateProvided
         if (interviewEligibilityMinScore !== undefined) job.interviewEligibilityMinScore = interviewEligibilityMinScore
+        if (visibility !== undefined) job.visibility = visibility
 
         await job.save()
 
@@ -274,6 +276,39 @@ exports.closeJob = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while closing the job',
+        })
+    }
+}
+
+// POST /jobs/close-expired sir, per direct request — manual on-demand trigger of the exact same
+// matching logic utils/JobExpiryCron.js's closeExpiredJobs already runs hourly, scoped to just
+// this recruiter's own jobs (the cron itself is global, across every recruiter) so a recruiter
+// isn't stuck waiting on the next run to clean up their own overdue listings.
+exports.closeExpiredJobsForRecruiter = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const now = new Date()
+
+        const result = await Job.updateMany(
+            {
+                recruiter: recruiterId,
+                status: 'published',
+                expiresAt: { $ne: null, $lt: now },
+            },
+            { $set: { status: 'closed' } }
+        )
+
+        const closed = result.modifiedCount || 0
+        return res.status(200).json({
+            success: true,
+            message: closed > 0 ? `Closed ${closed} expired job${closed === 1 ? '' : 's'}` : 'No expired jobs to close',
+            closed,
+        })
+    } catch (error) {
+        (req.log || logger).error('close expired jobs for recruiter failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while closing expired jobs',
         })
     }
 }
@@ -736,6 +771,45 @@ exports.toggleShortlist = async (req, res) => {
     }
 }
 
+// PATCH /job-applications/:applicationId/notes sir, per direct request — the recruiter's own
+// PRIVATE notes on this candidate, never shown to the candidate anywhere. Same ownership check
+// shape as toggleShortlist above, same "overwrite the whole field" shape as User.adminNote —
+// a sticky note, not a log of entries.
+exports.updateApplicantNotes = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { applicationId } = req.params
+        const { notes } = req.body
+
+        if (!mongoose.isValidObjectId(applicationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid application id' })
+        }
+
+        const application = await JobApplication.findById(applicationId).populate('job', 'recruiter')
+        if (!application || !application.job) {
+            return res.status(404).json({ success: false, message: 'Application not found' })
+        }
+
+        if (!application.job.recruiter.equals(recruiterId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have access to this application',
+            })
+        }
+
+        application.recruiterNotes = notes || ''
+        await application.save()
+
+        return res.status(200).json({ success: true, message: 'Notes saved', recruiterNotes: application.recruiterNotes })
+    } catch (error) {
+        (req.log || logger).error('update applicant notes failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while saving these notes',
+        })
+    }
+}
+
 // PATCH /job-applications/:applicationId/status sir — the recruiter recording an outcome.
 //
 // 'hired' still requires the candidate to have actually finished the job's test (if it has
@@ -1002,7 +1076,9 @@ exports.listPublicJobs = async (req, res) => {
         const employmentType = (req.query.employmentType || '').trim()
         const skill = (req.query.skill || '').trim()
 
-        const filter = { status: 'published' }
+        // invite_only jobs never show up here sir — see Models/Job.js's own comment on
+        // visibility. They're reachable only through a direct invite link.
+        const filter = { status: 'published', visibility: 'public' }
         if (search) {
             // same safe-regex escape as controllers/Admin.js's getUsers sir
             const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -1052,9 +1128,11 @@ exports.getPublicJob = async (req, res) => {
 
         // $inc in the same query that gates on status:'published' sir — a closed/draft job
         // (404s below) never bumps the counter, and this is a single atomic write, not a
-        // read-then-write race
+        // read-then-write race. visibility:'public' too sir — an invite_only job is reachable
+        // only through its own token-gated route (getJobInviteByToken below), never by
+        // guessing/visiting this one directly with just the job id.
         const job = await Job.findOneAndUpdate(
-            { _id: jobId, status: 'published' },
+            { _id: jobId, status: 'published', visibility: 'public' },
             { $inc: { views: 1 } },
             { returnDocument: 'after' }
         )
@@ -1108,9 +1186,32 @@ exports.applyToJob = async (req, res) => {
 
         // title + recruiter selected here too sir — needed below to email the recruiter and to
         // score the resume against the job's own description once the application is created
-        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id title description recruiter')
+        const job = await Job.findOne({ _id: jobId, status: 'published' }).select('_id title description recruiter visibility')
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        // invite_only gate sir — see Models/Job.js's own comment on visibility. The candidate
+        // must hold a still-pending, unexpired invite addressed to their OWN account email —
+        // this is the ONLY way into an invite_only job's apply flow, browsing/guessing the job
+        // id alone (blocked upstream at listPublicJobs/getPublicJob) isn't enough even if
+        // someone reaches this endpoint directly. candidateEmail is looked up once here and
+        // reused below (marking the invite applied) rather than queried twice.
+        let candidateEmail
+        if (job.visibility === 'invite_only') {
+            candidateEmail = (await User.findById(candidateId).select('email'))?.email
+            const invite = await JobInvite.findOne({
+                job: jobId,
+                email: candidateEmail,
+                status: 'pending',
+                expiresAt: { $gt: new Date() },
+            })
+            if (!invite) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'This job is invite-only — you need a valid invite to apply',
+                })
+            }
         }
 
         // extract the resume's plain text sir — same PDFParse call every other resume-intake
@@ -1170,6 +1271,16 @@ exports.applyToJob = async (req, res) => {
                 })
             }
             throw createErr
+        }
+
+        // mark the invite consumed sir — best-effort, an invite-update failure must never fail
+        // an already-successfully-created application. Only reachable when visibility was
+        // actually invite_only (the gate above already confirmed a pending invite exists).
+        if (job.visibility === 'invite_only') {
+            JobInvite.updateOne(
+                { job: jobId, email: candidateEmail, status: 'pending' },
+                { $set: { status: 'applied', application: application._id } }
+            ).catch((err) => logger.error('mark job invite applied failed', { err, applicationId: application._id }))
         }
 
         // AI fit-score sir — best-effort, wrapped in its own try/catch exactly like the
@@ -1251,6 +1362,69 @@ exports.listMyApplications = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your applications',
+        })
+    }
+}
+
+// PATCH /jobs/:jobId/save sir, per direct request — a plain bookmark, toggled on/off from one
+// endpoint rather than separate save/unsave routes. Works on any job (published or not) the
+// candidate can otherwise see; doesn't require it to still be open, so a saved job that later
+// closes stays visible in the saved list rather than silently vanishing.
+exports.toggleSavedJob = async (req, res) => {
+    try {
+        const candidateId = req?.User.id
+        const { jobId } = req.params
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+
+        const job = await Job.findById(jobId).select('_id')
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        const user = await User.findById(candidateId).select('savedJobs')
+        const alreadySaved = user.savedJobs.some((id) => id.equals(jobId))
+
+        if (alreadySaved) {
+            user.savedJobs = user.savedJobs.filter((id) => !id.equals(jobId))
+        } else {
+            user.savedJobs.push(jobId)
+        }
+        await user.save()
+
+        return res.status(200).json({ success: true, saved: !alreadySaved })
+    } catch (error) {
+        (req.log || logger).error('toggle saved job failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while saving this job',
+        })
+    }
+}
+
+exports.listSavedJobs = async (req, res) => {
+    try {
+        const candidateId = req?.User.id
+
+        const user = await User.findById(candidateId)
+            .select('savedJobs')
+            .populate({
+                path: 'savedJobs',
+                select: 'companyName title location employmentType status compensationType ctcMin ctcMax visibility',
+            })
+
+        // a saved job later deleted outright leaves a null entry after populate sir — filtered out
+        // here rather than left for the frontend to guard against
+        const jobs = (user?.savedJobs || []).filter(Boolean)
+
+        return res.status(200).json({ success: true, jobs })
+    } catch (error) {
+        (req.log || logger).error('list saved jobs failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while getting your saved jobs',
         })
     }
 }

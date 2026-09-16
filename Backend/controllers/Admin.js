@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const crypto = require('crypto')
 const logger = require('../utils/logger')
 const jwt = require('jsonwebtoken')
 
@@ -16,6 +17,9 @@ const { creditBonusTemplate } = require('../Templates/CreditBonus.js')
 const { supportSuspendedTemplate } = require('../Templates/SupportSuspended.js')
 const { supportRestoredTemplate } = require('../Templates/SupportRestored.js')
 const { supportAppealFinalTemplate } = require('../Templates/SupportAppealFinal.js')
+const { winBackEmailHtml } = require('../utils/StreakCron.js')
+const { notify } = require('../utils/NotificationLog.js')
+const { passwordResetTemplate } = require('../Templates/passwordResetTemplate.js')
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
@@ -49,6 +53,9 @@ exports.getDashboardStats = async (req, res) => {
             proMaxUsers,
             totalReviews,
             totalChats,
+            bannedUsers,
+            publishedJobs,
+            pendingRecruiterApplications,
             avgScoreAgg,
             revenueAgg,
             signupsPerDay,
@@ -62,6 +69,14 @@ exports.getDashboardStats = async (req, res) => {
             User.countDocuments({ Subscription: true, SubType: 'ProMax', SubscriptionExpires: { $gt: now } }),
             Review.countDocuments(),
             Chat.countDocuments(),
+            // three small system-health counts sir, per direct request — genuinely missing from
+            // this page before (Overview.jsx had no banned-user, published-job, or pending-
+            // recruiter-approval visibility at all until now)
+            User.countDocuments({ isBanned: true }),
+            Job.countDocuments({ status: 'published' }),
+            // still role:'User' while pending sir — approveRecruiterApplication is what flips
+            // role to 'Recruiter', only once approved (see controllers/Admin.js there)
+            User.countDocuments({ 'recruiterApplication.status': 'pending' }),
             Review.aggregate([
                 { $group: { _id: null, avgScore: { $avg: '$atsScore' } } }
             ]),
@@ -96,6 +111,7 @@ exports.getDashboardStats = async (req, res) => {
                 users: {
                     total: totalUsers,
                     verified: verifiedUsers,
+                    banned: bannedUsers,
                     // plan split sir — Basic is everyone without an active paid sub
                     plans: {
                         Basic: totalUsers - proUsers - proMaxUsers,
@@ -104,6 +120,12 @@ exports.getDashboardStats = async (req, res) => {
                     },
                     // conversion % straight for the dashboard card sir
                     paidConversion: totalUsers ? Number((((proUsers + proMaxUsers) / totalUsers) * 100).toFixed(1)) : 0,
+                },
+                jobs: {
+                    published: publishedJobs,
+                },
+                recruiterApplications: {
+                    pending: pendingRecruiterApplications,
                 },
                 usage: {
                     totalReviews,
@@ -236,6 +258,95 @@ exports.getUserDetail = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the user',
+        })
+    }
+}
+
+// PATCH /admin/users/:userId/note sir — Admin/Support-only, per direct request. Deliberately
+// a single freeform field that overwrites on every save (a sticky note, not a log of entries —
+// see Models/User.js's own comment on adminNote), so this just sets it directly rather than
+// appending. Not shown to the user themselves anywhere — publicUser() (utils/session.js) never
+// includes it.
+exports.updateUserAdminNote = async (req, res) => {
+    try {
+        const actorId = req?.User.id
+        const { userId } = req.params
+        const { note } = req.body
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user id' })
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { adminNote: note || '' },
+            { returnDocument: 'after' }
+        ).select('firstName lastName email adminNote')
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        logAction(actorId, 'ADMIN_NOTE_UPDATED', user, {})
+
+        return res.status(200).json({ success: true, message: 'Note saved', user })
+    } catch (error) {
+        (req.log || logger).error('update admin note failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while saving this note',
+        })
+    }
+}
+
+// POST /admin/users/:userId/resend-reset sir, per direct request — Support/Admin one-click
+// trigger of the exact same reset-token + email flow controllers/user.js's forgotPassword uses,
+// just keyed by userId (looked up here) instead of email (typed by the user themselves). Useful
+// when a user calls in locked out and can't get to the forgot-password page themselves.
+exports.resendPasswordReset = async (req, res) => {
+    try {
+        const { userId } = req.params
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user id' })
+        }
+
+        const token = crypto.randomBytes(20).toString('hex')
+        const user = await User.findByIdAndUpdate(
+            userId,
+            {
+                resetPasswordToken: token,
+                resetPasswordExpires: Date.now() + 3600000,
+            },
+            { returnDocument: 'after' }
+        ).select('firstName lastName email')
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+
+        const frontendUrl = process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+            : 'http://localhost:5173'
+        const url = `${frontendUrl}/reset-password/${token}`
+
+        try {
+            await mailSender(
+                user.email,
+                'Reset Your Password',
+                passwordResetTemplate(`${user.firstName} ${user.lastName}`, url)
+            )
+        } catch (mailError) {
+            (req.log || logger).error('resend password reset mail failed', { err: mailError, userId })
+            return res.status(502).json({ success: false, message: 'Could not send the reset email — please try again' })
+        }
+
+        return res.status(200).json({ success: true, message: `Reset link sent to ${user.email}` })
+    } catch (error) {
+        (req.log || logger).error('resend password reset failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while sending the reset link',
         })
     }
 }
@@ -729,6 +840,70 @@ exports.bulkBanUsers = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the accounts',
+        })
+    }
+}
+
+// POST /admin/users/bulk-resend-nudge sir, per direct request ("bulk-resend welcome emails").
+// There's no separate "welcome email" to resend in this app — signup verification is OTP-based
+// and single-use (controllers/user.js's SendOtp refuses to even run once a User document
+// exists), so there's no "incomplete signup" email state to nudge back into. The real
+// equivalent that exists and is genuinely useful here: manually trigger the SAME win-back
+// nudge utils/StreakCron.js's sendWinBackNudges already sends automatically after 14 days of
+// inactivity, but on-demand for whatever subset of users the admin selects right now, instead
+// of waiting for the cron's own 14-day window. Reuses that file's exact email content
+// (winBackEmailHtml, exported for this) rather than duplicating the HTML in a second place.
+exports.bulkSendWinBackEmail = async (req, res) => {
+    try {
+        const { userIds } = req.body
+
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'userIds must be a non-empty array',
+            })
+        }
+        if (userIds.length > 200) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot act on more than 200 users at once',
+            })
+        }
+
+        const validIds = userIds.filter((id) => mongoose.isValidObjectId(id))
+        const users = await User.find({ _id: { $in: validIds } }).select('email firstName')
+
+        // best-effort, per-recipient sir — one failed send must never stop the rest of the
+        // batch, same discipline as every other bulk-mail path in this app
+        const results = await Promise.allSettled(
+            users.map((user) =>
+                mailSender(user.email, 'We miss you at AI Resume Enhancer', winBackEmailHtml(user.firstName))
+                    .then(() => {
+                        notify({
+                            user: user._id,
+                            type: 'win-back',
+                            title: 'We miss you!',
+                            message: 'It\'s been a while since your last resume review. Come back and see how your score has room to grow.',
+                            link: '/Dashboard/New-Review',
+                        })
+                    })
+            )
+        )
+
+        const sent = results.filter((r) => r.status === 'fulfilled').length
+        const failed = results.length - sent
+
+        return res.status(200).json({
+            success: true,
+            message: `Sent to ${sent} user${sent === 1 ? '' : 's'}${failed ? `, ${failed} failed` : ''}`,
+            sent,
+            failed,
+        })
+    } catch (error) {
+        (req.log || logger).error('bulk send win-back email failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while sending these emails',
         })
     }
 }
@@ -1302,7 +1477,7 @@ exports.getChatDetail = async (req, res) => {
 // each time to spot these. Read-only, no writes, cheap enough to run on every page load.
 exports.getRecruiterDataHealth = async (req, res) => {
     try {
-        const [publishedJobsWithTest, staleInvites] = await Promise.all([
+        const [publishedJobsWithTest, staleInvites, overdueJobs] = await Promise.all([
             // published jobs with a test attached sir, need the test's own status/inviteCode to
             // know if it's actually usable — same distinction as getJobApplicants' testPublished
             Job.find({ status: 'published', test: { $ne: null } })
@@ -1320,6 +1495,17 @@ exports.getRecruiterDataHealth = async (req, res) => {
                 .select('job candidate testInviteExpiresAt')
                 .populate('job', 'title companyName')
                 .populate('candidate', 'firstName lastName email')
+                .lean(),
+            // same idea as staleInvites above sir, for JobExpiryCron.js instead of
+            // TestInviteExpiryCron.js — a published job still showing here 30+ min past its own
+            // expiresAt means that hourly cron missed a run too. force-expire (below) is the
+            // manual override so an admin isn't stuck waiting on the next run.
+            Job.find({
+                status: 'published',
+                expiresAt: { $ne: null, $lt: new Date(Date.now() - 30 * 60 * 1000) },
+            })
+                .select('title companyName expiresAt recruiter')
+                .populate('recruiter', 'firstName lastName email')
                 .lean(),
         ])
 
@@ -1343,6 +1529,13 @@ exports.getRecruiterDataHealth = async (req, res) => {
                     candidateEmail: app.candidate?.email || 'Deleted candidate',
                     expiredAt: app.testInviteExpiresAt,
                 })),
+                overdueJobs: overdueJobs.map((job) => ({
+                    jobId: job._id,
+                    jobTitle: job.title,
+                    companyName: job.companyName,
+                    recruiterEmail: job.recruiter?.email || null,
+                    expiredAt: job.expiresAt,
+                })),
             },
         })
     } catch (error) {
@@ -1350,6 +1543,45 @@ exports.getRecruiterDataHealth = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while checking recruiter data health',
+        })
+    }
+}
+
+// POST /admin/jobs/:jobId/force-expire sir — the manual override for a job the hourly
+// JobExpiryCron.js should have already closed (see overdueJobs above). Same effect as
+// controllers/Job.js's closeJob, but Admin-scoped (any recruiter's job, not gated by ownership)
+// and NOT gated on expiresAt having actually passed — an admin might reasonably want to force-
+// close something for another reason too (reported job, recruiter account issue mid-review).
+exports.forceExpireJob = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { jobId } = req.params
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+
+        const job = await Job.findOneAndUpdate(
+            { _id: jobId, status: 'published' },
+            { status: 'closed' },
+            { returnDocument: 'after' }
+        )
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Published job not found' })
+        }
+
+        // target is the JOB here sir, not a user — logAction's targetUser/targetEmail fields
+        // are named for the common case but are really just a generic reference; job._id lands
+        // in targetUser, targetEmail stays undefined (harmless), and the job's own identifying
+        // info goes in details instead so the log entry is still meaningful on its own
+        logAction(adminId, 'JOB_FORCE_CLOSED', { _id: job._id }, { jobTitle: job.title, companyName: job.companyName })
+
+        return res.status(200).json({ success: true, message: 'Job closed', job })
+    } catch (error) {
+        (req.log || logger).error('force expire job failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while closing this job',
         })
     }
 }

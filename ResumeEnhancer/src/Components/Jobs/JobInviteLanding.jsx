@@ -1,16 +1,14 @@
-import { useEffect, useState, useMemo } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaMapMarkerAlt, FaBriefcase, FaArrowLeft, FaRupeeSign, FaClock, FaCheckCircle, FaBookmark, FaRegBookmark } from 'react-icons/fa'
-import toast from 'react-hot-toast'
+import { FaMapMarkerAlt, FaBriefcase, FaCheckCircle, FaEnvelopeOpenText, FaRupeeSign, FaClock } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import ApplyModal from './ApplyModal'
-import { GetPublicJob, GetMyApplications, GetSavedJobs, ToggleSavedJob } from '../../Services/operations/Job'
-import { formatJobDate } from '../../utils/formatDate'
+import { GetJobInviteByToken } from '../../Services/operations/Job'
 
 const CompensationLine = ({ job }) => {
   if (job.compensationType === 'paid') {
@@ -31,53 +29,57 @@ const CompensationLine = ({ job }) => {
   return null
 }
 
-const JobDetail = () => {
-  const { jobId } = useParams()
-  const dispatch = useDispatch()
+// candidate landing page for a direct job invite sir — see controllers/JobInvite.js's
+// getJobInviteByToken. Deliberately no jobBoard/currentPublicJob slice reuse: this is a one-off
+// token-gated view with its own loading/error shape (pending/applied/expired/not-found), not a
+// normal public job fetch.
+const JobInviteLanding = () => {
+  const { token: inviteToken } = useParams()
   const navigate = useNavigate()
-  const { isLoggedIn, token } = useSelector((state) => state.auth)
-  const { currentPublicJob: job, myApplications, savedJobIds, loading } = useSelector((state) => state.job)
+  const { isLoggedIn } = useSelector((state) => state.auth)
+  const [state, setState] = useState({ loading: true, data: null })
   const [applyOpen, setApplyOpen] = useState(false)
 
   useEffect(() => {
-    dispatch(GetPublicJob(jobId))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId])
-
-  // same reasoning as JobBoard.jsx sir — getPublicJob is a genuinely public route (no auth), so
-  // "have I applied to this one" is cross-referenced client-side against myApplications instead
-  useEffect(() => {
-    if (isLoggedIn) {
-      dispatch(GetMyApplications(token))
-      dispatch(GetSavedJobs(token))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn])
-
-  const alreadyApplied = useMemo(
-    () => myApplications.some((a) => a.job?._id === jobId),
-    [myApplications, jobId]
-  )
-  const isSaved = savedJobIds.includes(jobId)
-
-  const handleToggleSave = () => {
-    if (!isLoggedIn) return toast.error('Log in to save jobs')
-    dispatch(ToggleSavedJob(jobId, token))
-  }
+    let cancelled = false
+    ;(async () => {
+      const result = await GetJobInviteByToken(inviteToken)()
+      if (!cancelled) setState({ loading: false, data: result })
+    })()
+    return () => { cancelled = true }
+  }, [inviteToken])
 
   const handleApplyClick = () => {
     if (!isLoggedIn) {
-      navigate('/Login', { state: { from: `/Jobs/${jobId}` } })
+      navigate('/Login', { state: { from: `/Jobs/invite/${inviteToken}` } })
       return
     }
     setApplyOpen(true)
   }
 
-  if (loading || !job) {
+  if (state.loading) {
     return (
       <div className="min-h-screen bg-richblack-900 flex flex-col">
         <Navbar />
-        <Loading text="Loading the job..." />
+        <Loading text="Loading your invite..." />
+      </div>
+    )
+  }
+
+  const { data } = state
+  const job = data?.job
+
+  if (!data?.success || !job) {
+    return (
+      <div className="min-h-screen w-full bg-richblack-900 flex flex-col">
+        <Navbar />
+        <div className="flex-1 max-w-lg mx-auto px-6 py-24 w-full text-center">
+          <FaEnvelopeOpenText className="mx-auto text-3xl text-richblack-400 mb-4" />
+          <h1 className="font-display text-xl text-richblack-5 mb-2">This invite couldn't be loaded</h1>
+          <p className="text-sm text-richblack-300">{data?.message || "This invite link is invalid or has expired."}</p>
+          <Link to="/Jobs" className="inline-block mt-6 text-sm text-yellow-50 hover:underline">Browse public jobs instead</Link>
+        </div>
+        <Footer />
       </div>
     )
   }
@@ -90,31 +92,18 @@ const JobDetail = () => {
       <Navbar />
 
       <div className="flex-1 max-w-3xl mx-auto px-6 py-16 w-full">
-        <Link to="/Jobs" className="inline-flex items-center gap-2 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200 mb-6">
-          <FaArrowLeft /> Back to jobs
-        </Link>
+        <span className="inline-flex items-center gap-2 px-3 py-1 text-[11px] font-semibold rounded-full bg-yellow-50/10 text-yellow-25 border border-yellow-50/30 mb-6">
+          <FaEnvelopeOpenText /> You've been personally invited to this role
+        </span>
 
         <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-2xl text-richblack-5">{job.title}</h1>
-              <p className="text-warm-200 mt-1">{job.companyName}</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleToggleSave}
-              title={isSaved ? 'Remove from saved jobs' : 'Save this job'}
-              className="shrink-0 text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer text-lg"
-            >
-              {isSaved ? <FaBookmark className="text-yellow-50" /> : <FaRegBookmark />}
-            </button>
-          </div>
+          <h1 className="font-display text-2xl text-richblack-5">{job.title}</h1>
+          <p className="text-warm-200 mt-1">{job.companyName}</p>
 
           <div className="flex items-center gap-4 mt-4 text-sm text-richblack-300 flex-wrap">
             {job.location && <span className="flex items-center gap-1.5"><FaMapMarkerAlt /> {job.location}</span>}
             {job.employmentType && <span className="flex items-center gap-1.5"><FaBriefcase /> {job.employmentType}</span>}
             <CompensationLine job={job} />
-            {job.createdAt && <span className="text-richblack-400">Posted {formatJobDate(job.createdAt)}</span>}
           </div>
 
           {job.skills?.length > 0 && (
@@ -130,13 +119,13 @@ const JobDetail = () => {
           <p className="text-sm text-richblack-200 whitespace-pre-wrap mt-6 leading-relaxed">{job.description}</p>
 
           <div className="mt-8">
-            {alreadyApplied ? (
+            {data.status === 'applied' ? (
               <>
                 <span className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full bg-caribgreen-700/30 text-caribgreen-100 border border-caribgreen-700">
                   <FaCheckCircle /> Applied
                 </span>
                 <p className="text-xs text-richblack-400 mt-3">
-                  You've already applied to this job. Check{' '}
+                  You've already applied to this invite. Check{' '}
                   <Link to="/Dashboard/My-Applications" className="text-yellow-50 hover:underline">My Applications</Link>{' '}
                   for its status.
                 </p>
@@ -145,8 +134,8 @@ const JobDetail = () => {
               <>
                 <IconBtn text="Apply" onclick={handleApplyClick} customClasses="w-full justify-center sm:w-auto" />
                 <p className="text-xs text-richblack-400 mt-3">
-                  Applying takes a couple of minutes — we'll ask a few quick questions and a resume
-                  upload. The recruiter may invite you to a short proctored test afterward.
+                  This is a private listing — you're seeing it because {job.companyName} invited
+                  you directly. Applying takes a couple of minutes.
                 </p>
               </>
             )}
@@ -158,7 +147,7 @@ const JobDetail = () => {
 
       {applyOpen && (
         <ApplyModal
-          jobId={jobId}
+          jobId={job._id}
           onClose={() => setApplyOpen(false)}
           onSuccess={() => {
             setApplyOpen(false)
@@ -170,4 +159,4 @@ const JobDetail = () => {
   )
 }
 
-export default JobDetail
+export default JobInviteLanding

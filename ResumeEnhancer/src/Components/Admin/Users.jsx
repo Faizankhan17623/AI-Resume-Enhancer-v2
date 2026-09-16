@@ -10,7 +10,7 @@ import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
-import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, DeleteUser, PermanentlySuspendSupport } from '../../Services/operations/Admin'
+import { GetUsers, UpdateUserRole, BulkUpdateUserRole, UpdateUserPlan, AdjustCredits, GrantCreditsToAll, BanUser, BulkBanUsers, BulkSendWinBackEmail, DeleteUser, PermanentlySuspendSupport } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import { getProviderMeta } from '../../utils/authProvider'
 import UserDetailModal from './UserDetailModal'
@@ -28,6 +28,20 @@ const USER_CSV_COLUMNS = [
 ]
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
+// common ban reasons sir, per direct request — a quick pick instead of retyping the same
+// explanation every time. SweetAlert2's <select> input returns the OBJECT KEY on selection, not
+// the display label, so each key here is already the exact string that gets stored as the ban
+// reason — no separate mapping step needed. 'other' is the one key handleBan treats specially
+// (opens the existing freeform textarea instead of using the key literally).
+const SUSPENSION_REASON_PRESETS = {
+  'Spam or abusive behavior on the platform': 'Spam or abuse',
+  'Fraudulent activity (fake payments, referral abuse, etc.)': 'Fraudulent activity',
+  'Violation of the platform\'s terms of service': 'Terms of service violation',
+  'Multiple fake/duplicate accounts': 'Multiple fake accounts',
+  'Harassment of another user or staff member': 'Harassment',
+  other: 'Other — type your own reason',
+}
 
 // Support only ever sees User/Recruiter accounts sir (matches the backend's own restriction in
 // Admin.js's getUsers — a Support caller filtering by role=Support there now falls back to the
@@ -171,6 +185,14 @@ const Users = () => {
     setSelected([])
   }
 
+  // manual on-demand trigger of the same win-back nudge the 14-day-inactivity cron already
+  // sends automatically sir, per direct request — no confirm dialog needed, sending an email
+  // reminder is non-destructive unlike ban/role-change above
+  const handleBulkNudge = () => {
+    dispatch(BulkSendWinBackEmail(selected, token, page, search, roleFilter, withRowBusy('Sending emails...')))
+    setSelected([])
+  }
+
   // ask how many bonus credits to grant this one user sir — bonus-only, positive amounts only,
   // always emails the user. Matches handleGrantCreditsToAll below, just scoped to one row.
   const handleCredits = async (target) => {
@@ -251,21 +273,47 @@ const Users = () => {
     // for that specific case (Backend/controllers/Admin.js's banUser). Enforced here too so the
     // prompt itself explains why, instead of a generic error toast after a blank submit.
     const isSupportTarget = target.role === 'Support'
-    const { value, isConfirmed } = await Swal.fire({
+
+    // preset picker first sir, per direct request — a dropdown of common ban reasons plus an
+    // "Other" fallback that opens the existing freeform textarea. Two separate Swal.fire calls
+    // rather than one combined dialog: SweetAlert2's own input types are mutually exclusive
+    // (can't show a <select> AND a <textarea> in one prompt), and this keeps the common case
+    // (pick a preset, done) to a single click instead of always showing a textarea to edit.
+    const { value: presetChoice, isConfirmed: pickedPreset } = await Swal.fire({
       ...swalDark,
       title: `Suspend ${target.email}?`,
       html: isSupportTarget ? 'Support accounts get exactly ONE appeal, ever, before this becomes final.' : undefined,
-      input: 'text',
-      inputPlaceholder: 'Reason for the ban',
+      input: 'select',
+      inputOptions: SUSPENSION_REASON_PRESETS,
+      inputPlaceholder: 'Choose a reason',
       customClass: { input: 'swal-dark-select' },
-      inputValidator: isSupportTarget
-        ? (value) => (!value || !value.trim()) ? 'A reason is required when suspending a Support account' : undefined
-        : undefined,
+      inputValidator: (value) => (!value) ? 'Pick a reason, or choose Other to type your own' : undefined,
       showCancelButton: true,
-      confirmButtonText: 'Suspend',
+      confirmButtonText: 'Next',
       confirmButtonColor: '#C1443C',
     })
-    if (isConfirmed) dispatch(BanUser(target._id, true, value || '', token, page, search, roleFilter, withRowBusy('Suspending the account...')))
+    if (!pickedPreset) return
+
+    let reason = presetChoice
+    if (presetChoice === 'other') {
+      const { value, isConfirmed } = await Swal.fire({
+        ...swalDark,
+        title: `Suspend ${target.email}?`,
+        input: 'text',
+        inputPlaceholder: 'Reason for the ban',
+        customClass: { input: 'swal-dark-select' },
+        inputValidator: isSupportTarget
+          ? (value) => (!value || !value.trim()) ? 'A reason is required when suspending a Support account' : undefined
+          : undefined,
+        showCancelButton: true,
+        confirmButtonText: 'Suspend',
+        confirmButtonColor: '#C1443C',
+      })
+      if (!isConfirmed) return
+      reason = value || ''
+    }
+
+    dispatch(BanUser(target._id, true, reason, token, page, search, roleFilter, withRowBusy('Suspending the account...')))
   }
 
   // standalone permanent-suspend sir — no pending appeal required first, unlike the "Reject
@@ -451,6 +499,12 @@ const Users = () => {
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer"
             >
               Promote to Support
+            </button>
+            <button
+              onClick={handleBulkNudge}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-700/20 text-yellow-25 border border-yellow-700 hover:bg-yellow-700/30 transition-colors duration-200 cursor-pointer"
+            >
+              Send nudge email
             </button>
             <button
               onClick={() => setSelected([])}

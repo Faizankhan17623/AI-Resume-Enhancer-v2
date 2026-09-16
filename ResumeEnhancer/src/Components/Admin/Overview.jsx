@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins, FaUserSecret } from 'react-icons/fa'
+import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins, FaUserSecret, FaUserSlash, FaBriefcase, FaUserTie } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
@@ -143,6 +143,10 @@ const Overview = () => {
     ]),
     { icon: <FaFileAlt className="text-yellow-50" />, label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
     { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
+    // three small system-health tiles sir, per direct request — genuinely missing before now
+    { icon: <FaUserSlash className="text-pink-100" />, label: 'Banned Users', value: stats.users.banned, to: '/Admin/Users' },
+    { icon: <FaBriefcase className="text-blue-100" />, label: 'Published Jobs', value: stats.jobs.published, to: '/Admin/Recruiter-Data-Health' },
+    { icon: <FaUserTie className="text-warm-25" />, label: 'Pending Recruiter Apps', value: stats.recruiterApplications.pending, to: '/Admin/Recruiter-Applications' },
   ]
 
   return (

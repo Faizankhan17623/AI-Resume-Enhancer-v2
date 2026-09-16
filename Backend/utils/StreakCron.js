@@ -274,4 +274,8 @@ module.exports = {
     sendWinBackNudges,
     sendMonthlyHealthCheck,
     sendInterviewPrepNudges,
+    // exported for controllers/Admin.js's bulkSendWinBackEmail sir — the manual on-demand
+    // trigger of this exact same content for an admin-picked subset, rather than duplicating
+    // the HTML string in a second file
+    winBackEmailHtml,
 }

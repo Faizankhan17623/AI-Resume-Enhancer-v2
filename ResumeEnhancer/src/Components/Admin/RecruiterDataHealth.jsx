@@ -1,12 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { FaHeartbeat, FaExclamationTriangle, FaClock } from 'react-icons/fa'
+import { FaHeartbeat, FaExclamationTriangle, FaClock, FaTimesCircle } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
-import { GetRecruiterDataHealth } from '../../Services/operations/Admin'
+import { GetRecruiterDataHealth, ForceExpireJob } from '../../Services/operations/Admin'
 import { utcDateToIstDisplay } from '../../utils/istTime'
 
 // per direct request sir — this session's own debugging kept turning up the same two things by
@@ -18,11 +18,16 @@ const RecruiterDataHealth = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { recruiterDataHealth: health, loading } = useSelector((state) => state.admin)
+  const [closingId, setClosingId] = useState(null)
 
   useEffect(() => {
     dispatch(GetRecruiterDataHealth(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleForceExpire = (jobId) => {
+    dispatch(ForceExpireJob(jobId, token, (busy) => setClosingId(busy ? jobId : null)))
+  }
 
   return (
     <div className="min-h-screen w-full bg-richblack-900">
@@ -92,6 +97,45 @@ const RecruiterDataHealth = () => {
                       <span className="shrink-0 text-xs text-pink-100">
                         Expired {utcDateToIstDisplay(row.expiredAt)}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+              <h3 className="text-sm font-semibold text-richblack-5 mb-1 flex items-center gap-2">
+                <FaTimesCircle className="text-warm-25" /> Published jobs past their expiry (cron may have missed a run)
+              </h3>
+              <p className="text-xs text-richblack-400 mb-4">
+                These jobs are still 'published' more than 30 minutes past their own expiresAt —
+                JobExpiryCron.js should have already closed them. Force-close below as a manual
+                override instead of waiting on the next run.
+              </p>
+              {health.overdueJobs.length === 0 ? (
+                <p className="text-sm text-richblack-300">None right now.</p>
+              ) : (
+                <div className="space-y-2">
+                  {health.overdueJobs.map((row) => (
+                    <div key={row.jobId} className="rounded-lg bg-richblack-700/40 p-3 flex items-center justify-between gap-4 flex-wrap">
+                      <div className="min-w-0">
+                        <p className="text-sm text-richblack-5 font-medium truncate">{row.jobTitle}</p>
+                        <p className="text-xs text-richblack-400 truncate">
+                          {row.companyName}{row.recruiterEmail ? ` · ${row.recruiterEmail}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs text-pink-100">
+                          Expired {utcDateToIstDisplay(row.expiredAt)}
+                        </span>
+                        <button
+                          onClick={() => handleForceExpire(row.jobId)}
+                          disabled={closingId === row.jobId}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-700/20 text-pink-100 border border-pink-700 hover:bg-pink-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {closingId === row.jobId ? 'Closing...' : 'Force close'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

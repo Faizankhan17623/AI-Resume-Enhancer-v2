@@ -4,12 +4,12 @@ import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle, FaBell } from 'react-icons/fa'
+import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle, FaBell, FaBookmark, FaRegBookmark } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import { staggerContainer, fadeUp } from '../../utils/motion'
-import { GetPublicJobs, GetMyApplications } from '../../Services/operations/Job'
+import { GetPublicJobs, GetMyApplications, GetSavedJobs, ToggleSavedJob } from '../../Services/operations/Job'
 import { formatJobDate } from '../../utils/formatDate'
 import { apiConnector } from '../../Services/apiConnector'
 import { JobAlertApi } from '../../Services/Apis/JobAlertApi'
@@ -21,7 +21,7 @@ const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship'
 const JobBoard = () => {
   const dispatch = useDispatch()
   const { isLoggedIn, token } = useSelector((state) => state.auth)
-  const { publicJobs, publicJobsPagination, myApplications, loading } = useSelector((state) => state.job)
+  const { publicJobs, publicJobsPagination, myApplications, savedJobIds, loading } = useSelector((state) => state.job)
   const [search, setSearch] = useState('')
   const [location, setLocation] = useState('')
   const [employmentType, setEmploymentType] = useState('')
@@ -38,7 +38,10 @@ const JobBoard = () => {
   // can't come from the backend response itself — fetched separately here (only when logged in)
   // and cross-referenced client-side against the public job list.
   useEffect(() => {
-    if (isLoggedIn) dispatch(GetMyApplications(token))
+    if (isLoggedIn) {
+      dispatch(GetMyApplications(token))
+      dispatch(GetSavedJobs(token))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn])
 
@@ -46,6 +49,14 @@ const JobBoard = () => {
     () => new Set(myApplications.map((a) => a.job?._id).filter(Boolean)),
     [myApplications]
   )
+  const savedJobIdSet = useMemo(() => new Set(savedJobIds), [savedJobIds])
+
+  const handleToggleSave = (e, jobId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isLoggedIn) return toast.error('Log in to save jobs')
+    dispatch(ToggleSavedJob(jobId, token))
+  }
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -136,6 +147,12 @@ const JobBoard = () => {
           >
             <FaBell className="text-xs" /> Save as alert
           </button>
+          <Link
+            to="/Jobs/Saved"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border border-richblack-600 text-richblack-100 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
+          >
+            <FaBookmark className="text-xs" /> Saved
+          </Link>
         </form>
 
         {loading ? (
@@ -161,6 +178,14 @@ const JobBoard = () => {
                             <FaCheckCircle className="text-[9px]" /> Applied
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleSave(e, job._id)}
+                          title={savedJobIdSet.has(job._id) ? 'Remove from saved jobs' : 'Save this job'}
+                          className="ml-auto text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer shrink-0"
+                        >
+                          {savedJobIdSet.has(job._id) ? <FaBookmark className="text-yellow-50" /> : <FaRegBookmark />}
+                        </button>
                       </div>
                       <p className="text-sm text-warm-200 mt-0.5">{job.companyName}</p>
                       <div className="flex items-center gap-4 mt-3 text-xs text-richblack-300 flex-wrap">

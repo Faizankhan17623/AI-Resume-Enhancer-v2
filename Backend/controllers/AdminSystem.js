@@ -547,6 +547,35 @@ exports.getAuditLogs = async (req, res) => {
     }
 }
 
+// GET /admin/my-activity sir, per direct request — Support has no access to the full audit log
+// (getAuditLogs above is isAdmin-only), but "what have I personally done today" is a genuinely
+// different, narrower question a Support agent can reasonably ask about their OWN actions. Hard-
+// scoped to req.User.id and today's date — never accepts a userId or date range from the query,
+// so there's no way to widen this into the general audit log through this endpoint.
+exports.getMyActivity = async (req, res) => {
+    try {
+        const actorId = req?.User.id
+
+        const startOfToday = new Date()
+        startOfToday.setHours(0, 0, 0, 0)
+
+        const logs = await AuditLog.find({
+            actor: actorId,
+            createdAt: { $gte: startOfToday },
+        })
+            .sort({ createdAt: -1 })
+            .limit(200)
+
+        return res.status(200).json({ success: true, logs })
+    } catch (error) {
+        (req.log || logger).error('get my activity failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while loading your activity',
+        })
+    }
+}
+
 // GET /admin/credit-grants?adminPage=1&referralPage=1&search=foo — where every bonus credit
 // came from sir, split into its two real sources rather than merged into one feed:
 //   - "admin" section: CREDIT_ADJUST (single-user, Admin.js's adjustCredits) and
@@ -936,19 +965,21 @@ exports.getGlobalSearch = async (req, res) => {
         const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const regex = { $regex: safe, $options: 'i' }
 
+        // number added to the $or sir, per direct request — a Support agent on a call often
+        // only has the caller's phone number to search by, not their email/name
         const userFilter = {
             role: { $ne: 'Admin' },
-            $or: [{ email: regex }, { firstName: regex }, { lastName: regex }],
+            $or: [{ email: regex }, { firstName: regex }, { lastName: regex }, { number: regex }],
         }
 
         const [users, matchingUserIds] = await Promise.all([
             User.find(userFilter)
-                .select('firstName lastName email role isBanned SubType')
+                .select('firstName lastName email number role isBanned SubType')
                 .sort({ createdAt: -1 })
                 .limit(8),
             // a payment doesn't store the buyer's email itself sir, so a search like
             // "faizan@" only turns up payments via this separate user lookup
-            User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }] }).select('_id'),
+            User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }, { number: regex }] }).select('_id'),
         ])
 
         const payments = await Payment.find({

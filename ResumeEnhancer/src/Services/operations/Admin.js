@@ -8,14 +8,14 @@ import {
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications, AdminRecruiterDataHealth } from '../Apis/AdminApi.js'
 
 const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
-const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, adjustcredits, grantcreditsall, deleteuser } = AdminUsers
+const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, bulkresendnudge, adjustcredits, grantcreditsall, deleteuser, updatenote, resendreset } = AdminUsers
 const { allpayments } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
 const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
 const { allreports, updatereport, deletereport } = AdminReports
 const { list: recruiterApplicationsUrl, approve: approveRecruiterUrl, reject: rejectRecruiterUrl } = AdminRecruiterApplications
-const { get: recruiterDataHealthUrl } = AdminRecruiterDataHealth
+const { get: recruiterDataHealthUrl, forceExpireJob: forceExpireJobUrl } = AdminRecruiterDataHealth
 
 // ---------- overview sir ----------
 
@@ -258,6 +258,57 @@ export function GetUserDetail(userId, token) {
     }
 }
 
+// internal Admin/Support-only sticky note sir, per direct request — overwrites the note
+// (a sticky note, not a log of entries) and refetches the detail drawer so the saved value
+// reflects what's actually stored
+export function UpdateUserAdminNote(userId, note, token, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("PATCH", `${updatenote}/${userId}/note`, { note }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Note saved")
+            dispatch(GetUserDetail(userId, token))
+        } catch (error) {
+            logApiError("Error saving the note", error)
+            toast.error(error?.response?.data?.message || "Could not save this note")
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
+// one-click trigger of the exact same reset-token + email flow forgotPassword uses sir, per
+// direct request — for when a user calls in locked out and can't reach the forgot-password
+// page themselves. No list refresh needed here (nothing about the user list itself changes).
+export function ResendPasswordReset(userId, token, onLoadingChange) {
+    return async () => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("POST", `${resendreset}/${userId}/resend-reset`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+        } catch (error) {
+            logApiError("Error resending the password reset", error)
+            toast.error(error?.response?.data?.message || "Could not send the reset link")
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
 // one shared helper sir — every user action follows the same call → refresh pattern.
 // `onLoadingChange` shows the caller's real centered spinner instead of a toast.loading.
 const userAction = (method, url, body, token, page, search, roleFilter = "", onLoadingChange) => {
@@ -338,6 +389,12 @@ export const BulkUpdateUserRole = (userIds, role, token, page, search, roleFilte
 
 export const DeleteUser = (userId, token, page, search, roleFilter, onLoadingChange) =>
     userAction("DELETE", `${deleteuser}/${userId}`, null, token, page, search, roleFilter, onLoadingChange)
+
+// manual on-demand trigger of the same win-back nudge the 14-day-inactivity cron already sends
+// automatically sir, per direct request ("bulk-resend welcome emails" — see
+// Backend/controllers/Admin.js's bulkSendWinBackEmail for why THIS is the real equivalent)
+export const BulkSendWinBackEmail = (userIds, token, page, search, roleFilter, onLoadingChange) =>
+    userAction("POST", bulkresendnudge, { userIds }, token, page, search, roleFilter, onLoadingChange)
 
 // plain async call sir, not a thunk — the search bar owns its own result/loading state
 // locally rather than parking transient dropdown results in the shared admin slice
@@ -770,6 +827,31 @@ export function GetRecruiterDataHealth(token) {
             toast.error(error?.response?.data?.message || "Could not load recruiter data health")
         } finally {
             dispatch(setLoading(false))
+        }
+    }
+}
+
+// force-closes a published job that's overdue for the hourly JobExpiryCron.js to have caught
+// sir — the manual override shown on the "overdue jobs" row in RecruiterDataHealth.jsx
+export function ForceExpireJob(jobId, token, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("POST", `${forceExpireJobUrl}/${jobId}/force-expire`, null, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Job closed")
+            dispatch(GetRecruiterDataHealth(token))
+        } catch (error) {
+            logApiError("Error force-closing the job", error)
+            toast.error(error?.response?.data?.message || "Could not close this job")
+        } finally {
+            onLoadingChange?.(false)
         }
     }
 }

@@ -117,6 +117,14 @@ const jobApplicationSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // recruiter's own PRIVATE notes on this candidate sir, per direct request — never
+        // shown to the candidate anywhere, purely for "called them, seemed strong" type
+        // reminders. Same "sticky note, not a log" shape as User.adminNote.
+        recruiterNotes: {
+            type: String,
+            trim: true,
+            maxlength: 2000,
+        },
         // AI fit-score sir — computed automatically right after the application is created (see
         // controllers/Job.js's applyToJob + services/fitScoreService.js), best-effort: null means
         // either "not scored yet" or "the recruiter was out of AI-score quota this month", the

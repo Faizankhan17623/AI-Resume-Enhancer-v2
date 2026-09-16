@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaTimes } from 'react-icons/fa'
 import { modalBackdrop } from '../../utils/motion'
-import { GetUserDetail, RejectSupportAppeal } from '../../Services/operations/Admin'
+import { GetUserDetail, RejectSupportAppeal, UpdateUserAdminNote, ResendPasswordReset } from '../../Services/operations/Admin'
 import { getProviderMeta } from '../../utils/authProvider'
 import Loading from '../extra/Loading'
 
@@ -20,11 +20,27 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
   const { userDetail, userDetailLoading } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
   const [rejectingAppeal, setRejectingAppeal] = useState(false)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [sendingReset, setSendingReset] = useState(false)
+
+  const user = userDetail?.user
 
   useEffect(() => {
     if (userId) dispatch(GetUserDetail(userId, token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
+
+  // seeds the draft from whatever's actually stored sir, keyed on the user id (not the whole
+  // user object) so a background refetch after saving doesn't clobber mid-typing — same narrow-
+  // dependency reasoning as JobDetailRecruiter.jsx's own compensation-field seeding effect
+  useEffect(() => {
+    if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNoteDraft(user.adminNote || '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id])
 
   useEffect(() => {
     const handleEscape = (e) => { if (e.key === 'Escape') onClose() }
@@ -32,9 +48,15 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
     return () => document.removeEventListener('keydown', handleEscape)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const user = userDetail?.user
   const activity = userDetail?.activity
+
+  const handleSaveNote = () => {
+    dispatch(UpdateUserAdminNote(user._id, noteDraft.trim(), token, setSavingNote))
+  }
+
+  const handleResendReset = () => {
+    dispatch(ResendPasswordReset(user._id, token, setSendingReset))
+  }
 
   const handleRejectAppeal = async () => {
     const { isConfirmed } = await Swal.fire({
@@ -154,6 +176,37 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* internal Admin/Support-only sticky note sir, per direct request — never
+                    shown to the user themselves anywhere, purely context for whoever handles
+                    this account next */}
+                <div className="mb-5">
+                  <p className="text-[10px] text-richblack-400 mb-1.5 font-semibold uppercase tracking-wide">Internal note (staff only)</p>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    placeholder="e.g. Called them on 12 Sep, seemed genuine — flagged twice for refund abuse before"
+                    className="w-full min-h-20 rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-500 focus:outline-none focus:border-yellow-50 resize-none"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={handleSaveNote}
+                      disabled={savingNote || noteDraft.trim() === (user.adminNote || '')}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingNote ? 'Saving...' : 'Save note'}
+                    </button>
+                    {/* one-click for a user who calls in locked out sir, per direct request —
+                        reuses the exact same reset-token + email flow forgotPassword itself uses */}
+                    <button
+                      onClick={handleResendReset}
+                      disabled={sendingReset}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-700/20 text-blue-100 border border-blue-700 hover:bg-blue-700/30 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sendingReset ? 'Sending...' : 'Resend password reset'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-5">

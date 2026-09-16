@@ -1,13 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaPlus, FaUsers, FaLock } from 'react-icons/fa'
+import { FaPlus, FaUsers, FaLock, FaBroom } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
-import { GetMyJobs } from '../../Services/operations/Job'
+import { GetMyJobs, CloseExpiredJobs } from '../../Services/operations/Job'
 import { formatJobDate } from '../../utils/formatDate'
 
 const statusBadge = {
@@ -23,11 +23,16 @@ const JobList = () => {
   const { token } = useSelector((state) => state.auth)
   const { myJobs, loading } = useSelector((state) => state.job)
   const { isLocked } = useRecruiterLock()
+  const [closingExpired, setClosingExpired] = useState(false)
 
   useEffect(() => {
     dispatch(GetMyJobs(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleCloseExpired = () => {
+    dispatch(CloseExpiredJobs(token, setClosingExpired))
+  }
 
   return (
     <RecruiterLayout>
@@ -35,17 +40,28 @@ const JobList = () => {
         <title>My Jobs | Resumify Recruiter</title>
       </Helmet>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <h1 className="font-display text-xl text-richblack-5">My Jobs</h1>
-        {isLocked ? (
-          <span title="Locked until an admin approves your recruiter account">
-            <IconBtn text="New Job" disabled><FaLock /></IconBtn>
-          </span>
-        ) : (
-          <Link to="/Recruiter/New">
-            <IconBtn text="New Job"><FaPlus /></IconBtn>
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {/* manual on-demand trigger of the exact same expiry the hourly cron already does
+              sir, per direct request — closes just THIS recruiter's own overdue jobs */}
+          <button
+            onClick={handleCloseExpired}
+            disabled={closingExpired}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full border border-richblack-600 text-richblack-100 hover:bg-richblack-800 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaBroom className="text-xs" /> {closingExpired ? 'Closing...' : 'Close expired jobs'}
+          </button>
+          {isLocked ? (
+            <span title="Locked until an admin approves your recruiter account">
+              <IconBtn text="New Job" disabled><FaLock /></IconBtn>
+            </span>
+          ) : (
+            <Link to="/Recruiter/New">
+              <IconBtn text="New Job"><FaPlus /></IconBtn>
+            </Link>
+          )}
+        </div>
       </div>
 
       {loading ? (

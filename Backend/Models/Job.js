@@ -71,6 +71,16 @@ const jobSchema = new mongoose.Schema(
             default: 'draft',
             index: true,
         },
+        // 'invite_only' jobs sir, per direct request — never appear on the public /Jobs board
+        // (excluded in listPublicJobs's query) and have no public apply flow at all. The
+        // recruiter instead sends a direct invite (Models/JobInvite.js) to a specific email;
+        // only that invited person can reach the application form, via a token-gated link, not
+        // by browsing the board. A 'public' job works exactly as before this field existed.
+        visibility: {
+            type: String,
+            enum: ['public', 'invite_only'],
+            default: 'public',
+        },
         // set once the recruiter attaches a proctored test to this job sir — optional until then,
         // a job can exist and accept applications before a test is built for it
         test: {
