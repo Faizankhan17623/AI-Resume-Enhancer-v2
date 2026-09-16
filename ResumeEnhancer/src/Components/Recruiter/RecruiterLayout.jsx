@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiLogOut } from 'react-icons/fi'
-import { FaLock } from 'react-icons/fa'
+import { FaLock, FaSearch } from 'react-icons/fa'
 import RecruiterNav from './RecruiterNav'
 import PageTransition from '../extra/PageTransition'
 import useTheme from '../../Hooks/useTheme'
@@ -29,6 +29,16 @@ const RecruiterLayout = ({ children }) => {
           </span>
         </div>
         <div className="flex items-center gap-2.5">
+          {/* opens the globally-mounted CommandPalette (App.jsx) sir — see that component's
+              own comment on why this fires a plain DOM event rather than prop-drilling */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+            aria-label="Search (Ctrl+K)"
+            title="Search (Ctrl+K)"
+            className="p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+          >
+            <FaSearch className="text-sm" />
+          </button>
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"

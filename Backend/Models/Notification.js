@@ -13,7 +13,11 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ['streak-break', 'win-back', 'digest', 'health-check', 'interview-prep', 'system', 'testimonial'],
+            // 'interview-scheduled' sir — the recruiter-interview-scheduling feature
+            // (Models/InterviewSchedule.js), deliberately distinct from 'interview-prep'
+            // (the unrelated mock-interview nudge) so the two never get confused in the bell
+            // dropdown or in a future "notification preferences" filter
+            enum: ['streak-break', 'win-back', 'digest', 'health-check', 'interview-prep', 'interview-scheduled', 'system', 'testimonial'],
             default: 'system',
         },
         title: {

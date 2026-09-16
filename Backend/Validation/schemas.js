@@ -367,6 +367,18 @@ const compensationRefinements = (schema) => schema.refine(
     { message: 'Enter the internship/unpaid duration in months', path: ['unpaidDurationMonths'] }
 )
 
+// optional recruiter-set interview-eligibility threshold sir — see Models/Job.js's own comment
+// on interviewEligibilityMinScore for why this is a plain percentage, not tied to any one test's
+// marks scale
+const interviewEligibilityMinScore = z.number().min(0).max(100).optional()
+
+// PATCH /jobs/:jobId/interview-eligibility body sir — see
+// controllers/Job.js's updateInterviewEligibilityThreshold for why this is its own tiny schema
+// separate from updateJobSchema (that one only ever applies to a draft job)
+const updateInterviewEligibilitySchema = z.object({
+    interviewEligibilityMinScore: z.number().min(0).max(100).optional(),
+})
+
 const createJobSchema = compensationRefinements(z.object({
     companyName: z.string({ error: 'Company name is required' }).trim().min(1, 'Company name is required').max(150),
     title: z.string({ error: 'Title is required' }).trim().min(1, 'Title is required').max(150),
@@ -374,6 +386,7 @@ const createJobSchema = compensationRefinements(z.object({
     location: z.string().trim().max(150).optional(),
     employmentType: employmentType.optional(),
     skills: z.array(z.string().trim().max(60)).max(30).optional(),
+    interviewEligibilityMinScore,
     ...compensationFields,
 }))
 
@@ -384,6 +397,7 @@ const updateJobSchema = compensationRefinements(z.object({
     location: z.string().trim().max(150).optional(),
     employmentType: employmentType.optional(),
     skills: z.array(z.string().trim().max(60)).max(30).optional(),
+    interviewEligibilityMinScore,
     ...compensationFields,
 }))
 
@@ -521,6 +535,36 @@ const deviceAlertResolveSchema = z.object({
     action: z.enum(['confirm', 'deny'], { error: 'Action must be confirm or deny' }),
 })
 
+// ---------------------------------------------------------------------------
+// interview scheduling sir — see Models/InterviewSchedule.js, controllers/Interview.js
+// ---------------------------------------------------------------------------
+const interviewSlotSchema = z.object({
+    start: z.coerce.date({ error: 'A valid start time is required' }),
+    end: z.coerce.date({ error: 'A valid end time is required' }),
+}).refine((slot) => slot.end > slot.start, {
+    message: 'A slot\'s end time must be after its start time',
+    path: ['end'],
+})
+
+// recruiter-authored only sir — the candidate's confirm-slot request never carries a slot body,
+// only an index into what the recruiter already proposed (see confirmSlotSchema below)
+const scheduleInterviewSchema = z.object({
+    slots: z.array(interviewSlotSchema).min(2, 'Propose at least 2 time slots').max(4, 'Propose at most 4 time slots'),
+    meetingLink: z.string().trim().max(500).optional(),
+    notes: z.string().trim().max(1000).optional(),
+}).refine(
+    (data) => data.slots.every((slot) => slot.start.getTime() > Date.now()),
+    { message: 'Every proposed slot must be in the future', path: ['slots'] }
+)
+
+const confirmSlotSchema = z.object({
+    slotIndex: z.number({ error: 'A slot must be selected' }).int().min(0).max(3),
+})
+
+const cancelInterviewSchema = z.object({
+    reason: z.string().trim().max(500).optional(),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -592,4 +636,10 @@ module.exports = {
 
     // new-device login alert
     deviceAlertResolveSchema,
+
+    // interview scheduling
+    scheduleInterviewSchema,
+    confirmSlotSchema,
+    cancelInterviewSchema,
+    updateInterviewEligibilitySchema,
 }

@@ -10,7 +10,7 @@ import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
-import { GetJob, PublishJob, CloseJob, UpdateJob, DeleteJob } from '../../Services/operations/Job'
+import { GetJob, PublishJob, CloseJob, UpdateJob, UpdateInterviewEligibility, DeleteJob } from '../../Services/operations/Job'
 import { PublishTest } from '../../Services/operations/Test'
 import { swalDark } from '../../utils/accountShared'
 
@@ -37,6 +37,8 @@ const JobDetailRecruiter = () => {
   const [unpaidDurationMonths, setUnpaidDurationMonths] = useState('')
   const [certificateProvided, setCertificateProvided] = useState(false)
   const [savingComp, setSavingComp] = useState(false)
+  const [interviewMinScore, setInterviewMinScore] = useState('')
+  const [savingInterviewThreshold, setSavingInterviewThreshold] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyLabel, setBusyLabel] = useState('Working...')
   const withBusy = (label) => (next) => {
@@ -63,6 +65,7 @@ const JobDetailRecruiter = () => {
     setCtcMax(job.ctcMax ?? '')
     setUnpaidDurationMonths(job.unpaidDurationMonths ?? '')
     setCertificateProvided(!!job.certificateProvided)
+    setInterviewMinScore(job.interviewEligibilityMinScore ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?._id])
 
@@ -110,6 +113,18 @@ const JobDetailRecruiter = () => {
       unpaidDurationMonths: compensationType === 'unpaid' ? Number(unpaidDurationMonths) : undefined,
       certificateProvided: compensationType === 'unpaid' ? certificateProvided : undefined,
     }, token, setSavingComp))
+  }
+
+  // leaving this blank keeps every completed_test applicant interview-eligible sir (no gate at
+  // all) — see Models/Job.js's own comment on interviewEligibilityMinScore. Uses its OWN
+  // endpoint (not UpdateJob) since UpdateJob only works on a 'draft' job — this threshold needs
+  // to be settable on a published job too, see the action creator's own comment.
+  const handleSaveInterviewThreshold = async () => {
+    const value = interviewMinScore === '' ? undefined : Number(interviewMinScore)
+    if (value !== undefined && (Number.isNaN(value) || value < 0 || value > 100)) {
+      return toast.error("Enter a percentage between 0 and 100, or leave it blank")
+    }
+    await dispatch(UpdateInterviewEligibility(jobId, value, token, setSavingInterviewThreshold))
   }
 
   // a mistake sir, per direct request — deletes the job outright, every applicant gets an email
@@ -359,6 +374,28 @@ const JobDetailRecruiter = () => {
               </span>
             </div>
           )}
+        </div>
+
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="text-sm font-semibold text-richblack-5 mb-1">Interview Eligibility</h2>
+          <p className="text-xs text-richblack-400 mb-3">
+            Optional — only candidates scoring at or above this percentage on the test can be
+            scheduled for an interview. Leave blank to allow scheduling for anyone who completes
+            the test, regardless of score.
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 max-w-[160px]">
+              <input
+                type="number" min="0" max="100"
+                value={interviewMinScore}
+                onChange={(e) => setInterviewMinScore(e.target.value)}
+                placeholder="e.g. 90"
+                className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+              />
+            </div>
+            <span className="text-sm text-richblack-400">%</span>
+            <IconBtn text="Save" onclick={handleSaveInterviewThreshold} disabled={savingInterviewThreshold} customClasses="text-sm" />
+          </div>
         </div>
       </div>
     </RecruiterLayout>

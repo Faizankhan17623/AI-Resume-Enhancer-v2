@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX, FiChevronLeft, FiChevronRight, FiPlus } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock, FaCalendarAlt } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
@@ -45,6 +45,7 @@ const navSections = [
       { name: 'Applications', path: '/Dashboard/Applications', icon: FaBriefcase },
       { name: 'My Job Applications', path: '/Dashboard/My-Applications', icon: FaClipboardCheck },
       { name: 'Career Copilot', path: '/Dashboard/Career-Copilot', icon: FaMagic },
+      { name: 'My Interviews', path: '/Dashboard/Interviews', icon: FaCalendarAlt },
     ],
   },
   {
@@ -350,6 +351,16 @@ const DashboardLayout = ({ title, children }) => {
             <h1 className="font-display text-xl text-richblack-5 truncate">{title}</h1>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
+            {/* opens the globally-mounted CommandPalette (App.jsx) sir — see that component's
+                own comment on why this fires a plain DOM event rather than prop-drilling */}
+            <button
+              onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+              aria-label="Search (Ctrl+K)"
+              title="Search (Ctrl+K)"
+              className="p-2 text-richblack-100 border border-richblack-600 rounded-xl hover:bg-richblack-800 hover:text-richblack-5 transition-all duration-200 cursor-pointer"
+            >
+              <FaSearch className="text-sm" />
+            </button>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
