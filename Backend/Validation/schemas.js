@@ -565,6 +565,13 @@ const cancelInterviewSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
+// ---------------------------------------------------------------------------
+// recruiter-candidate messaging sir — see Models/MessageThread.js
+// ---------------------------------------------------------------------------
+const sendMessageSchema = z.object({
+    text: z.string({ error: 'A message is required' }).trim().min(1, 'A message is required').max(2000),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -642,4 +649,7 @@ module.exports = {
     confirmSlotSchema,
     cancelInterviewSchema,
     updateInterviewEligibilitySchema,
+
+    // messaging
+    sendMessageSchema,
 }
