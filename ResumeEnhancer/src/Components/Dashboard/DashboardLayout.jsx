@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
 import { FiSun, FiMoon, FiMenu, FiX, FiChevronLeft, FiChevronRight, FiPlus } from 'react-icons/fi'
-import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock, FaCalendarAlt } from 'react-icons/fa'
+import { FaChartPie, FaFilePdf, FaHistory, FaComments, FaTrophy, FaUser, FaFire, FaSignOutAlt, FaCrown, FaEnvelopeOpenText, FaFolderOpen, FaSearch, FaMagic, FaBriefcase, FaKey, FaSwatchbook, FaLayerGroup, FaMicrophoneAlt, FaClipboardCheck, FaLock, FaCalendarAlt, FaBell } from 'react-icons/fa'
 import useTheme from '../../Hooks/useTheme'
 import QuickActionsFab from '../extra/QuickActionsFab'
 import FeedbackModal from '../extra/FeedbackModal'
@@ -46,6 +46,7 @@ const navSections = [
       { name: 'My Job Applications', path: '/Dashboard/My-Applications', icon: FaClipboardCheck },
       { name: 'Career Copilot', path: '/Dashboard/Career-Copilot', icon: FaMagic },
       { name: 'My Interviews', path: '/Dashboard/Interviews', icon: FaCalendarAlt },
+      { name: 'Job Alerts', path: '/Dashboard/Job-Alerts', icon: FaBell },
     ],
   },
   {

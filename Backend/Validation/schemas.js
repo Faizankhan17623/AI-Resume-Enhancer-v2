@@ -572,6 +572,19 @@ const sendMessageSchema = z.object({
     text: z.string({ error: 'A message is required' }).trim().min(1, 'A message is required').max(2000),
 })
 
+// ---------------------------------------------------------------------------
+// saved job alerts sir — see Models/JobAlert.js
+// ---------------------------------------------------------------------------
+const createJobAlertSchema = z.object({
+    keywords: z.string({ error: 'Keywords are required' }).trim().min(1, 'Keywords are required').max(200),
+    location: z.string().trim().max(150).optional(),
+    employmentType: z.string().trim().max(50).optional(),
+})
+
+const updateJobAlertSchema = z.object({
+    active: z.boolean().optional(),
+})
+
 module.exports = {
     // primitives, exported so new schemas reuse the same rules sir
     email,
@@ -652,4 +665,8 @@ module.exports = {
 
     // messaging
     sendMessageSchema,
+
+    // job alerts
+    createJobAlertSchema,
+    updateJobAlertSchema,
 }
