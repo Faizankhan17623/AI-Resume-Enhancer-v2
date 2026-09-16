@@ -16,6 +16,7 @@ dev-dist
 # secrets sir — never push env files
 .env
 .env.*
+.env.production
 
 # Editor directories and files
 .vscode/*

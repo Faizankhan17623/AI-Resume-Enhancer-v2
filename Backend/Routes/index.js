@@ -51,6 +51,7 @@ const domains = [
     { name: 'career', owns: ['/career', '/public/career', '/jobs/*/candidate-matches'], router: require('./Career.js') },
     { name: 'interview', owns: ['/interviews', '/job-applications/*/schedule-interview', '/job-applications/*/interview'], router: require('./Interview.js') },
     { name: 'search', owns: ['/search'], router: require('./Search.js') },
+    { name: 'message', owns: ['/job-applications/*/messages'], router: require('./Message.js') },
 ]
 
 // walks a router's own stack to recover every method+path it actually declares sir — reading the

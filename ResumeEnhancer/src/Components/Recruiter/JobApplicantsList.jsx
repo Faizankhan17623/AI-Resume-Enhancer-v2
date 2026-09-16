@@ -3,12 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard, FaBookmark, FaRegBookmark, FaFileAlt, FaCalendarAlt } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard, FaBookmark, FaRegBookmark, FaFileAlt, FaCalendarAlt, FaCommentDots } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import ResumeViewerModal from './ResumeViewerModal'
 import ScheduleInterviewModal from './ScheduleInterviewModal'
+import MessageThreadModal from '../extra/MessageThreadModal'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import {
   GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome,
@@ -102,6 +103,8 @@ const JobApplicantsList = () => {
   const [viewerIndex, setViewerIndex] = useState(null)
   // applicationId of the row whose "Schedule interview" modal is open sir, null when closed
   const [scheduleFor, setScheduleFor] = useState(null)
+  // applicationId of the row whose message thread modal is open sir, null when closed
+  const [messagingFor, setMessagingFor] = useState(null)
   const withBusy = (label) => (next) => {
     if (next) setBusyLabel(label)
     setBusy(next)
@@ -238,6 +241,14 @@ const JobApplicantsList = () => {
           applicationId={scheduleFor}
           onClose={() => setScheduleFor(null)}
           onScheduled={() => dispatch(GetJobApplicants(jobId, token))}
+        />
+      )}
+
+      {messagingFor && (
+        <MessageThreadModal
+          applicationId={messagingFor}
+          myRole="recruiter"
+          onClose={() => setMessagingFor(null)}
         />
       )}
 
@@ -483,6 +494,16 @@ const JobApplicantsList = () => {
                         className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FaCalendarAlt className="text-[10px]" /> Schedule interview
+                      </button>
+                    )}
+                    {/* opens once the recruiter has acted on the application sir — matches the
+                        backend's own gate (Message.js's getThreadForCaller) */}
+                    {app.status !== 'applied' && (
+                      <button
+                        onClick={() => setMessagingFor(app._id)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+                      >
+                        <FaCommentDots className="text-[10px]" /> Message
                       </button>
                     )}
                     <span className="flex items-center gap-2" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>

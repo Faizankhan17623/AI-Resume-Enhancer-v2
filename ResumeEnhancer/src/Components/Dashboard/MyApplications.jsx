@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { FaBriefcase, FaMapMarkerAlt } from 'react-icons/fa'
+import { FaBriefcase, FaMapMarkerAlt, FaCommentDots } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
+import MessageThreadModal from '../extra/MessageThreadModal'
 import { GetMyApplications } from '../../Services/operations/Job'
 
 const statusBadge = {
@@ -32,6 +33,8 @@ const MyApplications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   const { myApplications, loading } = useSelector((state) => state.job)
+  // applicationId of the row whose message thread modal is open sir, null when closed
+  const [messagingFor, setMessagingFor] = useState(null)
 
   useEffect(() => {
     dispatch(GetMyApplications(token))
@@ -72,6 +75,17 @@ const MyApplications = () => {
                     {statusLabel[app.status] || app.status}
                   </span>
                 </div>
+                {/* opens once the recruiter has acted on the application sir — matches the
+                    backend's own gate (Message.js's getThreadForCaller), 'applied' alone is
+                    too early for a conversation to make sense */}
+                {app.status !== 'applied' && (
+                  <button
+                    onClick={() => setMessagingFor(app._id)}
+                    className="flex items-center gap-1.5 mt-3 text-xs text-richblack-300 hover:text-yellow-50 cursor-pointer"
+                  >
+                    <FaCommentDots className="text-[10px]" /> Message recruiter
+                  </button>
+                )}
                 {app.status === 'invited_to_test' && app.job?.status === 'published' && (
                   <p className="text-xs text-yellow-25 mt-3">
                     You've been invited to take this job's test — check your email or ask the recruiter for the test link.
@@ -97,6 +111,14 @@ const MyApplications = () => {
           </div>
         )}
       </div>
+
+      {messagingFor && (
+        <MessageThreadModal
+          applicationId={messagingFor}
+          myRole="candidate"
+          onClose={() => setMessagingFor(null)}
+        />
+      )}
     </DashboardLayout>
   )
 }
