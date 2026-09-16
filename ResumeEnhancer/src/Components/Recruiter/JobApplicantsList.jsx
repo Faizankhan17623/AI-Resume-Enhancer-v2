@@ -3,11 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useParams, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard, FaBookmark, FaRegBookmark, FaFileAlt } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPaperPlane, FaLock, FaCheck, FaTimes, FaBolt, FaMagic, FaArrowLeft, FaIdCard, FaBookmark, FaRegBookmark, FaFileAlt, FaCalendarAlt } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import ResumeViewerModal from './ResumeViewerModal'
+import ScheduleInterviewModal from './ScheduleInterviewModal'
 import useRecruiterLock from '../../Hooks/useRecruiterLock'
 import {
   GetJobApplicants, InviteApplicantToTest, SetApplicationOutcome,
@@ -99,6 +100,8 @@ const JobApplicantsList = () => {
   // index into rankedApplicants sir — null means the resume viewer modal is closed. Per direct
   // request: cycling through resumes one at a time instead of one PDF link per tab.
   const [viewerIndex, setViewerIndex] = useState(null)
+  // applicationId of the row whose "Schedule interview" modal is open sir, null when closed
+  const [scheduleFor, setScheduleFor] = useState(null)
   const withBusy = (label) => (next) => {
     if (next) setBusyLabel(label)
     setBusy(next)
@@ -227,6 +230,14 @@ const JobApplicantsList = () => {
           applicants={rankedApplicants}
           startIndex={viewerIndex}
           onClose={() => setViewerIndex(null)}
+        />
+      )}
+
+      {scheduleFor && (
+        <ScheduleInterviewModal
+          applicationId={scheduleFor}
+          onClose={() => setScheduleFor(null)}
+          onScheduled={() => dispatch(GetJobApplicants(jobId, token))}
         />
       )}
 
@@ -461,6 +472,18 @@ const JobApplicantsList = () => {
                       >
                         View attempt
                       </Link>
+                    )}
+                    {/* server re-checks eligibility (status + this job's own
+                        interviewEligibilityMinScore threshold) on submit sir — this button just
+                        shows for the plausible case, scheduleInterview is the real gate */}
+                    {app.status === 'completed_test' && (
+                      <button
+                        onClick={() => setScheduleFor(app._id)}
+                        disabled={isLocked}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-richblack-600 text-richblack-100 text-xs font-semibold hover:bg-richblack-700 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FaCalendarAlt className="text-[10px]" /> Schedule interview
+                      </button>
                     )}
                     <span className="flex items-center gap-2" title={isLocked ? 'Locked until an admin approves your recruiter account' : undefined}>
                       {canHire && (

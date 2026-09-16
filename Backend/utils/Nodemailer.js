@@ -6,14 +6,14 @@ const dns = require('dns')
 // email hops to our own Vercel serverless function (/api/send-mail) over HTTPS, and THAT
 // runs the real Nodemailer+Gmail send from Vercel's network where port 465 is open.
 // Same Gmail, same app password, no third-party mail service.
-const sendViaRelay = async (email, title, body) => {
+const sendViaRelay = async (email, title, body, attachments) => {
     const response = await fetch(process.env.MAIL_RELAY_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-relay-secret': process.env.MAIL_RELAY_SECRET,
         },
-        body: JSON.stringify({ to: email, subject: title, html: body }),
+        body: JSON.stringify({ to: email, subject: title, html: body, ...(attachments ? { attachments } : {}) }),
         // a dead relay must error fast, not hang the caller's request sir
         signal: AbortSignal.timeout(20000),
     })
@@ -25,12 +25,15 @@ const sendViaRelay = async (email, title, body) => {
     return data
 }
 
-// sends one email sir — used by OTP, password reset, and account deletion notices
-const mailSender = async (email, title, body) => {
+// sends one email sir — used by OTP, password reset, and account deletion notices.
+// `attachments` is optional (nodemailer's own attachment array shape, e.g.
+// [{ filename, content, contentType }]) sir — so far only the interview-confirmed email
+// (utils/icsGenerator.js's .ics file) uses it; every other existing call site is unaffected.
+const mailSender = async (email, title, body, attachments) => {
     try {
         // production path sir — relay through Vercel where SMTP isn't blocked
         if (process.env.MAIL_RELAY_URL && process.env.MAIL_RELAY_SECRET) {
-            return await sendViaRelay(email, title, body)
+            return await sendViaRelay(email, title, body, attachments)
         }
 
         // no SMTP configured sir — skip sending instead of crashing the caller
@@ -67,6 +70,7 @@ const mailSender = async (email, title, body) => {
             to: email,
             subject: title,
             html: body,
+            ...(attachments ? { attachments } : {}),
         })
 
         return info

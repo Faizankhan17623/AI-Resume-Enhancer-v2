@@ -9,6 +9,7 @@ const {
     setApplicationOutcomeSchema,
     bulkInviteApplicantsSchema,
     bulkApplicationOutcomeSchema,
+    updateInterviewEligibilitySchema,
 } = require('../Validation/schemas.js')
 const {
     createJob,
@@ -30,6 +31,7 @@ const {
     getPublicJob,
     applyToJob,
     listMyApplications,
+    updateInterviewEligibilityThreshold,
 } = require('../controllers/Job.js')
 
 // applyToJob is multipart/form-data sir (the resume PDF rides as req.files.resume, alongside the
@@ -67,6 +69,9 @@ route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publi
 route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)
 route.delete('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, deleteJob)
 route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateJobSchema }), updateJob)
+// works regardless of draft/published status sir — see controllers/Job.js's own comment on why
+// this can't just be folded into updateJob above
+route.patch('/jobs/:jobId/interview-eligibility', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateInterviewEligibilitySchema }), updateInterviewEligibilityThreshold)
 route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, getJob)
 
 // public — no auth required

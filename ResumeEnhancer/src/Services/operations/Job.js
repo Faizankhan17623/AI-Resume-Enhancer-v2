@@ -19,7 +19,7 @@ import {
 } from '../../Slices/jobSlice.js'
 
 const {
-    createJob, listMyJobs, getJob, updateJob, publishJob, closeJob, deleteJob, getJobApplicants,
+    createJob, listMyJobs, getJob, updateJob, updateInterviewEligibility, publishJob, closeJob, deleteJob, getJobApplicants,
     getJobAnalytics, getRecruiterOverviewAnalytics, inviteApplicantToTest, toggleShortlist, setApplicationOutcome,
     bulkInviteApplicants, bulkApplicationOutcome, listPublicJobs, getPublicJob, applyToJob,
     listMyApplications,
@@ -115,6 +115,32 @@ export function UpdateJob(jobId, jobPayload, token, onLoadingChange) {
         } catch (error) {
             logApiError("Error updating the job", error)
             toast.error(error?.response?.data?.message || "Could not update the job")
+        } finally {
+            onLoadingChange?.(false)
+        }
+    }
+}
+
+// separate from UpdateJob sir — that one only works on a 'draft' job, this threshold needs to be
+// settable on a PUBLISHED job too (see controllers/Job.js's updateInterviewEligibilityThreshold
+// for why it's its own endpoint)
+export function UpdateInterviewEligibility(jobId, interviewEligibilityMinScore, token, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("PATCH", `${updateInterviewEligibility}/${jobId}/interview-eligibility`, { interviewEligibilityMinScore }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success("Interview eligibility updated")
+            dispatch(setCurrentJob(response.data.job))
+        } catch (error) {
+            logApiError("Error updating interview eligibility", error)
+            toast.error(error?.response?.data?.message || "Could not update this setting")
         } finally {
             onLoadingChange?.(false)
         }

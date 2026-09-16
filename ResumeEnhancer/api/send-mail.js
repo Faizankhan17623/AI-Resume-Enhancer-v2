@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: 'Unauthorized' })
   }
 
-  const { to, subject, html } = req.body || {}
+  const { to, subject, html, attachments } = req.body || {}
   if (!to || !subject || !html) {
     return res.status(400).json({ success: false, message: 'to, subject and html are required' })
   }
@@ -48,13 +48,22 @@ export default async function handler(req, res) {
       socketTimeout: 8000,
     })
 
-    // MUST await before responding sir — serverless freezes background work once the response is sent
-    const info = await transporter.sendMail({
+    // optional sir — first (and so far only) caller is the interview-confirmed email, which
+    // attaches a .ics calendar file. `content` arrives as a plain string over this JSON relay
+    // (the backend never has a real Buffer to send here anyway, .ics is text), Nodemailer is
+    // fine encoding a string attachment itself.
+    const mailOptions = {
       from: `"Resume Enhancer" <${process.env.MAIL_USER}>`,
       to,
       subject,
       html,
-    })
+    }
+    if (Array.isArray(attachments) && attachments.length) {
+      mailOptions.attachments = attachments
+    }
+
+    // MUST await before responding sir — serverless freezes background work once the response is sent
+    const info = await transporter.sendMail(mailOptions)
 
     return res.status(200).json({ success: true, messageId: info.messageId })
   } catch (error) {

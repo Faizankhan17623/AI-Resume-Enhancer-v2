@@ -8,6 +8,7 @@ export const JobData = {
     listMyJobs: BASE_URL + "/jobs/mine",
     getJob: BASE_URL + "/jobs",              // + /:jobId
     updateJob: BASE_URL + "/jobs",            // + /:jobId
+    updateInterviewEligibility: BASE_URL + "/jobs", // + /:jobId/interview-eligibility
     publishJob: BASE_URL + "/jobs",          // + /:jobId/publish
     closeJob: BASE_URL + "/jobs",            // + /:jobId/close
     deleteJob: BASE_URL + "/jobs",           // + /:jobId

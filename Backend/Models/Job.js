@@ -77,6 +77,17 @@ const jobSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'Test',
         },
+        // optional recruiter-set percentage threshold sir (against TestAttempt.score /
+        // Test.totalMarks * 100, computed at gate-check time — TestAttempt stores raw marks,
+        // never a percentage, so there is nothing to store or drift out of sync here). Gates
+        // whether "Schedule interview" appears on a completed_test applicant in
+        // controllers/Interview.js's scheduleInterview. Left unset (null) means no auto-gate —
+        // any completed_test applicant is eligible, same as before this feature existed.
+        interviewEligibilityMinScore: {
+            type: Number,
+            min: 0,
+            max: 100,
+        },
         // incremented on every getPublicJob fetch sir — a simple hit counter, not a unique-visitor
         // count (no session/cookie dedup), same "good enough for a funnel, not analytics-grade"
         // tradeoff as VisitorLog.js makes elsewhere for site-wide traffic

@@ -32,7 +32,7 @@ const TEST_INVITE_WINDOW_MS = 5 * 60 * 60 * 1000
 exports.createJob = async (req, res) => {
     try {
         const recruiterId = req?.User.id
-        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided } = req.body
+        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore } = req.body
 
         const job = await Job.create({
             recruiter: recruiterId,
@@ -47,6 +47,7 @@ exports.createJob = async (req, res) => {
             ctcMax,
             unpaidDurationMonths,
             certificateProvided,
+            interviewEligibilityMinScore,
         })
 
         return res.status(201).json({
@@ -134,7 +135,7 @@ exports.updateJob = async (req, res) => {
             })
         }
 
-        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided } = req.body
+        const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore } = req.body
         if (companyName !== undefined) job.companyName = companyName
         if (title !== undefined) job.title = title
         if (description !== undefined) job.description = description
@@ -146,6 +147,7 @@ exports.updateJob = async (req, res) => {
         if (ctcMax !== undefined) job.ctcMax = ctcMax
         if (unpaidDurationMonths !== undefined) job.unpaidDurationMonths = unpaidDurationMonths
         if (certificateProvided !== undefined) job.certificateProvided = certificateProvided
+        if (interviewEligibilityMinScore !== undefined) job.interviewEligibilityMinScore = interviewEligibilityMinScore
 
         await job.save()
 
@@ -155,6 +157,44 @@ exports.updateJob = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating the job',
+        })
+    }
+}
+
+// PATCH /jobs/:jobId/interview-eligibility sir — deliberately NOT part of updateJob above:
+// updateJob only works on a 'draft' job (compensation must be locked in before publishing, by
+// design), but this threshold is only meaningful once the job is LIVE and candidates are
+// actually completing its test — a recruiter needs to be able to set/adjust/clear it at any
+// point in the job's life, published or not, without the "only a draft can be edited" wall.
+exports.updateInterviewEligibilityThreshold = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { jobId } = req.params
+        const { interviewEligibilityMinScore } = req.body
+
+        if (!mongoose.isValidObjectId(jobId)) {
+            return res.status(400).json({ success: false, message: 'Invalid job id' })
+        }
+
+        const job = await Job.findOneAndUpdate(
+            { _id: jobId, recruiter: recruiterId },
+            // undefined clears the field via $unset sir — a plain $set with undefined is a
+            // silent no-op in Mongoose, which would make "clear the threshold" impossible
+            interviewEligibilityMinScore === undefined
+                ? { $unset: { interviewEligibilityMinScore: 1 } }
+                : { $set: { interviewEligibilityMinScore } },
+            { returnDocument: 'after' }
+        )
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found' })
+        }
+
+        return res.status(200).json({ success: true, message: 'Interview eligibility updated', job })
+    } catch (error) {
+        (req.log || logger).error('update interview eligibility threshold failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while updating this setting',
         })
     }
 }

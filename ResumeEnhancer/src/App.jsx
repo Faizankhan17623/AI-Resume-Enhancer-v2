@@ -19,6 +19,7 @@ import RecruiterRoute from './Hooks/RecruiterRoute'
 import ScrollToTop from './Components/extra/ScrollToTop'
 import AnnouncementBanner from './Components/extra/AnnouncementBanner'
 import CookieConsent from './Components/extra/CookieConsent'
+import CommandPalette from './Components/extra/CommandPalette'
 import ErrorBoundary from './Components/extra/ErrorBoundary'
 import MobileBlock from './Components/extra/MobileBlock'
 
@@ -85,6 +86,7 @@ const JobBoard = lazy(() => import('./Components/Jobs/JobBoard'))
 const JobDetail = lazy(() => import('./Components/Jobs/JobDetail'))
 const MyApplications = lazy(() => import('./Components/Dashboard/MyApplications'))
 const CareerCopilot = lazy(() => import('./Components/Dashboard/CareerCopilot'))
+const MyInterviews = lazy(() => import('./Components/Dashboard/MyInterviews'))
 const ForRecruiters = lazy(() => import('./Components/Home/ForRecruiters'))
 const AdminRecruiterApplications = lazy(() => import('./Components/Admin/RecruiterApplications'))
 
@@ -190,6 +192,8 @@ function App() {
       <AnnouncementBanner />
       {/* cookie consent card sir — shows once until accepted */}
       <CookieConsent />
+      {/* opens with a keyboard shortcut sir */}
+      <CommandPalette />
       <ScrollToTop />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
@@ -247,6 +251,7 @@ function App() {
                 /Dashboard/Applications (the pre-existing personal Kanban tracker) */}
             <Route path="/Dashboard/My-Applications" element={<PrivateRoute><MyApplications /></PrivateRoute>} />
             <Route path="/Dashboard/Career-Copilot" element={<PrivateRoute><CareerCopilot /></PrivateRoute>} />
+            <Route path="/Dashboard/Interviews" element={<PrivateRoute><MyInterviews /></PrivateRoute>} />
 
             {/* candidate-facing proctored test flow sir — plain 'User' accounts only, same
                 PrivateRoute as every other Dashboard feature. Not under /Dashboard/* itself since
