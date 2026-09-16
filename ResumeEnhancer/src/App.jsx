@@ -87,6 +87,7 @@ const JobDetail = lazy(() => import('./Components/Jobs/JobDetail'))
 const MyApplications = lazy(() => import('./Components/Dashboard/MyApplications'))
 const CareerCopilot = lazy(() => import('./Components/Dashboard/CareerCopilot'))
 const MyInterviews = lazy(() => import('./Components/Dashboard/MyInterviews'))
+const JobAlerts = lazy(() => import('./Components/Dashboard/JobAlerts'))
 const ForRecruiters = lazy(() => import('./Components/Home/ForRecruiters'))
 const AdminRecruiterApplications = lazy(() => import('./Components/Admin/RecruiterApplications'))
 
@@ -252,6 +253,7 @@ function App() {
             <Route path="/Dashboard/My-Applications" element={<PrivateRoute><MyApplications /></PrivateRoute>} />
             <Route path="/Dashboard/Career-Copilot" element={<PrivateRoute><CareerCopilot /></PrivateRoute>} />
             <Route path="/Dashboard/Interviews" element={<PrivateRoute><MyInterviews /></PrivateRoute>} />
+            <Route path="/Dashboard/Job-Alerts" element={<PrivateRoute><JobAlerts /></PrivateRoute>} />
 
             {/* candidate-facing proctored test flow sir — plain 'User' accounts only, same
                 PrivateRoute as every other Dashboard feature. Not under /Dashboard/* itself since

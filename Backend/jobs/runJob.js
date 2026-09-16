@@ -38,6 +38,7 @@ const { reconcileExpiredSubscriptions } = require('../utils/SubscriptionReconcil
 const { reconcileOrphanedCreditSpends } = require('../utils/CreditReconcileCron')
 const { closeExpiredJobs } = require('../utils/JobExpiryCron')
 const { expireStaleInterviewProposals } = require('../utils/InterviewScheduleExpiryCron')
+const { checkJobAlerts } = require('../utils/JobAlertCron')
 
 // the same jobs worker.js schedules sir. `leaseMs` must comfortably exceed the job's realistic
 // runtime while staying well under its interval.
@@ -60,6 +61,7 @@ const JOBS = {
     'credit-reconcile': { leaseMs: 5 * 60 * 1000, task: reconcileOrphanedCreditSpends },
     'job-expiry': { leaseMs: 5 * 60 * 1000, task: closeExpiredJobs },
     'interview-schedule-expiry': { leaseMs: 5 * 60 * 1000, task: expireStaleInterviewProposals },
+    'job-alert-check': { leaseMs: 5 * 60 * 1000, task: checkJobAlerts },
 }
 
 const main = async () => {

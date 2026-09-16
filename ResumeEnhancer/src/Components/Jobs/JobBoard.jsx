@@ -3,13 +3,16 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'motion/react'
-import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle } from 'react-icons/fa'
+import toast from 'react-hot-toast'
+import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle, FaBell } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
 import { staggerContainer, fadeUp } from '../../utils/motion'
 import { GetPublicJobs, GetMyApplications } from '../../Services/operations/Job'
 import { formatJobDate } from '../../utils/formatDate'
+import { apiConnector } from '../../Services/apiConnector'
+import { JobAlertApi } from '../../Services/Apis/JobAlertApi'
 
 const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
 
@@ -48,6 +51,25 @@ const JobBoard = () => {
     e.preventDefault()
     setPage(1)
     dispatch(GetPublicJobs({ page: 1, search, location, employmentType }))
+  }
+
+  // logged-out visitors can browse the board sir, but saving an alert needs an account to
+  // notify — same "sign in to do the personal stuff" rule as applying itself already follows
+  const handleSaveAlert = async () => {
+    if (!isLoggedIn) return toast.error('Log in to save a job alert')
+    if (!search.trim()) return toast.error('Enter some keywords first')
+
+    try {
+      const r = await apiConnector('POST', JobAlertApi.create, {
+        keywords: search.trim(),
+        location: location.trim() || undefined,
+        employmentType: employmentType || undefined,
+      }, { Authorization: `Bearer ${token}` })
+      if (!r.data.success) throw new Error(r.data.message)
+      toast.success("Saved — we'll email you when a matching job is posted")
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || 'Could not save this alert')
+    }
   }
 
   return (
@@ -105,6 +127,14 @@ const JobBoard = () => {
           </select>
           <button type="submit" className="px-5 py-2.5 text-sm font-semibold bg-yellow-50 text-richblack-900 rounded-full hover:brightness-110 transition-all duration-200 cursor-pointer">
             Search
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveAlert}
+            title="Get emailed when a new job matches this search"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border border-richblack-600 text-richblack-100 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
+          >
+            <FaBell className="text-xs" /> Save as alert
           </button>
         </form>
 
