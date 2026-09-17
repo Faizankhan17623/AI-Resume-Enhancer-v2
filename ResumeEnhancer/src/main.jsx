@@ -7,11 +7,21 @@ import { configureStore } from '@reduxjs/toolkit'
 import rootReduers from './reducer/index.js'
 import { Provider } from 'react-redux'
 import { HelmetProvider } from 'react-helmet-async'
+import { registerSW } from 'virtual:pwa-register'
 
 
 const store = configureStore({
   reducer: rootReduers
 })
+
+// vite.config.js's VitePWA sets registerType: 'prompt' + injectRegister: false sir — that combo
+// means the plugin deliberately does NOT auto-register the service worker, the app has to call
+// this itself. Was missing entirely before (real bug found while testing Web Push: no
+// registration anywhere meant navigator.serviceWorker.ready never resolved, so the "Enable on
+// this device" toggle just hung forever with no error). immediate:true registers on load rather
+// than waiting for the browser's own idle heuristics, so push/PWA-install features work right
+// away instead of only after some unpredictable delay.
+registerSW({ immediate: true })
 
 
 createRoot(document.getElementById('root')).render(
