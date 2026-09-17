@@ -1,10 +1,34 @@
 // counts: [{ action: 'ROLE_CHANGE', count: 3 }, ...] sir — already sorted by the cron
-exports.adminDigestTemplate = (name, { counts, totalActions, weekStart, weekEnd }) => {
+// retention: { weeklyActiveUsers, reviewCompletionRate, reviewAttempts, inactiveUsers } from
+// utils/AdminDigestCron.js's getRetentionStats — reviewCompletionRate is null when there were
+// zero review attempts that week (nothing to divide by), rendered as "—" rather than 0%
+exports.adminDigestTemplate = (name, { counts, totalActions, retention, weekStart, weekEnd }) => {
   const rows = counts.map((c) => `
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #2C333F;color:#F9FAFB;font-size:14px;">${c.action.replace(/_/g, ' ')}</td>
       <td style="padding:10px 0;border-bottom:1px solid #2C333F;color:#9CA3AF;font-size:14px;text-align:right;">${c.count}</td>
     </tr>`).join('')
+
+  const retentionBlock = retention ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="width:33.3%;padding:16px;background:#0D1117;border-radius:12px;border:1px solid #2C333F;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#F9FAFB;">${retention.weeklyActiveUsers}</div>
+          <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">Weekly Active Users</div>
+        </td>
+        <td style="width:8px;"></td>
+        <td style="width:33.3%;padding:16px;background:#0D1117;border-radius:12px;border:1px solid #2C333F;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#F9FAFB;">${retention.reviewCompletionRate === null ? '—' : retention.reviewCompletionRate + '%'}</div>
+          <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">Review Completion (${retention.reviewAttempts} attempts)</div>
+        </td>
+        <td style="width:8px;"></td>
+        <td style="width:33.3%;padding:16px;background:#0D1117;border-radius:12px;border:1px solid #2C333F;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#F9FAFB;">${retention.inactiveUsers}</div>
+          <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">Inactive 30+ Days</div>
+        </td>
+      </tr>
+    </table>
+  ` : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -59,6 +83,8 @@ exports.adminDigestTemplate = (name, { counts, totalActions, weekStart, weekEnd 
                 Resume Enhancer between <strong style="color:#F9FAFB;">${weekStart}</strong> and
                 <strong style="color:#F9FAFB;">${weekEnd}</strong>.
               </p>
+
+              ${retentionBlock}
 
               ${totalActions === 0 ? `
               <div style="background:#0D1117;border-radius:12px;padding:20px;text-align:center;

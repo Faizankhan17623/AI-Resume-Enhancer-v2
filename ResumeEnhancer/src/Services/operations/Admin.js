@@ -9,7 +9,7 @@ import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSetting
 
 const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, bulkresendnudge, adjustcredits, grantcreditsall, deleteuser, updatenote, resendreset } = AdminUsers
-const { allpayments } = AdminPayments
+const { allpayments, refundpayment } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
 const { getsettings, updatesetting } = AdminSettings
 const { alltestimonials, moderatetestimonial, deletetestimonial } = AdminTestimonials
@@ -444,6 +444,38 @@ export function GetPayments(token, page = 1, status = "") {
             logApiError("Error fetching the payments", error)
         } finally {
             dispatch(setLoading(false))
+        }
+    }
+}
+
+// real Razorpay refund sir, per direct request — Admin-only server-side (see Routes/Admin.js).
+// Refetches the current page/status filter on success rather than patching one row in place,
+// since a refund also shifts the stats cards (MRR, byStatus counts) shown alongside the list —
+// cheaper to just reload than to recompute those client-side.
+export function RefundPayment(paymentId, amount, reason, token, page, status, onLoadingChange) {
+    return async (dispatch) => {
+        onLoadingChange?.(true)
+        try {
+            const response = await apiConnector("POST", `${refundpayment}/${paymentId}/refund`, {
+                ...(amount && { amount }),
+                ...(reason && { reason }),
+            }, {
+                Authorization: `Bearer ${token}`
+            })
+
+            if (!response.data.success) {
+                throw new Error(response.data.message)
+            }
+
+            toast.success(response.data.message)
+            dispatch(GetPayments(token, page, status))
+            return true
+        } catch (error) {
+            logApiError("Error processing the refund", error)
+            toast.error(error?.response?.data?.message || "Could not process this refund")
+            return false
+        } finally {
+            onLoadingChange?.(false)
         }
     }
 }

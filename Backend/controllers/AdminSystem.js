@@ -13,6 +13,8 @@ const VisitorLog = require('../Models/VisitorLog')
 const CreditSpend = require('../Models/CreditSpend')
 const ReferralLog = require('../Models/ReferralLog')
 const { REQUIRED_ENV_VARS } = require('../utils/checkRequiredEnv')
+const RazorpayInstance = require('../utils/Razorpay')
+const { logAction } = require('../utils/AdminLog')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -36,7 +38,7 @@ exports.getPayments = async (req, res) => {
         const status = req.query.status
 
         const filter = {}
-        if (['created', 'paid', 'failed'].includes(status)) {
+        if (['created', 'paid', 'failed', 'refunded'].includes(status)) {
             filter.status = status
         }
 
@@ -47,7 +49,7 @@ exports.getPayments = async (req, res) => {
             // pattern as the user-facing payment history query, the dashboard doesn't
             // display it and it's a payment-integrity secret, not UI data
             Payment.find(filter)
-                .select('plan amount currency status orderId paymentId createdAt user')
+                .select('plan amount currency status orderId paymentId createdAt user refundId refundAmount refundedAt refundReason')
                 .populate('user', 'firstName lastName email')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
@@ -90,6 +92,82 @@ exports.getPayments = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting the payments',
+        })
+    }
+}
+
+// POST /admin/payments/:paymentId/refund sir — a real Razorpay refund, not the goodwill
+// downgrade-to-Basic workaround updateUserPlan gets used for today. Only ever refunds a 'paid'
+// Payment row (has a real paymentId to refund against); amount is OPTIONAL — omit it for a full
+// refund, or pass a smaller paise amount for a partial one, same as Razorpay's own API.
+exports.refundPayment = async (req, res) => {
+    try {
+        const adminId = req?.User.id
+        const { paymentId } = req.params
+        const { amount, reason } = req.body
+
+        if (!mongoose.isValidObjectId(paymentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid payment id' })
+        }
+
+        const payment = await Payment.findById(paymentId).populate('user', 'firstName lastName email')
+        if (!payment) {
+            return res.status(404).json({ success: false, message: 'Payment not found' })
+        }
+        if (payment.status !== 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: `Only a 'paid' payment can be refunded — this one is '${payment.status}'`,
+            })
+        }
+        if (amount !== undefined && amount > payment.amount) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refund amount cannot exceed the original payment amount',
+            })
+        }
+
+        // hits Razorpay's real refund API sir — this actually moves money back to the customer,
+        // unlike updateUserPlan's Basic-downgrade which only ever touched our own DB
+        let refund
+        try {
+            refund = await RazorpayInstance.payments.refund(payment.paymentId, {
+                amount: amount || undefined,
+                notes: { reason: reason || 'Admin-initiated refund', paymentDbId: String(payment._id) },
+            })
+        } catch (razorpayError) {
+            (req.log || logger).error('razorpay refund call failed', { err: razorpayError, paymentId })
+            return res.status(502).json({
+                success: false,
+                message: razorpayError?.error?.description || 'Razorpay rejected this refund',
+            })
+        }
+
+        payment.status = 'refunded'
+        payment.refundId = refund.id
+        payment.refundAmount = refund.amount
+        payment.refundedAt = new Date()
+        payment.refundedBy = adminId
+        payment.refundReason = reason || ''
+        await payment.save()
+
+        logAction(adminId, 'PAYMENT_REFUNDED', payment.user, {
+            paymentId: payment._id,
+            razorpayRefundId: refund.id,
+            amountRupees: Math.round(refund.amount / 100),
+            reason: reason || '',
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: `Refunded ₹${Math.round(refund.amount / 100)} to ${payment.user.email}`,
+            payment,
+        })
+    } catch (error) {
+        (req.log || logger).error('refund payment failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while processing this refund',
         })
     }
 }

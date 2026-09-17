@@ -24,6 +24,7 @@ const auditLogSchema = new mongoose.Schema(
             enum: [
                 'ROLE_CHANGE',
                 'PLAN_CHANGE',
+                'PAYMENT_REFUNDED',
                 'USER_BAN',
                 'USER_UNBAN',
                 'CREDIT_ADJUST',

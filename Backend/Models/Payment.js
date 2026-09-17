@@ -50,9 +50,30 @@ const paymentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['created', 'paid', 'failed'],
+            enum: ['created', 'paid', 'failed', 'refunded'],
             default: 'created'
-        }
+        },
+        // set once an Admin issues a real Razorpay refund sir — refundId is Razorpay's own
+        // rfnd_xxx id, refundAmount is in paise (may be less than `amount` for a partial refund).
+        // status only flips to 'refunded' after Razorpay confirms the refund call succeeded.
+        refundId: {
+            type: String,
+        },
+        refundAmount: {
+            type: Number,
+        },
+        refundedAt: {
+            type: Date,
+        },
+        refundedBy: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'User',
+        },
+        refundReason: {
+            type: String,
+            trim: true,
+            maxlength: 500,
+        },
     },
     { timestamps: true }
 )

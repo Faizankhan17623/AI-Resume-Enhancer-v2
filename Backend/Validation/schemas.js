@@ -298,6 +298,13 @@ const updateUserPlanSchema = z.object({
     plan: planKey,
 })
 
+// POST /admin/payments/:paymentId/refund body sir — amount is OPTIONAL (omit for a full refund,
+// pass a smaller paise amount for partial), in paise same unit as Payment.amount
+const refundPaymentSchema = z.object({
+    amount: z.coerce.number().int().positive().optional(),
+    reason: z.string().trim().max(500).optional(),
+})
+
 const userIdParamSchema = z.object({ userId: objectId })
 
 // ---------------------------------------------------------------------------
@@ -664,6 +671,7 @@ module.exports = {
     adjustCreditsSchema,
     grantCreditsToAllSchema,
     updateUserPlanSchema,
+    refundPaymentSchema,
     userIdParamSchema,
 
     // recruiter proctored tests

@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import { FaFileDownload } from 'react-icons/fa'
+import Swal from 'sweetalert2'
+import { FaFileDownload, FaUndo } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import AdminNav from './AdminNav'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
-import { GetPayments } from '../../Services/operations/Admin'
+import { GetPayments, RefundPayment } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
+import { swalDark } from '../../utils/accountShared'
 
 const statusChip = {
   paid: 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700',
   created: 'bg-yellow-700/30 text-yellow-25 border-yellow-700',
   failed: 'bg-pink-700/30 text-pink-100 border-pink-700',
+  refunded: 'bg-richblack-700 text-richblack-200 border-richblack-600',
 }
 
 const PAYMENT_CSV_COLUMNS = [
@@ -23,14 +26,18 @@ const PAYMENT_CSV_COLUMNS = [
   { key: 'status', label: 'Status' },
   { key: 'orderId', label: 'Order ID' },
   { key: 'date', label: 'Date' },
+  { key: 'refundAmount', label: 'Refund Amount (₹)' },
+  { key: 'refundedAt', label: 'Refunded At' },
 ]
 
 const Payments = () => {
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const dispatch = useDispatch()
-  const { token } = useSelector((state) => state.auth)
+  const { token, user: me } = useSelector((state) => state.auth)
   const { payments, loading } = useSelector((state) => state.admin)
+  const [refundingId, setRefundingId] = useState(null)
+  const isAdmin = me?.role === 'Admin'
 
   useEffect(() => {
     dispatch(GetPayments(token, page, status))
@@ -38,6 +45,48 @@ const Payments = () => {
   }, [page, status])
 
   const stats = payments?.stats
+
+  // real money movement sir — Admin-only (enforced server-side too), two-step confirm since this
+  // isn't reversible from here. Reason is optional context for the audit log; amount left blank
+  // means a full refund, matching Razorpay's own semantics.
+  const handleRefund = async (payment) => {
+    const fullRupees = payment.amount / 100
+    const { value: formValues } = await Swal.fire({
+      ...swalDark,
+      title: `Refund ${payment.user?.email}?`,
+      html: `Original payment: <strong>₹${fullRupees}</strong> (${payment.plan})`,
+      icon: 'warning',
+      input: 'text',
+      inputLabel: `Refund amount in ₹ (leave blank for full ₹${fullRupees})`,
+      inputPlaceholder: `${fullRupees}`,
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      confirmButtonColor: '#C1443C',
+      preConfirm: (amountInput) => {
+        if (amountInput && (isNaN(amountInput) || Number(amountInput) <= 0 || Number(amountInput) > fullRupees)) {
+          Swal.showValidationMessage(`Enter a number between 0 and ₹${fullRupees}, or leave it blank`)
+          return false
+        }
+        return amountInput
+      },
+    })
+    if (formValues === undefined) return
+
+    const { value: reason } = await Swal.fire({
+      ...swalDark,
+      title: 'Reason for this refund (optional)',
+      input: 'textarea',
+      inputPlaceholder: 'e.g. accidental duplicate charge, customer requested cancellation...',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm refund',
+      confirmButtonColor: '#C1443C',
+    })
+    if (reason === undefined) return
+
+    const amountPaise = formValues ? Math.round(Number(formValues) * 100) : undefined
+    const setBusy = (isBusy) => setRefundingId(isBusy ? payment._id : null)
+    await dispatch(RefundPayment(payment._id, amountPaise, reason, token, page, status, setBusy))
+  }
 
   // exports the currently-loaded page/filter sir — client-side from data already fetched
   const handleExportCsv = () => {
@@ -49,6 +98,8 @@ const Payments = () => {
       status: payment.status,
       orderId: payment.orderId,
       date: new Date(payment.createdAt).toLocaleString(),
+      refundAmount: payment.refundAmount ? payment.refundAmount / 100 : '',
+      refundedAt: payment.refundedAt ? new Date(payment.refundedAt).toLocaleString() : '',
     }))
     downloadCsv(`payments-page-${page}.csv`, rows, PAYMENT_CSV_COLUMNS)
   }
@@ -91,7 +142,7 @@ const Payments = () => {
 
         {/* Status filter sir */}
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          {['', 'paid', 'created', 'failed'].map((s) => (
+          {['', 'paid', 'created', 'failed', 'refunded'].map((s) => (
             <button
               key={s}
               onClick={() => { setStatus(s); setPage(1) }}
@@ -138,6 +189,20 @@ const Payments = () => {
                   </div>
                   <p className="font-mono text-xs text-richblack-300 mt-2 truncate">{payment.orderId}</p>
                   <p className="text-xs text-richblack-300 mt-1">{new Date(payment.createdAt).toLocaleString()}</p>
+                  {isAdmin && payment.status === 'paid' && (
+                    <button
+                      onClick={() => handleRefund(payment)}
+                      disabled={refundingId === payment._id}
+                      className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 disabled:opacity-50 transition-colors duration-200 cursor-pointer"
+                    >
+                      <FaUndo className="text-[10px]" /> {refundingId === payment._id ? 'Refunding...' : 'Refund'}
+                    </button>
+                  )}
+                  {payment.status === 'refunded' && (
+                    <p className="text-xs text-richblack-400 mt-2">
+                      Refunded ₹{(payment.refundAmount / 100)?.toFixed(0)} on {new Date(payment.refundedAt).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               ))}
               {(payments?.payments || []).length === 0 && (
@@ -155,6 +220,7 @@ const Payments = () => {
                     <th className="p-4">Status</th>
                     <th className="p-4">Order ID</th>
                     <th className="p-4">Date</th>
+                    {isAdmin && <th className="p-4">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-richblack-700">
@@ -170,9 +236,25 @@ const Payments = () => {
                         <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${statusChip[payment.status] || statusChip.created}`}>
                           {payment.status}
                         </span>
+                        {payment.status === 'refunded' && (
+                          <p className="text-[10px] text-richblack-400 mt-1">₹{(payment.refundAmount / 100)?.toFixed(0)} back</p>
+                        )}
                       </td>
                       <td className="p-4 font-mono text-xs text-richblack-300">{payment.orderId}</td>
                       <td className="p-4 text-xs text-richblack-300">{new Date(payment.createdAt).toLocaleString()}</td>
+                      {isAdmin && (
+                        <td className="p-4">
+                          {payment.status === 'paid' && (
+                            <button
+                              onClick={() => handleRefund(payment)}
+                              disabled={refundingId === payment._id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-pink-100 border border-pink-700 rounded-full hover:bg-pink-700/20 disabled:opacity-50 transition-colors duration-200 cursor-pointer"
+                            >
+                              <FaUndo className="text-[10px]" /> {refundingId === payment._id ? 'Refunding...' : 'Refund'}
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

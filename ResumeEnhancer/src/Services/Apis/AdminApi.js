@@ -35,7 +35,8 @@ export const AdminUsers = {
 }
 
 export const AdminPayments = {
-    allpayments: BASE_URL + "/admin/payments"
+    allpayments: BASE_URL + "/admin/payments",
+    refundpayment: BASE_URL + "/admin/payments"   // + /:paymentId/refund
 }
 
 export const AdminAnnouncements = {

@@ -15,6 +15,7 @@ const {
     grantCreditsToAllSchema,
     updateUserPlanSchema,
     rejectRecruiterApplicationSchema,
+    refundPaymentSchema,
 } = require('../Validation/schemas.js')
 const {
     getDashboardStats,
@@ -45,6 +46,7 @@ const {
 } = require('../controllers/Admin.js')
 const {
     getPayments,
+    refundPayment,
     getAiStats,
     getAiUsageByUser,
     getAtRiskUsers,
@@ -86,6 +88,9 @@ route.get('/admin/users/:userId/chats', Auth, isSupport, adminReadLimiter, getUs
 route.get('/admin/chats/:chatId', Auth, isSupport, adminReadLimiter, getChatDetail)
 route.patch('/admin/users/:userId/credits', Auth, isSupport, adminWriteLimiter, validate({ body: adjustCreditsSchema }), adjustCredits)
 route.get('/admin/payments', Auth, isSupport, adminReadLimiter, getPayments)
+// real money movement sir — Admin only, unlike the read-only payments list above which Support
+// can also see
+route.post('/admin/payments/:paymentId/refund', Auth, isAdmin, adminWriteLimiter, validate({ body: refundPaymentSchema }), refundPayment)
 route.get('/admin/ai', Auth, isSupport, adminReadLimiter, getAiStats)
 route.get('/admin/ai/by-user', Auth, isSupport, adminReadLimiter, getAiUsageByUser)
 route.get('/admin/at-risk', Auth, isSupport, adminReadLimiter, getAtRiskUsers)
