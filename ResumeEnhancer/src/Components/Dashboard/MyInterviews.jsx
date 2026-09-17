@@ -70,17 +70,13 @@ export default function MyInterviews() {
     }
   }
 
-  if (!schedules) return <DashboardLayout><Loading text="Loading your interviews..." /></DashboardLayout>
+  if (!schedules) return <DashboardLayout title="My Interviews"><Loading text="Loading your interviews..." /></DashboardLayout>
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="My Interviews">
       <Helmet><title>My Interviews | Resumify</title></Helmet>
-      <div className="max-w-3xl space-y-4">
-        <div>
-          <h1 className="font-display text-2xl text-richblack-5">My Interviews</h1>
-          <p className="text-sm text-richblack-400 mt-1">Recruiters propose times here once you've completed a job's test.</p>
-        </div>
-
+      <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Recruiters propose times here once you've completed a job's test.</p>
+      <div className="max-w-3xl mx-auto space-y-4 px-4 lg:px-6 py-4">
         {schedules.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">
             <p className="text-sm text-richblack-400">No interview invitations yet.</p>

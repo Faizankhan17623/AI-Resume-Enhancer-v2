@@ -44,19 +44,15 @@ export default function JobAlerts() {
     }
   }
 
-  if (!alerts) return <DashboardLayout><Loading text="Loading your job alerts..." /></DashboardLayout>
+  if (!alerts) return <DashboardLayout title="Job Alerts"><Loading text="Loading your job alerts..." /></DashboardLayout>
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Job Alerts">
       <Helmet><title>Job Alerts | Resumify</title></Helmet>
-      <div className="max-w-2xl space-y-4">
-        <div>
-          <h1 className="font-display text-2xl text-richblack-5">Job Alerts</h1>
-          <p className="text-sm text-richblack-400 mt-1">
-            Saved from the job board — we'll email you when a new job matches.
-          </p>
-        </div>
-
+      <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">
+        Saved from the job board — we'll email you when a new job matches.
+      </p>
+      <div className="max-w-2xl mx-auto space-y-4 px-4 lg:px-6 py-4">
         {alerts.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">
             <p className="text-sm text-richblack-400">No saved alerts yet — search the job board and click "Save as alert."</p>

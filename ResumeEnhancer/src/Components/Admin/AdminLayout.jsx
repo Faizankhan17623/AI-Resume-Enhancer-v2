@@ -153,18 +153,30 @@ const GlobalAdminSearch = () => {
 
   return (
     <div ref={boxRef} className="relative w-full max-w-xl mx-auto">
-      <div className="relative">
-        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setOpen(true)}
-          placeholder="Search users or payments..."
-          aria-label="Search users or payments"
-          className="w-full rounded-lg bg-richblack-800 border border-richblack-600 pl-10 pr-10 py-2.5 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-        />
-        {loading && <FaSpinner className="absolute right-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm animate-spin" />}
+      {/* YouTube-style split pill sir, per direct request — a fully-rounded input on the left
+          (no icon inside it) butted up against a separate fully-rounded search button on the
+          right, rather than one bar with an icon floating inside it */}
+      <div className="flex items-stretch">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setOpen(true)}
+            placeholder="Search users or payments..."
+            aria-label="Search users or payments"
+            className="w-full h-10 rounded-l-full bg-white border border-richblack-600 border-r-0 pl-5 pr-9 text-sm text-richblack-900 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+          />
+          {loading && <FaSpinner className="absolute right-4 top-1/2 -translate-y-1/2 text-richblack-400 text-sm animate-spin" />}
+        </div>
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="flex items-center justify-center w-14 h-10 rounded-r-full bg-white border border-richblack-600 text-richblack-500 hover:bg-richblack-100 transition-colors duration-200 cursor-pointer"
+        >
+          <FaSearch className="text-sm" />
+        </button>
       </div>
 
       <AnimatePresence>
