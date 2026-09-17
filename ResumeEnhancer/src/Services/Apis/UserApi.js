@@ -63,7 +63,10 @@ export const Notifications = {
     list: BASE_URL + "/notifications",
     unreadcount: BASE_URL + "/notifications/unread-count",
     readall: BASE_URL + "/notifications/read-all",
-    markread: BASE_URL + "/notifications"   // + /:notificationId/read
+    markread: BASE_URL + "/notifications",   // + /:notificationId/read
+    pushpublickey: BASE_URL + "/notifications/push/public-key",
+    pushsubscribe: BASE_URL + "/notifications/push/subscribe",
+    pushunsubscribe: BASE_URL + "/notifications/push/unsubscribe"
 }
 
 export const Referral = {

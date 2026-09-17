@@ -15,6 +15,7 @@ import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import PageTransition from '../extra/PageTransition'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats, GetCreditHistory } from '../../Services/operations/User'
+import { GetPushSubscriptionStatus, EnablePushNotifications, DisablePushNotifications } from '../../Services/operations/Notification'
 import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
@@ -28,7 +29,7 @@ const roleBadge = {
 }
 
 // small on/off switch sir — used for notification preferences, shared with RecruiterAccount.jsx
-export const Toggle = ({ checked, onChange, label, hint }) => (
+export const Toggle = ({ checked, onChange, label, hint, disabled }) => (
   <div className="flex items-center justify-between py-3">
     <div>
       <p className="text-sm font-medium text-richblack-5">{label}</p>
@@ -39,7 +40,8 @@ export const Toggle = ({ checked, onChange, label, hint }) => (
       onClick={() => onChange(!checked)}
       role="switch"
       aria-checked={checked}
-      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 cursor-pointer ${checked ? 'bg-yellow-50' : 'bg-richblack-600'}`}
+      disabled={disabled}
+      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${checked ? 'bg-yellow-50' : 'bg-richblack-600'}`}
     >
       <motion.span
         layout
@@ -270,6 +272,25 @@ const Account = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // real Web Push sir, per direct request — this checks THIS BROWSER's own subscription state,
+  // separate from any notify* preference: a user could have granted permission on their phone
+  // but not this laptop, so the toggle can't just read off the user object like the email ones do
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  useEffect(() => {
+    dispatch(GetPushSubscriptionStatus()).then((enabled) => {
+      setPushEnabled(enabled)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleTogglePush = async (wantEnabled) => {
+    const success = wantEnabled
+      ? await dispatch(EnablePushNotifications(token, setPushBusy))
+      : await dispatch(DisablePushNotifications(token, setPushBusy))
+    if (success) setPushEnabled(wantEnabled)
+  }
+
   const onChangePassword = async (data) => {
     setChangingPassword(true)
     await dispatch(ChangePassword(data.oldPassword, data.newPassword, data.confirmNewPassword, token, () => resetPasswordForm(), withBusyLabel('Updating your password...', setBusy)))
@@ -466,6 +487,28 @@ const Account = () => {
               />
             )}
           </div>
+        </div>
+
+        {/* Real Web Push sir, per direct request — a separate card from Email Notifications
+            above since this is per-BROWSER (needs OS permission on this device), not a stored
+            user preference. Respects the same notify* flags above once enabled — turning off
+            e.g. "Win-back emails" also stops the matching push, see Backend/utils/
+            NotificationLog.js's PUSH_PREF_FIELD mapping. */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaBell className="text-yellow-50 text-base" /> Push Notifications
+          </h2>
+          <p className="text-xs text-richblack-400 mb-2">
+            Get a notification on this device even when Resumify isn't open. Uses the same
+            preferences above — turn off a category there and its push stops too.
+          </p>
+          <Toggle
+            label="Enable on this device"
+            hint={pushEnabled ? "You'll get notifications here even with the site closed." : "Off — you'll only see notifications inside the app."}
+            checked={pushEnabled}
+            onChange={handleTogglePush}
+            disabled={pushBusy}
+          />
         </div>
 
         {/* Invite friends sir — User-only here. A Recruiter has their own reachable equivalent

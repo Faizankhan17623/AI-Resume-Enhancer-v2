@@ -38,6 +38,9 @@ export default defineConfig({
       workbox: {
         // the backend lives on a separate origin (see VITE_MAIN_BACKEND_URL) sir, so Workbox's
         // default same-origin runtime caching never touches API calls — nothing extra needed here.
+        // importScripts pulls public/push-sw.js's push/notificationclick listeners into the
+        // generated sw.js sir — generateSW itself has no listener-injection hook, this is it.
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

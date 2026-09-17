@@ -66,6 +66,10 @@ candidates with proctored tests — with a full admin/support back office runnin
   reminders), bonus credit history, export your own data as JSON, and delete your account with a
   2-day recovery window (logging back in undoes it)
 - **In-App Notifications** — an unread-badge bell mirroring the email nudges
+- **Push Notifications** — real Web Push (VAPID), opt in per-device from the Account page; unlike
+  the in-app bell, this reaches the user even with every tab and the browser itself fully closed.
+  Respects the same per-type toggle as the matching email nudge — turning off "Win-back emails"
+  also stops the win-back push, one preference gates both channels
 
 ### For recruiters
 
@@ -170,6 +174,7 @@ candidates with proctored tests — with a full admin/support back office runnin
 - Scheduled jobs run in a **separate worker process** (`npm run worker`), not inside the API
   server, and are protected by a MongoDB-backed lease so only one process instance ever executes
   a given job tick
+- `web-push` for real Web Push notifications (VAPID) — see "Push Notifications setup" below
 
 ## Project Structure
 
@@ -273,6 +278,34 @@ paste a token from `/Login` to try authenticated endpoints directly from the doc
    cd Backend
    npm run worker        # or: npm run dev:worker, for auto-restart
    ```
+
+## Push Notifications setup
+
+Real Web Push (works even with the site fully closed, not just backgrounded) — no third-party
+account or paid service, just a self-generated key pair using the open Web Push standard.
+
+1. Generate a VAPID key pair (one-time, from `Backend/`):
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+   This prints a public key and a private key.
+
+2. Add both to `Backend/.env`:
+   ```
+   WEB_PUSH_PUBLIC_KEY=<the public key>
+   WEB_PUSH_PRIVATE_KEY=<the private key>
+   WEB_PUSH_CONTACT_EMAIL=you@example.com   # optional, defaults to support@resumifyapp.com
+   ```
+
+3. Restart the backend (`pm2 restart web worker` in production, or just re-run `npm run dev`
+   locally). If these keys are missing, the server still boots fine — push sends are silently
+   skipped (a startup warning is logged) rather than the boot failing, since push is an
+   enhancement, not a hard dependency.
+
+The public key is served from `GET /notifications/push/public-key` (genuinely public by design —
+that's the whole point of the public half of a VAPID pair) and consumed by the frontend's
+`PushManager.subscribe()` call. Rotating the keys later invalidates every existing subscription —
+users will need to re-enable push on the Account page after a rotation.
 
 ## Testing
 

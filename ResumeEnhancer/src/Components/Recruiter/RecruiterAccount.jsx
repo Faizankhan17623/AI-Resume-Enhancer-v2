@@ -16,6 +16,7 @@ import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PasswordInput from '../extra/PasswordInput'
 import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, UpdateLastName, UpdateEmail, UpdateNumber, ExportMyData, GetReferralStats } from '../../Services/operations/User'
+import { GetPushSubscriptionStatus, EnablePushNotifications, DisablePushNotifications } from '../../Services/operations/Notification'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
 
@@ -122,6 +123,24 @@ const RecruiterAccount = () => {
     dispatch(GetProfile(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // real Web Push sir — same per-browser check as Dashboard/Account.jsx, see that file's own
+  // comment on why this can't just read off the user object
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  useEffect(() => {
+    dispatch(GetPushSubscriptionStatus()).then((enabled) => {
+      setPushEnabled(enabled)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleTogglePush = async (wantEnabled) => {
+    const success = wantEnabled
+      ? await dispatch(EnablePushNotifications(token, setPushBusy))
+      : await dispatch(DisablePushNotifications(token, setPushBusy))
+    if (success) setPushEnabled(wantEnabled)
+  }
 
   const onChangePassword = async (data) => {
     setChangingPassword(true)
@@ -280,6 +299,23 @@ const RecruiterAccount = () => {
               onChange={(value) => dispatch(UpdateNotificationPrefs({ notifyNewApplicant: value }, token, withBusyLabel('Saving...', setBusy)))}
             />
           </div>
+        </div>
+
+        {/* Real Web Push sir — same per-device toggle as Dashboard/Account.jsx */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <h2 className="font-display text-lg text-richblack-5 mb-1 flex items-center gap-2">
+            <FaBell className="text-yellow-50 text-base" /> Push Notifications
+          </h2>
+          <p className="text-xs text-richblack-400 mb-2">
+            Get a notification on this device even when Resumify isn't open.
+          </p>
+          <Toggle
+            label="Enable on this device"
+            hint={pushEnabled ? "You'll get notifications here even with the site closed." : "Off — you'll only see notifications inside the app."}
+            checked={pushEnabled}
+            onChange={handleTogglePush}
+            disabled={pushBusy}
+          />
         </div>
 
         {/* Invite friends sir */}

@@ -1,6 +1,8 @@
 const mongoose = require('mongoose')
 const logger = require('../utils/logger')
 const Notification = require('../Models/Notification')
+const PushSubscription = require('../Models/PushSubscription')
+const { isPushConfigured } = require('../utils/WebPush')
 
 // GET /notifications — newest-first, capped so the bell dropdown never loads unbounded history sir
 exports.getNotifications = async (req, res) => {
@@ -102,6 +104,69 @@ exports.markAllAsRead = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while updating your notifications',
+        })
+    }
+}
+
+// GET /notifications/push/public-key sir — the frontend needs this to call
+// PushManager.subscribe({ applicationServerKey: <this key> }); genuinely public by design (it's
+// the whole point of the public half of a VAPID key pair), no Auth needed
+exports.getPushPublicKey = async (req, res) => {
+    if (!isPushConfigured()) {
+        return res.status(503).json({ success: false, message: 'Push notifications are not configured on this server' })
+    }
+    return res.status(200).json({ success: true, publicKey: process.env.WEB_PUSH_PUBLIC_KEY })
+}
+
+// POST /notifications/push/subscribe sir — called right after the browser grants permission and
+// PushManager.subscribe() resolves. Upserts on endpoint (the same physical subscription re-sent,
+// e.g. after a token refresh some browsers do periodically, updates in place rather than
+// duplicating) — see Models/PushSubscription.js's own comment on why this isn't just a User field.
+exports.subscribeToPush = async (req, res) => {
+    try {
+        const userId = req.User.id
+        const { endpoint, keys, userAgent } = req.body
+
+        if (!endpoint || !keys?.p256dh || !keys?.auth) {
+            return res.status(400).json({ success: false, message: 'Invalid push subscription' })
+        }
+
+        await PushSubscription.findOneAndUpdate(
+            { endpoint },
+            { user: userId, endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth }, userAgent: userAgent || '' },
+            { upsert: true }
+        )
+
+        return res.status(200).json({ success: true, message: 'Push notifications enabled on this device' })
+    } catch (error) {
+        (req.log || logger).error('push subscribe failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while enabling push notifications',
+        })
+    }
+}
+
+// POST /notifications/push/unsubscribe sir — called when the user turns push off in-app, or
+// right before the frontend calls the browser's own subscription.unsubscribe(). Scoped to the
+// endpoint + owning user so one device can't remove another user's subscription by guessing an id.
+exports.unsubscribeFromPush = async (req, res) => {
+    try {
+        const userId = req.User.id
+        const { endpoint } = req.body
+
+        if (!endpoint) {
+            return res.status(400).json({ success: false, message: 'endpoint is required' })
+        }
+
+        await PushSubscription.deleteOne({ endpoint, user: userId })
+
+        return res.status(200).json({ success: true, message: 'Push notifications turned off on this device' })
+    } catch (error) {
+        (req.log || logger).error('push unsubscribe failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while turning off push notifications',
         })
     }
 }
