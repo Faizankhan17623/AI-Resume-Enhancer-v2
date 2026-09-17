@@ -1,5 +1,16 @@
+const { escapeHtml } = require('../utils/escapeHtml')
+
 // same visual language as passwordResetTemplate.js sir — one look for every security email
-exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, when }, confirmUrl, denyUrl) => {
+exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, when, clientHints }, confirmUrl, denyUrl) => {
+  // clientHints sir — genuinely untrusted, browser-self-reported data (see
+  // services/deviceAlertService.js's own comment on why this is advisory-only), escaped like any
+  // other user-controllable string going into this email. browserLabel/osLabel/location/ip are
+  // NOT escaped here — those are server-derived (User-Agent header regex match, ip-lookup
+  // response, the connection's own IP), not free-form client input.
+  const hintLine = clientHints
+    ? [escapeHtml(clientHints.brand), escapeHtml(clientHints.model), escapeHtml(clientHints.platform)].filter(Boolean).join(' · ')
+    : null
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,6 +70,8 @@ exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, w
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Device</td>
                       <td style="padding:4px 0;font-size:13px;color:#F9FAFB;text-align:right;">${browserLabel} on ${osLabel}</td></tr>
+                  ${hintLine ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Reported by device</td>
+                      <td style="padding:4px 0;font-size:13px;color:#9CA3AF;text-align:right;">${hintLine}</td></tr>` : ''}
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Location</td>
                       <td style="padding:4px 0;font-size:13px;color:#F9FAFB;text-align:right;">${location || 'Unknown'}</td></tr>
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">IP address</td>
@@ -98,8 +111,9 @@ exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, w
               <div style="margin-top:28px;background:#F59E0B10;border-radius:12px;padding:16px 20px;
                           border:1px solid #F59E0B30;text-align:center;">
                 <span style="font-size:13px;color:#FCD34D;">
-                  🔒 If this wasn't you, click "secure my account" — we'll email you a link to
-                  reset your password, and every other device will be signed out the moment you do.
+                  🔒 If this wasn't you, click "secure my account" — you'll be taken to the
+                  password reset page, and every other device will be signed out the moment you
+                  set a new one.
                 </span>
               </div>
             </td>

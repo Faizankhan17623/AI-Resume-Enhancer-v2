@@ -25,6 +25,24 @@ const frontendOrigin = () => process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
     : 'http://localhost:5173'
 
+// client-reported User-Agent Client Hints sir, per direct request — self-reported by the
+// browser (window.navigator.userAgentData), genuinely spoofable, so this is ONLY ever shown as
+// a labeled "self-reported" extra detail in the alert email, never used for the actual new-device
+// decision above (that stays on the server-parsed User-Agent HEADER, via fingerprintRequest).
+// Trims/type-checks every field before it ever reaches an email template — this is untrusted
+// client input, same discipline as any other req.body field.
+const sanitizeClientHints = (hints) => {
+    if (!hints || typeof hints !== 'object') return null
+    const clean = (v, max = 60) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
+
+    const brand = clean(hints.brand)
+    const model = clean(hints.model)
+    const platform = clean(hints.platform)
+    if (!brand && !model && !platform) return null
+
+    return { brand, model, platform, mobile: hints.mobile === true }
+}
+
 const mintDeviceAlertToken = async (userId, deviceHash) => {
     const token = crypto.randomBytes(24).toString('hex')
     await DeviceAlertToken.create({
@@ -77,6 +95,9 @@ const checkAndAlertNewDevice = async (user, req) => {
 
         const token = await mintDeviceAlertToken(user._id, deviceHash)
         const location = await lookupIpLocation(ip) // null-safe, never throws
+        // only present on a password login sir — req.body doesn't exist the same way on the
+        // OAuth redirect path, hence the optional chaining rather than assuming it's there
+        const clientHints = sanitizeClientHints(req.body?.clientHints)
 
         const confirmUrl = `${frontendOrigin()}/device-confirm?token=${token}&action=confirm`
         const denyUrl = `${frontendOrigin()}/device-confirm?token=${token}&action=deny`
@@ -95,6 +116,7 @@ const checkAndAlertNewDevice = async (user, req) => {
                     // convention as the frontend's own utils/istTime.js), UTC in a security email
                     // read a few hours off from the recipient's own clock and just read as wrong
                     when: new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST',
+                    clientHints,
                 },
                 confirmUrl,
                 denyUrl

@@ -3,6 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } from '../../Slices/authSlice.js'
 import { CreateUser, SendOtp, Login, Logout, Password, Account } from '../Apis/UserApi.js'
+import { getClientHints } from '../../utils/clientHints.js'
 
 const { createuser } = CreateUser
 const { createotp } = SendOtp
@@ -101,7 +102,11 @@ export function LoginUser(email, password, navigate, onStatus) {
         dispatch(setLoading(true))
         onStatus?.('loading', 'Logging in...')
         try {
-            const response = await apiConnector("POST", login, { email, password })
+            // advisory-only sir — see utils/clientHints.js's own comment on why this is never
+            // trusted for the actual new-device security decision, only shown as an extra
+            // self-reported detail in the alert email when the backend already means to send one
+            const clientHints = await getClientHints()
+            const response = await apiConnector("POST", login, { email, password, clientHints })
 
             if (!response.data.success) {
                 throw new Error(response.data.message)

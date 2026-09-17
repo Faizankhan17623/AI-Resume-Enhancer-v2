@@ -132,11 +132,23 @@ const createUserSchema = z.object({
     { message: 'Please tell us your hiring needs', path: ['hiringNeeds'] }
 )
 
+// User-Agent Client Hints sir, per direct request — genuinely optional (Firefox/Safari never
+// send this, ResumeEnhancer/src/utils/clientHints.js returns null there), and purely advisory:
+// see services/deviceAlertService.js's own comment on why this is never used for the actual
+// new-device security decision, only shown as a labeled "self-reported" extra in the alert email.
+const clientHintsSchema = z.object({
+    brand: z.string().max(60).nullable().optional(),
+    model: z.string().max(60).nullable().optional(),
+    platform: z.string().max(60).nullable().optional(),
+    mobile: z.boolean().nullable().optional(),
+}).nullable().optional()
+
 const loginSchema = z.object({
     email,
     // NOT the full policy sir — an existing account may predate it, and a policy-shaped error on
     // login would tell an attacker their guess was the wrong SHAPE rather than simply wrong
     password: z.string({ error: 'Password is required' }).min(1, 'Password is required'),
+    clientHints: clientHintsSchema,
 })
 
 const sendOtpSchema = z.object({ email })
