@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router'
 import { useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { FaSearch, FaCoins, FaUserFriends } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetCreditGrants } from '../../Services/operations/Admin'
@@ -103,12 +102,10 @@ const CreditGrants = () => {
   const referralGrants = data.referral?.grants || []
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Credit Grants">
       <Helmet>
         <title>Admin — Credit Grants | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
         <p className="text-sm text-richblack-300 mb-6">
@@ -216,7 +213,7 @@ const CreditGrants = () => {
           </div>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

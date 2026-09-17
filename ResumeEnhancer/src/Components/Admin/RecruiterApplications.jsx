@@ -4,8 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaCheck, FaTimes, FaUserTie, FaGlobe } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
@@ -79,12 +78,10 @@ const RecruiterApplications = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Recruiter Applications">
       <Helmet>
         <title>Admin — Recruiter Applications | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <AnimatePresence>
       {rowBusy && (
@@ -190,7 +187,7 @@ const RecruiterApplications = () => {
           )}
         </div>
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

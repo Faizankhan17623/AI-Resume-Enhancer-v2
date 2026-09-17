@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaToggleOn, FaToggleOff, FaSlidersH, FaCheck } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
 import { useMinDurationLoading } from '../../Hooks/useMinDurationLoading'
@@ -77,12 +76,10 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Settings">
       <Helmet>
         <title>Admin — Settings | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <AnimatePresence>
       {updating && (
@@ -235,7 +232,7 @@ const Settings = () => {
           </motion.div>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

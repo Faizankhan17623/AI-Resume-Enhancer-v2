@@ -5,8 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins, FaUserSecret, FaUserSlash, FaBriefcase, FaUserTie } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
@@ -112,11 +111,9 @@ const Overview = () => {
 
   if (loading || !stats) {
     return (
-      <div className="min-h-screen w-full bg-richblack-900">
-        <Navbar />
-        <AdminNav />
+      <AdminLayout title="Overview">
         <Loading text="Loading the dashboard..." />
-      </div>
+      </AdminLayout>
     )
   }
 
@@ -150,12 +147,10 @@ const Overview = () => {
   ]
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Overview">
       <Helmet>
         <title>Admin | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
@@ -727,7 +722,7 @@ const Overview = () => {
           )}
         </div>
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

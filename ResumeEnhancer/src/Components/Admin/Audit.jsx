@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { FaSearch, FaFileDownload } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetAuditLogs, FetchAllAuditLogsForExport } from '../../Services/operations/Admin'
@@ -88,12 +87,10 @@ const Audit = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Audit Log">
       <Helmet>
         <title>Admin — Audit Log | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
@@ -194,7 +191,7 @@ const Audit = () => {
           </div>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

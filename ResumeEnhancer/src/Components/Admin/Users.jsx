@@ -5,8 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import Swal from 'sweetalert2'
 import { FaSearch, FaTrash, FaBan, FaUndo, FaCoins, FaWrench, FaFileDownload, FaGift, FaSkullCrossbones } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
@@ -385,12 +384,10 @@ const Users = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Users">
       <Helmet>
         <title>Admin — Users | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       {/* full-screen loader sir while the broadcast credit grant is in flight — the request only
           resolves once the DB write for every user has actually landed (emails are sent
@@ -824,7 +821,7 @@ const Users = () => {
         )}
       </PageTransition>
       <UserDetailModal userId={detailUserId} onClose={() => setDetailUserId(null)} page={page} search={search} roleFilter={roleFilter} />
-    </div>
+    </AdminLayout>
   )
 }
 

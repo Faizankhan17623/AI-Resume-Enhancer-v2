@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaStar, FaCheck, FaTimes, FaTrash, FaCommentDots } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
@@ -47,12 +46,10 @@ const Testimonials = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Testimonials">
       <Helmet>
         <title>Admin — Testimonials | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <AnimatePresence>
       {rowBusy && (
@@ -153,7 +150,7 @@ const Testimonials = () => {
           )}
         </div>
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

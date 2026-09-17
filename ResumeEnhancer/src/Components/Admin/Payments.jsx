@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
 import { FaFileDownload, FaUndo } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GetPayments, RefundPayment } from '../../Services/operations/Admin'
@@ -105,12 +104,10 @@ const Payments = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Payments">
       <Helmet>
         <title>Admin — Payments | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-7xl mx-auto px-6 py-8">
 
@@ -287,7 +284,7 @@ const Payments = () => {
           </div>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

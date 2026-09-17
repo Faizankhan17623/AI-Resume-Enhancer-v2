@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { FaHeartbeat, FaExclamationTriangle, FaClock, FaTimesCircle } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
 import { GetRecruiterDataHealth, ForceExpireJob } from '../../Services/operations/Admin'
@@ -30,12 +29,10 @@ const RecruiterDataHealth = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Recruiter Data Health">
       <Helmet>
         <title>Admin — Recruiter Data Health | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2">
@@ -144,7 +141,7 @@ const RecruiterDataHealth = () => {
           </>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { FaHistory } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
 import { apiConnector } from '../../Services/apiConnector'
@@ -30,12 +29,10 @@ const MyActivity = () => {
   }, [token])
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="My Activity">
       <Helmet>
         <title>My Activity | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <PageTransition className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <h2 className="font-display text-lg text-richblack-5 flex items-center gap-2">
@@ -69,7 +66,7 @@ const MyActivity = () => {
           </div>
         )}
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 

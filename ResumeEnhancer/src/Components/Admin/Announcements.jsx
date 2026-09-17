@@ -4,8 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaBullhorn, FaTrash, FaEdit, FaTimes } from 'react-icons/fa'
-import Navbar from '../Home/Navbar'
-import AdminNav from './AdminNav'
+import AdminLayout from './AdminLayout'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
@@ -169,12 +168,10 @@ const Announcements = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-richblack-900">
+    <AdminLayout title="Announcements">
       <Helmet>
         <title>Admin — Announcements | Resumify</title>
       </Helmet>
-      <Navbar />
-      <AdminNav />
 
       <AnimatePresence>
       {publishing && (
@@ -306,7 +303,7 @@ const Announcements = () => {
           )}
         </div>
       </PageTransition>
-    </div>
+    </AdminLayout>
   )
 }
 
