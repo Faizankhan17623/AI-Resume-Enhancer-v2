@@ -895,7 +895,8 @@ exports.forgotPassword = async (req, res) => {
                 // logging in (password or OAuth) after requesting a reset silently clobbered
                 // the emailed reset link, and requesting a reset clobbered the last-issued JWT
                 resetPasswordToken: token,
-                resetPasswordExpires: Date.now() + 3600000,
+                // 5 minutes sir, per direct request — a deliberately tight window
+                resetPasswordExpires: Date.now() + 5 * 60 * 1000,
             },
             { returnDocument: 'after' }
 
@@ -1727,7 +1728,7 @@ exports.resolveDeviceAlert = async (req, res) => {
             return res.status(result.status).json({ success: false, message: result.message })
         }
 
-        return res.status(200).json({ success: true, action: result.action, message: result.message })
+        return res.status(200).json({ success: true, action: result.action, message: result.message, email: result.email })
     } catch (error) {
         (req.log || logger).error('resolve device alert failed', { err: error })
         return res.status(500).json({

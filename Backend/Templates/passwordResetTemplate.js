@@ -51,7 +51,7 @@ exports.passwordResetTemplate = (name, url) => {
                 Hi <strong style="color:#F9FAFB;white-space:nowrap;">${name}</strong>,
                 we received a request to reset your password. Click the button below to
                 choose a new one. This link is valid for the next
-                <strong style="color:#F9FAFB;">1 hour</strong>.
+                <strong style="color:#F9FAFB;">5 minutes</strong>.
               </p>
 
               <!-- Reset button -->

@@ -14,7 +14,6 @@ const { buildDeviceHash, fingerprintRequest } = require('../utils/deviceFingerpr
 const { lookupIpLocation } = require('../utils/ipGeoLookup')
 const mailSender = require('../utils/Nodemailer')
 const { newDeviceAlertTemplate } = require('../Templates/newDeviceAlertTemplate')
-const { passwordResetTemplate } = require('../Templates/passwordResetTemplate')
 const logger = require('../utils/logger')
 
 const ALERT_ELIGIBLE_ROLES = ['User', 'Recruiter']
@@ -92,7 +91,10 @@ const checkAndAlertNewDevice = async (user, req) => {
                     osLabel,
                     location,
                     ip,
-                    when: new Date().toLocaleString('en-US', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' }) + ' UTC',
+                    // IST sir, per direct request — this app's user base is India-based (same
+                    // convention as the frontend's own utils/istTime.js), UTC in a security email
+                    // read a few hours off from the recipient's own clock and just read as wrong
+                    when: new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST',
                 },
                 confirmUrl,
                 denyUrl
@@ -113,14 +115,12 @@ const checkAndAlertNewDevice = async (user, req) => {
  * see checkAndAlertNewDevice above) — this click just consumes the token so it can't be reused,
  * nothing else needs to change.
  *
- * 'deny': deliberately does NOT touch tokenVersion or KnownDevice directly here. Instead it
- * generates a real password-reset token and sends the EXACT SAME reset-password email the
- * forgot-password flow sends — reusing that flow means the existing resetPassword controller's
- * own tokenVersion bump + token:null (which kills every session, everywhere) fires the moment
- * the user actually sets a new password, not before. Force-killing the session at the "no, it
- * wasn't me" click instead would lock the real account owner out immediately, before they've had
- * any chance to reset — a worse outcome than leaving the (already-flagged) session alone for the
- * few minutes it takes to open the follow-up email and reset.
+ * 'deny': per direct request, this no longer auto-generates or auto-sends a reset email itself.
+ * It just consumes the token and hands the frontend the account's email so DeviceAlertConfirm.jsx
+ * can redirect straight to the real Forgot Password page — the user types nothing extra (their
+ * email is already known), but the actual reset-token minting + email send goes through the
+ * SAME forgotPassword flow every other password reset uses, rather than a second bespoke path
+ * here duplicating it.
  */
 const resolveDeviceAlert = async (token, action) => {
     const record = await DeviceAlertToken.findOne({ token })
@@ -136,30 +136,12 @@ const resolveDeviceAlert = async (token, action) => {
     }
 
     if (action === 'deny') {
-        const user = await User.findById(record.user)
+        const user = await User.findById(record.user).select('email')
         if (!user) {
             return { ok: false, status: 404, message: 'Account not found' }
         }
 
-        // same reset-token shape as forgotPassword in controllers/user.js sir — one hour to use it
-        const resetToken = crypto.randomBytes(20).toString('hex')
-        await User.findByIdAndUpdate(user._id, {
-            resetPasswordToken: resetToken,
-            resetPasswordExpires: Date.now() + 3600000,
-        })
-
-        const url = `${frontendOrigin()}/reset-password/${resetToken}`
-        try {
-            await mailSender(
-                user.email,
-                'Reset Your Password',
-                passwordResetTemplate(`${user.firstName} ${user.lastName}`, url)
-            )
-        } catch (mailError) {
-            logger.error('device-deny reset email delivery failed', { err: mailError, userId: user._id })
-        }
-
-        return { ok: true, action: 'deny', message: 'A password reset link is on its way to your email — resetting it will sign out every other device' }
+        return { ok: true, action: 'deny', email: user.email, message: 'Enter your email below to reset your password' }
     }
 
     return { ok: false, status: 400, message: 'Unrecognized action' }

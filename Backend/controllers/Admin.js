@@ -316,7 +316,9 @@ exports.resendPasswordReset = async (req, res) => {
             userId,
             {
                 resetPasswordToken: token,
-                resetPasswordExpires: Date.now() + 3600000,
+                // 5 minutes sir, per direct request — same window as the self-serve forgot-password
+                // flow (controllers/user.js), kept in sync deliberately
+                resetPasswordExpires: Date.now() + 5 * 60 * 1000,
             },
             { returnDocument: 'after' }
         ).select('firstName lastName email')
