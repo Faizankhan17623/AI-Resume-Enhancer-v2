@@ -156,15 +156,21 @@ const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Onboarding checklist sir — shows until every step is done or the user dismisses it, never again after that */}
+        {/* Onboarding checklist sir — shows until every step is done or the user dismisses it,
+            never again after that. Scale/opacity enter (not a height:0->'auto' animation) sir —
+            found live: height:'auto' inside this flex-col parent could get stuck mid-collapse
+            (rendered at ~40px instead of its real content height) depending on the browser's
+            render timing, silently clipping the card's own content with its own overflow-hidden.
+            A scale/opacity transform never depends on layout completing first, so it can't get
+            stuck partway like that. */}
         <AnimatePresence>
           {showOnboarding && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5 overflow-hidden"
+              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5"
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -210,15 +216,16 @@ const DashboardHome = () => {
         </AnimatePresence>
 
         {/* Days-since-last-review nudge sir, per direct request — dismissible, re-eligible after
-            the next review (see dismissReviewNudge's own comment above) */}
+            the next review (see dismissReviewNudge's own comment above). Same scale/opacity fix
+            as the onboarding card just above — see that card's own comment for why. */}
         <AnimatePresence>
           {showReviewNudge && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4 overflow-hidden"
+              className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
