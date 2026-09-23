@@ -340,6 +340,29 @@ exports.downloadReviewPdf = async (req, res) => {
             }
         }
 
+        // ----- ATS structural formatting scan sir — deterministic parse-safety check, stored
+        // directly on the Review doc (saved.formattingCheck), NOT part of the AI's JSON (r) —
+        // same section the UI shows right after Score Breakdown (Report.jsx), was missing here
+        if (saved.formattingCheck) {
+            sectionTitle(doc, 'ATS Formatting Scan')
+            doc.fillColor(scoreColor(saved.formattingCheck.score)).fontSize(20).font('Helvetica-Bold')
+                .text(`${saved.formattingCheck.score}/100`, { continued: true })
+            doc.fillColor(COLORS.muted).fontSize(9).font('Helvetica')
+                .text(saved.formattingCheck.issues?.length
+                    ? `   ${saved.formattingCheck.issues.length} formatting issue${saved.formattingCheck.issues.length > 1 ? 's' : ''} that could trip up real ATS parsers`
+                    : '   No structural parsing issues detected — this resume should parse cleanly.')
+            doc.moveDown(0.3)
+            if (saved.formattingCheck.issues?.length) {
+                for (const issue of saved.formattingCheck.issues) {
+                    const sevColor = issue.severity === 'high' ? COLORS.bad : issue.severity === 'medium' ? COLORS.warn : COLORS.muted
+                    doc.fillColor(sevColor).fontSize(9).font('Helvetica-Bold')
+                        .text(`[${(issue.severity || '').toUpperCase()}] `, { continued: true })
+                    doc.fillColor(COLORS.body).font('Helvetica').text(issue.message || '')
+                    doc.moveDown(0.2)
+                }
+            }
+        }
+
         // ----- ProMax extra: recruiter first impression sir -----
         if (r.recruiterFirstImpression) {
             sectionTitle(doc, 'Recruiter First Impression')
