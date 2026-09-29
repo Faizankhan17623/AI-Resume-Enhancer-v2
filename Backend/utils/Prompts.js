@@ -230,6 +230,38 @@ RULES:
 - Do not invent a company name, hiring manager name, or address — write the body only, no letterhead or signature block beyond "Sincerely," followed by a "[Your Name]" placeholder.
 - Respond with plain text only — no markdown, no JSON, no commentary before or after.`
 
+// ---------- OUTREACH MESSAGE PROMPT (controllers/OutreachMessage.js) ----------
+
+// same Pro+ gate as the cover letter sir, but a different artifact entirely: this is the short
+// note a candidate sends directly to a recruiter or hiring manager, not a formal letter — wrong
+// tone/length here (a cover letter shrunk down) reads exactly as template-y as the thing it's
+// supposed to replace.
+//
+// Returns BOTH a subject line and a body sir, since this can go out as an email (subject
+// required) or a LinkedIn DM (subject just gets ignored by the frontend) — one generation covers
+// both destinations rather than guessing which one the user meant.
+const buildOutreachMessagePrompt = (resumeText, jd) => `You are an expert career coach writing a short, casual outreach message for a candidate to send directly to a recruiter or hiring manager about a specific job. The candidate may send this as an email OR paste it into a LinkedIn message — you don't know which, so write a body that works as either, and a subject line for the email case.
+
+=== THE CANDIDATE'S RESUME ===
+${resumeText}
+
+=== THE JOB DESCRIPTION ===
+${jd}
+
+RULES:
+- Ground every claim strictly in the resume. Do NOT invent experience, employers, certifications, or metrics the candidate does not have.
+- "subject": a short, specific email subject line (under 60 characters) naming the role — e.g. "Experienced Frontend Engineer interested in [Role]". No clickbait, no "Application for..." boilerplate.
+- "body": 3-5 sentences total, plain conversational language — a DM/email opener, not a cover letter. No paragraphs, no formal structure.
+- Open the body with a specific, genuine reason for reaching out about THIS role, referencing one real, relevant detail from the resume and language from the JD.
+- End the body with a light, low-pressure call to action (e.g. asking for a quick chat or pointing to the attached resume) — never pushy or salesy.
+- No greeting like "Dear" or "To whom it may concern" inside "body", no letterhead, no signature block, no "[Your Name]" placeholder — just the message content, since the sender's name is already visible wherever this gets sent.
+- No clichés like "I am writing to express my interest" or "I hope this message finds you well".
+- Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fences, no commentary before or after:
+{
+  "subject": "string",
+  "body": "string"
+}`
+
 // ---------- RESUME BUILDER PROMPTS (controllers/BuiltResume.js) ----------
 
 // the exact JSON shape a BuiltResume document expects sir — shared by both AI builder features
@@ -444,4 +476,4 @@ Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fenc
   "summary": "the 2-4 sentence summary"
 }`
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt, buildFitScorePrompt, buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt }
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildOutreachMessagePrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt, buildFitScorePrompt, buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt }
