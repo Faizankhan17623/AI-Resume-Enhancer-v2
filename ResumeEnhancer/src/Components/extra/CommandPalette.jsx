@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   FaSearch, FaFilePdf, FaMagic, FaComments, FaEnvelopeOpenText, FaBriefcase,
-  FaPlus, FaUsers, FaBug, FaChartLine, FaFolderOpen,
+  FaPlus, FaUsers, FaBug, FaChartLine, FaFolderOpen, FaPaperPlane,
 } from 'react-icons/fa'
 import { apiConnector } from '../../Services/apiConnector'
 import BASE_URL from '../../utils/backendUrl'
@@ -21,6 +21,7 @@ const QUICK_ACTIONS = {
     { label: 'Build Resume', path: '/Dashboard/Build-Resume', icon: FaMagic },
     { label: 'AI Coach', path: '/Dashboard/Chats', icon: FaComments },
     { label: 'Cover Letter', path: '/Dashboard/Cover-Letter', icon: FaEnvelopeOpenText },
+    { label: 'Outreach Message', path: '/Dashboard/Outreach-Message', icon: FaPaperPlane },
     { label: 'My Job Applications', path: '/Dashboard/My-Applications', icon: FaBriefcase },
     { label: 'My Resumes', path: '/Dashboard/Resumes', icon: FaFolderOpen },
   ],

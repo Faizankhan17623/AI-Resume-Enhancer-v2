@@ -47,6 +47,7 @@ const History = lazy(() => import('./Components/Dashboard/History'))
 const Leaderboard = lazy(() => import('./Components/Dashboard/Leaderboard'))
 const Chat = lazy(() => import('./Components/Dashboard/Chat'))
 const CoverLetter = lazy(() => import('./Components/Dashboard/CoverLetter'))
+const OutreachMessage = lazy(() => import('./Components/Dashboard/OutreachMessage'))
 const JobSearch = lazy(() => import('./Components/Dashboard/JobSearch'))
 const MockInterview = lazy(() => import('./Components/Dashboard/MockInterview'))
 const Account = lazy(() => import('./Components/Dashboard/Account'))
@@ -249,6 +250,7 @@ function App() {
             <Route path="/Dashboard/Chats" element={<PrivateRoute><Chat /></PrivateRoute>} />
             <Route path="/Dashboard/Chat/:chatId" element={<PrivateRoute><Chat /></PrivateRoute>} />
             <Route path="/Dashboard/Cover-Letter" element={<PrivateRoute><CoverLetter /></PrivateRoute>} />
+            <Route path="/Dashboard/Outreach-Message" element={<PrivateRoute><OutreachMessage /></PrivateRoute>} />
             <Route path="/Dashboard/Job-Search" element={<PrivateRoute><JobSearch /></PrivateRoute>} />
             <Route path="/Dashboard/Mock-Interview" element={<PrivateRoute><MockInterview /></PrivateRoute>} />
             <Route path="/Dashboard/Mock-Interview/:sessionId" element={<PrivateRoute><MockInterview /></PrivateRoute>} />

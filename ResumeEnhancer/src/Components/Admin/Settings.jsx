@@ -16,6 +16,7 @@ import { istPartsToUtcDate, utcDateToIstDisplay, istDateStrFromNow } from '../..
 const LABELS = {
   'feature.review': { label: 'AI Resume Review', description: 'The core ATS review — upload + JD, score, gaps.' },
   'feature.coverLetter': { label: 'Cover Letter Generator', description: 'Pro+ feature, generates a tailored cover letter.' },
+  'feature.outreachMessage': { label: 'Outreach Message Generator', description: 'Pro+ feature, generates a short recruiter/hiring-manager outreach message.' },
   'feature.jobSearch': { label: 'Job Search', description: 'Pro+ feature, live job search via Tavily.' },
 }
 

@@ -30,6 +30,7 @@ const domains = [
     { name: 'admin', owns: ['/admin', '/announcements'], router: require('./Admin.js') },
     { name: 'grammarCheck', owns: ['/grammar-check'], router: require('./GrammarCheck.js') },
     { name: 'coverLetter', owns: ['/cover-letter'], router: require('./CoverLetter.js') },
+    { name: 'outreachMessage', owns: ['/outreach-message'], router: require('./OutreachMessage.js') },
     { name: 'resume', owns: ['/resumes'], router: require('./Resume.js') },
     { name: 'builtResume', owns: ['/built-resumes'], router: require('./BuiltResume.js') },
     { name: 'jobSearch', owns: ['/job-search'], router: require('./JobSearch.js') },

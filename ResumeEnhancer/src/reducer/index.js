@@ -6,6 +6,7 @@ import paymentReducer from '../Slices/paymentSlice'
 import profileReducer from '../Slices/profileSlice'
 import adminReducer from '../Slices/adminSlice'
 import coverLetterReducer from '../Slices/coverLetterSlice'
+import outreachMessageReducer from '../Slices/outreachMessageSlice'
 import resumeReducer from '../Slices/resumeSlice'
 import builtResumeReducer from '../Slices/builtResumeSlice'
 import jobSearchReducer from '../Slices/jobSearchSlice'
@@ -25,6 +26,7 @@ const rootReduers = combineReducers({
     profile: profileReducer,
     admin: adminReducer,
     coverLetter: coverLetterReducer,
+    outreachMessage: outreachMessageReducer,
     resume: resumeReducer,
     builtResume: builtResumeReducer,
     jobSearch: jobSearchReducer,

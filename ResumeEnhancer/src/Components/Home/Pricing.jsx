@@ -39,6 +39,7 @@ const CAPABILITY_MATRIX = [
 const REASON_BANNERS = {
   credits: "You've used all your free AI reviews — here's what upgrading unlocks.",
   coverLetter: 'Cover letters are a Pro feature — here\'s what upgrading unlocks.',
+  outreachMessage: 'Outreach messages are a Pro feature — here\'s what upgrading unlocks.',
   jobSearch: 'Job search is a Pro feature — here\'s what upgrading unlocks.',
   mockInterview: 'Mock interviews are a Pro Max feature — here\'s what upgrading unlocks.',
 }
