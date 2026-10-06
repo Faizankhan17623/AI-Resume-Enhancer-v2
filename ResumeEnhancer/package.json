@@ -18,7 +18,7 @@
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@tensorflow/tfjs-converter": "^4.22.0",
     "@tensorflow/tfjs-core": "^4.22.0",
-    "axios": "^1.18.1",
+    "axios": "^1.20.0",
     "gsap": "^3.15.0",
     "js-cookie": "^3.0.8",
     "motion": "^12.42.2",
