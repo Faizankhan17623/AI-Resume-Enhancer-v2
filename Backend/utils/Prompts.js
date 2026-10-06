@@ -262,6 +262,33 @@ RULES:
   "body": "string"
 }`
 
+// ---------- REJECTION DIAGNOSIS PROMPT (services/rejectionDiagnosisService.js) ----------
+
+// User-side, NOT recruiter sir — this reads one of the user's OWN saved Review docs (the full
+// AI JSON this app already generated at review time, see Models/Review.js), for an application
+// they've since marked Rejected on their personal tracker (Models/Application.js). It never
+// calls Groq with raw resume/JD text again — the review already has everything needed
+// (scoreBreakdown, strengths, missingKeywords, etc.), this just asks the model to reason about
+// WHY it likely wasn't enough, grounded in that same data, now that the real-world outcome is known.
+const buildRejectionDiagnosisPrompt = (reviewJson, jdTitle) => `You are an expert career coach. A candidate applied to a job ("${jdTitle || 'this role'}") after running an ATS review on their resume against the job description, and was rejected. Below is the FULL review the AI already generated at the time they applied — scores, strengths, gaps, everything it found.
+
+=== THE ORIGINAL REVIEW ===
+${JSON.stringify(reviewJson)}
+
+The candidate now knows the outcome: rejected. Your job is to look at this review with that hindsight and give a blunt, specific diagnosis — not generic resume advice, but reasoning grounded in what THIS review actually found.
+
+RULES:
+- Base your diagnosis strictly on what's in the review above. Do NOT invent new gaps, skills, or details not already present there.
+- If the review already shows a clearly weak area (a low scoreBreakdown category, a red flag, several missingKeywords), name that as the likely reason — be direct, not comforting.
+- If the review actually looked strong overall (high atsScore, no major gaps), say so honestly — the rejection may have been about something outside the resume (role already filled, salary mismatch, interview performance), not the resume itself. Never invent a resume flaw just to have something to blame.
+- "reasoning": 2-3 sentences, specific, grounded in the review's own data.
+- "suggestedFix": 1-2 sentences, the single most useful thing to change before applying to a similar role next time. If the resume genuinely wasn't the likely issue, say that instead of forcing a fix.
+- Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fences, no commentary before or after:
+{
+  "reasoning": "string",
+  "suggestedFix": "string"
+}`
+
 // ---------- RESUME BUILDER PROMPTS (controllers/BuiltResume.js) ----------
 
 // the exact JSON shape a BuiltResume document expects sir — shared by both AI builder features
@@ -476,4 +503,4 @@ Respond ONLY with a valid JSON object in EXACTLY this shape — no markdown fenc
   "summary": "the 2-4 sentence summary"
 }`
 
-module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildOutreachMessagePrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt, buildFitScorePrompt, buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt }
+module.exports = { buildReviewSystemPrompt, buildChatSystemPrompt, buildCoverLetterPrompt, buildOutreachMessagePrompt, buildRejectionDiagnosisPrompt, buildResumeGeneratorPrompt, buildResumeTailorPrompt, buildMockInterviewStartPrompt, buildMockInterviewAnswerPrompt, buildFitScorePrompt, buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt }

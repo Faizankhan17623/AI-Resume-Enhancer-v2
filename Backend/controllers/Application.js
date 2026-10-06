@@ -5,6 +5,7 @@ const Review = require('../Models/Review')
 const Resume = require('../Models/Resume')
 const BuiltResume = require('../Models/BuiltResume')
 const { getUserPlan } = require('../utils/Plans')
+const { runRejectionDiagnosis } = require('../services/rejectionDiagnosisService')
 
 const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
 
@@ -317,6 +318,160 @@ exports.getApplicationAnalytics = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Something went wrong while getting your application analytics',
+        })
+    }
+}
+
+// POST /applications/:applicationId/diagnose — AI rejection diagnosis sir, opt-in, spends one
+// of the user's own AI credits (same pool a fresh review spends from). Only works on a card
+// that's actually Rejected AND has a review linked — there is no reliable data to diagnose
+// otherwise, see Models/Application.js's own comment on why that link can't be auto-inferred.
+exports.diagnoseRejection = async (req, res) => {
+    try {
+        const id = req?.User.id
+        const { applicationId } = req.params
+
+        if (!mongoose.isValidObjectId(applicationId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid application id',
+            })
+        }
+
+        const application = await Application.findOne({ _id: applicationId, user: id })
+        if (!application) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found',
+            })
+        }
+
+        if (application.status !== 'Rejected') {
+            return res.status(400).json({
+                success: false,
+                message: 'This only works on an application marked Rejected',
+            })
+        }
+
+        if (!application.review) {
+            return res.status(400).json({
+                success: false,
+                message: 'Link the ATS review you used for this application first — there is nothing to diagnose without one',
+            })
+        }
+
+        const reviewDoc = await Review.findOne({ _id: application.review, user: id })
+        if (!reviewDoc) {
+            return res.status(400).json({
+                success: false,
+                message: 'The linked review could not be found',
+            })
+        }
+
+        const result = await runRejectionDiagnosis({ userId: id, reviewDoc })
+        if (!result.ok) {
+            return res.status(result.status).json({
+                success: false,
+                message: result.message,
+                code: result.code,
+            })
+        }
+
+        application.aiDiagnosis = {
+            reasoning: result.reasoning,
+            suggestedFix: result.suggestedFix,
+            generatedAt: new Date(),
+        }
+        await application.save()
+
+        return res.status(200).json({
+            success: true,
+            application,
+        })
+    } catch (error) {
+        (req.log || logger).error('diagnose rejection failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while running the diagnosis',
+        })
+    }
+}
+
+// GET /applications/rejection-patterns — pure aggregation sir, NO AI call, no credit spent.
+// Scans the user's own Rejected cards that have a review linked, and finds which
+// scoreBreakdown category comes up weakest most often — same "only as complete as what's
+// explicitly tagged" caveat as getApplicationAnalytics above, same reason (Review has no ref
+// back to the resume it scored, so this link can't be auto-inferred).
+exports.getRejectionPatterns = async (req, res) => {
+    try {
+        const id = req?.User.id
+
+        const rejected = await Application.find({ user: id, status: 'Rejected', review: { $ne: null } })
+            .select('review')
+            .populate({ path: 'review', select: 'scoreBreakdown' })
+
+        const linkedCount = rejected.length
+
+        // need at least 2 data points sir for "keeps coming up" to mean anything — one rejection
+        // is just one data point, not a pattern
+        if (linkedCount < 2) {
+            return res.status(200).json({
+                success: true,
+                hasPattern: false,
+                linkedCount,
+            })
+        }
+
+        const CATEGORY_LABELS = {
+            keywordMatch: 'Keyword Match',
+            experienceRelevance: 'Experience Relevance',
+            skillsCoverage: 'Skills Coverage',
+            formatting: 'Formatting',
+        }
+
+        // count how many of these rejections had each category as its OWN lowest-scoring one
+        // sir — a category that keeps being the weakest link across multiple rejections is the
+        // pattern worth surfacing, not just "this one review happened to flag it once"
+        const weakestCounts = { keywordMatch: 0, experienceRelevance: 0, skillsCoverage: 0, formatting: 0 }
+        for (const app of rejected) {
+            const breakdown = app.review?.scoreBreakdown
+            if (!breakdown) continue
+            let weakestKey = null
+            let weakestVal = Infinity
+            for (const key of Object.keys(CATEGORY_LABELS)) {
+                const val = breakdown[key]
+                if (typeof val === 'number' && val < weakestVal) {
+                    weakestVal = val
+                    weakestKey = key
+                }
+            }
+            if (weakestKey) weakestCounts[weakestKey] += 1
+        }
+
+        const [topKey, topCount] = Object.entries(weakestCounts).sort((a, b) => b[1] - a[1])[0]
+
+        // require it to show up in at least half the linked rejections sir — otherwise this is
+        // noise, not a real recurring pattern
+        if (topCount < 2 || topCount < linkedCount / 2) {
+            return res.status(200).json({
+                success: true,
+                hasPattern: false,
+                linkedCount,
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            hasPattern: true,
+            linkedCount,
+            category: CATEGORY_LABELS[topKey],
+            occurrences: topCount,
+        })
+    } catch (error) {
+        (req.log || logger).error('get rejection patterns failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while checking your rejection patterns',
         })
     }
 }

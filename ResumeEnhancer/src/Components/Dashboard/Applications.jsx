@@ -5,13 +5,13 @@ import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
-import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar } from 'react-icons/fa'
+import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar, FaMagic, FaLightbulb } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel, fadeUp, staggerContainer } from '../../utils/motion'
-import { GetApplications, CreateApplication, UpdateApplication, DeleteApplication, GetApplicationAnalytics } from '../../Services/operations/Application'
+import { GetApplications, CreateApplication, UpdateApplication, DeleteApplication, GetApplicationAnalytics, DiagnoseRejection, GetRejectionPatterns } from '../../Services/operations/Application'
 import { GetAllReviews } from '../../Services/operations/Review'
 
 const COLUMNS = [
@@ -154,6 +154,50 @@ const ApplicationModal = ({ editing, onClose }) => {
   )
 }
 
+// AI rejection diagnosis sir — only ever shown on a Rejected card. Opt-in button costs one AI
+// credit (see Services/operations/Application.js's DiagnoseRejection); once aiDiagnosis exists
+// on the card it's just shown, no re-fetch needed (patchApplication already put it there).
+const RejectionDiagnosis = ({ app }) => {
+  const dispatch = useDispatch()
+  const { token } = useSelector((state) => state.auth)
+  const { diagnosingId } = useSelector((state) => state.application)
+  const isDiagnosing = diagnosingId === app._id
+
+  if (app.aiDiagnosis) {
+    return (
+      <div className="mt-3 pt-3 border-t border-richblack-700 space-y-1.5">
+        <p className="text-[11px] font-semibold text-richblack-200 flex items-center gap-1.5">
+          <FaMagic className="text-yellow-50 text-[10px]" /> Likely why
+        </p>
+        <p className="text-xs text-richblack-300 leading-relaxed">{app.aiDiagnosis.reasoning}</p>
+        {app.aiDiagnosis.suggestedFix && (
+          <p className="text-xs text-caribgreen-100 leading-relaxed flex gap-1.5">
+            <FaLightbulb className="text-[10px] shrink-0 mt-0.5" /> {app.aiDiagnosis.suggestedFix}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  if (!app.review) {
+    return (
+      <p className="mt-3 pt-3 border-t border-richblack-700 text-[11px] text-richblack-400">
+        Link the review you used (edit this card) to get an AI diagnosis.
+      </p>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => dispatch(DiagnoseRejection(app._id, token))}
+      disabled={isDiagnosing}
+      className="mt-3 pt-3 border-t border-richblack-700 w-full text-left text-xs font-semibold text-yellow-50 hover:opacity-80 disabled:opacity-50 transition-opacity duration-150 cursor-pointer flex items-center gap-1.5"
+    >
+      <FaMagic className="text-[10px]" /> {isDiagnosing ? 'Diagnosing...' : 'Get AI diagnosis'}
+    </button>
+  )
+}
+
 const ApplicationCard = ({ app, onEdit, onDelete, onDragStart }) => (
   <motion.div
     layout
@@ -191,6 +235,8 @@ const ApplicationCard = ({ app, onEdit, onDelete, onDragStart }) => (
       </a>
     )}
     <p className="text-[11px] text-richblack-400 mt-2.5">{new Date(app.appliedDate || app.createdAt).toDateString()}</p>
+
+    {app.status === 'Rejected' && <RejectionDiagnosis app={app} />}
   </motion.div>
 )
 
@@ -270,6 +316,33 @@ const OutcomeAnalytics = () => {
   )
 }
 
+// cross-rejection pattern banner sir — pure data, no AI call (see getRejectionPatterns),
+// available to every plan. Only renders once there are enough linked rejections to say
+// anything meaningful — see the backend's own "at least half the linked rejections" bar.
+const RejectionPatternBanner = () => {
+  const dispatch = useDispatch()
+  const { token } = useSelector((state) => state.auth)
+  const { rejectionPattern } = useSelector((state) => state.application)
+
+  useEffect(() => {
+    dispatch(GetRejectionPatterns(token))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!rejectionPattern?.hasPattern) return null
+
+  return (
+    <div className="max-w-7xl mx-auto rounded-xl bg-pink-900/10 border border-pink-800/30 p-5 mb-6 flex items-start gap-3">
+      <FaLightbulb className="text-pink-200 shrink-0 mt-0.5" />
+      <p className="text-sm text-richblack-100">
+        <span className="font-semibold text-richblack-5">{rejectionPattern.category}</span> keeps coming up as the
+        weakest area across {rejectionPattern.occurrences} of your {rejectionPattern.linkedCount} rejected applications
+        with a review linked — worth fixing before your next few applications.
+      </p>
+    </div>
+  )
+}
+
 const Applications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
@@ -331,6 +404,7 @@ const Applications = () => {
         </div>
 
         <OutcomeAnalytics />
+        <RejectionPatternBanner />
 
         {loading ? (
           <Loading text="Loading your applications..." />
