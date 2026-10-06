@@ -6,4 +6,6 @@ export const ApplicationData = {
     update: BASE_URL + "/applications",   // + /:applicationId
     remove: BASE_URL + "/applications",   // + /:applicationId
     analytics: BASE_URL + "/applications/analytics",
+    diagnose: BASE_URL + "/applications",   // + /:applicationId/diagnose
+    rejectionPatterns: BASE_URL + "/applications/rejection-patterns",
 }

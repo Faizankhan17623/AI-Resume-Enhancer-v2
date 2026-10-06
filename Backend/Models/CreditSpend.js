@@ -25,7 +25,7 @@ const CreditSpendSchema = new mongoose.Schema(
         // behavioural difference between kinds
         kind: {
             type: String,
-            enum: ['review', 'resume-generate', 'resume-tailor'],
+            enum: ['review', 'resume-generate', 'resume-tailor', 'rejection-diagnosis'],
             required: true,
         },
     },

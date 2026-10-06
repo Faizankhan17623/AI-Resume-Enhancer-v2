@@ -64,6 +64,15 @@ const applicationSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'Review',
         },
+        // AI rejection diagnosis sir — opt-in (the user clicks "Get AI diagnosis" on a Rejected
+        // card, see controllers/Application.js's diagnoseRejection), spends one of the user's own
+        // AI credits same as a fresh review. null means never requested, not "nothing found" —
+        // the frontend tells these apart by whether this whole object is present.
+        aiDiagnosis: {
+            reasoning: { type: String, trim: true, maxlength: 1000 },
+            suggestedFix: { type: String, trim: true, maxlength: 500 },
+            generatedAt: { type: Date },
+        },
     }, { timestamps: true }
 )
 
