@@ -3,15 +3,17 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import Swal from 'sweetalert2'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
-import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar, FaMagic, FaLightbulb } from 'react-icons/fa'
+import { FaPlus, FaTimes, FaTrash, FaPen, FaBuilding, FaMapMarkerAlt, FaExternalLinkAlt, FaBriefcase, FaCrown, FaChartBar, FaMagic, FaLightbulb, FaBolt } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { modalBackdrop, modalPanel, fadeUp, staggerContainer } from '../../utils/motion'
 import { GetApplications, CreateApplication, UpdateApplication, DeleteApplication, GetApplicationAnalytics, DiagnoseRejection, GetRejectionPatterns } from '../../Services/operations/Application'
+import { SlidingNumber } from '../Animated/SlidingNumber'
+import { MorphingPopover, MorphingPopoverTrigger, MorphingPopoverContent } from '../Animated/MorphingPopover'
 import { GetAllReviews } from '../../Services/operations/Review'
 
 const COLUMNS = [
@@ -24,6 +26,61 @@ const COLUMNS = [
 const emptyForm = { company: '', role: '', location: '', jobUrl: '', notes: '', status: 'Applied', review: '' }
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
+// ---------- quick add sir — company + role only, straight onto the Applied column. The full modal
+// below stays for everything else (location, URL, notes, linked review). ----------
+const QuickAdd = () => {
+  const dispatch = useDispatch()
+  const { token } = useSelector((state) => state.auth)
+  const { saving } = useSelector((state) => state.application)
+  const [open, setOpen] = useState(false)
+  const [company, setCompany] = useState('')
+  const [role, setRole] = useState('')
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!company.trim() || !role.trim()) return
+    const ok = await dispatch(CreateApplication({ ...emptyForm, company: company.trim(), role: role.trim() }, token))
+    if (ok) {
+      setCompany('')
+      setRole('')
+      setOpen(false)
+    }
+  }
+
+  return (
+    <MorphingPopover open={open} onOpenChange={setOpen} className="shrink-0">
+      <MorphingPopoverTrigger className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 transition-colors duration-200 cursor-pointer">
+        <FaBolt className="text-xs text-yellow-50" /> Quick add
+      </MorphingPopoverTrigger>
+      <MorphingPopoverContent className="right-0 top-0 w-72">
+        <form onSubmit={submit} className="space-y-3">
+          <p className="text-xs font-semibold text-richblack-300">Quick add to Applied</p>
+          <input
+            autoFocus
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Company"
+            className="w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50"
+          />
+          <input
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            placeholder="Role"
+            className="w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50"
+          />
+          <button
+            type="submit"
+            disabled={saving || !company.trim() || !role.trim()}
+            className="w-full py-2 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-lg hover:bg-yellow-25 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Adding...' : 'Add'}
+          </button>
+        </form>
+      </MorphingPopoverContent>
+    </MorphingPopover>
+  )
+}
 
 // ---------- add/edit modal sir — same form for both, editing pre-fills from the card ----------
 const ApplicationModal = ({ editing, onClose }) => {
@@ -201,6 +258,7 @@ const RejectionDiagnosis = ({ app }) => {
 const ApplicationCard = ({ app, onEdit, onDelete, onDragStart }) => (
   <motion.div
     layout
+    layoutId={`application-card-${app._id}`}
     variants={fadeUp}
     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
     draggable
@@ -398,9 +456,12 @@ const Applications = () => {
           <p className="text-sm text-richblack-300">
             Track every application from applied to offer — drag a card between columns to update its status.
           </p>
-          <IconBtn text="Add application" onclick={() => setModalState('new')} customClasses="text-sm shrink-0 ml-4">
-            <FaPlus className="text-xs" />
-          </IconBtn>
+          <div className="flex items-center gap-3 shrink-0 ml-4">
+            <QuickAdd />
+            <IconBtn text="Add application" onclick={() => setModalState('new')} customClasses="text-sm shrink-0">
+              <FaPlus className="text-xs" />
+            </IconBtn>
+          </div>
         </div>
 
         <OutcomeAnalytics />
@@ -416,6 +477,7 @@ const Applications = () => {
             <IconBtn text="Add your first application" onclick={() => setModalState('new')} />
           </div>
         ) : (
+          <LayoutGroup>
           <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {COLUMNS.map((col) => (
               <div
@@ -430,7 +492,7 @@ const Applications = () => {
                 <div className="flex items-center gap-2 px-1 mb-3">
                   <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                   <h3 className="text-sm font-semibold text-richblack-5">{col.label}</h3>
-                  <span className="text-xs text-richblack-400 ml-auto">{grouped[col.status].length}</span>
+                  <div className="text-xs text-richblack-400 ml-auto"><SlidingNumber value={grouped[col.status].length} /></div>
                 </div>
 
                 <motion.div variants={staggerContainer(0.04)} initial="hidden" animate="show" className="space-y-3">
@@ -449,6 +511,7 @@ const Applications = () => {
               </div>
             ))}
           </div>
+          </LayoutGroup>
         )}
       </PageTransition>
 

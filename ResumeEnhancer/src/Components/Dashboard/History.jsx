@@ -10,6 +10,7 @@ import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAllReviews } from '../../Services/operations/Review'
+import { CountUp } from '../Animated/CountUp'
 
 const scoreColor = (score) =>
   score >= 70 ? 'text-caribgreen-100' : score >= 50 ? 'text-yellow-50' : 'text-pink-200'
@@ -68,7 +69,7 @@ const History = () => {
                   </div>
                 </div>
                 <span className={`text-2xl font-extrabold font-mono shrink-0 ml-4 ${scoreColor(review.atsScore)}`}>
-                  {review.atsScore}
+                  <CountUp value={review.atsScore} />
                 </span>
               </Link>
               </motion.div>

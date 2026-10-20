@@ -1,3 +1,5 @@
+import { TextShimmer } from '../Animated/TextShimmer'
+
 // h-full sir, not a fixed min-height — a fixed 300px box only centers the spinner within
 // that box, which reads as "stuck near the top" on a full-height page like NewReview's. h-full
 // makes this fill whatever scrollable content area it's placed in (see PageTransition's
@@ -18,11 +20,14 @@
 // max-h-[85vh] panel would nearly hit that cap on load with the page default).
 const MIN_HEIGHT = { page: 'min-h-[60vh]', compact: 'min-h-[160px]' }
 
+// the label shimmers instead of sitting static sir — a real in-page loader for every AI wait
+// (cover letter, outreach, review...) so the screen reads as "working", never frozen
+
 const Loading = ({ text = "Loading...", size = "page" }) => {
   return (
     <div className={`w-full h-full ${MIN_HEIGHT[size]} flex flex-col justify-center items-center gap-4`}>
       <div className="w-16 h-16 border-4 border-yellow-50 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-yellow-50 font-semibold text-lg">{text}</p>
+      <TextShimmer as="p" duration={1.8} className="font-semibold text-lg">{String(text)}</TextShimmer>
     </div>
   )
 }

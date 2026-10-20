@@ -5,7 +5,17 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaLayerGroup, FaCopy, FaTrash, FaPen, FaSearch } from 'react-icons/fa'
+import { FaLayerGroup, FaCopy, FaTrash, FaPen, FaSearch, FaEye } from 'react-icons/fa'
+import {
+  MorphingDialog,
+  MorphingDialogTrigger,
+  MorphingDialogContainer,
+  MorphingDialogContent,
+  MorphingDialogTitle,
+  MorphingDialogSubtitle,
+  MorphingDialogDescription,
+  MorphingDialogClose,
+} from '../Animated/MorphingDialog'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -15,6 +25,54 @@ import { getTemplateById } from '../ResumeBuilder/Templates/templateRegistry'
 import { GetBuiltResumes, DuplicateBuiltResume, DeleteBuiltResume } from '../../Services/operations/BuiltResume'
 
 const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: '#2F6F5E', cancelButtonColor: '#3A3428' }
+
+// quick-view card sir — the eye icon morphs open into a small details card, so you can see what a
+// resume is (template, dates) and jump to edit/duplicate without leaving the list
+const ResumeQuickView = ({ resume, template, onEdit, onDuplicate }) => (
+  <MorphingDialog transition={{ type: 'spring', bounce: 0.05, duration: 0.35 }}>
+    <MorphingDialogTrigger
+      className="hover:text-richblack-5 transition-colors duration-200"
+      style={{ borderRadius: 8 }}
+    >
+      <span title="Quick view"><FaEye className="text-sm" /></span>
+    </MorphingDialogTrigger>
+    <MorphingDialogContainer>
+      <MorphingDialogContent
+        style={{ borderRadius: 16 }}
+        className="relative w-[90vw] max-w-md bg-richblack-800 border border-richblack-600 p-7 shadow-2xl"
+      >
+        <MorphingDialogTitle className="font-display text-xl text-richblack-5 pr-8">
+          {resume.title || 'Untitled resume'}
+        </MorphingDialogTitle>
+        <MorphingDialogSubtitle className="mt-1 text-xs text-yellow-50 font-semibold">
+          {template.name} template
+        </MorphingDialogSubtitle>
+        <MorphingDialogDescription
+          className="mt-5 space-y-2 text-sm text-richblack-300"
+          variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0 } }}
+        >
+          <p>Last edited {new Date(resume.updatedAt).toDateString()}</p>
+          {resume.createdAt && <p>Created {new Date(resume.createdAt).toDateString()}</p>}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-900 bg-yellow-50 rounded-full hover:bg-yellow-25 transition-colors duration-200 cursor-pointer"
+            >
+              <FaPen className="text-xs" /> Edit
+            </button>
+            <button
+              onClick={onDuplicate}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
+            >
+              <FaCopy className="text-xs" /> Duplicate
+            </button>
+          </div>
+        </MorphingDialogDescription>
+        <MorphingDialogClose className="top-5 right-5 text-richblack-300 hover:text-richblack-5 transition-colors duration-200 cursor-pointer" />
+      </MorphingDialogContent>
+    </MorphingDialogContainer>
+  </MorphingDialog>
+)
 
 // the missing browse/manage page for BuiltResume documents sir — the builder editor and template
 // picker already existed, but there was nowhere to see everything you've built, duplicate a
@@ -193,6 +251,12 @@ const BuiltResumes = () => {
                   </div>
 
                   <div className="flex items-center gap-3.5 shrink-0 text-richblack-300">
+                    <ResumeQuickView
+                      resume={resume}
+                      template={template}
+                      onEdit={() => navigate(`/Dashboard/Build-Resume/${resume._id}`)}
+                      onDuplicate={() => dispatch(DuplicateBuiltResume(resume._id, token))}
+                    />
                     <button
                       onClick={() => navigate(`/Dashboard/Build-Resume/${resume._id}`)}
                       className="hover:text-richblack-5 transition-colors duration-200 cursor-pointer"

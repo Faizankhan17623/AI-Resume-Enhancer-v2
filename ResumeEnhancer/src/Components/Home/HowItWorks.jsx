@@ -1,5 +1,7 @@
 import { FaRocket, FaSmile, FaEdit, FaCheckCircle, FaLightbulb, FaBriefcase } from 'react-icons/fa'
 import useGsapReveal from '../../Hooks/useGsapReveal'
+import { Tilt } from '../Animated/Tilt'
+import { Spotlight } from '../Animated/Spotlight'
 
 const tiles = [
   {
@@ -65,16 +67,18 @@ const HowItWorks = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tiles.map((tile, i) => (
-          <div
-            key={i}
-            data-reveal
-            className="group relative rounded-2xl bg-richblack-800 border border-richblack-700 p-7 transition-all duration-300 hover:-translate-y-2 hover:border-richblack-500 hover:shadow-2xl hover:shadow-richblack-900/40"
-          >
-            <div className={`w-14 h-14 rounded-full ${tile.bg} ring-4 ring-transparent ${tile.ring} flex items-center justify-center mb-5 text-xl text-richblack-900 transition-all duration-300`}>
-              {tile.icon}
-            </div>
-            <h3 className="font-display font-bold text-lg text-richblack-5 mb-2">{tile.title}</h3>
-            <p className="text-richblack-300 text-sm leading-relaxed">{tile.desc}</p>
+          <div key={i} data-reveal>
+            <Tilt rotationFactor={4} className="h-full">
+              <div className="group relative h-full rounded-2xl bg-richblack-800 border border-richblack-700 p-7 transition-all duration-300 hover:-translate-y-2 hover:border-richblack-500 hover:shadow-2xl hover:shadow-richblack-900/40">
+                {/* soft cursor-following glow sir — Spotlight clips itself to this card */}
+                <Spotlight className="from-warm-200/30 via-warm-200/10 to-transparent" size={220} />
+                <div className={`relative w-14 h-14 rounded-full ${tile.bg} ring-4 ring-transparent ${tile.ring} flex items-center justify-center mb-5 text-xl text-richblack-900 transition-all duration-300`}>
+                  {tile.icon}
+                </div>
+                <h3 className="relative font-display font-bold text-lg text-richblack-5 mb-2">{tile.title}</h3>
+                <p className="relative text-richblack-300 text-sm leading-relaxed">{tile.desc}</p>
+              </div>
+            </Tilt>
           </div>
         ))}
       </div>

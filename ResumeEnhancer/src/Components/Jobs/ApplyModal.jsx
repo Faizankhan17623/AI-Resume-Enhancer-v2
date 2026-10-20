@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaTimes, FaPlus, FaTrash } from 'react-icons/fa'
+import { FaTimes, FaPlus, FaTrash, FaCheck } from 'react-icons/fa'
+import { TransitionPanel } from '../Animated/TransitionPanel'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import { ApplyToJob } from '../../Services/operations/Job'
@@ -14,6 +15,43 @@ const inputClass = "w-full rounded-xl bg-richblack-900/60 border border-richblac
 const labelClass = "block text-xs font-semibold text-richblack-200 mb-1.5"
 
 const MAX_RESUME_BYTES = 2 * 1024 * 1024
+
+const STEP_LABELS = ['Background', 'Details', 'Resume']
+
+// numbered progress rail sir — done steps get a check and the connecting line fills in as you advance
+const ApplyStepper = ({ step }) => (
+  <ol className="flex items-center gap-2 mt-2" aria-label={`Step ${step} of ${STEP_LABELS.length}`}>
+    {STEP_LABELS.map((label, i) => {
+      const n = i + 1
+      const done = step > n
+      const active = step === n
+      return (
+        <li key={label} className="flex items-center gap-2">
+          <span
+            className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors duration-300 ${
+              done || active ? 'bg-yellow-50 text-richblack-900' : 'bg-richblack-700 text-richblack-400'
+            }`}
+          >
+            {done ? <FaCheck className="text-[8px]" /> : n}
+          </span>
+          <span className={`text-xs transition-colors duration-300 ${active ? 'text-richblack-5 font-semibold' : 'text-richblack-400'}`}>
+            {label}
+          </span>
+          {i < STEP_LABELS.length - 1 && (
+            <span className="relative w-6 h-px bg-richblack-600 overflow-hidden">
+              <motion.span
+                className="absolute inset-y-0 left-0 bg-yellow-50"
+                initial={false}
+                animate={{ width: done ? '100%' : '0%' }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              />
+            </span>
+          )}
+        </li>
+      )
+    })}
+  </ol>
+)
 
 const emptyEducation = () => ({ degree: 'bachelors', institution: '', startDate: '', endDate: '', currentlyStudying: false })
 const emptyWorkHistory = () => ({ companyName: '', startDate: '', endDate: '', currentlyWorking: false })
@@ -133,16 +171,24 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
           <div className="flex items-center justify-between px-6 py-4 border-b border-richblack-700">
             <div>
               <h2 className="font-display text-lg text-richblack-5">Apply for this role</h2>
-              <p className="text-xs text-richblack-400 mt-0.5">Step {step} of 3</p>
+              <ApplyStepper step={step} />
             </div>
             <button onClick={onClose} className="text-richblack-300 hover:text-richblack-5 cursor-pointer">
               <FaTimes />
             </button>
           </div>
 
-          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-            {step === 1 && (
-              <>
+          <div className="p-6 max-h-[70vh] overflow-y-auto overflow-x-hidden">
+            <TransitionPanel
+              activeIndex={step - 1}
+              variants={{
+                enter: { opacity: 0, x: 40 },
+                center: { opacity: 1, x: 0 },
+                exit: { opacity: 0, x: -40 },
+              }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="space-y-4">
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -252,10 +298,8 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
                     </button>
                   </div>
                 )}
-              </>
-            )}
+              </div>
 
-            {step === 2 && (
               <div className="space-y-4">
                 <div>
                   <label className={labelClass}>Address</label>
@@ -271,9 +315,7 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
                   <input type="number" min="0" value={expectedSalary} onChange={(e) => setExpectedSalary(e.target.value)} placeholder="e.g. 1000000" className={inputClass} />
                 </div>
               </div>
-            )}
 
-            {step === 3 && (
               <div className="space-y-4">
                 <div>
                   <label className={labelClass}>Resume (PDF, under 2MB)</label>
@@ -285,7 +327,7 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
                   rating alongside your application.
                 </p>
               </div>
-            )}
+            </TransitionPanel>
           </div>
 
           <div className="flex items-center justify-between px-6 py-4 border-t border-richblack-700">

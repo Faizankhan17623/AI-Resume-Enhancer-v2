@@ -4,18 +4,15 @@ import { Link, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCopy, FaCrown, FaEnvelope, FaLinkedin } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCrown, FaEnvelope, FaLinkedin } from 'react-icons/fa'
+import { CopyButton } from '../Animated/CopyButton'
+import { AiStatusIsland } from '../Animated/AiStatusIsland'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { GenerateOutreachMessage } from '../../Services/operations/OutreachMessage'
 import { setSubject, setBody } from '../../Slices/outreachMessageSlice'
-
-const copyText = (text) => {
-  navigator.clipboard.writeText(text)
-  toast.success("Copied to clipboard")
-}
 
 // which destination the drafted message is shown for sir — the AI always returns both a
 // subject + body (see controllers/OutreachMessage.js), this just decides what the UI shows:
@@ -85,13 +82,12 @@ const OutreachMessage = () => {
     navigate('/Dashboard')
   }
 
-  const copyAll = () => {
-    const text = destination === 'email' && subject ? `Subject: ${subject}\n\n${body}` : body
-    copyText(text)
-  }
+  // what the header copy button puts on the clipboard sir — email gets the subject line too
+  const copyAllText = destination === 'email' && subject ? `Subject: ${subject}\n\n${body}` : body
 
   return (
     <DashboardLayout title="Outreach message generator">
+      <AiStatusIsland active={generating} label="Writing your outreach message..." doneLabel="Message ready" />
       <Helmet>
         <title>Outreach Message | Resumify</title>
       </Helmet>
@@ -139,13 +135,11 @@ const OutreachMessage = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-lg text-richblack-5">Your outreach message</h2>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={copyAll}
-                    className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer"
+                  <CopyButton
+                    value={copyAllText}
                     title="Copy"
-                  >
-                    <FaCopy />
-                  </button>
+                    className="size-7 border-transparent bg-transparent text-richblack-300 hover:bg-richblack-700 hover:text-yellow-50"
+                  />
                   <button
                     onClick={closeResult}
                     className="text-richblack-300 hover:text-pink-200 transition-colors duration-200 cursor-pointer"
@@ -165,13 +159,11 @@ const OutreachMessage = () => {
                       <p className="text-[11px] font-semibold text-richblack-400 uppercase tracking-wide mb-1">Subject</p>
                       <p className="text-sm font-medium text-richblack-5">{subject}</p>
                     </div>
-                    <button
-                      onClick={() => copyText(subject)}
-                      className="shrink-0 text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer"
+                    <CopyButton
+                      value={subject}
                       title="Copy subject"
-                    >
-                      <FaCopy className="text-sm" />
-                    </button>
+                      className="size-7 shrink-0 border-transparent bg-transparent text-richblack-300 hover:bg-richblack-700 hover:text-yellow-50"
+                    />
                   </div>
                 </div>
               )}

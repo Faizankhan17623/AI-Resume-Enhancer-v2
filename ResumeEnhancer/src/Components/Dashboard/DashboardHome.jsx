@@ -10,6 +10,19 @@ import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetProgress, GetAllReviews, GetStreak } from '../../Services/operations/Review'
 import { GetProfile, CompleteOnboarding } from '../../Services/operations/User'
+import { CountUp } from '../Animated/CountUp'
+import { RollingNumber } from '../Animated/RollingNumber'
+import { Typewriter } from '../Animated/Typewriter'
+import WelcomeTour from './WelcomeTour'
+import JobSearchTodos from './JobSearchTodos'
+
+// module-level so the Typewriter's effect doesn't restart on every render sir
+const COACH_PROMPTS = [
+  'How do I make my summary stronger?',
+  'Which keywords am I missing for this role?',
+  'How should I answer "tell me about yourself"?',
+  'What should I fix first to raise my score?',
+]
 
 const DashboardHome = () => {
   const dispatch = useDispatch()
@@ -92,7 +105,8 @@ const DashboardHome = () => {
     {
       icon: (stats?.improvement ?? 0) >= 0 ? <FaArrowUp /> : <FaArrowDown />,
       label: 'Improvement',
-      value: `${(stats?.improvement ?? 0) >= 0 ? '+' : ''}${stats?.improvement ?? 0}`,
+      value: stats?.improvement ?? 0,
+      prefix: (stats?.improvement ?? 0) >= 0 ? '+' : '',
       valueClass: (stats?.improvement ?? 0) >= 0 ? 'text-caribgreen-100' : 'text-pink-200',
     },
   ]
@@ -105,6 +119,9 @@ const DashboardHome = () => {
       <Helmet>
         <title>Dashboard | Resumify</title>
       </Helmet>
+
+      {/* one-time walkthrough for brand-new accounts sir (see WelcomeTour for the dismissal rules) */}
+      <WelcomeTour enabled={!!showOnboarding} />
 
       <PageTransition className="h-full min-w-0 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 flex flex-col gap-6">
 
@@ -145,7 +162,9 @@ const DashboardHome = () => {
                 }`}
               >
                 <FaCrown className="text-[10px]" />
-                {creditsRemaining === 0 ? 'No free reviews left' : `${creditsRemaining} free review${creditsRemaining === 1 ? '' : 's'} left`}
+                {creditsRemaining === 0
+                  ? 'No free reviews left'
+                  : <span><RollingNumber value={creditsRemaining} /> free review{creditsRemaining === 1 ? '' : 's'} left</span>}
               </Link>
             )}
             <Link to="/Dashboard/New-Review">
@@ -155,6 +174,18 @@ const DashboardHome = () => {
             </Link>
           </div>
         </div>
+
+        {/* AI coach prompt line sir — types out example questions and links to the coach chat */}
+        <Link
+          to="/Dashboard/Chats"
+          className="group flex items-center gap-3 rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 px-4 py-3 text-sm text-richblack-300 hover:text-richblack-5 transition-colors duration-200"
+        >
+          <span className="shrink-0 text-xs font-semibold text-yellow-50">Ask your AI coach</span>
+          <span className="min-w-0 truncate text-richblack-100">
+            <Typewriter baseText="" texts={COACH_PROMPTS} delay={0.4} />
+          </span>
+          <FaBolt className="ml-auto shrink-0 text-xs text-richblack-500 group-hover:text-yellow-50 transition-colors duration-200" />
+        </Link>
 
         {/* Onboarding checklist sir — shows until every step is done or the user dismisses it,
             never again after that. Scale/opacity enter (not a height:0->'auto' animation) sir —
@@ -264,7 +295,7 @@ const DashboardHome = () => {
                 </div>
                 <span className="text-xs font-semibold text-richblack-400">{card.label}</span>
               </div>
-              <p className={`font-display text-2xl ${card.valueClass || 'text-richblack-5'}`}>{card.value}</p>
+              <p className={`font-display text-2xl ${card.valueClass || 'text-richblack-5'}`}>{card.prefix}<CountUp value={card.value} /></p>
             </motion.div>
           ))}
         </motion.div>
@@ -319,7 +350,7 @@ const DashboardHome = () => {
                       </p>
                     </div>
                     <span className={`text-lg font-extrabold font-mono shrink-0 ml-3 ${scoreColor(review.atsScore)}`}>
-                      {review.atsScore}
+                      <CountUp value={review.atsScore} />
                     </span>
                   </Link>
                 ))}
@@ -327,6 +358,8 @@ const DashboardHome = () => {
             )}
           </div>
         </div>
+
+        <JobSearchTodos />
       </PageTransition>
     </DashboardLayout>
   )

@@ -7,6 +7,9 @@ import LoginStatusOverlay from './Components/Login/LoginStatusOverlay'
 import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
+import FeatureStrip from './Components/Home/FeatureStrip'
+import ReviewDemo from './Components/Home/ReviewDemo'
+import FinalCta from './Components/Home/FinalCta'
 import TemplateSlider from './Components/Home/TemplateSlider'
 import Testimonials from './Components/Home/Testimonials'
 import FAQ from './Components/Home/FAQ'
@@ -111,10 +114,13 @@ const Homelayout = () => {
       <Navbar />
       <div className="flex-1">
         <Banner />
+        <FeatureStrip />
         <HowItWorks />
+        <ReviewDemo />
         <TemplateSlider />
         <Testimonials />
         <FAQ />
+        <FinalCta />
       </div>
       <Footer />
     </div>

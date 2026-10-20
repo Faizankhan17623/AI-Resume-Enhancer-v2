@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { motion } from 'motion/react'
 import { FaQuestionCircle, FaPlus } from 'react-icons/fa'
 import useGsapReveal from '../../Hooks/useGsapReveal'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../Animated/Accordion'
 
 const faqs = [
   {
@@ -30,34 +30,9 @@ const faqs = [
   },
 ]
 
-const FAQItem = ({ item, open, onToggle }) => (
-  <div className={`rounded-2xl border transition-colors duration-300 ${open ? 'bg-richblack-800 border-warm-200/40' : 'bg-richblack-800 border-richblack-700 hover:border-richblack-600'}`}>
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer"
-    >
-      <span className="font-semibold text-richblack-5">{item.q}</span>
-      <motion.span
-        animate={{ rotate: open ? 45 : 0 }}
-        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${open ? 'bg-warm-200 text-richblack-900' : 'bg-richblack-700 text-warm-200'}`}
-      >
-        <FaPlus className="text-xs" />
-      </motion.span>
-    </button>
-    <div
-      className="grid transition-all duration-300 ease-in-out"
-      style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
-    >
-      <div className="overflow-hidden">
-        <p className="px-6 pb-5 -mt-1 text-sm text-richblack-300 leading-relaxed">{item.a}</p>
-      </div>
-    </div>
-  </div>
-)
-
 const FAQ = () => {
-  const [openIndex, setOpenIndex] = useState(0)
+  // one open at a time sir; the first starts open like before
+  const [openValue, setOpenValue] = useState(0)
   const scope = useGsapReveal()
 
   return (
@@ -74,17 +49,32 @@ const FAQ = () => {
         <p className="mt-3 text-richblack-300">Still curious? Here's what people ask before signing up.</p>
       </div>
 
-      <div className="relative flex flex-col gap-3">
+      <Accordion
+        className="relative flex flex-col gap-3"
+        expandedValue={openValue}
+        onValueChange={setOpenValue}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      >
         {faqs.map((item, i) => (
-          <div key={i} data-reveal>
-            <FAQItem
-              item={item}
-              open={openIndex === i}
-              onToggle={() => setOpenIndex(openIndex === i ? -1 : i)}
-            />
+          <div
+            key={i}
+            data-reveal
+            className="rounded-2xl border bg-richblack-800 border-richblack-700 hover:border-richblack-600 has-[[data-expanded]]:border-warm-200/40 transition-colors duration-300"
+          >
+            <AccordionItem value={i}>
+              <AccordionTrigger className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer">
+                <span className="font-semibold text-richblack-5">{item.q}</span>
+                <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-richblack-700 text-warm-200 transition-all duration-300 group-data-[expanded]:rotate-45 group-data-[expanded]:bg-warm-200 group-data-[expanded]:text-richblack-900">
+                  <FaPlus className="text-xs" />
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="px-6 pb-5 -mt-1 text-sm text-richblack-300 leading-relaxed">{item.a}</p>
+              </AccordionContent>
+            </AccordionItem>
           </div>
         ))}
-      </div>
+      </Accordion>
     </div>
   )
 }
