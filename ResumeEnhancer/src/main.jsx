@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import { Toaster } from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 import { BrowserRouter } from 'react-router'
 import { configureStore } from '@reduxjs/toolkit'
 import rootReduers from './reducer/index.js'
@@ -21,7 +21,45 @@ const store = configureStore({
 // this device" toggle just hung forever with no error). immediate:true registers on load rather
 // than waiting for the browser's own idle heuristics, so push/PWA-install features work right
 // away instead of only after some unpredictable delay.
-registerSW({ immediate: true })
+// onNeedRefresh sir — with registerType 'prompt' a freshly deployed version installs in the
+// background but WAITS; without this handler nothing ever told the user, so a returning visitor kept
+// running the old cached app (found live: the "Last used" login badge was deployed but never showed,
+// and the same would hit any other change). This shows a small, dismissible toast; clicking Refresh
+// activates the waiting version and reloads. It is deliberately NOT an automatic reload — that could
+// wipe a half-filled form or interrupt a proctored test.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    toast(
+      (t) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span>A new version is available</span>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id)
+              // updateSW(true) activates the waiting version and reloads — but only when this page
+              // is controlled by the service worker. A page that never was (first visit after an
+              // install) gets no automatic reload, so reload ourselves as a fallback; if the
+              // plugin's own reload fires first, this timer simply dies with the old page.
+              updateSW(true).finally(() => setTimeout(() => window.location.reload(), 500))
+            }}
+            style={{ background: 'var(--color-yellow-50)', color: 'var(--color-richblack-900)', borderRadius: '999px', padding: '4px 12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+          >
+            Refresh
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            aria-label="Dismiss"
+            style={{ color: 'var(--color-richblack-300)', fontSize: '16px', lineHeight: 1, cursor: 'pointer' }}
+          >
+            ×
+          </button>
+        </span>
+      ),
+      { id: 'sw-update', duration: Infinity }
+    )
+  },
+})
 
 
 createRoot(document.getElementById('root')).render(
