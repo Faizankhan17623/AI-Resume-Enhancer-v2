@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
@@ -65,7 +65,33 @@ const isActive = (link, pathname) => {
   return pathname.startsWith(link.path)
 }
 
-const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
+// remembered between pages sir. Every dashboard page renders its OWN <DashboardLayout>, so clicking
+// a sidebar link unmounts the whole sidebar and mounts a brand-new one — whose scroll container
+// starts at scrollTop 0. That is the "I click Account/Leaderboard at the bottom and the sidebar
+// jumps back to the top" bug. Keeping the last scroll position at module level (it survives the
+// unmount) and re-applying it on mount makes the sidebar stay exactly where it was.
+let sidebarNavScrollTop = 0
+
+const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => {
+  const navScrollRef = useRef(null)
+
+  // restore the saved position BEFORE the first paint (useLayoutEffect), then nudge the active
+  // link into view if it still isn't visible — e.g. opening /Dashboard/Account directly, or the
+  // list being a different height than last time
+  useLayoutEffect(() => {
+    const el = navScrollRef.current
+    if (!el) return
+    el.scrollTop = sidebarNavScrollTop
+    const active = el.querySelector('[aria-current="page"]')
+    if (!active) return
+    const box = el.getBoundingClientRect()
+    const item = active.getBoundingClientRect()
+    if (item.top < box.top) el.scrollTop -= box.top - item.top + 8
+    else if (item.bottom > box.bottom) el.scrollTop += item.bottom - box.bottom + 8
+    sidebarNavScrollTop = el.scrollTop
+  }, [])
+
+  return (
   <>
     <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
       <MdOutlineDocumentScanner className="text-2xl text-yellow-50" />
@@ -87,7 +113,11 @@ const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
       </Link>
     )}
 
-    <div className="flex-1 min-h-0 overflow-y-auto hairline-scrollbar flex flex-col gap-4 pr-0.5">
+    <div
+      ref={navScrollRef}
+      onScroll={(e) => { sidebarNavScrollTop = e.currentTarget.scrollTop }}
+      className="flex-1 min-h-0 overflow-y-auto hairline-scrollbar flex flex-col gap-4 pr-0.5"
+    >
       {/* banned sir — the ENTIRE normal nav is replaced by this one locked item. Every other
           Dashboard route redirects to Suspended anyway (PrivateRoute), so linking to them here
           would just be a dead end; better to make the lock visible instead of pretending
@@ -112,6 +142,7 @@ const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
                     key={link.path}
                     to={link.path}
                     onClick={onNavigate}
+                    aria-current={active ? 'page' : undefined}
                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
                       active ? 'bg-yellow-900/15 text-yellow-50' : 'text-richblack-200 hover:bg-richblack-700/60 hover:text-richblack-5'
                     }`}
@@ -190,7 +221,8 @@ const SidebarContent = ({ pathname, user, streak, onNavigate, onLogout }) => (
       </div>
     </div>
   </>
-)
+  )
+}
 
 const SIDEBAR_MIN = 200
 const SIDEBAR_MAX = 380
