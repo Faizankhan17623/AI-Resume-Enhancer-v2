@@ -11,10 +11,26 @@ import LoginStatusOverlay from './LoginStatusOverlay'
 import { LoginUser } from '../../Services/operations/Auth'
 import { OAuth } from '../../Services/Apis/UserApi'
 import { startOAuth } from '../../utils/oauthProviders'
+import { getLastLoginMethod } from '../../utils/lastLoginMethod'
+import { FaHistory } from 'react-icons/fa'
 
 const inputClass = "w-full rounded-xl bg-richblack-800 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const labelClass = "text-sm font-medium text-richblack-100 mb-1.5 block"
 const errorClass = "mt-1 text-xs text-pink-200"
+
+// small "Last used" tag that sits on the corner of whichever login option this browser used last
+// sir — pointer-events-none so it never steals a click from the button underneath
+// onFilled sir — the email option's button is itself filled with the accent colour, so its badge
+// is dark with a light edge instead of accent-on-accent (which would disappear into the button)
+const LastUsedBadge = ({ onFilled = false }) => (
+  <span className={`pointer-events-none absolute -top-2.5 right-5 flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold shadow-md ${onFilled ? 'bg-richblack-900 text-yellow-50 border border-yellow-50/70' : 'bg-yellow-50 text-richblack-900'}`}>
+    <FaHistory className="text-[9px]" /> Last used
+  </span>
+)
+
+// the option itself gets a soft highlight ring too, so it reads as "your usual one" even before
+// the badge is noticed
+const lastUsedRing = "border-yellow-50/60 shadow-[0_0_0_1px_rgba(111,191,168,0.35)]"
 
 const User = () => {
   const { register, handleSubmit, formState: { errors } } = useForm()
@@ -25,6 +41,8 @@ const User = () => {
   // Replaces the old toast.loading/success/error trio (see Services/operations/Auth.js's
   // LoginUser, which now calls onStatus instead of toasting directly).
   const [loginStatus, setLoginStatus] = useState({ status: null, message: '' })
+  // read once on mount sir — 'email' | 'google' | 'github' | null (nothing remembered yet)
+  const [lastMethod] = useState(getLastLoginMethod)
 
   const onSubmit = (data) => {
     dispatch(LoginUser(data.email, data.password, navigate, (status, message) => {
@@ -91,12 +109,15 @@ const User = () => {
             {errors.password && <p className={errorClass}>{errors.password.message}</p>}
           </div>
 
-          <IconBtn
-            type="submit"
-            text="Log in"
-            disabled={loading}
-            customClasses="w-full justify-center"
-          />
+          <div className="relative">
+            {lastMethod === 'email' && <LastUsedBadge onFilled />}
+            <IconBtn
+              type="submit"
+              text="Log in"
+              disabled={loading}
+              customClasses="w-full justify-center"
+            />
+          </div>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-richblack-700" />
@@ -104,7 +125,9 @@ const User = () => {
             <div className="flex-1 h-px bg-richblack-700" />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
+            <div className="relative">
+            {lastMethod === 'google' && <LastUsedBadge />}
             <button
               type="button"
               onClick={() => {
@@ -115,7 +138,7 @@ const User = () => {
                 setLoginStatus({ status: 'loading', message: 'Redirecting to Google...' })
                 startOAuth('google', OAuth.google)
               }}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
+              className={`w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer ${lastMethod === 'google' ? lastUsedRing : 'border-richblack-600'}`}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                 <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"/>
@@ -125,20 +148,24 @@ const User = () => {
               </svg>
               Continue with Google
             </button>
+            </div>
 
+            <div className="relative">
+            {lastMethod === 'github' && <LastUsedBadge />}
             <button
               type="button"
               onClick={() => {
                 setLoginStatus({ status: 'loading', message: 'Redirecting to GitHub...' })
                 startOAuth('github', OAuth.github)
               }}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border border-richblack-600 rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer"
+              className={`w-full flex items-center justify-center gap-3 px-4 py-3 text-sm font-semibold text-richblack-5 border rounded-full hover:bg-richblack-800 transition-all duration-200 cursor-pointer ${lastMethod === 'github' ? lastUsedRing : 'border-richblack-600'}`}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                 <path d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2.02c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"/>
               </svg>
               Continue with GitHub
             </button>
+            </div>
           </div>
 
           <p className="text-center text-sm text-richblack-300">

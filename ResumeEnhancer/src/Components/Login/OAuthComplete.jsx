@@ -5,6 +5,7 @@ import { setToken, setUser, setLogin } from '../../Slices/authSlice'
 import { apiConnector } from '../../Services/apiConnector'
 import { OAuth } from '../../Services/Apis/UserApi'
 import LoginStatusOverlay from './LoginStatusOverlay'
+import { rememberLoginMethod } from '../../utils/lastLoginMethod'
 
 // landing page for every OAuth provider's redirect sir — the backend's GET /auth/<provider>/callback
 // sends the browser here with only a short-lived, single-use ?code (never the real JWT — a
@@ -60,6 +61,8 @@ const OAuthComplete = () => {
         // Services/operations/Auth.js). The httpOnly cookie set by the exchange response is
         // the real credential; only the non-sensitive user object is cached for paint-on-reload.
         localStorage.setItem('user', JSON.stringify(user))
+        // so the login page can badge this provider as "Last used" next time sir
+        rememberLoginMethod(provider)
 
         setLoginStatus({ status: 'success', message: 'Login successful' })
         // each role lands on its OWN dashboard sir — same rule LoginUser uses in Services/operations/Auth.js,
