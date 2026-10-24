@@ -9,6 +9,7 @@ import { FaPlus, FaPaperPlane, FaTrash, FaRobot, FaFilePdf, FaTimes, FaComments,
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
+import { TextShimmer } from '../Animated/TextShimmer'
 import { GetAllChats, GetSingleChat, SendMessage, CreateChat, DeleteChat } from '../../Services/operations/Chat'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
@@ -334,10 +335,13 @@ const Chat = () => {
                     <Message role="assistant" content={streamingReply} />
                   ) : (
                     <div className="flex justify-start">
-                      <div className="rounded-2xl rounded-bl-sm bg-richblack-700 px-5 py-3.5 flex gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:0ms]" />
-                        <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:150ms]" />
-                        <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:300ms]" />
+                      <div className="rounded-2xl rounded-bl-sm bg-richblack-700 px-5 py-3.5 flex items-center gap-2.5">
+                        <span className="flex gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:0ms]" />
+                          <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:150ms]" />
+                          <span className="w-2 h-2 rounded-full bg-richblack-300 animate-bounce [animation-delay:300ms]" />
+                        </span>
+                        <TextShimmer as="span" duration={1.6} className="text-xs font-medium">AI coach is thinking...</TextShimmer>
                       </div>
                     </div>
                   )
