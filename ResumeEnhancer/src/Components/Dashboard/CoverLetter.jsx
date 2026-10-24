@@ -4,7 +4,9 @@ import { Link, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'motion/react'
-import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCopy, FaCrown, FaExclamationTriangle } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaFilePdf, FaTimes, FaCrown, FaExclamationTriangle } from 'react-icons/fa'
+import { CopyButton } from '../Animated/CopyButton'
+import { AiStatusIsland } from '../Animated/AiStatusIsland'
 import DashboardLayout from './DashboardLayout'
 import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
@@ -14,11 +16,6 @@ import { setContent, setGenericCheck } from '../../Slices/coverLetterSlice'
 
 // below this the letter reads specific enough that a nudge would just be noise sir
 const GENERIC_SCORE_WARNING_THRESHOLD = 40
-
-const copyText = (text) => {
-  navigator.clipboard.writeText(text)
-  toast.success("Copied to clipboard")
-}
 
 const CoverLetter = () => {
   const [pdfFile, setPdfFile] = useState(null)
@@ -82,6 +79,7 @@ const CoverLetter = () => {
 
   return (
     <DashboardLayout title="Cover letter generator">
+      <AiStatusIsland active={generating} label="Drafting your cover letter..." doneLabel="Cover letter ready" />
       <Helmet>
         <title>Cover Letter | Resumify</title>
       </Helmet>
@@ -123,13 +121,11 @@ const CoverLetter = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-lg text-richblack-5">Your cover letter</h2>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => copyText(content)}
-                    className="text-richblack-300 hover:text-yellow-50 transition-colors duration-200 cursor-pointer"
+                  <CopyButton
+                    value={content}
                     title="Copy"
-                  >
-                    <FaCopy />
-                  </button>
+                    className="size-7 border-transparent bg-transparent text-richblack-300 hover:bg-richblack-700 hover:text-yellow-50"
+                  />
                   <button
                     onClick={closeResult}
                     className="text-richblack-300 hover:text-pink-200 transition-colors duration-200 cursor-pointer"

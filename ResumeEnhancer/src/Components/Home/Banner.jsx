@@ -5,6 +5,10 @@ import { useGSAP } from '@gsap/react'
 import { FaArrowRight, FaCheckCircle, FaStar } from 'react-icons/fa'
 import { MdOutlineDocumentScanner, MdOutlineGpsFixed, MdOutlineEdit } from 'react-icons/md'
 import IconBtn from '../extra/IconBtn'
+import { TextLoop } from '../Animated/TextLoop'
+import { TextScramble } from '../Animated/TextScramble'
+import { Magnetic } from '../Animated/Magnetic'
+import { CountUp } from '../Animated/CountUp'
 import { gsap, SplitText, prefersReducedMotion } from '../../utils/gsap'
 
 const Banner = () => {
@@ -23,6 +27,7 @@ const Banner = () => {
     tl.from(rootRef.current.querySelector('[data-hero-badge]'), { opacity: 0, y: -10, duration: 0.4 })
       .from(split.chars, { opacity: 0, y: 24, rotateX: -40, stagger: 0.015, duration: 0.6 }, '-=0.15')
       .from(rootRef.current.querySelector('[data-hero-copy]'), { opacity: 0, y: 16, duration: 0.5 }, '-=0.3')
+      .from(rootRef.current.querySelector('[data-hero-loop]'), { opacity: 0, y: 10, duration: 0.4 }, '-=0.3')
       .from(rootRef.current.querySelectorAll('[data-hero-cta]'), { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, '-=0.3')
       .from(rootRef.current.querySelector('[data-hero-trust]'), { opacity: 0, duration: 0.4 }, '-=0.2')
       .from(rootRef.current.querySelectorAll('[data-hero-callout]'), { opacity: 0, y: 20, stagger: 0.12, duration: 0.5 }, '-=0.2')
@@ -57,7 +62,7 @@ const Banner = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-50 opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-50" />
           </span>
-          AI-POWERED ATS RESUME REVIEWER
+          <TextScramble as="span" duration={1.1} speed={0.035}>AI-POWERED ATS RESUME REVIEWER</TextScramble>
         </span>
 
         <h1 data-hero-heading className="font-display font-bold text-4xl lg:text-6xl text-richblack-5 tracking-tight leading-[1.1]">
@@ -76,12 +81,26 @@ const Banner = () => {
           score with line-by-line fixes, in seconds.
         </p>
 
+        {/* rotating feature line sir — shows the breadth of the product without a wall of text */}
+        <div data-hero-loop className="mt-5 flex items-center justify-center gap-2 text-base font-semibold text-richblack-100">
+          Perfect your
+          <TextLoop interval={2.2} className="text-warm-200 min-w-[9.5rem] text-left">
+            <span>resume</span>
+            <span>cover letter</span>
+            <span>outreach email</span>
+            <span>interview prep</span>
+            <span>job search</span>
+          </TextLoop>
+        </div>
+
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Link data-hero-cta to={isLoggedIn ? "/Dashboard/New-Review" : "/Signup"}>
-            <IconBtn text={isLoggedIn ? "Analyze my resume" : "Start free — 5 reviews"} customClasses="text-base px-7 py-3.5 shadow-lg shadow-yellow-900/20 hover:shadow-xl hover:shadow-yellow-900/30 hover:-translate-y-0.5">
-              <FaArrowRight />
-            </IconBtn>
-          </Link>
+          <Magnetic intensity={0.3} range={110}>
+            <Link data-hero-cta to={isLoggedIn ? "/Dashboard/New-Review" : "/Signup"}>
+              <IconBtn text={isLoggedIn ? "Analyze my resume" : "Start free — 5 reviews"} customClasses="text-base px-7 py-3.5 shadow-lg shadow-yellow-900/20 hover:shadow-xl hover:shadow-yellow-900/30 hover:-translate-y-0.5">
+                <FaArrowRight />
+              </IconBtn>
+            </Link>
+          </Magnetic>
           <Link data-hero-cta to="/Pricing">
             <button className="px-7 py-3.5 text-base font-semibold text-richblack-100 border border-richblack-600 rounded-full hover:bg-richblack-800 hover:text-richblack-5 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
               See pricing
@@ -155,7 +174,7 @@ const Banner = () => {
             </div>
             <div>
               <p className="text-xs text-richblack-300 text-left">ATS Score</p>
-              <p className="font-display font-bold text-2xl text-caribgreen-100 leading-none mt-0.5">87</p>
+              <p className="font-display font-bold text-2xl text-caribgreen-100 leading-none mt-0.5"><CountUp value={87} /></p>
             </div>
           </div>
         </div>

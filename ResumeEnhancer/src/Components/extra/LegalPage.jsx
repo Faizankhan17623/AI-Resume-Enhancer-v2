@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { MdOutlineDocumentScanner } from 'react-icons/md'
+import { ScrollProgress } from '../Animated/ScrollProgress'
 
 // shared shell for the three legal pages sir (Privacy, Terms, Refund & Cancellation) — same
 // header/back-link/typography as SharedReport.jsx's public-page pattern, so a visitor lands on
@@ -10,6 +11,9 @@ const LegalPage = ({ title, updatedAt, children }) => (
     <Helmet>
       <title>{title} | Resumify</title>
     </Helmet>
+
+    {/* reading-progress bar sir — these pages are long walls of text */}
+    <ScrollProgress className="fixed top-0 inset-x-0 z-50 h-0.5 bg-warm-200" />
 
     <div className="border-b border-richblack-700 bg-richblack-900/90 py-4">
       <Link to="/" className="flex items-center gap-2 w-fit mx-auto">

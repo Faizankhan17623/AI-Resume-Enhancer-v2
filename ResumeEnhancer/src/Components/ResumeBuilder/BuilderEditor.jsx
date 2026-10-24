@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt, FaShareAlt, FaCopy, FaCrown, FaEye } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaDownload, FaFileWord, FaSave, FaSwatchbook, FaCheck, FaChartLine, FaTimes, FaHistory, FaUndo, FaExchangeAlt, FaShareAlt, FaCopy, FaCrown, FaEye, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 import DashboardLayout from '../Dashboard/DashboardLayout'
 import Loading from '../extra/Loading'
 import IconBtn from '../extra/IconBtn'
@@ -31,6 +31,28 @@ const ACCENT_SWATCHES = ['#0b2545', '#1d4ed8', '#0f766e', '#b91c1c', '#c2410c', 
 
 const fieldClass = "w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
 const labelClass = "text-xs font-semibold text-richblack-300 mb-1 block"
+// up/down arrows on a list entry sir — reorders experience/education/projects without a drag lib
+const MoveButtons = ({ index, total, onMove }) => (
+  <div className="flex items-center gap-2 mr-auto">
+    <button
+      onClick={() => onMove(-1)}
+      disabled={index === 0}
+      title="Move up"
+      className="text-richblack-400 hover:text-yellow-50 disabled:opacity-30 disabled:hover:text-richblack-400 disabled:cursor-not-allowed cursor-pointer transition-colors duration-200"
+    >
+      <FaArrowUp className="text-xs" />
+    </button>
+    <button
+      onClick={() => onMove(1)}
+      disabled={index === total - 1}
+      title="Move down"
+      className="text-richblack-400 hover:text-yellow-50 disabled:opacity-30 disabled:hover:text-richblack-400 disabled:cursor-not-allowed cursor-pointer transition-colors duration-200"
+    >
+      <FaArrowDown className="text-xs" />
+    </button>
+  </div>
+)
+
 const sectionClass = "rounded-2xl bg-richblack-800 border border-richblack-700 p-5"
 
 const BuilderEditor = () => {
@@ -211,6 +233,15 @@ const BuilderEditor = () => {
 
   const addListItem = (listKey, factory) => {
     patch({ [listKey]: [...(current[listKey] || []), factory()] })
+  }
+
+  // swaps an entry with its neighbour sir and saves through the same debounced patch path
+  const moveListItem = (listKey, index, delta) => {
+    const list = [...(current[listKey] || [])]
+    const target = index + delta
+    if (target < 0 || target >= list.length) return
+    ;[list[index], list[target]] = [list[target], list[index]]
+    patch({ [listKey]: list })
   }
 
   const removeListItem = (listKey, index) => {
@@ -653,7 +684,8 @@ const BuilderEditor = () => {
               <div className="flex flex-col gap-4">
                 {(current.experience || []).map((exp, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4">
-                    <div className="flex justify-end mb-2">
+                    <div className="flex justify-end items-center mb-2">
+                      <MoveButtons index={i} total={(current.experience || []).length} onMove={(d) => moveListItem('experience', i, d)} />
                       <button onClick={() => removeListItem('experience', i)} className="text-richblack-400 hover:text-pink-200 cursor-pointer">
                         <FaTrash className="text-xs" />
                       </button>
@@ -703,7 +735,8 @@ const BuilderEditor = () => {
               <div className="flex flex-col gap-4">
                 {(current.education || []).map((edu, i) => (
                   <div key={i} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4">
-                    <div className="flex justify-end mb-2">
+                    <div className="flex justify-end items-center mb-2">
+                      <MoveButtons index={i} total={(current.education || []).length} onMove={(d) => moveListItem('education', i, d)} />
                       <button onClick={() => removeListItem('education', i)} className="text-richblack-400 hover:text-pink-200 cursor-pointer">
                         <FaTrash className="text-xs" />
                       </button>
@@ -744,7 +777,8 @@ const BuilderEditor = () => {
               <div className="flex flex-col gap-4">
                 {(current.projects || []).map((proj, i) => (
                   <div key={i} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4">
-                    <div className="flex justify-end mb-2">
+                    <div className="flex justify-end items-center mb-2">
+                      <MoveButtons index={i} total={(current.projects || []).length} onMove={(d) => moveListItem('projects', i, d)} />
                       <button onClick={() => removeListItem('projects', i)} className="text-richblack-400 hover:text-pink-200 cursor-pointer">
                         <FaTrash className="text-xs" />
                       </button>
