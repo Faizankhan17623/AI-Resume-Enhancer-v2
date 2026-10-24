@@ -18,12 +18,31 @@ import { estimateYawRatio, YAW_AWAY_THRESHOLD } from '../../utils/facePose'
 // glance shouldn't trip it, only a sustained turn
 const LOOK_AWAY_GRACE_MS = 3000
 // how often a detection pass runs sir — frequent enough to feel responsive, cheap enough
-// to not tax a low-end laptop's CPU/GPU running this alongside everything else
-const DETECTION_INTERVAL_MS = 700
+// to not tax a low-end laptop's CPU/GPU running this alongside everything else. This only drives
+// the face box/dots and the look-away check now, NOT the picture itself: the candidate sees the
+// live <video> at the camera's full frame rate, so a slow pass can no longer make the feed stutter.
+const DETECTION_INTERVAL_MS = 500
 // minimum gap between two violation reports sir, independent of the grace period above — once a
 // violation fires, this stops an immediate second one from double-counting the SAME "still
 // looking away" state before the candidate has had a chance to correct
 const VIOLATION_COOLDOWN_MS = 4000
+
+// the yellow face box + keypoint dots sir — face-detection gives a bounding box AND only 6
+// keypoints (vs FaceMesh's 468), so just 6 tiny dots would look nearly empty; the box outline gives
+// the candidate the "yes, tracking is active" confirmation. Used for the live overlay AND baked
+// into the violation snapshot (see reportViolation), so both look the same.
+const drawFaceOverlay = (ctx, face) => {
+    ctx.strokeStyle = '#FFD60A'
+    ctx.lineWidth = 2
+    ctx.strokeRect(face.box.xMin, face.box.yMin, face.box.width, face.box.height)
+
+    ctx.fillStyle = '#FFD60A'
+    for (const kp of face.keypoints) {
+        ctx.beginPath()
+        ctx.arc(kp.x, kp.y, 3, 0, 2 * Math.PI)
+        ctx.fill()
+    }
+}
 
 const ProctoredTestRunner = () => {
     const { inviteCode } = useParams()
@@ -33,7 +52,11 @@ const ProctoredTestRunner = () => {
     const { test, attempt, answers, cameraConsent } = useSelector((state) => state.testAttempt)
 
     const videoRef = useRef(null)
+    // overlayRef = the visible transparent canvas on top of the live video (box + dots only);
+    // canvasRef = a hidden canvas used purely to build the violation snapshot at the moment it's needed
+    const overlayRef = useRef(null)
     const canvasRef = useRef(null)
+    const lastFaceRef = useRef(null)
     const detectorRef = useRef(null)
     const streamRef = useRef(null)
     const detectionTimerRef = useRef(null)
@@ -194,8 +217,16 @@ const ProctoredTestRunner = () => {
         if (now - lastViolationAtRef.current < VIOLATION_COOLDOWN_MS) return
         lastViolationAtRef.current = now
 
+        // the evidence snapshot is drawn NOW sir (current video frame + the last tracked face), since
+        // the visible canvas is only a transparent overlay and no longer holds a picture of the video
+        const video = videoRef.current
         const canvas = canvasRef.current
-        if (!canvas) return
+        if (!canvas || !video || video.readyState < 2) return
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const snapCtx = canvas.getContext('2d')
+        snapCtx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        if (lastFaceRef.current) drawFaceOverlay(snapCtx, lastFaceRef.current)
 
         canvas.toBlob(async (blob) => {
             if (!blob || endedRef.current) return
@@ -231,36 +262,27 @@ const ProctoredTestRunner = () => {
 
         const tick = async () => {
             const video = videoRef.current
-            const canvas = canvasRef.current
+            const overlay = overlayRef.current
             const detector = detectorRef.current
 
-            if (video && canvas && detector && video.readyState >= 2) {
-                const ctx = canvas.getContext('2d')
-                canvas.width = video.videoWidth
-                canvas.height = video.videoHeight
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
+            if (video && overlay && detector && video.readyState >= 2) {
                 const faces = await detector.estimateFaces(video, { flipHorizontal: false })
+
+                // the overlay is repainted only AFTER inference finishes sir, so the box never
+                // flickers off while a pass is running. Resizing a canvas clears it, so only do
+                // that when the camera's size actually differs.
+                if (overlay.width !== video.videoWidth) overlay.width = video.videoWidth
+                if (overlay.height !== video.videoHeight) overlay.height = video.videoHeight
+                const ctx = overlay.getContext('2d')
+                ctx.clearRect(0, 0, overlay.width, overlay.height)
+                lastFaceRef.current = faces[0] || null
 
                 if (!faces.length) {
                     // no face in frame at all sir — treated the same as looking away
                     if (!lookAwaySinceRef.current) lookAwaySinceRef.current = Date.now()
                 } else {
                     const face = faces[0]
-                    // face-detection sir gives a bounding box AND only 6 keypoints (vs FaceMesh's
-                    // 468) — drawing just 6 tiny 1.2px dots would look nearly empty compared to
-                    // before, so the box outline is drawn too, giving the candidate the same
-                    // "yes, tracking is active" visual confirmation as the denser mesh did
-                    ctx.strokeStyle = '#FFD60A'
-                    ctx.lineWidth = 2
-                    ctx.strokeRect(face.box.xMin, face.box.yMin, face.box.width, face.box.height)
-
-                    ctx.fillStyle = '#FFD60A'
-                    for (const kp of face.keypoints) {
-                        ctx.beginPath()
-                        ctx.arc(kp.x, kp.y, 3, 0, 2 * Math.PI)
-                        ctx.fill()
-                    }
+                    drawFaceOverlay(ctx, face)
 
                     const yaw = estimateYawRatio(face.keypoints)
                     const isAway = yaw === null || Math.abs(yaw) > YAW_AWAY_THRESHOLD
@@ -391,12 +413,14 @@ const ProctoredTestRunner = () => {
             </AnimatePresence>
 
             <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-                {/* camera panel sir — real video underneath, landmark dots drawn on the canvas
-                    directly on top of it, so the candidate sees themself being tracked */}
+                {/* camera panel sir — the REAL live <video> (full frame rate, so it's smooth) with a
+                    transparent canvas on top that only draws the face box + dots. The second canvas
+                    is hidden and only used to build the violation snapshot. */}
                 <div className="space-y-3">
                     <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3]">
-                        <video ref={videoRef} className="w-full h-full object-cover opacity-0 absolute inset-0" playsInline muted />
-                        <canvas ref={canvasRef} className="w-full h-full object-cover" />
+                        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
+                        <canvas ref={overlayRef} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                        <canvas ref={canvasRef} className="hidden" />
                         {!modelReady && (
                             <div className="absolute inset-0 flex items-center justify-center bg-richblack-900/80">
                                 <p className="text-xs text-richblack-200">Starting camera...</p>
