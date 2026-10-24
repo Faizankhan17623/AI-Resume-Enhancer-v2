@@ -4,6 +4,7 @@ import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } from '../../Slices/authSlice.js'
 import { CreateUser, SendOtp, Login, Logout, Password, Account } from '../Apis/UserApi.js'
 import { getClientHints } from '../../utils/clientHints.js'
+import { rememberLoginMethod } from '../../utils/lastLoginMethod.js'
 
 const { createuser } = CreateUser
 const { createotp } = SendOtp
@@ -113,6 +114,9 @@ export function LoginUser(email, password, navigate, onStatus) {
             }
 
             const { token, user, accountRecovered } = response.data
+
+            // so the login page can badge the email form as "Last used" next time sir
+            rememberLoginMethod('email')
 
             // distinct message sir — this is a meaningfully different event from a normal login
             // and the user should notice their deletion got undone
