@@ -6,6 +6,7 @@ import { FaEye, FaFileAlt, FaTrophy, FaBriefcase } from 'react-icons/fa'
 import RecruiterLayout from './RecruiterLayout'
 import Loading from '../extra/Loading'
 import { GetRecruiterOverviewAnalytics } from '../../Services/operations/Job'
+import { CountUp } from '../Animated/CountUp'
 
 const StatCard = ({ icon: Icon, label, value }) => (
   <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-4">
@@ -13,7 +14,9 @@ const StatCard = ({ icon: Icon, label, value }) => (
       <Icon className="text-[13px]" />
       <p className="text-[11px] uppercase tracking-wide">{label}</p>
     </div>
-    <p className="font-display text-2xl text-richblack-5">{value}</p>
+    <p className="font-display text-2xl text-richblack-5">
+      {typeof value === 'number' ? <CountUp value={value} /> : value}
+    </p>
   </div>
 )
 

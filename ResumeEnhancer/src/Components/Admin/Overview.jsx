@@ -11,6 +11,7 @@ import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetAtRisk, GetReferralAbuse, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
+import { CountUp } from '../Animated/CountUp'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
 // #FFFFFF / #1F1C16 — both clear the lightness/chroma/CVD/normal-vision gates, see chat history)
@@ -136,7 +137,7 @@ const Overview = () => {
   const statCards = [
     { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified`, to: '/Admin/Users' },
     ...(isSupport ? [] : [
-      { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', value: `₹${stats.revenue.totalRupees}`, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
+      { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', prefix: '₹', value: Number(stats.revenue.totalRupees) || 0, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
     ]),
     { icon: <FaFileAlt className="text-yellow-50" />, label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
     { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
@@ -195,7 +196,7 @@ const Overview = () => {
                 <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center">{card.icon}</div>
                 <span className="text-xs font-medium text-richblack-300">{card.label}</span>
               </div>
-              <p className="font-display text-2xl text-richblack-5">{card.value}</p>
+              <p className="font-display text-2xl text-richblack-5">{typeof card.value === 'number' ? <>{card.prefix}<CountUp value={card.value} /></> : card.value}</p>
               <p className="text-xs text-richblack-400 mt-1">{card.sub}</p>
             </motion.div>
           ))}

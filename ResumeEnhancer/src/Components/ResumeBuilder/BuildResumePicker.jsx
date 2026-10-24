@@ -10,6 +10,7 @@ import IconBtn from '../extra/IconBtn'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
 import { fadeUp, staggerContainer } from '../../utils/motion'
+import { AnimatedGroup } from '../Animated/AnimatedGroup'
 import { TEMPLATE_REGISTRY } from './Templates/templateRegistry'
 import { SAMPLE_RESUME_DATA } from './Templates/sampleResumeData'
 import { CreateBuiltResume, GenerateResume, TailorResume } from '../../Services/operations/BuiltResume'
@@ -124,7 +125,7 @@ const BuildResumePicker = () => {
               <h1 className="font-display font-bold text-2xl text-richblack-5">Build a resume</h1>
               <p className="text-sm text-richblack-400 mt-1">How do you want to start?</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <AnimatedGroup preset="blur-slide" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {MODES.map((m) => {
                 const Icon = m.icon
                 return (
@@ -143,7 +144,7 @@ const BuildResumePicker = () => {
                   </motion.button>
                 )
               })}
-            </div>
+            </AnimatedGroup>
           </div>
         </PageTransition>
       </DashboardLayout>

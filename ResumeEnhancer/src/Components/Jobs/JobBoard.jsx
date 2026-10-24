@@ -8,6 +8,7 @@ import { FaSearch, FaMapMarkerAlt, FaBriefcase, FaCheckCircle, FaBell, FaBookmar
 import Navbar from '../Home/Navbar'
 import Footer from '../Home/Footer'
 import Loading from '../extra/Loading'
+import { Spotlight } from '../Animated/Spotlight'
 import { staggerContainer, fadeUp } from '../../utils/motion'
 import { GetPublicJobs, GetMyApplications, GetSavedJobs, ToggleSavedJob } from '../../Services/operations/Job'
 import { formatJobDate } from '../../utils/formatDate'
@@ -169,6 +170,8 @@ const JobBoard = () => {
                   to={`/Jobs/${job._id}`}
                   className="block rounded-xl bg-richblack-800 border border-richblack-700 p-6 hover:border-yellow-50/50 transition-colors duration-200"
                 >
+                  {/* soft cursor-following glow sir — Spotlight clips itself to this card */}
+                  <Spotlight className="from-yellow-50/20 via-yellow-50/5 to-transparent" size={220} />
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

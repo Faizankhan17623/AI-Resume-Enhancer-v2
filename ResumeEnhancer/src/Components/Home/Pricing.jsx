@@ -9,6 +9,11 @@ import Footer from './Footer'
 import Loading from '../extra/Loading'
 import { GetAllPlans } from '../../Services/operations/Payment'
 import { fadeUp, staggerContainer } from '../../utils/motion'
+import { Tilt } from '../Animated/Tilt'
+import { TextEffect } from '../Animated/TextEffect'
+import { Disclosure, DisclosureTrigger, DisclosureContent } from '../Animated/Disclosure'
+import { BorderTrail } from '../Animated/BorderTrail'
+import { AnimatedNumber } from '../Animated/AnimatedNumber'
 
 // full capability matrix sir — one row per real capability across ALL plans, so every
 // card can show both what it has (check) and what it's missing versus the tier above it.
@@ -63,6 +68,52 @@ const PLAN_META = {
     messages: '500 messages / chat',
     aiModel: 'gpt-oss-120b',
   },
+}
+
+// the first few rows are what people compare plans on sir, the rest fold away behind a smooth
+// expand so three 16-row cards don't turn the page into a wall of checkmarks
+const VISIBLE_ROWS = 7
+
+const FeatureRows = ({ rows, planKey, className = '' }) => (
+  <ul className={`space-y-3 ${className}`}>
+    {rows.map((row) => {
+      const included = row.tiers.includes(planKey)
+      return (
+        <li
+          key={row.label}
+          className={`flex gap-3 text-sm ${included ? 'text-richblack-100' : 'text-richblack-400/60'}`}
+        >
+          {included ? (
+            <FaCheck className="text-caribgreen-100 mt-0.5 shrink-0" />
+          ) : (
+            <FaTimes className="text-richblack-500 mt-0.5 shrink-0" />
+          )}
+          <span className={included ? '' : 'line-through decoration-richblack-500'}>{row.label}</span>
+        </li>
+      )
+    })}
+  </ul>
+)
+
+// full capability matrix sir — every row the plan HAS gets a check, every row it's MISSING (that
+// a higher tier has) gets a greyed-out cross. Rows past VISIBLE_ROWS live in the Disclosure.
+const FeatureList = ({ planKey }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-6 flex-1">
+      <FeatureRows rows={CAPABILITY_MATRIX.slice(0, VISIBLE_ROWS)} planKey={planKey} />
+      <Disclosure open={open} onOpenChange={setOpen} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+        <DisclosureTrigger>
+          <button type="button" className="mt-4 text-xs font-semibold text-yellow-50 hover:underline cursor-pointer">
+            {open ? 'Show fewer' : `Show all ${CAPABILITY_MATRIX.length} features`}
+          </button>
+        </DisclosureTrigger>
+        <DisclosureContent>
+          <FeatureRows rows={CAPABILITY_MATRIX.slice(VISIBLE_ROWS)} planKey={planKey} className="pt-4" />
+        </DisclosureContent>
+      </Disclosure>
+    </div>
+  )
 }
 
 const Pricing = () => {
@@ -125,7 +176,7 @@ const Pricing = () => {
           <h1 className="font-display font-bold text-4xl lg:text-5xl text-richblack-5 tracking-tight">
             Simple <span className="text-warm-200">pricing</span>
           </h1>
-          <p className="mt-3 text-richblack-200 text-lg">Start free. Upgrade when your job hunt gets serious.</p>
+          <TextEffect as="p" per="word" preset="fade-in-blur" delay={0.15} className="mt-3 text-richblack-200 text-lg">Start free. Upgrade when your job hunt gets serious.</TextEffect>
         </div>
 
         {/* Monthly/Yearly toggle sir — one shared choice for every paid plan on the page, same
@@ -192,10 +243,10 @@ const Pricing = () => {
               const isFree = !plan.billingCycles
 
               return (
-                <motion.div
-                  key={plan.key}
-                  variants={fadeUp}
-                  className={`relative flex flex-col rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-2 ${
+                <motion.div key={plan.key} variants={fadeUp} className="h-full">
+                <Tilt rotationFactor={4} className="h-full">
+                <div
+                  className={`relative flex flex-col h-full rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-2 ${
                     isPro
                       ? 'bg-richblack-800 border-warm-200 shadow-[0_0_40px_-12px_rgba(232,131,79,0.35)]'
                       : isProMax
@@ -203,6 +254,10 @@ const Pricing = () => {
                       : 'bg-richblack-800 border-richblack-700 hover:border-richblack-500'
                   }`}
                 >
+                  {/* light chasing around the paid cards' border sir — highlights the two upgrade tiers */}
+                  {isPro && <BorderTrail className="bg-warm-200" size={70} transition={{ repeat: Infinity, duration: 6, ease: 'linear' }} />}
+                  {isProMax && <BorderTrail className="bg-yellow-50" size={70} transition={{ repeat: Infinity, duration: 6, ease: 'linear' }} />}
+
                   {/* Ribbon badges sir — most popular (coral) / best value (teal), MyPerfectResume-style */}
                   {isPro && (
                     <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-4 py-1 text-xs font-bold rounded-full bg-warm-200 text-richblack-900 whitespace-nowrap">
@@ -222,7 +277,7 @@ const Pricing = () => {
 
                   <div className="mt-4 flex items-end gap-1">
                     <span className="text-4xl font-extrabold text-richblack-5 font-mono">
-                      {isFree ? 'Free' : `₹${activeCycle?.priceInRupees.toLocaleString('en-IN')}`}
+                      {isFree ? 'Free' : <>₹<AnimatedNumber value={activeCycle?.priceInRupees ?? 0} locale="en-IN" springOptions={{ stiffness: 120, damping: 22 }} /></>}
                     </span>
                     {!isFree && (
                       <span className="text-sm text-richblack-300 mb-1">
@@ -258,24 +313,7 @@ const Pricing = () => {
 
                   {/* Full capability matrix sir — every row the plan HAS gets a check,
                       every row it's MISSING (that a higher tier has) gets a greyed-out cross */}
-                  <ul className="mt-6 space-y-3 flex-1">
-                    {CAPABILITY_MATRIX.map((row, index) => {
-                      const included = row.tiers.includes(plan.key)
-                      return (
-                        <li
-                          key={index}
-                          className={`flex gap-3 text-sm ${included ? 'text-richblack-100' : 'text-richblack-400/60'}`}
-                        >
-                          {included ? (
-                            <FaCheck className="text-caribgreen-100 mt-0.5 shrink-0" />
-                          ) : (
-                            <FaTimes className="text-richblack-500 mt-0.5 shrink-0" />
-                          )}
-                          <span className={included ? '' : 'line-through decoration-richblack-500'}>{row.label}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  <FeatureList planKey={plan.key} />
 
                   <div className="mt-8">
                     {isCurrent ? (
@@ -298,6 +336,8 @@ const Pricing = () => {
                       </button>
                     )}
                   </div>
+                </div>
+                </Tilt>
                 </motion.div>
               )
             })}
