@@ -12,6 +12,7 @@ const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { getModelForPlan } = require('../utils/AiModel')
 const { withTransaction } = require('../utils/withTransaction')
 const { validatePdfUpload } = require('../utils/pdfUpload')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 const logger = require('../utils/logger')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
@@ -41,6 +42,20 @@ exports.createChat = async (req, res) => {
                 success: false,
                 message: 'Job Description is required',
             })
+        }
+
+        // moderation pass sir — on the JD, BEFORE the transaction below (consumeCredit lives
+        // inside it, alongside the Chat insert). This has to be checked out here rather than
+        // inside withTransaction's callback: that callback "MUST be safe to re-run" (Mongo can
+        // retry it on a transient commit error — see utils/withTransaction.js's own docstring),
+        // and holding a DB transaction open across an external HTTP call to the moderation API
+        // is the wrong shape regardless. Unlike sendMessage/review (checked per message/per
+        // review), this only runs once per chat, so a zero-credit user's create attempt costing
+        // one moderation call before being denied is a much smaller trade-off here. See
+        // utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(jd, { feature: 'chat-create' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         // parse the PDF BEFORE spending anything sir — a malformed upload used to burn a credit
@@ -144,6 +159,14 @@ exports.sendMessage = async (req, res) => {
                 success: false,
                 message: 'This chat is full for your plan, please start a new chat or upgrade your plan',
             })
+        }
+
+        // moderation pass sir — BEFORE building the prompt or touching the AI model, and before
+        // response headers are set (this handler streams below, so it's now-or-never). See
+        // utils/Moderation.js for why this runs independently of the chat model's own prompt.
+        const modResult = await moderateText(message.trim(), { feature: 'chat' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         // plan-aware system prompt sir — Basic coaches light, Pro rewrites deep, ProMax is the full career coach

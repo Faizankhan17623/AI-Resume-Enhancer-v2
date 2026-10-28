@@ -12,6 +12,7 @@ const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { getModelForPlan } = require('../utils/AiModel')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
 const { validatePdfUpload } = require('../utils/pdfUpload')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -127,6 +128,16 @@ exports.startMockInterview = async (req, res) => {
             })
         }
 
+        // moderation pass sir — AFTER consumeCredit above, not before: moderation itself calls
+        // Groq, so checking it first would burn that call on every zero-credit user's request
+        // too. Immediately refunded if flagged. See utils/Moderation.js; fails open if the
+        // classifier itself errors.
+        const modResult = await moderateText(jd, { feature: 'mock-interview' })
+        if (modResult.flagged) {
+            await refundCredit(id)
+            return res.status(400).json(moderationBlockedResponse(modResult))
+        }
+
         const resumeText = result.text
         const role = jd.trim().slice(0, 60) || 'Mock Interview'
 
@@ -205,6 +216,14 @@ exports.answerMockInterview = async (req, res) => {
                 success: false,
                 message: 'An answer is required',
             })
+        }
+
+        // moderation pass sir — on the candidate's own answer text, before it's stored on the
+        // session or sent to the AI interviewer for scoring. See utils/Moderation.js; fails open
+        // if the classifier itself errors.
+        const modResult = await moderateText(answer, { feature: 'mock-interview-answer' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         const session = await MockInterview.findOne({ _id: sessionId, user: id })

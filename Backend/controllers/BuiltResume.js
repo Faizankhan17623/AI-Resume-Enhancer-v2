@@ -16,6 +16,7 @@ const { builtResumeToText } = require('../utils/BuiltResumeText')
 const { getModelForPlan } = require('../utils/AiModel')
 const { runReview } = require('../services/reviewService')
 const { validatePdfUpload } = require('../utils/pdfUpload')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -765,6 +766,18 @@ exports.generateResume = async (req, res) => {
             })
         }
 
+        // moderation pass sir — AFTER consumeCredit above, not before: moderation itself makes
+        // a real Groq call, and checking it first means a zero-credit user's request still burns
+        // that call before ever hitting the 403. rawInfo is fully open-ended free text ("tell the
+        // AI about yourself"), the most unconstrained input field in the whole app. Immediately
+        // refunded if flagged, same as every other failure path below. See utils/Moderation.js;
+        // fails open if the classifier itself errors.
+        const modResult = await moderateText(rawInfo, { feature: 'resume-generate' })
+        if (modResult.flagged) {
+            await refundCredit(id)
+            return res.status(400).json(moderationBlockedResponse(modResult))
+        }
+
         // write-ahead marker sir — see Models/CreditSpend.js. A crash during the multi-second
         // Groq call below would otherwise strand the spent credit with no resume and no refund;
         // CreditReconcileCron.js sweeps and refunds anything still pending here after a crash.
@@ -867,6 +880,16 @@ exports.tailorResume = async (req, res) => {
                 message: spend.message,
                 ...(spend.code ? { code: spend.code } : {}),
             })
+        }
+
+        // moderation pass sir — AFTER consumeCredit above, not before: see generateResume's own
+        // comment above for why (moderation itself calls Groq, so checking it first would burn
+        // that call on every zero-credit user's request too). Immediately refunded if flagged.
+        // See utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(jd, { feature: 'resume-tailor' })
+        if (modResult.flagged) {
+            await refundCredit(id)
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         // write-ahead marker sir — see generateResume above and Models/CreditSpend.js

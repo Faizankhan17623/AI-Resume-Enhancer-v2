@@ -1,6 +1,7 @@
 const { getUserPlan } = require('../utils/Plans')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 const logger = require('../utils/logger')
 
 // POST /job-search — Pro+ feature sir, searches the live web via Tavily for real job postings
@@ -34,6 +35,15 @@ exports.searchJobs = async (req, res) => {
                 success: false,
                 message: 'Please describe the job you are looking for',
             })
+        }
+
+        // moderation pass sir — this query is the one place in this file that leaves our own
+        // server verbatim, straight to a third-party API (Tavily). No Groq call happens here
+        // (see this file's own top comment), but the external-exposure risk is still real. See
+        // utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(query, { feature: 'job-search' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         const tavilyRes = await fetch('https://api.tavily.com/search', {

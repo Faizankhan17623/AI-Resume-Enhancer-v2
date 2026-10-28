@@ -12,6 +12,7 @@ const { consumeJdWrite, refundJdWrite, consumeInterviewQGen, refundInterviewQGen
 const { buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidateSummaryPrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { AI_MODEL } = require('../utils/AiModel')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 const logger = require('../utils/logger')
 
 // same lazy-construction reasoning as reviewService.js/fitScoreService.js sir
@@ -72,6 +73,15 @@ exports.generateJobDescription = async (req, res) => {
 
         if (!title?.trim() || !mustHaves?.trim()) {
             return res.status(400).json({ success: false, message: 'A title and your must-have requirements are required' })
+        }
+
+        // moderation pass sir — on the recruiter's free-typed must-haves, before consumeJdWrite
+        // below. Approved recruiters are a lower-risk population than open signups, but this is
+        // still open free text reaching an LLM, so the same gate applies. See utils/Moderation.js;
+        // fails open if the classifier itself errors.
+        const modResult = await moderateText(`${title.trim()}\n${mustHaves.trim()}`, { feature: 'recruiter-jd-writer' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         const spend = await consumeJdWrite(recruiterId)
