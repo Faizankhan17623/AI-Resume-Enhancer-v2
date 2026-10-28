@@ -18,6 +18,9 @@ const LABELS = {
   'feature.coverLetter': { label: 'Cover Letter Generator', description: 'Pro+ feature, generates a tailored cover letter.' },
   'feature.outreachMessage': { label: 'Outreach Message Generator', description: 'Pro+ feature, generates a short recruiter/hiring-manager outreach message.' },
   'feature.jobSearch': { label: 'Job Search', description: 'Pro+ feature, live job search via Tavily.' },
+  'feature.moderation': { label: 'Content Moderation', description: 'Safety classifier that screens free-typed text (JDs, chat, interview answers) before it reaches an AI feature. Fails open if disabled or erroring.' },
+  'feature.learningResources': { label: 'Learning Resources', description: 'Suggested courses/articles to close resume gaps.' },
+  'feature.mockInterview': { label: 'Mock Interview', description: 'Pro Max feature, AI-run practice interview with scored turns.' },
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1)

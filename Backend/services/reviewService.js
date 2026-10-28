@@ -26,6 +26,7 @@ const { updateStreak } = require('../utils/Streak')
 const { recordFeatureUse } = require('../utils/FeatureUsage')
 const { getModelForPlan } = require('../utils/AiModel')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 const logger = require('../utils/logger')
 
 // timeout + maxRetries pinned explicitly sir — the SDK default retries 429/5xx with backoff and a
@@ -87,6 +88,24 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
     const spend = await consumeCredit(userId)
     if (!spend.ok) {
         return { ok: false, status: 403, message: spend.message, code: spend.code }
+    }
+
+    // moderation pass sir — AFTER consumeCredit above, not before: moderation makes a real call
+    // to Groq (even though it's a different model), and running it before the credit check would
+    // mean every zero-credit user's request still burns that call before ever hitting the 403 —
+    // a cost leak in the opposite direction from the one this guards against. Immediately refunded
+    // if flagged, same as every other failure path below, so the invariant from this function's
+    // own docstring ("nobody is billed for a review they never received") still holds; this is
+    // just one more reason a review can fail to materialize. This is the single chokepoint both of
+    // controllers/AI.js's endpoints go through, and the highest-traffic AI call in the app, so
+    // this is the one place this check matters most. resumeText is NOT moderated: it is the
+    // user's own PDF, already constrained by what can even go in a resume, and running it through
+    // too would burn the classifier's much tighter 2000 TPM budget (see utils/Moderation.js) on
+    // every single review for no realistic safety gain. Fails open if the classifier itself errors.
+    const modResult = await moderateText(jd, { feature: 'review' })
+    if (modResult.flagged) {
+        await refundCredit(userId)
+        return { ok: false, status: 400, code: 'CONTENT_FLAGGED', message: moderationBlockedResponse(modResult).message }
     }
 
     // write-ahead marker sir — see Models/CreditSpend.js. Resolved (deleted) on every path below,

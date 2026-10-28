@@ -12,6 +12,7 @@ const { getModelForPlan } = require('../utils/AiModel')
 const { detectGenericness } = require('../utils/GenericPhraseDetector')
 const { isFeatureEnabled, getFeatureFlagDetails } = require('../utils/FeatureFlags')
 const { validatePdfUpload } = require('../utils/pdfUpload')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 const grok = new Grok({ apiKey: process.env.GROK_API_KEY, timeout: 30 * 1000, maxRetries: 1 })
 
@@ -55,6 +56,13 @@ exports.generateCoverLetter = async (req, res) => {
                 success: false,
                 message: 'Job Description is required',
             })
+        }
+
+        // moderation pass sir — on the JD text, before the PDF is even parsed. See
+        // utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(jd, { feature: 'cover-letter' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         const parser = new PDFParse({ data: PDf.data })
