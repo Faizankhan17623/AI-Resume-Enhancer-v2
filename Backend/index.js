@@ -132,6 +132,26 @@ app.get("/", (req, res) => {
 	});
 });
 
+// liveness probe sir — cheap, no DB touch: just "is the Node process alive and responding"
+app.get('/healthz', (req, res) => {
+	res.status(200).json({
+		status: 'UP',
+		uptime: process.uptime(),
+		timestamp: new Date().toISOString(),
+	});
+});
+
+// readiness probe sir — also checks Mongo, since a request can hit this process fine while the
+// DB connection is down (readyState !== 1), which every controller actually depends on
+const mongoose = require('mongoose')
+app.get('/readyz', (req, res) => {
+	const dbUp = mongoose.connection.readyState === 1
+	res.status(dbUp ? 200 : 503).json({
+		status: dbUp ? 'READY' : 'NOT_READY',
+		checks: { server: 'UP', db: dbUp ? 'UP' : 'DOWN' },
+	});
+});
+
 // unmatched route sir — every controller returns {success:false, message}, so 404s should match
 app.use((req, res) => {
 	res.status(404).json({

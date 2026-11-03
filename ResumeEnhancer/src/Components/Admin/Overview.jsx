@@ -12,6 +12,14 @@ import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetDashboardStats, GetAiStats, GetAiUsageByUser, GetHealth, GetDeletions, GetReconciliation, GetSecurity, GetAtRisk, GetReferralAbuse, GetTraffic } from '../../Services/operations/Admin'
 import { setTrafficRange } from '../../Slices/adminSlice'
 import { CountUp } from '../Animated/CountUp'
+import BASE_URL from '../../utils/backendUrl'
+
+// /readyz lives on the server root sir, not under /api/v1 like every other admin endpoint here
+// (see Backend/index.js) — it's unauthenticated and has its own {status, checks} shape, so it
+// doesn't fit apiConnector/Redux (which assume a bearer token + {success,...}). A plain fetch
+// for a presence badge is all this needs; GetHealth's existing System Health card above already
+// covers everything else (DB latency/pool, Groq, mail, env, event-loop lag).
+const READYZ_URL = BASE_URL.replace(/\/api\/v1\/?$/, '') + '/readyz'
 
 // validated categorical slots (dataviz skill, run against this app's own light/dark surfaces:
 // #FFFFFF / #1F1C16 — both clear the lightness/chroma/CVD/normal-vision gates, see chat history)
@@ -91,6 +99,14 @@ const Overview = () => {
   const isSupport = user?.role === 'Support'
   const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
+
+  // readyz badge sir — separate from GetHealth above, see READYZ_URL comment. null while
+  // checking, then true/false. Caught, not thrown: a down backend must render "DOWN", not
+  // break this page.
+  const [readyz, setReadyz] = useState(null)
+  useEffect(() => {
+    fetch(READYZ_URL).then((res) => setReadyz(res.ok)).catch(() => setReadyz(false))
+  }, [])
 
   useEffect(() => {
     dispatch(GetDashboardStats(token))
@@ -283,15 +299,24 @@ const Overview = () => {
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
             <h2 className="font-display text-lg text-richblack-5 mb-4 flex items-center gap-2">
               <FaHeartbeat className="text-pink-100" /> System Health
-              {health?.overall && (
-                <span className={`ml-auto px-2 py-0.5 text-[10px] font-bold rounded-full border uppercase ${
-                  health.overall === 'healthy' ? 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700'
-                    : health.overall === 'degraded' ? 'bg-yellow-700/30 text-yellow-25 border-yellow-700'
-                    : 'bg-pink-700/30 text-pink-100 border-pink-700'
-                }`}>
-                  {health.overall}
-                </span>
-              )}
+              <span className="ml-auto flex items-center gap-2">
+                {readyz !== null && (
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border uppercase ${
+                    readyz ? 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700' : 'bg-pink-700/30 text-pink-100 border-pink-700'
+                  }`} title="Live GET /readyz check, separate from the stats below">
+                    {readyz ? 'readyz: up' : 'readyz: down'}
+                  </span>
+                )}
+                {health?.overall && (
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border uppercase ${
+                    health.overall === 'healthy' ? 'bg-caribgreen-700/30 text-caribgreen-25 border-caribgreen-700'
+                      : health.overall === 'degraded' ? 'bg-yellow-700/30 text-yellow-25 border-yellow-700'
+                      : 'bg-pink-700/30 text-pink-100 border-pink-700'
+                  }`}>
+                    {health.overall}
+                  </span>
+                )}
+              </span>
             </h2>
             {health ? (
               <div className="space-y-3">
