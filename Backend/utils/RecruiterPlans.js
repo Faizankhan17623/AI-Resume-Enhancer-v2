@@ -11,13 +11,20 @@ const round2 = (n) => Math.round(n * 100) / 100
 // imported — per direct request, the Recruiter plan system must never share a code path with
 // the User one, even a pure-function pricing helper, so the two can never accidentally drift
 // into touching each other.
-const buildCycle = (baseRupees, validityDays) => {
+//
+// exactTotalRupees sir (optional) — mirrors Plans.js's buildCycle: when a fixed GST-inclusive
+// price is given, base*1.18 can be a paisa off after rounding. Passing the exact total here pins
+// `price` to it exactly and backs gst into the remainder instead.
+const buildCycle = (baseRupees, validityDays, exactTotalRupees) => {
     const gstRupees = round2(baseRupees * 0.18)
-    const totalRupees = round2(baseRupees + gstRupees)
+    const totalRupees = exactTotalRupees ?? round2(baseRupees + gstRupees)
+    if (totalRupees < baseRupees) {
+        throw new Error(`buildCycle: total (${totalRupees}) is less than base (${baseRupees}) — gst would be negative`)
+    }
     return {
-        basePrice: Math.round(baseRupees * 100),   // paise
-        gst: Math.round(gstRupees * 100),          // paise
-        price: Math.round(totalRupees * 100),      // paise — what Razorpay actually charges
+        basePrice: Math.round(baseRupees * 100),                    // paise
+        gst: Math.round((totalRupees - baseRupees) * 100),          // paise
+        price: Math.round(totalRupees * 100),                       // paise — what Razorpay actually charges
         validityDays,
     }
 }

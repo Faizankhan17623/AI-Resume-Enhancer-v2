@@ -22,6 +22,9 @@ const round2 = (n) => Math.round(n * 100) / 100
 const buildCycle = (baseRupees, validityDays, exactTotalRupees) => {
     const gstRupees = round2(baseRupees * 0.18)
     const totalRupees = exactTotalRupees ?? round2(baseRupees + gstRupees)
+    if (totalRupees < baseRupees) {
+        throw new Error(`buildCycle: total (${totalRupees}) is less than base (${baseRupees}) — gst would be negative`)
+    }
     return {
         basePrice: Math.round(baseRupees * 100),                    // paise
         gst: Math.round((totalRupees - baseRupees) * 100),          // paise
