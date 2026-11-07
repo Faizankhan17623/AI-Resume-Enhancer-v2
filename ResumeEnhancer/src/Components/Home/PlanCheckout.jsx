@@ -34,6 +34,9 @@ const PlanCheckout = () => {
   const [agreed, setAgreed] = useState(false)
   const [buying, setBuying] = useState(false)
   const [buyingText, setBuyingText] = useState('')
+  // payment verified sir — shows a full-screen loader for 5s before redirecting to /Dashboard,
+  // per direct request, instead of an instant jump straight off the checkout page
+  const [paymentDone, setPaymentDone] = useState(false)
   // "now" snapshotted once via useState's lazy initializer sir, not read inline during render —
   // Date.now() called directly in a render body (even inside useMemo) is an impure call the React
   // Compiler rejects; a lazy initializer runs exactly once at mount, which it accepts
@@ -68,9 +71,16 @@ const PlanCheckout = () => {
     setBuyingText(text || '')
   }
 
+  // 5s success loader sir, per direct request, then on to /Dashboard
+  useEffect(() => {
+    if (!paymentDone) return
+    const timer = setTimeout(() => navigate('/Dashboard'), 5000)
+    return () => clearTimeout(timer)
+  }, [paymentDone, navigate])
+
   const handleSubscribe = () => {
     if (!plan || !cycleData || !agreed) return
-    dispatch(BuyPlan(planKey, token, user, navigate, handleLoadingChange, cycle))
+    dispatch(BuyPlan(planKey, token, user, () => setPaymentDone(true), handleLoadingChange, cycle))
   }
 
   // invalid/unknown plan key sir (e.g. someone typed /Checkout/Basic by hand — Basic is free,
@@ -236,6 +246,17 @@ const PlanCheckout = () => {
       </motion.div>
 
       <Footer />
+
+      {/* success loader sir, per direct request (2026-11-08) — full-screen overlay for 5s after
+          verification succeeds, then on to /Dashboard (see the paymentDone effect above), instead
+          of an instant redirect straight off this page */}
+      {paymentDone && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-richblack-900/90 backdrop-blur-sm">
+          <FaCheckCircle className="text-5xl text-caribgreen-100" />
+          <div className="w-14 h-14 border-4 border-yellow-50 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-richblack-5 font-semibold text-lg">Payment successful — taking you to your dashboard...</p>
+        </div>
+      )}
     </div>
   )
 }

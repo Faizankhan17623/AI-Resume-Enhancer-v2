@@ -42,7 +42,11 @@ export function GetAllPlans() {
 // returns a promise that resolves once the razorpay window is open (or the setup step failed) sir,
 // so the caller's `buying` state only needs to stay true for THIS setup phase — not the whole
 // checkout, which can otherwise sit open for minutes waiting on the user to pay
-export function BuyPlan(plan, token, user, navigate, onLoadingChange, billingCycle = 'monthly') {
+//
+// onVerified sir (optional, 2026-11-08) — called once verification succeeds, BEFORE navigating
+// anywhere. Lets the caller show its own success loader for a few seconds first instead of an
+// instant jump to /Dashboard; this function does no navigation of its own anymore.
+export function BuyPlan(plan, token, user, onVerified, onLoadingChange, billingCycle = 'monthly') {
     return async (dispatch) => {
         onLoadingChange?.(true, "Setting up the payment...")
         try {
@@ -97,7 +101,7 @@ export function BuyPlan(plan, token, user, navigate, onLoadingChange, billingCyc
                         // localStorage write here that could fall out of step with redux
                         dispatch(setUser({ ...user, SubType: verifyResponse.data.plan }))
 
-                        if (navigate) navigate("/Dashboard")
+                        onVerified?.()
                     } catch (error) {
                         logApiError("Error verifying the payment", error)
                         toast.error(error?.response?.data?.message || "Payment verification failed")
