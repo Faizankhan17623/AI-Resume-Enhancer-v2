@@ -151,18 +151,32 @@ const PlanCheckout = () => {
               })}
             </div>
 
-            {/* Order details sir — GST line-item removed per direct request (2026-11-07): the
-                total charged is unchanged (cycleData.priceInRupees already has GST baked in,
-                see Backend/utils/Plans.js's buildCycle), this is display-only simplification to
-                match the pricing page's single-number style. basePriceInRupees/gstInRupees are
-                still returned by the backend and still used elsewhere (e.g. GST invoices), just
-                not itemized here anymore. */}
+            {/* Order details sir — GST breakdown restored per direct request (2026-11-08), base
+                + 18% GST shown as separate lines above the total, monthly only for now (see
+                Backend/utils/Plans.js's buildCycle comment — yearly still uses the old flat-total
+                scheme, so its basePriceInRupees/gstInRupees would mislead if shown the same way). */}
             <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-6">
               <h2 className="text-sm font-bold text-richblack-5 mb-4">Order details</h2>
               <div className="flex justify-between text-richblack-5 font-bold text-base">
                 <span>{PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
                 <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
               </div>
+              {cycle === 'monthly' && cycleData && (
+                <div className="mt-4 pt-4 border-t border-richblack-700 space-y-2 text-sm">
+                  <div className="flex justify-between text-richblack-300">
+                    <span>Base price</span>
+                    <span>₹{cycleData.basePriceInRupees.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-richblack-300">
+                    <span>GST (18%)</span>
+                    <span>₹{cycleData.gstInRupees.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-richblack-5 font-bold pt-2 border-t border-richblack-700">
+                    <span>Total</span>
+                    <span>₹{cycleData.priceInRupees.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Auto-renew disclosure sir — one-time charge (Razorpay order, not a subscription

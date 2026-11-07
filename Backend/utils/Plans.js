@@ -58,12 +58,13 @@ const PLANS = {
         credits: 100,
         maxMessagesPerChat: 250,
         contextWindow: 100,
-        // per direct request (2026-11-07, fourth update same day) sir — ₹1,500/mo, ₹1,350/mo-
-        // equivalent yearly (was ₹1,400) — FINAL, GST-inclusive totals the customer pays, not
-        // base prices. Base backed out at 18% GST, exact total enforced via buildCycle's
-        // exactTotalRupees param.
+        // per direct request (2026-11-08) sir — monthly now shows base + 18% GST as separate
+        // line items on checkout, GST added on top instead of backed out of a flat total. Base
+        // is the old flat monthly total (₹1,500) so the GST line is new, not hidden — new total
+        // is ₹1,770/mo. Yearly stays on the old flat-total scheme (exactTotalRupees) until the
+        // user asks to extend this there too.
         billingCycles: {
-            monthly: buildCycle(1271.19, 30, 1500),
+            monthly: buildCycle(1500, 30),
             yearly: buildCycle(1144.07 * 12, 365, 1350 * 12),
         },
         features: [
@@ -80,11 +81,10 @@ const PLANS = {
         credits: 300,
         maxMessagesPerChat: 500,
         contextWindow: 30,
-        // per direct request (2026-11-07, fourth update same day) sir — ₹2,000/mo, ₹1,890/mo-
-        // equivalent yearly (was ₹1,900) — FINAL, GST-inclusive totals (see Pro's comment above,
-        // same reasoning).
+        // per direct request (2026-11-08) sir — same change as Pro's monthly above: base
+        // (₹2,000) + 18% GST on top, new total ₹2,360/mo. Yearly untouched for now.
         billingCycles: {
-            monthly: buildCycle(1694.92, 30, 2000),
+            monthly: buildCycle(2000, 30),
             yearly: buildCycle(1601.70 * 12, 365, 1890 * 12),
         },
         features: [
