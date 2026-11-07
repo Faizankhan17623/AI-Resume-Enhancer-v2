@@ -187,13 +187,20 @@ exports.createUser = async (req, res) => {
     } catch (error) {
         // duplicate-key race sir — the pre-checks above (existingEmail/existingNumber) can't
         // catch two signups landing on User.create() near-simultaneously; the unique index is
-        // the real guard. Same 409 + field shape as those pre-checks, instead of a scary 500,
-        // for the one field that actually has a unique index (email) — see 2026-11-07 audit.
+        // the real guard. Same 409 + field shape as those pre-checks, instead of a scary 500 —
+        // see 2026-11-07 audit (email) and 2026-11-08 (number, after adding its unique index).
         if (error.code === 11000 && error.keyPattern?.email) {
             return res.status(409).json({
                 success: false,
                 field: 'email',
                 message: 'A user with this email already exists',
+            });
+        }
+        if (error.code === 11000 && error.keyPattern?.number) {
+            return res.status(409).json({
+                success: false,
+                field: 'number',
+                message: 'This number is already registered',
             });
         }
         (req.log || logger).error('create user failed', { err: error })
@@ -903,6 +910,15 @@ exports.updateNumber = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
+        // duplicate-key race sir — same gap as createUser's, see 2026-11-08: the existingNumber
+        // pre-check above can't catch two requests landing on findByIdAndUpdate near-simultaneously.
+        if (error.code === 11000 && error.keyPattern?.number) {
+            return res.status(409).json({
+                success: false,
+                field: 'number',
+                message: 'This number is already registered',
+            });
+        }
         (req.log || logger).error('update number failed', { err: error })
         return res.status(500).json({
             success: false,

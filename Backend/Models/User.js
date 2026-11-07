@@ -93,7 +93,8 @@ const UserCreation = new mongoose.Schema(
             type: String,
             required: function () { return this.provider === 'local' },
             match: [/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'],
-            index: true
+            unique: true,
+            sparse: true
         },
         CountryCode:{
             type: String,
