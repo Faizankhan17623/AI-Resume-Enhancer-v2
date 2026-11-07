@@ -39,3 +39,4 @@ __*-check.js
 
 .vercel
 .env*
+!.env.example
