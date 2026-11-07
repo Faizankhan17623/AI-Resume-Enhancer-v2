@@ -171,10 +171,12 @@ const RecruiterPricing = () => {
                       </span>
                     )}
                   </div>
+                  {/* GST breakdown deliberately NOT shown here sir, per direct request — the
+                      pricing page shows only the final amount; the base+GST split appears on
+                      the actual checkout/payment page (RecruiterPlanCheckout.jsx) instead. */}
                   {!isFree && (
                     <p className="mt-1 text-[11px] text-richblack-400">
-                      ₹{activeCycle?.basePriceInRupees.toLocaleString('en-IN')} + ₹{activeCycle?.gstInRupees.toLocaleString('en-IN')} GST
-                      {cycle === 'yearly' ? ', billed once a year' : ', billed monthly'}
+                      {cycle === 'yearly' ? 'Billed once a year' : 'Billed monthly'}
                     </p>
                   )}
 

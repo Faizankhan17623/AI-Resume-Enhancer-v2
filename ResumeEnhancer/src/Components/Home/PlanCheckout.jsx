@@ -151,23 +151,17 @@ const PlanCheckout = () => {
               })}
             </div>
 
-            {/* Order details sir — the exact base + GST + total breakdown from the reference screenshots */}
+            {/* Order details sir — GST line-item removed per direct request (2026-11-07): the
+                total charged is unchanged (cycleData.priceInRupees already has GST baked in,
+                see Backend/utils/Plans.js's buildCycle), this is display-only simplification to
+                match the pricing page's single-number style. basePriceInRupees/gstInRupees are
+                still returned by the backend and still used elsewhere (e.g. GST invoices), just
+                not itemized here anymore. */}
             <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-6">
               <h2 className="text-sm font-bold text-richblack-5 mb-4">Order details</h2>
-              <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between text-richblack-200">
-                  <span>{PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
-                  <span>₹{cycleData?.basePriceInRupees.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-richblack-400">
-                  <span>GST (18%)</span>
-                  <span>₹{cycleData?.gstInRupees.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="border-t border-richblack-700 my-2"></div>
-                <div className="flex justify-between text-richblack-5 font-bold text-base">
-                  <span>Total due today</span>
-                  <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
-                </div>
+              <div className="flex justify-between text-richblack-5 font-bold text-base">
+                <span>{PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
+                <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
               </div>
             </div>
 

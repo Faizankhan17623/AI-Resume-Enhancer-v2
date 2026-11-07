@@ -146,22 +146,13 @@ const RecruiterPlanCheckout = () => {
               })}
             </div>
 
+            {/* GST line-item removed per direct request (2026-11-07) sir — same reasoning as
+                PlanCheckout.jsx: total charged is unchanged, display-only simplification. */}
             <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-6">
               <h2 className="text-sm font-bold text-richblack-5 mb-4">Order details</h2>
-              <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between text-richblack-200">
-                  <span>Recruiter {PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
-                  <span>₹{cycleData?.basePriceInRupees.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-richblack-400">
-                  <span>GST (18%)</span>
-                  <span>₹{cycleData?.gstInRupees.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="border-t border-richblack-700 my-2"></div>
-                <div className="flex justify-between text-richblack-5 font-bold text-base">
-                  <span>Total due today</span>
-                  <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
-                </div>
+              <div className="flex justify-between text-richblack-5 font-bold text-base">
+                <span>Recruiter {PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
+                <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
               </div>
             </div>
 

@@ -97,20 +97,28 @@ const FeatureRows = ({ rows, planKey, className = '' }) => (
 
 // full capability matrix sir — every row the plan HAS gets a check, every row it's MISSING (that
 // a higher tier has) gets a greyed-out cross. Rows past VISIBLE_ROWS live in the Disclosure.
+//
+// Sorted per-plan (included rows first, then missing) before slicing sir — per direct request,
+// CAPABILITY_MATRIX's fixed row order mixed checks and crosses together in the first VISIBLE_ROWS
+// for Pro/ProMax, so "Show fewer/more" landed mid-list instead of after a clean included block.
 const FeatureList = ({ planKey }) => {
   const [open, setOpen] = useState(false)
+  const sorted = [...CAPABILITY_MATRIX].sort((a, b) => b.tiers.includes(planKey) - a.tiers.includes(planKey))
   return (
     <div className="mt-6 flex-1">
-      <FeatureRows rows={CAPABILITY_MATRIX.slice(0, VISIBLE_ROWS)} planKey={planKey} />
+      <FeatureRows rows={sorted.slice(0, VISIBLE_ROWS)} planKey={planKey} />
       <Disclosure open={open} onOpenChange={setOpen} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+        <DisclosureContent>
+          <FeatureRows rows={sorted.slice(VISIBLE_ROWS)} planKey={planKey} className="pt-4" />
+        </DisclosureContent>
+        {/* trigger moved after both row blocks sir, per direct request — it used to sit between
+            the visible and expanded rows, so opening it put the button in the card's visual
+            middle instead of at the bottom */}
         <DisclosureTrigger>
           <button type="button" className="mt-4 text-xs font-semibold text-yellow-50 hover:underline cursor-pointer">
             {open ? 'Show fewer' : `Show all ${CAPABILITY_MATRIX.length} features`}
           </button>
         </DisclosureTrigger>
-        <DisclosureContent>
-          <FeatureRows rows={CAPABILITY_MATRIX.slice(VISIBLE_ROWS)} planKey={planKey} className="pt-4" />
-        </DisclosureContent>
       </Disclosure>
     </div>
   )
@@ -285,10 +293,12 @@ const Pricing = () => {
                       </span>
                     )}
                   </div>
+                  {/* GST breakdown deliberately NOT shown here sir, per direct request — the
+                      pricing page shows only the final amount; the base+GST split appears on
+                      the actual checkout/payment page (PlanCheckout.jsx) instead. */}
                   {!isFree && (
                     <p className="mt-1 text-[11px] text-richblack-400">
-                      ₹{activeCycle?.basePriceInRupees.toLocaleString('en-IN')} + ₹{activeCycle?.gstInRupees.toLocaleString('en-IN')} GST
-                      {cycle === 'yearly' ? ', billed once a year' : ', billed monthly'}
+                      {cycle === 'yearly' ? 'Billed once a year' : 'Billed monthly'}
                     </p>
                   )}
 
