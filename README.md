@@ -322,61 +322,23 @@ npm test
 
 ## Deployment
 
-The frontend and backend deploy independently, to different platforms, and are separate concerns
-from the scheduled-jobs worker below.
+**Frontend** — Vercel. **Backend** — EC2 + Nginx + PM2, two processes:
 
-**Frontend** — deployed on Vercel. `ResumeEnhancer/vercel.json` rewrites every unmatched path to
-`index.html` so client-side routing (React Router) works on a hard refresh or a shared deep link.
+| PM2 process | Runs |
+|---|---|
+| `web` | `Backend/index.js` — HTTP traffic |
+| `worker` | `Backend/worker.js` — scheduled jobs |
 
-**Backend** — runs on a persistent server (this project runs it on an AWS EC2 instance) behind
-Nginx as a reverse proxy, with the Node process kept alive by PM2 as two separate processes:
+Deploy: SSH in, `git pull`, `pm2 restart web worker` (`npm install` first if `package.json`
+changed).
 
-| PM2 process | Runs | Notes |
-|---|---|---|
-| `web` | `Backend/index.js` | Serves all HTTP traffic |
-| `worker` | `Backend/worker.js` | All scheduled/cron jobs — see below |
+### Scheduled jobs
 
-A typical deploy is: SSH in, `git pull`, `pm2 restart web worker` (only `npm install` first if
-`package.json` changed).
-
-### Scheduled jobs — two options
-
-**Option A — a dedicated worker process (what this project uses)**
-
-```bash
-pm2 start Backend/worker.js --name worker
-```
-
-A real long-lived process is the better choice if you need jobs to fire at an exact time — a
-GitHub Actions schedule (below) is best-effort and can be delayed by several minutes.
-
-**Option B — free (GitHub Actions)**
-
-`.github/workflows/scheduled-jobs.yml` runs every job on GitHub's scheduled runners, which are
-free and unlimited for public repositories — a reasonable choice if you don't want to run a
-persistent worker process at all. Each run invokes `Backend/jobs/runJob.js <job>`, which executes
-one job and exits. Needs these repository secrets under **Settings → Secrets and variables →
-Actions**:
-
-```
-MONGO_DB_URL        (required)
-MAIL_HOST           (needed for the digest / nudge emails)
-MAIL_USER
-MAIL_PASS
-ADMIN_ALERT_EMAIL   (needed for the AI cost alert)
-FRONTEND_URL
-```
-
-You can also run any job by hand:
-```bash
-cd Backend
-node jobs/runJob.js subscription-reconcile
-```
-
-**Do not run both options at once against the same database** unless you mean to. It is *safe* if
-you do — a Mongo-backed lease (`Backend/utils/jobLease.js`) guarantees only one process executes
-each tick, which also covers the overlap during a rolling deploy — but there is no reason to pay
-for/run both.
+`worker.js` runs every job continuously. `.github/workflows/job-*.yml` (one file per job) is a
+free failover on the same jobs via `Backend/jobs/runJob.js <job>` — both run at once by design,
+safely: a Mongo-backed lease (`Backend/utils/jobLease.js`) ensures only one executes each tick.
+Needs `MONGO_DB_URL`, `MAIL_HOST`, `MAIL_USER`, `MAIL_PASS`, `ADMIN_ALERT_EMAIL`, `FRONTEND_URL` as
+repo secrets. Run any job by hand: `node Backend/jobs/runJob.js subscription-reconcile`.
 
 ### Database requirement
 
