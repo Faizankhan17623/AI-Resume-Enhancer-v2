@@ -1,18 +1,21 @@
-# Free replacement for a paid Render Background Worker.
+# Failover for Backend/worker.js sir — NOT a Render keep-alive anymore.
 #
-# The scheduled jobs used to run inside the API server, then moved to Backend/worker.js — a
-# long-lived process, which on Render means a paid Background Worker (~$7/month). This workflow
-# runs the SAME jobs on GitHub's free scheduled runners instead: each entry below wakes a runner,
-# executes one job via Backend/jobs/runJob.js, and exits.
+# ORIGIN: this started as a free replacement for a paid Render Background Worker, back when the
+# backend ran on Render's free tier (which sleeps after ~15 min idle) and Backend/worker.js wasn't
+# a real always-on process yet. That's no longer true: the backend moved to AWS EC2, and
+# worker.js runs there continuously under PM2 (`pm2 status` shows a live `worker` process), firing
+# every one of these same jobs on its own internal schedule. Render is not in this project's
+# infrastructure anymore — confirmed the old onrender.com URL now 503s, nothing is listening.
 #
-# Public repositories get unlimited free Actions minutes, so this costs nothing.
+# What's left is a genuinely useful FAILOVER, not a primary scheduler: if the EC2 instance or its
+# PM2 worker process is ever down, these same jobs still fire from here instead of silently never
+# running. Every job still takes the Mongo lease (Backend/utils/jobLease.js) before doing any
+# work, so this is safe to run alongside the EC2 worker — the one that's actually alive wins the
+# lease, the other's attempt is a no-op, never a duplicate email or double-run.
 #
-# Two notes on correctness:
-#   - Every job still takes the Mongo lease (Backend/utils/jobLease.js), so this is safe to run
-#     alongside a real worker and a double-trigger is a no-op rather than a duplicate email.
-#   - GitHub's scheduler is best-effort and can be delayed by several minutes under load. Every
-#     job here is either idempotent or time-windowed, so a late run is harmless. Do not use this
-#     for anything that must fire at an exact second.
+# GitHub's scheduler is best-effort and can be delayed by several minutes under load. Every job
+# here is either idempotent or time-windowed, so a late run is harmless. Do not use this for
+# anything that must fire at an exact second.
 #
 # Cron times are UTC. IST is UTC+5:30, so 03:30 UTC = 09:00 IST.
 
@@ -67,24 +70,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      # keep-alive ping sir — Render's free tier sleeps the whole service after ~15 minutes of no
-      # incoming HTTP traffic, and the next real user request then eats a 30-90+ second cold boot.
-      #
-      # PREVIOUSLY this was gated behind `if: github.event.schedule == '*/15 * * * *'` to only run
-      # on that one schedule slot — but GitHub's `github.event.schedule` context value did not
-      # match that literal string on any observed run (verified via `gh run view --json jobs`:
-      # this step showed conclusion "skipped" on every single run since it was added), so the
-      # ping never actually fired, not even once, and the backend kept sleeping exactly as before.
-      # Root-caused by inspecting real run history, not assumed.
-      #
-      # Fix: no `if` at all now — this runs on every trigger (every schedule tick AND manual
-      # dispatch), unconditionally. It's one cheap curl, harmless to run more often than strictly
-      # needed, and "always runs" can't silently no-op the way a schedule-string match can.
-      # `|| true` sir — a missed ping (backend mid-deploy, transient network blip) must never fail
-      # this whole workflow run and skip the real jobs below it.
-      - name: Keep Render backend warm
-        run: curl -sf --max-time 60 https://ai-resume-enhancer-v2.onrender.com/ || true
-
+      # no keep-alive ping here anymore sir — that was ONLY ever needed for Render's free tier,
+      # which sleeps an idle service after ~15 minutes. The backend now runs on EC2 under PM2,
+      # which never sleeps; there is nothing left to keep warm. The old step pinged
+      # ai-resume-enhancer-v2.onrender.com, which now 503s (confirmed live — nothing listens
+      # there anymore), so it was silently doing nothing useful even before being removed here.
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
