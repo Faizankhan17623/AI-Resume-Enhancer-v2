@@ -13,10 +13,6 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "jest": {
-    "testEnvironment": "node",
-    "testTimeout": 30000
-  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",
