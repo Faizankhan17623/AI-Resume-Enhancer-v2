@@ -79,7 +79,11 @@ const PlanCheckout = () => {
   }, [paymentDone, navigate])
 
   const handleSubscribe = () => {
-    if (!plan || !cycleData || !agreed) return
+    // buying's own setState happens inside the async thunk, one tick after this click sir — a
+    // second rapid click before that render lands would otherwise slip through and open two
+    // Razorpay sessions. Set it synchronously here too, per 2026-11-08 audit.
+    if (!plan || !cycleData || !agreed || buying) return
+    setBuying(true)
     dispatch(BuyPlan(planKey, token, user, () => setPaymentDone(true), handleLoadingChange, cycle))
   }
 

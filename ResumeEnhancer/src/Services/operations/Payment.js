@@ -4,20 +4,9 @@ import { logApiError } from '../logApiError.js'
 import { setPlans, setHistory, setLoading } from '../../Slices/paymentSlice.js'
 import { setUser } from '../../Slices/authSlice.js'
 import { PaymentData } from '../Apis/PaymentApi.js'
+import { loadRazorpayScript } from '../razorpay.js'
 
 const { allplans, createorder, verifypayment, paymenthistory } = PaymentData
-
-// loads the razorpay checkout script once sir
-function loadRazorpayScript() {
-    return new Promise((resolve) => {
-        if (window.Razorpay) return resolve(true)
-        const script = document.createElement("script")
-        script.src = "https://checkout.razorpay.com/v1/checkout.js"
-        script.onload = () => resolve(true)
-        script.onerror = () => resolve(false)
-        document.body.appendChild(script)
-    })
-}
 
 export function GetAllPlans() {
     return async (dispatch) => {
@@ -78,6 +67,15 @@ export function BuyPlan(plan, token, user, onVerified, onLoadingChange, billingC
                     email: user?.email || ''
                 },
                 theme: { color: "#FFD60A" },
+                // closing the Razorpay popup without paying sir — no feedback existed for this
+                // at all before (only payment.failed below fired, which needs an actual attempted
+                // and declined payment). `buying` is already false by now (see the outer finally,
+                // which runs right after .open()), so nothing was ever stuck — just silent.
+                modal: {
+                    ondismiss: function () {
+                        toast("Payment window closed, you have not been charged", { icon: 'ℹ️' })
+                    }
+                },
                 handler: async function (razorpayResponse) {
                     // verify on our server sir — signature + the session cookie must both match
                     onLoadingChange?.(true, "Verifying your payment...")

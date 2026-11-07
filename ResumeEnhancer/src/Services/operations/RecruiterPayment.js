@@ -3,23 +3,14 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setUser } from '../../Slices/authSlice.js'
 import { RecruiterPaymentData } from '../Apis/RecruiterPaymentApi.js'
+import { loadRazorpayScript } from '../razorpay.js'
 
 // completely separate from Services/operations/Payment.js sir — same Razorpay checkout mechanics
-// (own script-load helper, own order/verify calls), but this dispatches setUser with
-// recruiterPlan, NEVER SubType — the two plan systems must never share a Redux write path either
+// (shared script-load helper now in ../razorpay.js, own order/verify calls), but this dispatches
+// setUser with recruiterPlan, NEVER SubType — the two plan systems must never share a Redux
+// write path either
 
 const { allplans, createorder, verifypayment, paymenthistory } = RecruiterPaymentData
-
-function loadRazorpayScript() {
-    return new Promise((resolve) => {
-        if (window.Razorpay) return resolve(true)
-        const script = document.createElement("script")
-        script.src = "https://checkout.razorpay.com/v1/checkout.js"
-        script.onload = () => resolve(true)
-        script.onerror = () => resolve(false)
-        document.body.appendChild(script)
-    })
-}
 
 export function GetAllRecruiterPlans() {
     return async () => {
@@ -69,6 +60,13 @@ export function BuyRecruiterPlan(plan, token, user, onSuccess, onLoadingChange, 
                     email: user?.email || ''
                 },
                 theme: { color: "#FFD60A" },
+                // closing the Razorpay popup without paying sir — same fix as Payment.js's,
+                // no feedback existed for this before
+                modal: {
+                    ondismiss: function () {
+                        toast("Payment window closed, you have not been charged", { icon: 'ℹ️' })
+                    }
+                },
                 handler: async function (razorpayResponse) {
                     onLoadingChange?.(true, "Verifying your payment...")
                     try {

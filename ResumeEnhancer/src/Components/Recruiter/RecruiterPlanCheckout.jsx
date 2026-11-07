@@ -51,10 +51,13 @@ const RecruiterPlanCheckout = () => {
   const plan = plans.find((p) => p.key === planKey)
   const cycleData = plan?.billingCycles?.[cycle]
 
+  // DD/MM/YYYY + "7 days, 3 days and 1 day" wording sir, matching PlanCheckout.jsx — per
+  // 2026-11-08 audit (copy-consistency finding), extending the 2026-11-08 User-checkout-only
+  // change here too
   const renewalDateFormatted = cycleData
     ? new Date(nowMs + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
       })
     : ''
@@ -65,7 +68,9 @@ const RecruiterPlanCheckout = () => {
   }
 
   const handleSubscribe = () => {
-    if (!plan || !cycleData || !agreed) return
+    // same double-submit guard as PlanCheckout.jsx, per 2026-11-08 audit
+    if (!plan || !cycleData || !agreed || buying) return
+    setBuying(true)
     dispatch(BuyRecruiterPlan(planKey, token, user, () => {
       dispatch(GetProfile(token))
       navigate('/Recruiter/Account')
@@ -162,7 +167,7 @@ const RecruiterPlanCheckout = () => {
                 This is a one-time charge for your {cycle === 'yearly' ? 'full year' : 'month'} of access.
                 Your plan will not renew automatically — it's valid until{' '}
                 <strong className="text-richblack-100">{renewalDateFormatted}</strong>. We'll email you
-                7, 3 and 1 day before that date, and again on the day it expires, so you can renew at the
+                7 days, 3 days and 1 day before that date, and again on the day it expires, so you can renew at the
                 then-current price of ₹{cycleData?.priceInRupees.toLocaleString('en-IN')}. No card is stored.
               </p>
             </div>
