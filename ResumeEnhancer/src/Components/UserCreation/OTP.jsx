@@ -8,12 +8,14 @@ import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import LoginStatusOverlay from '../Login/LoginStatusOverlay'
+import OtpCountdownRing from '../Animated/OtpCountdownRing'
 import { CreateTheUser, SendTheOtp } from '../../Services/operations/Auth'
 
-// matches the backend's real OTP TTL sir (Backend/Models/OTP.js: `expires: 60 * 2`, a MongoDB
+// matches the backend's real OTP TTL sir (Backend/Models/OTP.js: `expires: 60`, a MongoDB
 // TTL index) — showing any other number here would just be lying to the user about when their
-// code actually stops working
-const OTP_LIFETIME_SECONDS = 2 * 60
+// code actually stops working. Shortened from 2 minutes to 1 per direct request — both this
+// constant and the backend's TTL must change together, see that file's own comment.
+const OTP_LIFETIME_SECONDS = 60
 
 const formatCountdown = (totalSeconds) => {
   const m = Math.floor(totalSeconds / 60)
@@ -33,7 +35,7 @@ const OTP = () => {
   const [otpStatus, setOtpStatus] = useState({ status: null, message: '' })
 
   // counts down once a second sir, independent of anything else on the page — resets to the
-  // full 2 minutes below whenever a fresh OTP is actually sent (initial send from Join.jsx, or
+  // full minute below whenever a fresh OTP is actually sent (initial send from Join.jsx, or
   // this page's own Resend button), since that's the only moment a NEW code starts its own TTL
   const intervalRef = useRef(null)
   useEffect(() => {
@@ -68,7 +70,7 @@ const OTP = () => {
     dispatch(SendTheOtp(signupData.email, null, (status, message) => {
       setOtpStatus({ status, message })
       if (status === 'success') {
-        // a fresh code just started its own 2-minute window sir
+        // a fresh code just started its own 1-minute window sir
         setSecondsLeft(OTP_LIFETIME_SECONDS)
       }
       if (status === 'error' || status === 'success') {
@@ -97,11 +99,16 @@ const OTP = () => {
           We sent a 6-digit code to <span className="text-blue-50 font-medium">{signupData.email}</span>
         </p>
 
-        {/* countdown sir — turns pink once the code has actually expired, matching the
-            backend's TTL exactly (see OTP_LIFETIME_SECONDS above) */}
-        <div className={`mt-4 flex items-center gap-1.5 text-xs font-semibold ${expired ? 'text-pink-200' : 'text-richblack-300'}`}>
-          <FiClock className="text-sm" />
-          {expired ? 'Code expired — request a new one' : `Code expires in ${formatCountdown(secondsLeft)}`}
+        {/* circular reverse-countdown ring sir, per direct request — drains from full to empty
+            over the OTP's lifetime, turns pink once expired. The mm:ss text underneath stays as
+            the precise, accessible readout; the ring is the at-a-glance version of the same
+            state, not a replacement for it. */}
+        <div className="mt-5 flex flex-col items-center gap-2">
+          <OtpCountdownRing secondsLeft={secondsLeft} totalSeconds={OTP_LIFETIME_SECONDS} expired={expired} />
+          <div className={`flex items-center gap-1.5 text-xs font-semibold ${expired ? 'text-pink-200' : 'text-richblack-300'}`}>
+            <FiClock className="text-sm" />
+            {expired ? 'Code expired — request a new one' : `Code expires in ${formatCountdown(secondsLeft)}`}
+          </div>
         </div>
 
         {/* OTP boxes sir */}

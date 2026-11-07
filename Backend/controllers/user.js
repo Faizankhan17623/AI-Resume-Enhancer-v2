@@ -90,8 +90,19 @@ exports.createUser = async (req, res) => {
             });
         }
 
-        // not case sir — the otp the user sent does not match the latest one
-        if (String(recentOtp.otp) !== String(otp)) {
+        // not case sir — the otp the user sent does not match the latest one. Constant-time
+        // comparison, not a plain !== sir (found in the 2026-11-07 audit, flagged as nice-to-have
+        // since this route's own authLimiter caps attempts at 20 per 15 min against 1,000,000
+        // possibilities — timing leaks essentially nothing at that volume today, but cheap to
+        // close outright rather than lean on the rate limit alone. utils/safeSignatureEqual.js's
+        // existing helper is hex-specific (webhook signatures); this compares plain OTP digit
+        // strings, so it needs its own utf8-based buffers, same length-mismatch-first short
+        // circuit for garbage input that crypto.timingSafeEqual itself would otherwise throw on.
+        const expectedOtpBuf = Buffer.from(String(recentOtp.otp), 'utf8')
+        const receivedOtpBuf = Buffer.from(String(otp), 'utf8')
+        const otpMatches = expectedOtpBuf.length === receivedOtpBuf.length
+            && crypto.timingSafeEqual(expectedOtpBuf, receivedOtpBuf)
+        if (!otpMatches) {
             return res.status(400).json({
                 success: false,
                 field: 'otp',
@@ -298,12 +309,16 @@ exports.loginUser = async (req, res) => {
         // find the user by email from the db sir
         const existingUser = await User.findOne({ email: email });
 
-        // not case sir — no account is registered with this email
+        // not case sir — no account is registered with this email. Deliberately the SAME
+        // status/message as a wrong password below (see that branch's own comment) — found in
+        // the 2026-11-07 audit: returning a distinct 404 "No account found" here let anyone
+        // build a list of which emails have Resumify accounts just by trying them, since a wrong
+        // password on a real account returned a different 401 "Incorrect password" instead.
         if (!existingUser) {
-            return res.status(404).json({
+            return res.status(401).json({
                 success: false,
-                field: 'email',
-                message: 'No account found with this email',
+                field: 'password',
+                message: 'Incorrect email or password',
             });
         }
 
@@ -345,10 +360,11 @@ exports.loginUser = async (req, res) => {
             }
             await User.findByIdAndUpdate(existingUser._id, update)
 
+            // same status/message as the "no account" branch above sir — see its comment
             return res.status(401).json({
                 success: false,
                 field: 'password',
-                message: 'Incorrect password, please try again',
+                message: 'Incorrect email or password',
             });
         }
 

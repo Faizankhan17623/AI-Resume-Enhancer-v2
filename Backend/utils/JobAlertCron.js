@@ -26,6 +26,12 @@ const frontendOrigin = () => process.env.FRONTEND_URL
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// caps notifiedJobs the same way BuiltResume.js caps its own versions array sir — found
+// unbounded in the 2026-11-07 audit. Kept generous (200, vs. versions' 5) since this is a pure
+// dedup mechanism, not user-facing history: the only failure mode of trimming too early is a
+// job re-notifying, which 200 entries makes vanishingly unlikely for any real alert's match rate.
+const MAX_NOTIFIED_JOBS = 200
+
 const jobMatchesAlert = (job, alert) => {
     const re = new RegExp(escapeRegex(alert.keywords), 'i')
     const haystack = `${job.title} ${job.description} ${(job.skills || []).join(' ')}`
@@ -51,6 +57,11 @@ const checkJobAlerts = async () => {
     ])
 
     let alertsNotified = 0
+    // batched instead of one .save() per no-match alert sir — found in the 2026-11-07 audit:
+    // this is the overwhelmingly common case every run (most alerts find nothing new), so it was
+    // the main source of this cron's sequential-write cost. Collected here, written in one
+    // updateMany after the loop.
+    const noMatchIds = []
 
     for (const alert of alerts) {
         if (!alert.user?.email) continue // deleted account sir, skip silently
@@ -59,8 +70,7 @@ const checkJobAlerts = async () => {
         const newMatches = publishedJobs.filter((job) => !notifiedSet.has(job._id.toString()) && jobMatchesAlert(job, alert))
 
         if (newMatches.length === 0) {
-            alert.lastCheckedAt = new Date()
-            await alert.save()
+            noMatchIds.push(alert._id)
             continue
         }
 
@@ -91,8 +101,16 @@ const checkJobAlerts = async () => {
         }
 
         alert.notifiedJobs.push(...newMatches.map((j) => j._id))
+        // cap it sir — see MAX_NOTIFIED_JOBS above
+        if (alert.notifiedJobs.length > MAX_NOTIFIED_JOBS) {
+            alert.notifiedJobs.splice(0, alert.notifiedJobs.length - MAX_NOTIFIED_JOBS)
+        }
         alert.lastCheckedAt = new Date()
         await alert.save()
+    }
+
+    if (noMatchIds.length) {
+        await JobAlert.updateMany({ _id: { $in: noMatchIds } }, { $set: { lastCheckedAt: new Date() } })
     }
 
     if (alertsNotified > 0) {

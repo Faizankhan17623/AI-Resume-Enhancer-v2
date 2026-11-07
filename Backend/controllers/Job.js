@@ -937,17 +937,26 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
         const invited = []
         const skipped = []
         const toEmail = []
+        const testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
         for (const application of applications) {
             // 'invite_expired' is eligible too sir — same reasoning as the single-invite path above
             if (!['applied', 'invite_expired'].includes(application.status)) {
                 skipped.push(String(application._id))
                 continue
             }
-            application.status = 'invited_to_test'
-            application.testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
-            await application.save()
             invited.push(String(application._id))
             if (application.candidate?.email) toEmail.push(application.candidate)
+        }
+
+        // one bulkWrite sir instead of N sequential .save() calls — found in the 2026-11-07
+        // audit: at the 200-applicant cap this was 200 separate DB round-trips before the
+        // recruiter's browser got a response. Every write here sets the exact same two fields,
+        // so one updateMany-shaped bulk op does the same job in a single round-trip.
+        if (invited.length) {
+            await JobApplication.updateMany(
+                { _id: { $in: invited } },
+                { $set: { status: 'invited_to_test', testInviteExpiresAt } }
+            )
         }
 
         // best-effort test-invite emails sir — allSettled, same reasoning as deleteJob's
@@ -1027,10 +1036,17 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
                 skipped.push(String(application._id))
                 continue
             }
-            application.status = status
-            await application.save()
             updated.push(String(application._id))
             if (application.candidate?.email) toEmail.push(application.candidate)
+        }
+
+        // one bulkWrite sir instead of N sequential .save() calls — same fix and same reasoning
+        // as bulkInviteApplicantsToTest above (found in the 2026-11-07 audit)
+        if (updated.length) {
+            await JobApplication.updateMany(
+                { _id: { $in: updated } },
+                { $set: { status } }
+            )
         }
 
         // best-effort hire/reject emails sir — allSettled, same reasoning as bulkInviteApplicantsToTest's

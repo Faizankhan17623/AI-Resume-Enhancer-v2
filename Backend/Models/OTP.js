@@ -14,7 +14,10 @@ const OTPSchema = new mongoose.Schema({
     createdAt: {
 		type: Date,
 		default: Date.now,
-		expires: 60 * 2,
+		// 1 minute sir, per direct request (was 2). MUST match ResumeEnhancer/src/Components/
+		// UserCreation/OTP.jsx's OTP_LIFETIME_SECONDS — that frontend countdown is purely
+		// cosmetic, this TTL index is the actual expiry a verify attempt is checked against.
+		expires: 60,
 	},
 },{timestamps:true})
 
