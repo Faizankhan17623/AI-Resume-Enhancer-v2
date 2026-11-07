@@ -604,15 +604,10 @@ exports.updateFirstName = async (req, res) => {
             });
         }
 
-        // findOne checker sir — is this first name already taken
-        const existingFirstName = await User.findOne({ firstName: firstName });
-        if (existingFirstName) {
-            return res.status(409).json({
-                success: false,
-                field: 'firstName',
-                message: 'This first name is already taken',
-            });
-        }
+        // no uniqueness check sir — names were never meant to be unique (see createUser's own
+        // comment, no unique index on firstName either), but this endpoint kept one anyway:
+        // global-uniqueness meant any second "John" who ever signs up permanently blocks the
+        // first "John" from re-saving their own existing name. Removed per 2026-11-08 audit.
 
         // logged-in user id from the auth middleware sir
         const userId = req.User.id;
@@ -659,15 +654,8 @@ exports.updateLastName = async (req, res) => {
             });
         }
 
-        // findOne checker sir — is this last name already taken
-        const existingLastName = await User.findOne({ lastName: lastName });
-        if (existingLastName) {
-            return res.status(409).json({
-                success: false,
-                field: 'lastName',
-                message: 'This last name is already taken',
-            });
-        }
+        // no uniqueness check sir — same reasoning as updateFirstName above, removed per
+        // 2026-11-08 audit.
 
         // logged-in user id from the auth middleware sir
         const userId = req.User.id;
@@ -846,6 +834,16 @@ exports.updateEmail = async (req, res) => {
             user: updatedUser,
         });
     } catch (error) {
+        // duplicate-key race sir — same gap as createUser's/updateNumber's, see 2026-11-08: the
+        // existingEmail pre-check above can't catch two requests landing on findByIdAndUpdate
+        // near-simultaneously.
+        if (error.code === 11000 && error.keyPattern?.email) {
+            return res.status(409).json({
+                success: false,
+                field: 'email',
+                message: 'This email is already in use',
+            });
+        }
         (req.log || logger).error('update email failed', { err: error })
         return res.status(500).json({
             success: false,
