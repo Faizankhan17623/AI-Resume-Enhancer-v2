@@ -27,8 +27,7 @@ function useMorphingDialog() {
   return context;
 }
 function MorphingDialogProvider({
-  children,
-  transition
+  children
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const uniqueId = useId();
@@ -43,13 +42,17 @@ function MorphingDialogProvider({
     [isOpen, uniqueId]
   );
   return <MorphingDialogContext.Provider value={contextValue}>
-      <MotionConfig transition={transition}>{children}</MotionConfig>
+      {children}
     </MorphingDialogContext.Provider>;
 }
+// the redundant inner MotionConfig sir, per 2026-11-08 audit — MorphingDialogProvider is always
+// called below with no `transition` prop (so its own MotionConfig was carrying `undefined`, a
+// no-op), while THIS MotionConfig is the one actually receiving the real transition value from
+// the only real caller (BuiltResumes.jsx). Removed the dead inner wrap, kept the live outer one.
 function MorphingDialog({ children, transition }) {
-  return <MorphingDialogProvider>
-      <MotionConfig transition={transition}>{children}</MotionConfig>
-    </MorphingDialogProvider>;
+  return <MotionConfig transition={transition}>
+      <MorphingDialogProvider>{children}</MorphingDialogProvider>
+    </MotionConfig>;
 }
 function MorphingDialogTrigger({
   children,

@@ -227,7 +227,7 @@ const TestConsent = () => {
           <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] mb-6 mx-auto max-w-sm">
             <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
             {!cameraReady && !cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-richblack-900/80">
+              <div className="absolute inset-0 flex items-center justify-center bg-[#17140F]/80">
                 <p className="text-xs text-richblack-200">Starting camera...</p>
               </div>
             )}
