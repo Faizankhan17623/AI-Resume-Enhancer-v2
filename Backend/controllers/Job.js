@@ -754,13 +754,20 @@ exports.toggleShortlist = async (req, res) => {
             })
         }
 
-        application.shortlisted = !application.shortlisted
-        await application.save()
+        // atomic flip sir, per 2026-11-08 audit — the old read-then-save (shortlisted = !shortlisted;
+        // save()) let two near-simultaneous clicks both read the same starting value and both write
+        // the same flipped result, so a fast double-click could land on "still shortlisted" instead
+        // of toggling back off. An aggregation-pipeline update flips the field server-side atomically.
+        const updated = await JobApplication.findByIdAndUpdate(
+            applicationId,
+            [{ $set: { shortlisted: { $not: '$shortlisted' } } }],
+            { new: true }
+        )
 
         return res.status(200).json({
             success: true,
-            message: application.shortlisted ? 'Added to shortlist' : 'Removed from shortlist',
-            shortlisted: application.shortlisted,
+            message: updated.shortlisted ? 'Added to shortlist' : 'Removed from shortlist',
+            shortlisted: updated.shortlisted,
         })
     } catch (error) {
         (req.log || logger).error('toggle shortlist failed', { err: error })
@@ -1400,17 +1407,27 @@ exports.toggleSavedJob = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
-        const user = await User.findById(candidateId).select('savedJobs')
-        const alreadySaved = user.savedJobs.some((id) => id.equals(jobId))
+        // atomic $pull-then-$addToSet sir, per 2026-11-08 audit — the old read-array/filter-or-push/
+        // save() let two near-simultaneous toggles both read the same starting state and race: a
+        // double-click could duplicate-push the job twice, or a save then fail to actually remove it.
+        // $pull is atomic and tells us via matchedCount whether the job WAS saved; if it wasn't,
+        // $addToSet atomically adds it (and is itself a no-op if it's already there by the time this
+        // runs, so no duplicate is possible either way).
+        const pullResult = await User.updateOne(
+            { _id: candidateId },
+            { $pull: { savedJobs: jobId } }
+        )
 
-        if (alreadySaved) {
-            user.savedJobs = user.savedJobs.filter((id) => !id.equals(jobId))
-        } else {
-            user.savedJobs.push(jobId)
+        if (pullResult.modifiedCount > 0) {
+            return res.status(200).json({ success: true, saved: false })
         }
-        await user.save()
 
-        return res.status(200).json({ success: true, saved: !alreadySaved })
+        await User.updateOne(
+            { _id: candidateId },
+            { $addToSet: { savedJobs: jobId } }
+        )
+
+        return res.status(200).json({ success: true, saved: true })
     } catch (error) {
         (req.log || logger).error('toggle saved job failed', { err: error })
         return res.status(500).json({

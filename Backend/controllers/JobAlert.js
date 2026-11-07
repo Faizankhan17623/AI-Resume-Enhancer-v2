@@ -20,6 +20,21 @@ exports.createJobAlert = async (req, res) => {
         }
 
         const alert = await JobAlert.create({ user: userId, keywords, location, employmentType })
+
+        // re-check sir, per 2026-11-08 audit — the countDocuments above can't catch two
+        // near-simultaneous creates both passing the check before either inserts, letting the cap
+        // be exceeded by a request or two. Re-counting after insert and rolling this one back if
+        // it pushed the user over closes the race without needing a full transaction for what's
+        // just a convenience-feature cap, not a money/data-integrity boundary.
+        const countAfter = await JobAlert.countDocuments({ user: userId })
+        if (countAfter > MAX_ALERTS_PER_USER) {
+            await JobAlert.deleteOne({ _id: alert._id })
+            return res.status(400).json({
+                success: false,
+                message: `You can save up to ${MAX_ALERTS_PER_USER} job alerts — remove one before adding another`,
+            })
+        }
+
         return res.status(201).json({ success: true, message: 'Job alert saved', alert })
     } catch (error) {
         (req.log || logger).error('create job alert failed', { err: error })
