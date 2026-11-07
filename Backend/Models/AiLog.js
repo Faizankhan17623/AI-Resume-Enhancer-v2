@@ -56,4 +56,10 @@ const aiLogSchema = new mongoose.Schema(
 // the monitor mostly asks "what happened recently" sir
 aiLogSchema.index({ createdAt: -1 })
 
+// TTL sir, per 2026-11-08 audit — every query against this collection (AdminSystem.js,
+// AiCostAlert.js, AdminDigestCron.js) only ever looks back 30 days max, but nothing ever
+// deleted old rows, so this grows forever. 90 days gives 3x headroom over the longest real
+// query window. Mongo handles the actual deletion itself, no cron job needed.
+aiLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 })
+
 module.exports = mongoose.model('AiLog', aiLogSchema)

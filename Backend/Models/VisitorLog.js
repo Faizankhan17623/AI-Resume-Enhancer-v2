@@ -24,4 +24,8 @@ const visitorLogSchema = new mongoose.Schema(
 // the dashboard mostly asks "how many first-time visits in this window" sir
 visitorLogSchema.index({ createdAt: -1 })
 
+// TTL sir, per 2026-11-08 audit — same reasoning as AiLog.js/LoginLog.js. A cookieId that
+// returns after 90 days of inactivity just gets treated as a new visitor again, which is fine.
+visitorLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 })
+
 module.exports = mongoose.model('VisitorLog', visitorLogSchema)
