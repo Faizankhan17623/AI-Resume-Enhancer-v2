@@ -8,7 +8,7 @@
 //   - two instances behind a load balancer -> effective limits DOUBLE, because each process
 //     keeps its own tally for the same user/IP
 //
-// For the OTP limiter (5 per 15 min, sends real emails) and the login limiter (brute-force
+// For the OTP limiter (5 per 5 min, sends real emails) and the login limiter (brute-force
 // protection) that is a security control that silently does not hold.
 //
 // This store keeps counters in MongoDB instead, so every instance increments the SAME document
@@ -138,15 +138,35 @@ class MongoRateLimitStore {
                 return { totalHits: live.count, resetTime: live.expiresAt }
             }
 
-            // no live window sir — open a new one. upsert makes this safe under a race: whichever
-            // request lands first creates it, the other overwrites with an equivalent fresh window.
+            // no live window sir — open a new one. Two sub-cases land here: a brand-new key
+            // (never seen before), or an EXPIRED document that Mongo's lazy TTL sweep hasn't
+            // deleted yet (confirmed live: the sweep runs ~60s, so a stale doc commonly survives
+            // past its own expiresAt). Either way this must become a fresh count of 1 — not an
+            // increment onto whatever stale count is still sitting there.
+            //
+            // Delete any expired doc for this _id first, so the upsert below always inserts a
+            // brand-new document rather than matching and incrementing a stale one. This also
+            // closes the actual bug found in the 2026-11-07 audit: the old code upserted with an
+            // unconditional `$set: { count: 1, ... }`, so N concurrent requests racing into this
+            // branch each independently WROTE count=1 and read back their own write — every one
+            // of them saw itself as "the first," and all passed the rate limiter instead of only
+            // the first `max`. $inc + upsert does not have that gap: MongoDB guarantees only ONE
+            // insert can win when two writers race to create the same _id; the loser's attempt is
+            // automatically retried by the driver as a normal update against the now-existing
+            // document, so it genuinely adds 1 to the real count instead of overwriting it.
             const resetTime = new Date(now.getTime() + this.windowMs)
+            await RateLimitModel.deleteOne({ _id, expiresAt: { $lte: now } })
             const fresh = await RateLimitModel.findOneAndUpdate(
                 { _id },
-                { $set: { count: 1, expiresAt: resetTime } },
+                { $inc: { count: 1 }, $setOnInsert: { expiresAt: resetTime } },
                 { upsert: true, returnDocument: 'after' }
             )
 
+            // a request can still land here just as the window naturally lapses between the
+            // delete above and this upsert sir — fresh.expiresAt may then be a moment stale
+            // rather than exactly resetTime, which is fine: the NEXT increment's { $gt: now }
+            // check on the live-window branch re-evaluates it for real, this is only ever off by
+            // the few ms between these two calls, never unboundedly
             return { totalHits: fresh.count, resetTime: fresh.expiresAt }
         } catch (err) {
             logger.error('rate limit store increment failed, applying degraded policy', {

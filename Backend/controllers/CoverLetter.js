@@ -116,7 +116,12 @@ exports.generateCoverLetter = async (req, res) => {
         if (raw.includes('</think>')) {
             raw = raw.split('</think>').pop()
         }
-        raw = raw.trim()
+        // strip a stray ```/```markdown fence sir too — found missing here in the 2026-11-07
+        // audit. This endpoint isn't JSON mode so a malformed fence never crashes a JSON.parse
+        // the way it would on the other 8 call sites, but a model that wraps its prose answer in
+        // a code fence (a real, common thing models do) would otherwise save/email the user's
+        // cover letter with literal backticks in it.
+        raw = raw.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim()
 
         const genericCheck = detectGenericness(raw, jd)
 
