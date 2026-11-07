@@ -1,0 +1,68 @@
+# Continuous Integration sir — runs on every push and pull request against main. Lints and
+# builds the frontend, and runs the backend test suite. Deployment is a SEPARATE, manual step
+# (see deploy-backend.yml / deploy-frontend.yml) — this workflow never deploys anything, it only
+# verifies the code is sound before a human decides to ship it.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run test suite
+        # --passWithNoTests sir — Backend/tests/ is currently gitignored (local-only test files),
+        # so a fresh CI checkout has zero tracked test files and Jest would otherwise exit
+        # non-zero on "no tests found", permanently failing this pipeline before any test exists.
+        # Once real test files are tracked in git, this still runs them normally — this flag only
+        # changes what happens when there are none.
+        run: npm test -- --passWithNoTests
+
+  frontend-lint-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ResumeEnhancer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ResumeEnhancer/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        # a placeholder VITE_MAIN_BACKEND_URL sir — the build only needs this set to SOMETHING
+        # (see src/utils/backendUrl.js, which errors loudly but doesn't fail the build if unset);
+        # CI never actually calls the backend, it only checks the bundle compiles
+        env:
+          VITE_MAIN_BACKEND_URL: https://ci-build-placeholder.invalid/api/v1
+        run: npm run build

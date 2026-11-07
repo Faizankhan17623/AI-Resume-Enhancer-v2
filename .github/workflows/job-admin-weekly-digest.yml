@@ -1,0 +1,42 @@
+# Failover for Backend/worker.js's admin-weekly-digest cron sir — see job-feature-flag-reenable.yml for
+# the full explanation of why this file exists and how it's safe to run alongside the EC2 worker
+# (short version: Mongo lease in jobLease.js, whichever process is alive wins each tick).
+#
+# Real EC2 schedule: 0 9 * * 1 UTC, Monday (Backend/utils/AdminDigestCron.js). Offset 10 min.
+
+name: 'Job: admin-weekly-digest'
+
+on:
+  schedule:
+    - cron: '10 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Backend
+        run: npm ci --omit=dev
+
+      - name: Run admin-weekly-digest
+        working-directory: Backend
+        env:
+          NODE_ENV: production
+          MONGO_DB_URL: ${{ secrets.MONGO_DB_URL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: node jobs/runJob.js admin-weekly-digest

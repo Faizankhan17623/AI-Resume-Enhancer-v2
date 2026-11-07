@@ -1,0 +1,55 @@
+# Frontend deploy sir — manual trigger ONLY (workflow_dispatch), no automatic deploy on merge to
+# main. Mirrors exactly the deploy-frontend skill's steps: deploy from the repo root (NOT from
+# inside ResumeEnhancer/ — the linked Vercel project's Root Directory is already set to
+# ResumeEnhancer, see that skill for why running it from inside the folder breaks the path), then
+# verify the live aliased domain actually picked up the new build by comparing bundle hashes.
+#
+# REQUIRES three repo secrets, Settings -> Secrets and variables -> Actions:
+#   VERCEL_TOKEN    a token from https://vercel.com/account/tokens
+#   VERCEL_ORG_ID    team_1e4M0s2jQmQh5pWLcp6gjQi8 (from ResumeEnhancer/.vercel/project.json)
+#   VERCEL_PROJECT_ID  prj_bjdIgD84bM9WryJDNY8CsWZmxM1i (same file)
+# Until all three are set, running this workflow will fail at the deploy step with a clear error.
+
+name: Deploy Frontend (Vercel)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm you want to deploy to production'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'deploy'
+    timeout-minutes: 10
+
+    steps:
+      - name: Refuse to continue without explicit confirmation
+        if: github.event.inputs.confirm != 'deploy'
+        run: |
+          echo "::error::Deploy was not confirmed — input 'confirm' must be exactly 'deploy'."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel production
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        # from the REPO ROOT sir, not inside ResumeEnhancer/ — see this file's header comment
+        run: npx vercel --prod --token="$VERCEL_TOKEN" --yes
+
+      - name: Verify the live domain served the new build
+        run: |
+          sleep 10
+          LIVE_HASH=$(curl -s https://ai-resume-enhancer-v2.vercel.app/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
+          echo "Live bundle hash: $LIVE_HASH"
+          if [ -z "$LIVE_HASH" ]; then
+            echo "::error::Could not find a bundle hash on the live domain — the deploy may not have gone live yet, or the page structure changed."
+            exit 1
+          fi

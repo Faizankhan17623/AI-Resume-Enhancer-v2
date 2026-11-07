@@ -1,0 +1,62 @@
+# Failover for Backend/worker.js's feature-flag-reenable cron sir.
+#
+# Each scheduled job now has its own workflow file like this one, split out of what used to be
+# one shared scheduled-jobs.yml — one file per job, found and run independently, instead of a
+# single dispatch table mapping cron strings to job names.
+#
+# WHY THIS EXISTS AT ALL: the backend runs Backend/worker.js continuously on EC2 under PM2, and
+# that process already runs every one of these jobs on its own internal schedule (see
+# utils/FeatureFlagCron.js for this one's real `*/5 * * * *` UTC schedule). This workflow is a
+# FAILOVER, not the primary scheduler: if the EC2 instance or its worker process is ever down,
+# this still fires the same job so it doesn't silently stop running. The Mongo lease in
+# Backend/utils/jobLease.js makes this safe to run alongside the EC2 worker — whichever process
+# is actually alive wins the lease each tick, the other's attempt is a no-op.
+#
+# Offset 2 minutes from the EC2 worker's own :00/:05/:10... schedule, so a normal tick where EC2
+# is healthy loses the lease race immediately (near-zero cost) rather than both firing at the
+# exact same instant every time.
+#
+# GitHub's scheduler is best-effort and can be delayed by several minutes under load — this job
+# is idempotent/time-windowed so a late run is harmless.
+
+name: 'Job: feature-flag-reenable'
+
+on:
+  schedule:
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Backend
+        run: npm ci --omit=dev
+
+      - name: Run feature-flag-reenable
+        working-directory: Backend
+        # Only what the job actually uses sir. jobs/runJob.js deliberately does not call
+        # checkRequiredEnv (worker.js and index.js do), so it does not demand OAuth callback URLs
+        # or payment keys a cron job never touches. MAIL_* is optional but recommended — without
+        # it utils/Nodemailer.js silently skips sending, which would make a digest/nudge job a
+        # no-op (not relevant to this specific job, but kept consistent across all 13 files).
+        env:
+          NODE_ENV: production
+          MONGO_DB_URL: ${{ secrets.MONGO_DB_URL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: node jobs/runJob.js feature-flag-reenable

@@ -1,0 +1,64 @@
+# Backend deploy sir — manual trigger ONLY (workflow_dispatch), no automatic deploy on merge to
+# main. Mirrors exactly the steps this project's deploys have always used by hand: SSH in,
+# git pull, npm install, restart both PM2 processes. Deploying is a deliberate human action you
+# take when you're ready to ship, not an automatic side effect of a merge.
+#
+# REQUIRES two repo secrets, Settings -> Secrets and variables -> Actions:
+#   EC2_SSH_PRIVATE_KEY   the full contents of airesumeenhancer-backend-eu.pem
+#   EC2_HOST              51.20.204.183
+# Until both are set, running this workflow will fail at the SSH step with a clear error.
+
+name: Deploy Backend (EC2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm you want to deploy to production'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'deploy'
+    timeout-minutes: 10
+
+    steps:
+      - name: Refuse to continue without explicit confirmation
+        if: github.event.inputs.confirm != 'deploy'
+        run: |
+          echo "::error::Deploy was not confirmed — input 'confirm' must be exactly 'deploy'."
+          exit 1
+
+      - name: Deploy over SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key ubuntu@"$EC2_HOST" '
+            set -e
+            cd ~/app/Backend
+            git pull origin main
+            npm install --omit=dev
+            pm2 restart web
+            pm2 restart worker
+            pm2 status
+          '
+
+      - name: Verify the deployed commit matches what we expect
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          DEPLOYED=$(ssh -i ~/.ssh/deploy_key ubuntu@"$EC2_HOST" 'cd ~/app/Backend && git rev-parse HEAD')
+          echo "Deployed commit: $DEPLOYED"
+          echo "Expected commit (this workflow run): ${{ github.sha }}"
+          if [ "$DEPLOYED" != "${{ github.sha }}" ]; then
+            echo "::warning::Deployed commit does not match the commit this workflow ran against — the server may be on a different branch/ref than expected."
+          fi
