@@ -249,12 +249,17 @@ const PlanCheckout = () => {
 
       {/* success loader sir, per direct request (2026-11-08) — full-screen overlay for 5s after
           verification succeeds, then on to /Dashboard (see the paymentDone effect above), instead
-          of an instant redirect straight off this page */}
+          of an instant redirect straight off this page.
+          Literal dark color sir, NOT bg-richblack-900 — that token flips to a pale cream in light
+          mode (see index.css's :root override), which made this overlay render as a near-
+          invisible wash with the checkout page ghosting through underneath it in light mode.
+          This overlay's whole job is to solidly block the page regardless of theme, so it needs
+          a color that stays dark in both. */}
       {paymentDone && (
-        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-richblack-900/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-[#17140F]/95 backdrop-blur-sm">
           <FaCheckCircle className="text-5xl text-caribgreen-100" />
           <div className="w-14 h-14 border-4 border-yellow-50 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-richblack-5 font-semibold text-lg">Payment successful — taking you to your dashboard...</p>
+          <p className="text-[#F3EFE6] font-semibold text-lg">Payment successful — taking you to your dashboard...</p>
         </div>
       )}
     </div>
