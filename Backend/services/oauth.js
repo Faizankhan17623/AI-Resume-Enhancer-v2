@@ -252,17 +252,13 @@ const createOAuthController = (config) => {
     return { login, callback, exchange }
 }
 
-// shared new-account creation sir — firstName isn't unique at the schema level but createUser's
-// local flow treats it as one via a manual check, so avoid a collision here too by suffixing a
-// short random tag rather than blocking the sign-up outright
+// shared new-account creation sir — names were never meant to be unique (no unique index on
+// firstName, and the manual uniqueness check in controllers/user.js's updateFirstName/
+// updateLastName was removed on 2026-11-08 for the same reason), so no collision check here
+// either — this used to silently rewrite a real OAuth user's name (e.g. "John" -> "John a1b2")
 const createOAuthUser = async (provider, providerId, email, profile, referredBy) => {
-    let firstName = (profile.firstName || 'User').slice(0, 50)
+    const firstName = (profile.firstName || 'User').slice(0, 50)
     const lastName = (profile.lastName || 'User').slice(0, 50)
-
-    const collision = await User.findOne({ firstName })
-    if (collision) {
-        firstName = `${firstName}${crypto.randomBytes(2).toString('hex')}`
-    }
 
     const defaultPasswordHash = await bcrypt.hash(OAUTH_DEFAULT_PASSWORD, 10)
 

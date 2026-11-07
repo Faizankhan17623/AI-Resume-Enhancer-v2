@@ -26,6 +26,11 @@ const chatSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        // messages sir — count is already gated by plan.maxMessagesPerChat in controllers/Chat.js
+        // (250/500 depending on plan) before a push happens, and per-message content length is
+        // checked there too (5000 chars). maxlength here is defense-in-depth per 2026-11-08
+        // audit, not the primary enforcement — a very long-running chat with no application-level
+        // cap could otherwise approach Mongo's 16MB document limit.
         messages: [
             {
                 role: {
@@ -35,7 +40,8 @@ const chatSchema = new mongoose.Schema(
                 },
                 content: {
                     type: String,
-                    required: true
+                    required: true,
+                    maxlength: 20000
                 },
                 createdAt: {
                     type: Date,

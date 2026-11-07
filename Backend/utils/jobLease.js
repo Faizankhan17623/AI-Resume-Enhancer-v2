@@ -36,7 +36,7 @@ const JobLease = mongoose.models.joblocks || mongoose.model('joblocks', leaseSch
 
 // identifies this process in the lease document sir — purely diagnostic, the correctness comes
 // from the atomic update, not from this value
-const INSTANCE_ID = `${process.env.RENDER_INSTANCE_ID || process.env.HOSTNAME || 'local'}-${process.pid}`
+const INSTANCE_ID = `${process.env.HOSTNAME || 'local'}-${process.pid}`
 
 /**
  * Runs `task` only if this instance wins the lease for `jobName`.

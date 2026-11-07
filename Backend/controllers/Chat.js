@@ -142,6 +142,15 @@ exports.sendMessage = async (req, res) => {
             })
         }
 
+        // length cap sir, per 2026-11-08 audit — nothing bounded a chat message's size before
+        // this, same 5000-char ceiling Validation/Job.js's description field already uses
+        if (message.trim().length > 5000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Message is too long, please keep it under 5000 characters',
+            })
+        }
+
         // filtering by user too so nobody can talk in someone else's chat sir
         const chat = await Chat.findOne({ _id: chatId, user: id })
 
