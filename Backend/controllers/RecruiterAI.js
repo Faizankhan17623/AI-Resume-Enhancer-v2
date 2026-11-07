@@ -75,18 +75,24 @@ exports.generateJobDescription = async (req, res) => {
             return res.status(400).json({ success: false, message: 'A title and your must-have requirements are required' })
         }
 
-        // moderation pass sir — on the recruiter's free-typed must-haves, before consumeJdWrite
-        // below. Approved recruiters are a lower-risk population than open signups, but this is
-        // still open free text reaching an LLM, so the same gate applies. See utils/Moderation.js;
-        // fails open if the classifier itself errors.
-        const modResult = await moderateText(`${title.trim()}\n${mustHaves.trim()}`, { feature: 'recruiter-jd-writer' })
-        if (modResult.flagged) {
-            return res.status(400).json(moderationBlockedResponse(modResult))
-        }
-
         const spend = await consumeJdWrite(recruiterId)
         if (!spend.ok) {
             return res.status(403).json({ success: false, message: spend.message, code: spend.code })
+        }
+
+        // moderation pass sir — AFTER consumeJdWrite above, not before: moderation makes a real
+        // Groq call, and checking it first means a zero-credit recruiter's request still burns
+        // that call before ever hitting the 403 — the same cost-leak bug fixed on every OTHER
+        // credit-spending moderation call site (BuiltResume.js x2, MockInterview.js,
+        // reviewService.js), found here in the 2026-11-07 audit as the one place this ordering
+        // was never applied. Approved recruiters are a lower-risk population than open signups,
+        // but this is still open free text reaching an LLM, so the same gate applies. Immediately
+        // refunded if flagged, same as every other failure path. See utils/Moderation.js; fails
+        // open if the classifier itself errors.
+        const modResult = await moderateText(`${title.trim()}\n${mustHaves.trim()}`, { feature: 'recruiter-jd-writer' })
+        if (modResult.flagged) {
+            await refundJdWrite(recruiterId)
+            return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
         // this one's plain text, not JSON sir (see Prompts.js's buildJobDescriptionPrompt) —

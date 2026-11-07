@@ -78,13 +78,16 @@ const authLimiter = rateLimit({
     store: createStore('auth', 'closed'),
 })
 
-// OTP is the most abusable route (it sends real emails) sir — keep this one tight
+// OTP is the most abusable route (it sends real emails) sir — keep this one tight.
+// 5 attempts / 5 min per direct request (was 15 min) — a genuine user who mistypes their email
+// a couple of times and waits each round unblocks faster; the tradeoff is an abuser can now send
+// up to 60/hour instead of 20/hour, still throttled, just a weaker ceiling. Noted and accepted.
 const otpLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs: 5 * 60 * 1000,
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    message: tooMany('Too many OTP requests, please try again after 15 minutes'),
+    message: tooMany('Too many OTP requests, please try again in 5 minutes'),
     // fail CLOSED sir — every request here spends real money on a real email.
     store: createStore('otp', 'closed'),
 })
