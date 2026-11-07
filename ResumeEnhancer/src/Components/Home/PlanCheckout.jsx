@@ -151,15 +151,17 @@ const PlanCheckout = () => {
                     </div>
                     <div className="mt-2 flex items-end gap-1">
                       <span className="text-2xl font-extrabold text-richblack-5 font-mono">
-                        {/* monthly shows the BASE price sir, matching Pricing.jsx — GST + service
-                            charge only shown in the Order details breakdown below, never here */}
-                        ₹{(c === 'monthly' ? data.basePriceInRupees : data.priceInRupees).toLocaleString('en-IN')}
+                        {/* both cycles show the BASE price sir, matching Pricing.jsx — GST +
+                            service charge only shown in the Order details breakdown below,
+                            never here. Yearly moved onto this same base+GST+service structure
+                            on 2026-11-08, same as monthly already was. */}
+                        ₹{data.basePriceInRupees.toLocaleString('en-IN')}
                       </span>
                       <span className="text-xs text-richblack-300 mb-0.5">/ {c === 'yearly' ? 'year' : 'month'}</span>
                     </div>
                     {c === 'yearly' && (
                       <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-100">
-                        Save up to 17% vs monthly
+                        Save up to 12% vs monthly
                       </span>
                     )}
                   </button>
@@ -168,16 +170,16 @@ const PlanCheckout = () => {
             </div>
 
             {/* Order details sir — base + 18% GST + a flat service charge shown as separate lines
-                above the total (2026-11-08), monthly only for now (see Backend/utils/Plans.js's
-                buildCycle comment — yearly still uses the old flat-total scheme with no service
-                charge, so its basePriceInRupees/gstInRupees would mislead if shown the same way). */}
+                above the total. Both monthly and yearly now use this same buildCycle structure
+                (see Backend/utils/Plans.js) — yearly moved off the old flat-total scheme on
+                2026-11-08, once the user set a real yearly base + its own service charge. */}
             <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-6">
               <h2 className="text-sm font-bold text-richblack-5 mb-4">Order details</h2>
               <div className="flex justify-between text-richblack-5 font-bold text-base">
                 <span>{PLAN_LABELS[planKey] || planKey} — {cycle === 'yearly' ? 'Yearly' : 'Monthly'}</span>
                 <span>₹{cycleData?.priceInRupees.toLocaleString('en-IN')}</span>
               </div>
-              {cycle === 'monthly' && cycleData && (
+              {cycleData && (
                 <div className="mt-4 pt-4 border-t border-richblack-700 space-y-2 text-sm">
                   <div className="flex justify-between text-richblack-300">
                     <span>Base price</span>

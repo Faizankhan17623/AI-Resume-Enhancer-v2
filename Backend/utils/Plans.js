@@ -64,14 +64,14 @@ const PLANS = {
         credits: 100,
         maxMessagesPerChat: 250,
         contextWindow: 100,
-        // per direct request (2026-11-08) sir — monthly shows base + 18% GST + a flat ₹10
-        // service charge as separate line items on checkout, GST added on top instead of backed
-        // out of a flat total. Base is the old flat monthly total (₹1,500), new total is
-        // ₹1,780/mo (₹1,500 + ₹270 GST + ₹10 service charge). Yearly stays on the old flat-total
-        // scheme (exactTotalRupees) until the user asks to extend this there too.
+        // per direct request (2026-11-08) sir — monthly AND yearly both show base + 18% GST +
+        // a flat service charge as separate line items on checkout, GST added on top instead of
+        // backed out of a flat total. Monthly: ₹1,500 base, ₹10 service charge, total ₹1,780/mo.
+        // Yearly: ₹16,200 base, ₹4 service charge, total ₹19,120/yr — a ~10.5% saving over paying
+        // monthly for 12 months (₹21,360), landing in the user's requested 10-15% range.
         billingCycles: {
             monthly: buildCycle(1500, 30, undefined, 10),
-            yearly: buildCycle(1144.07 * 12, 365, 1350 * 12),
+            yearly: buildCycle(16200, 365, undefined, 4),
         },
         features: [
             '100 AI uses per month (ATS reviews + new chats)',
@@ -87,11 +87,14 @@ const PLANS = {
         credits: 300,
         maxMessagesPerChat: 500,
         contextWindow: 30,
-        // per direct request (2026-11-08) sir — same change as Pro's monthly above: base
-        // (₹2,000) + 18% GST + ₹10 service charge, new total ₹2,370/mo. Yearly untouched for now.
+        // per direct request (2026-11-08) sir — same change as Pro's above. Monthly: ₹2,000
+        // base, ₹10 service charge, total ₹2,370/mo. Yearly: ₹21,204 base (was ₹1,900/mo-equiv,
+        // now ~₹1,767/mo-equiv) — the old yearly base only gave a ~5.4% saving over paying
+        // monthly for 12 months, well short of the user's requested 10-15% range, so it was
+        // lowered until the saving landed at ~12% (total ₹25,026.72 vs ₹28,440 for 12× monthly).
         billingCycles: {
             monthly: buildCycle(2000, 30, undefined, 10),
-            yearly: buildCycle(1601.70 * 12, 365, 1890 * 12),
+            yearly: buildCycle(21204, 365, undefined, 6),
         },
         features: [
             '300 AI uses per month (ATS reviews + new chats)',

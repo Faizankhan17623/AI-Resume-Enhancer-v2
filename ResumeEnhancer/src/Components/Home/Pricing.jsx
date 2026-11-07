@@ -211,7 +211,7 @@ const Pricing = () => {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                   cycle === 'yearly' ? 'bg-richblack-900/20 text-richblack-900' : 'bg-caribgreen-700/30 text-caribgreen-100'
                 }`}>
-                  Save up to 17%
+                  Save up to 12%
                 </span>
               </button>
             </div>
@@ -283,14 +283,14 @@ const Pricing = () => {
                     <p className="mt-1.5 text-xs text-richblack-300 leading-relaxed">{meta.tagline}</p>
                   )}
 
-                  {/* Monthly shows the BASE price (no GST) sir, per direct request (2026-11-08):
-                      GST reads like a hidden trap on a pricing page, so it's kept off this page
-                      entirely and only disclosed at checkout (PlanCheckout.jsx), where the
-                      customer is already committing to buy. Yearly still shows its flat total
-                      (untouched — yearly isn't on the base+GST system yet). */}
+                  {/* Both cycles show the BASE price (no GST) sir, per direct request
+                      (2026-11-08): GST reads like a hidden trap on a pricing page, so it's kept
+                      off this page entirely and only disclosed at checkout (PlanCheckout.jsx),
+                      where the customer is already committing to buy. Yearly moved onto this
+                      same base+GST+service structure on 2026-11-08, same as monthly already was. */}
                   <div className="mt-4 flex items-end gap-1">
                     <span className="text-4xl font-extrabold text-richblack-5 font-mono">
-                      {isFree ? 'Free' : <>₹<AnimatedNumber value={(cycle === 'monthly' ? activeCycle?.basePriceInRupees : activeCycle?.priceInRupees) ?? 0} locale="en-IN" springOptions={{ stiffness: 120, damping: 22 }} /></>}
+                      {isFree ? 'Free' : <>₹<AnimatedNumber value={activeCycle?.basePriceInRupees ?? 0} locale="en-IN" springOptions={{ stiffness: 120, damping: 22 }} /></>}
                     </span>
                     {!isFree && (
                       <span className="text-sm text-richblack-300 mb-1">
