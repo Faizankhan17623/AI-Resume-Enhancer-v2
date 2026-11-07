@@ -177,7 +177,7 @@ const Announcements = () => {
       {publishing && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
         >
           <Loading text={publishLabel} size="compact" />
         </motion.div>

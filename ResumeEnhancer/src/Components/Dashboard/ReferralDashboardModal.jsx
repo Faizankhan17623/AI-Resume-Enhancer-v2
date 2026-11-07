@@ -63,7 +63,7 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
           initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
-          <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={onClose} />
+          <div className="absolute inset-0 bg-[#17140F]/80 backdrop-blur-sm" onClick={onClose} />
           <motion.div variants={modalPanel} className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
             <div className="flex items-center justify-between mb-1">
               <div className="w-5" />

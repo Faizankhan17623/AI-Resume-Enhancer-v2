@@ -405,7 +405,7 @@ const ProctoredTestRunner = () => {
             {submitting && (
                 <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
                 >
                     <Loading text="Submitting..." size="compact" />
                 </motion.div>
@@ -422,7 +422,7 @@ const ProctoredTestRunner = () => {
                         <canvas ref={overlayRef} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
                         <canvas ref={canvasRef} className="hidden" />
                         {!modelReady && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-richblack-900/80">
+                            <div className="absolute inset-0 flex items-center justify-center bg-[#17140F]/80">
                                 <p className="text-xs text-richblack-200">Starting camera...</p>
                             </div>
                         )}

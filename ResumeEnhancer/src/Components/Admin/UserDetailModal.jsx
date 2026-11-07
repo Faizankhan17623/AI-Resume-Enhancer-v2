@@ -83,14 +83,14 @@ const UserDetailModal = ({ userId, onClose, page, search, roleFilter }) => {
             animate="show"
             exit="exit"
             variants={modalBackdrop}
-            className="fixed inset-0 z-[60] bg-richblack-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-[#17140F]/70 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {rejectingAppeal && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
             >
               <Loading text="Rejecting the appeal..." size="compact" />
             </motion.div>

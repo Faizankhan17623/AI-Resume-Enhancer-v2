@@ -139,7 +139,7 @@ const CommandPalette = () => {
       {open && (
         <motion.div
           initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
-          className="fixed inset-0 z-[100] bg-richblack-900/80 backdrop-blur-sm flex items-start justify-center pt-24 px-4"
+          className="fixed inset-0 z-[100] bg-[#17140F]/80 backdrop-blur-sm flex items-start justify-center pt-24 px-4"
           onClick={closePalette}
         >
           <motion.div

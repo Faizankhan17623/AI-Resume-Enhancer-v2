@@ -336,7 +336,7 @@ const DashboardLayout = ({ title, children }) => {
               animate="show"
               exit="exit"
               variants={modalBackdrop}
-              className="fixed inset-0 z-50 bg-richblack-900/70 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-50 bg-[#17140F]/70 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside

@@ -153,14 +153,14 @@ const ApplyModal = ({ jobId, onClose, onSuccess }) => {
       {submitting && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
         >
           <Loading text="Submitting your application..." size="compact" />
         </motion.div>
       )}
       <motion.div
         initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
-        className="fixed inset-0 z-[100] bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4 py-8 overflow-y-auto"
+        className="fixed inset-0 z-[100] bg-[#17140F]/80 backdrop-blur-sm flex items-center justify-center px-4 py-8 overflow-y-auto"
         onClick={onClose}
       >
         <motion.div

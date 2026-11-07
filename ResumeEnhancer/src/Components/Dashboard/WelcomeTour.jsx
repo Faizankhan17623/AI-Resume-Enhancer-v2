@@ -60,7 +60,7 @@ const WelcomeTour = ({ enabled }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-richblack-900/75 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#17140F]/75 backdrop-blur-sm px-4"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}

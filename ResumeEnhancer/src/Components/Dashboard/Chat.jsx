@@ -49,7 +49,7 @@ const NewChatModal = ({ onClose }) => {
       animate="show"
       exit="exit"
       variants={modalBackdrop}
-      className="fixed inset-0 z-50 bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4"
+      className="fixed inset-0 z-50 bg-[#17140F]/80 backdrop-blur-sm flex items-center justify-center px-4"
     >
       <motion.div variants={modalPanel} className="w-full max-w-lg rounded-2xl bg-richblack-800 shadow-2xl shadow-richblack-900/40 p-7">
         <div className="flex items-center justify-between mb-5">
@@ -224,7 +224,7 @@ const Chat = () => {
       {deleting && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
         >
           <Loading text="Deleting the chat..." size="compact" />
         </motion.div>

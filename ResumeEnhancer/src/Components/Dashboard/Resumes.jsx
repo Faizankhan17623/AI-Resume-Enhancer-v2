@@ -127,7 +127,7 @@ const Resumes = () => {
       {(saving || bulkDeleting) && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
         >
           <Loading text={saving ? "Saving your resume..." : "Deleting the selected resumes..."} size="compact" />
         </motion.div>

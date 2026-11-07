@@ -75,7 +75,7 @@ const ScheduleInterviewModal = ({ applicationId, onClose, onScheduled }) => {
     <AnimatePresence>
       <motion.div
         initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
-        className="fixed inset-0 z-[70] bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center px-4"
+        className="fixed inset-0 z-[70] bg-[#17140F]/80 backdrop-blur-sm flex items-center justify-center px-4"
         onClick={onClose}
       >
         <motion.div

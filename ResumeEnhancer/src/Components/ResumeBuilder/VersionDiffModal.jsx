@@ -74,7 +74,7 @@ const VersionDiffModal = ({ open, onClose, version, current, onRestore, restorin
           initial="hidden"
           animate="show"
           exit="exit"
-          className="fixed inset-0 z-[60] bg-richblack-900/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] bg-[#17140F]/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div

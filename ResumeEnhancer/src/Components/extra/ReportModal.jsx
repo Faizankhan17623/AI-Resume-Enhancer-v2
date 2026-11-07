@@ -72,7 +72,7 @@ const ReportModal = ({ open, onClose }) => {
             animate="show"
             exit="exit"
             variants={modalBackdrop}
-            className="fixed inset-0 z-[60] bg-richblack-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-[#17140F]/70 backdrop-blur-sm"
             onClick={handleClose}
           />
           <motion.div

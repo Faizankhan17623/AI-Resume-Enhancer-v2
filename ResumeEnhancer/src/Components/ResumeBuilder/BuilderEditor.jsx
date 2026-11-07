@@ -321,7 +321,7 @@ const BuilderEditor = () => {
       {(uploadingPhoto || downloadingDocx || reviewLoading) && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/70 backdrop-blur-sm"
         >
           <Loading
             text={uploadingPhoto ? "Uploading photo..." : downloadingDocx ? "Preparing your DOCX..." : "Analyzing your resume — this takes a few seconds..."}
@@ -486,7 +486,7 @@ const BuilderEditor = () => {
             initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
           >
-            <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
+            <div className="absolute inset-0 bg-[#17140F]/80 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
             <motion.div variants={modalPanel} className="relative w-full max-w-md rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-5" />
@@ -542,7 +542,7 @@ const BuilderEditor = () => {
         {sharing && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-richblack-900/60 backdrop-blur-sm print:hidden"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#17140F]/60 backdrop-blur-sm print:hidden"
           >
             <Loading text="Updating share link..." />
           </motion.div>
@@ -556,7 +556,7 @@ const BuilderEditor = () => {
             initial="hidden" animate="show" exit="exit" variants={modalBackdrop}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
           >
-            <div className="absolute inset-0 bg-richblack-900/80 backdrop-blur-sm" onClick={() => setScoreModalOpen(false)} />
+            <div className="absolute inset-0 bg-[#17140F]/80 backdrop-blur-sm" onClick={() => setScoreModalOpen(false)} />
             <motion.div variants={modalPanel} className="relative w-full max-w-lg rounded-2xl bg-richblack-800 border border-richblack-600 shadow-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display font-bold text-lg text-richblack-5">Score this resume</h3>
