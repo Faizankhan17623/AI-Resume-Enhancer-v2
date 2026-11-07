@@ -15,6 +15,7 @@ const { logSystemAction } = require('../utils/AdminLog.js')
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
 const { otpEmail } = require('../Templates/OTP.js')
+const { welcomeEmail } = require('../Templates/Welcome.js')
 const { referralSuccessTemplate } = require('../Templates/ReferralSuccess.js')
 const { supportAppealSubmittedTemplate } = require('../Templates/SupportAppealSubmitted.js')
 const { issueSession, publicUser, buildClearAuthCookie } = require('../utils/session.js')
@@ -156,6 +157,19 @@ exports.createUser = async (req, res) => {
                 },
             } : {}),
         })
+
+        // welcome email sir — fire-and-forget, same pattern as the referral-success/support-
+        // appeal-alert emails above: a nice-to-have, never something the signup response should
+        // wait on or fail over. Same frontendUrl-from-FRONTEND_URL pattern as the reset-password
+        // link further down this file.
+        const frontendUrl = process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+            : "http://localhost:5173"
+        mailSender(
+            Creation.email,
+            'Welcome to Resumify',
+            welcomeEmail(Creation.firstName, `${frontendUrl}/Login`)
+        ).catch((err) => logger.error('welcome email failed', { err, userId: Creation._id }))
 
         return res.status(201).json({
             success: true,
