@@ -137,7 +137,9 @@ const PlanCheckout = () => {
                     </div>
                     <div className="mt-2 flex items-end gap-1">
                       <span className="text-2xl font-extrabold text-richblack-5 font-mono">
-                        ₹{data.priceInRupees.toLocaleString('en-IN')}
+                        {/* monthly shows the BASE price sir, matching Pricing.jsx — GST + service
+                            charge only shown in the Order details breakdown below, never here */}
+                        ₹{(c === 'monthly' ? data.basePriceInRupees : data.priceInRupees).toLocaleString('en-IN')}
                       </span>
                       <span className="text-xs text-richblack-300 mb-0.5">/ {c === 'yearly' ? 'year' : 'month'}</span>
                     </div>
