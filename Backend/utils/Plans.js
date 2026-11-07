@@ -18,17 +18,23 @@ const round2 = (n) => Math.round(n * 100) / 100
 
 // exactTotalRupees sir (optional) — when the user gives a fixed GST-inclusive price (e.g. "Pro
 // Max must be exactly ₹2,000/mo"), base*1.18 can be a paisa off after rounding. Passing the exact
-// total here pins `price` to it exactly and backs gst into the remainder instead.
-const buildCycle = (baseRupees, validityDays, exactTotalRupees) => {
+// total here pins the base+gst portion to it exactly and backs gst into the remainder instead.
+//
+// serviceChargeRupees sir (optional, 2026-11-08) — a flat, untaxed fee added on top of base+gst
+// (e.g. ₹10), kept separate from `gst` since it's never itself taxed. Only disclosed at checkout,
+// never on the pricing page (see Pricing.jsx/PlanCheckout.jsx).
+const buildCycle = (baseRupees, validityDays, exactTotalRupees, serviceChargeRupees = 0) => {
     const gstRupees = round2(baseRupees * 0.18)
-    const totalRupees = exactTotalRupees ?? round2(baseRupees + gstRupees)
-    if (totalRupees < baseRupees) {
-        throw new Error(`buildCycle: total (${totalRupees}) is less than base (${baseRupees}) — gst would be negative`)
+    const beforeServiceCharge = exactTotalRupees ?? round2(baseRupees + gstRupees)
+    if (beforeServiceCharge < baseRupees) {
+        throw new Error(`buildCycle: total (${beforeServiceCharge}) is less than base (${baseRupees}) — gst would be negative`)
     }
+    const totalRupees = round2(beforeServiceCharge + serviceChargeRupees)
     return {
-        basePrice: Math.round(baseRupees * 100),                    // paise
-        gst: Math.round((totalRupees - baseRupees) * 100),          // paise
-        price: Math.round(totalRupees * 100),                       // paise — what Razorpay actually charges
+        basePrice: Math.round(baseRupees * 100),                           // paise
+        gst: Math.round((beforeServiceCharge - baseRupees) * 100),         // paise
+        serviceCharge: Math.round(serviceChargeRupees * 100),              // paise — flat, untaxed
+        price: Math.round(totalRupees * 100),                              // paise — what Razorpay actually charges
         validityDays,
     }
 }
@@ -58,13 +64,13 @@ const PLANS = {
         credits: 100,
         maxMessagesPerChat: 250,
         contextWindow: 100,
-        // per direct request (2026-11-08) sir — monthly now shows base + 18% GST as separate
-        // line items on checkout, GST added on top instead of backed out of a flat total. Base
-        // is the old flat monthly total (₹1,500) so the GST line is new, not hidden — new total
-        // is ₹1,770/mo. Yearly stays on the old flat-total scheme (exactTotalRupees) until the
-        // user asks to extend this there too.
+        // per direct request (2026-11-08) sir — monthly shows base + 18% GST + a flat ₹10
+        // service charge as separate line items on checkout, GST added on top instead of backed
+        // out of a flat total. Base is the old flat monthly total (₹1,500), new total is
+        // ₹1,780/mo (₹1,500 + ₹270 GST + ₹10 service charge). Yearly stays on the old flat-total
+        // scheme (exactTotalRupees) until the user asks to extend this there too.
         billingCycles: {
-            monthly: buildCycle(1500, 30),
+            monthly: buildCycle(1500, 30, undefined, 10),
             yearly: buildCycle(1144.07 * 12, 365, 1350 * 12),
         },
         features: [
@@ -82,9 +88,9 @@ const PLANS = {
         maxMessagesPerChat: 500,
         contextWindow: 30,
         // per direct request (2026-11-08) sir — same change as Pro's monthly above: base
-        // (₹2,000) + 18% GST on top, new total ₹2,360/mo. Yearly untouched for now.
+        // (₹2,000) + 18% GST + ₹10 service charge, new total ₹2,370/mo. Yearly untouched for now.
         billingCycles: {
-            monthly: buildCycle(2000, 30),
+            monthly: buildCycle(2000, 30, undefined, 10),
             yearly: buildCycle(1601.70 * 12, 365, 1890 * 12),
         },
         features: [

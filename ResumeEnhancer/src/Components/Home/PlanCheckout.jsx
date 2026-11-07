@@ -151,10 +151,10 @@ const PlanCheckout = () => {
               })}
             </div>
 
-            {/* Order details sir — GST breakdown restored per direct request (2026-11-08), base
-                + 18% GST shown as separate lines above the total, monthly only for now (see
-                Backend/utils/Plans.js's buildCycle comment — yearly still uses the old flat-total
-                scheme, so its basePriceInRupees/gstInRupees would mislead if shown the same way). */}
+            {/* Order details sir — base + 18% GST + a flat service charge shown as separate lines
+                above the total (2026-11-08), monthly only for now (see Backend/utils/Plans.js's
+                buildCycle comment — yearly still uses the old flat-total scheme with no service
+                charge, so its basePriceInRupees/gstInRupees would mislead if shown the same way). */}
             <div className="rounded-2xl bg-richblack-800 border border-richblack-700 p-6 mb-6">
               <h2 className="text-sm font-bold text-richblack-5 mb-4">Order details</h2>
               <div className="flex justify-between text-richblack-5 font-bold text-base">
@@ -171,6 +171,12 @@ const PlanCheckout = () => {
                     <span>GST (18%)</span>
                     <span>₹{cycleData.gstInRupees.toLocaleString('en-IN')}</span>
                   </div>
+                  {cycleData.serviceChargeInRupees > 0 && (
+                    <div className="flex justify-between text-richblack-300">
+                      <span>Service charge</span>
+                      <span>₹{cycleData.serviceChargeInRupees.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-richblack-5 font-bold pt-2 border-t border-richblack-700">
                     <span>Total</span>
                     <span>₹{cycleData.priceInRupees.toLocaleString('en-IN')}</span>

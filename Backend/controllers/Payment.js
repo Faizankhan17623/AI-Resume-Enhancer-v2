@@ -109,6 +109,7 @@ exports.getPlans = (req, res) => {
                             {
                                 basePriceInRupees: cycle.basePrice / 100,
                                 gstInRupees: cycle.gst / 100,
+                                serviceChargeInRupees: cycle.serviceCharge / 100,
                                 priceInRupees: cycle.price / 100,
                                 validityDays: cycle.validityDays,
                             },

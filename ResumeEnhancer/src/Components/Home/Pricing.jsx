@@ -283,9 +283,14 @@ const Pricing = () => {
                     <p className="mt-1.5 text-xs text-richblack-300 leading-relaxed">{meta.tagline}</p>
                   )}
 
+                  {/* Monthly shows the BASE price (no GST) sir, per direct request (2026-11-08):
+                      GST reads like a hidden trap on a pricing page, so it's kept off this page
+                      entirely and only disclosed at checkout (PlanCheckout.jsx), where the
+                      customer is already committing to buy. Yearly still shows its flat total
+                      (untouched — yearly isn't on the base+GST system yet). */}
                   <div className="mt-4 flex items-end gap-1">
                     <span className="text-4xl font-extrabold text-richblack-5 font-mono">
-                      {isFree ? 'Free' : <>₹<AnimatedNumber value={activeCycle?.priceInRupees ?? 0} locale="en-IN" springOptions={{ stiffness: 120, damping: 22 }} /></>}
+                      {isFree ? 'Free' : <>₹<AnimatedNumber value={(cycle === 'monthly' ? activeCycle?.basePriceInRupees : activeCycle?.priceInRupees) ?? 0} locale="en-IN" springOptions={{ stiffness: 120, damping: 22 }} /></>}
                     </span>
                     {!isFree && (
                       <span className="text-sm text-richblack-300 mb-1">
@@ -293,9 +298,6 @@ const Pricing = () => {
                       </span>
                     )}
                   </div>
-                  {/* GST breakdown deliberately NOT shown here sir, per direct request — the
-                      pricing page shows only the final amount; the base+GST split appears on
-                      the actual checkout/payment page (PlanCheckout.jsx) instead. */}
                   {!isFree && (
                     <p className="mt-1 text-[11px] text-richblack-400">
                       {cycle === 'yearly' ? 'Billed once a year' : 'Billed monthly'}
