@@ -1339,6 +1339,17 @@ exports.impersonateUser = async (req, res) => {
             })
         }
 
+        // staff accounts cannot be impersonated sir — this only ever checked that the CALLER is
+        // an Admin, never who the TARGET is, so one Admin (or a Support account that somehow got
+        // here) could mint a login token for another Admin or Support account with nothing in
+        // this route, Auth.js, or anywhere else stopping it. Closed per 2026-11-07 audit finding.
+        if (user.role === 'Admin' || user.role === 'Support') {
+            return res.status(403).json({
+                success: false,
+                message: 'Staff accounts cannot be impersonated',
+            })
+        }
+
         // same payload shape as the login token sir (see utils/session.js's signSessionToken),
         // plus the impersonatedBy marker — expires in 15 minutes.
         //
