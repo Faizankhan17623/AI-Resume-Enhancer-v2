@@ -6,6 +6,7 @@ const {
     scheduleInterviewSchema,
     confirmSlotSchema,
     cancelInterviewSchema,
+    submitInterviewFeedbackSchema,
 } = require('../Validation/schemas.js')
 const {
     scheduleInterview,
@@ -13,6 +14,7 @@ const {
     cancelInterview,
     listMyInterviews,
     getInterviewForApplication,
+    submitInterviewFeedback,
 } = require('../controllers/Interview.js')
 
 // interview scheduling sir — same strict role isolation as Routes/Job.js. Route ORDER matters:
@@ -25,5 +27,6 @@ route.patch('/interviews/:scheduleId/cancel', Auth, validate({ body: cancelInter
 
 route.post('/job-applications/:applicationId/schedule-interview', Auth, isRecruiter, isApprovedRecruiter, validate({ body: scheduleInterviewSchema }), scheduleInterview)
 route.get('/job-applications/:applicationId/interview', Auth, isRecruiter, isApprovedRecruiter, getInterviewForApplication)
+route.post('/interviews/:scheduleId/feedback', Auth, isRecruiter, isApprovedRecruiter, validate({ body: submitInterviewFeedbackSchema }), submitInterviewFeedback)
 
 module.exports = route

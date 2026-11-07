@@ -341,6 +341,51 @@ exports.listMyInterviews = async (req, res) => {
     }
 }
 
+// POST /interviews/:scheduleId/feedback sir — recruiter's post-interview scorecard. Only
+// reachable once the candidate actually confirmed a slot (see Models/InterviewSchedule.js's own
+// comment on the feedback field); submitting again overwrites the previous feedback rather than
+// erroring, same "re-save overwrites" behavior as JobApplication's recruiterNotes.
+exports.submitInterviewFeedback = async (req, res) => {
+    try {
+        const recruiterId = req?.User.id
+        const { scheduleId } = req.params
+        const { recommendation, rating, strengths, concerns } = req.body
+
+        if (!mongoose.isValidObjectId(scheduleId)) {
+            return res.status(400).json({ success: false, message: 'Invalid interview id' })
+        }
+
+        const schedule = await InterviewSchedule.findById(scheduleId)
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Interview not found' })
+        }
+
+        if (!schedule.recruiter.equals(recruiterId)) {
+            return res.status(403).json({ success: false, message: 'You do not have access to this interview' })
+        }
+
+        if (schedule.status !== 'confirmed') {
+            return res.status(400).json({
+                success: false,
+                message: schedule.status === 'proposed'
+                    ? 'This interview has not been confirmed by the candidate yet'
+                    : 'Feedback can only be left on a confirmed interview',
+            })
+        }
+
+        schedule.feedback = { recommendation, rating, strengths, concerns, submittedAt: new Date() }
+        await schedule.save()
+
+        return res.status(200).json({ success: true, message: 'Feedback saved', schedule })
+    } catch (error) {
+        (req.log || logger).error('submit interview feedback failed', { err: error })
+        return res.status(500).json({
+            success: false,
+            message: 'Something went wrong while saving the interview feedback',
+        })
+    }
+}
+
 // GET /job-applications/:applicationId/interview sir — the recruiter's applicant-list view asks
 // this for "does this application already have an interview thread, and what's its state"
 exports.getInterviewForApplication = async (req, res) => {

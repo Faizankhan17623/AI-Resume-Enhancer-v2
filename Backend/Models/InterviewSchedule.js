@@ -89,6 +89,37 @@ const interviewScheduleSchema = new mongoose.Schema(
             trim: true,
             maxlength: 500,
         },
+        // recruiter's post-interview scorecard sir — per direct request, closes the gap where a
+        // recruiter could flip JobApplication.status to hired/rejected with zero record of why.
+        // Lives here (not on JobApplication) because it's specifically about THIS interview
+        // thread/conversation, the same reasoning this whole model is split out from
+        // JobApplication for in the first place (see this file's own top comment). Only
+        // meaningful once status is 'confirmed' — enforced in the controller, not the schema,
+        // same pattern as every other business-rule gate in this codebase.
+        feedback: {
+            recommendation: {
+                type: String,
+                enum: ['strong_yes', 'yes', 'no', 'strong_no'],
+            },
+            rating: {
+                type: Number,
+                min: 1,
+                max: 5,
+            },
+            strengths: {
+                type: String,
+                trim: true,
+                maxlength: 1000,
+            },
+            concerns: {
+                type: String,
+                trim: true,
+                maxlength: 1000,
+            },
+            submittedAt: {
+                type: Date,
+            },
+        },
     },
     { timestamps: true }
 )

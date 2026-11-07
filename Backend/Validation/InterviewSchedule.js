@@ -29,8 +29,18 @@ const cancelInterviewSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
+// recommendation is required sir — strengths/concerns are free text, optional like every other
+// "notes" field in this codebase (recruiterNotes, cancelReason, etc.)
+const submitInterviewFeedbackSchema = z.object({
+    recommendation: z.enum(['strong_yes', 'yes', 'no', 'strong_no'], { error: 'A recommendation is required' }),
+    rating: z.number({ error: 'A rating is required' }).int().min(1).max(5),
+    strengths: z.string().trim().max(1000).optional(),
+    concerns: z.string().trim().max(1000).optional(),
+})
+
 module.exports = {
     scheduleInterviewSchema,
     confirmSlotSchema,
     cancelInterviewSchema,
+    submitInterviewFeedbackSchema,
 }

@@ -8,6 +8,7 @@ export const InterviewApi = {
   myInterviews: `${BASE_URL}/interviews/mine`,
   confirmSlot: `${BASE_URL}/interviews`,          // + /:scheduleId/confirm
   cancelInterview: `${BASE_URL}/interviews`,      // + /:scheduleId/cancel
+  submitFeedback: `${BASE_URL}/interviews`,       // + /:scheduleId/feedback
   scheduleInterview: `${BASE_URL}/job-applications`, // + /:applicationId/schedule-interview
   getInterviewForApplication: `${BASE_URL}/job-applications`, // + /:applicationId/interview
 }
