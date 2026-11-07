@@ -16,13 +16,16 @@ const logger = require('./logger')
 // one-time-order flow this app already uses (no Razorpay Subscriptions/auto-charge involved).
 const round2 = (n) => Math.round(n * 100) / 100
 
-const buildCycle = (baseRupees, validityDays) => {
+// exactTotalRupees sir (optional) — when the user gives a fixed GST-inclusive price (e.g. "Pro
+// Max must be exactly ₹2,000/mo"), base*1.18 can be a paisa off after rounding. Passing the exact
+// total here pins `price` to it exactly and backs gst into the remainder instead.
+const buildCycle = (baseRupees, validityDays, exactTotalRupees) => {
     const gstRupees = round2(baseRupees * 0.18)
-    const totalRupees = round2(baseRupees + gstRupees)
+    const totalRupees = exactTotalRupees ?? round2(baseRupees + gstRupees)
     return {
-        basePrice: Math.round(baseRupees * 100),   // paise
-        gst: Math.round(gstRupees * 100),          // paise
-        price: Math.round(totalRupees * 100),      // paise — what Razorpay actually charges
+        basePrice: Math.round(baseRupees * 100),                    // paise
+        gst: Math.round((totalRupees - baseRupees) * 100),          // paise
+        price: Math.round(totalRupees * 100),                       // paise — what Razorpay actually charges
         validityDays,
     }
 }
@@ -52,10 +55,13 @@ const PLANS = {
         credits: 100,
         maxMessagesPerChat: 250,
         contextWindow: 100,
-        // per direct request sir — ₹1,200/mo, ₹1,000/mo-equivalent billed yearly, both + 18% GST
+        // per direct request (2026-11-07, fourth update same day) sir — ₹1,500/mo, ₹1,350/mo-
+        // equivalent yearly (was ₹1,400) — FINAL, GST-inclusive totals the customer pays, not
+        // base prices. Base backed out at 18% GST, exact total enforced via buildCycle's
+        // exactTotalRupees param.
         billingCycles: {
-            monthly: buildCycle(1200, 30),
-            yearly: buildCycle(1000 * 12, 365),
+            monthly: buildCycle(1271.19, 30, 1500),
+            yearly: buildCycle(1144.07 * 12, 365, 1350 * 12),
         },
         features: [
             '100 AI uses per month (ATS reviews + new chats)',
@@ -71,10 +77,12 @@ const PLANS = {
         credits: 300,
         maxMessagesPerChat: 500,
         contextWindow: 30,
-        // per direct request sir — ₹1,500/mo, ₹1,300/mo-equivalent billed yearly, both + 18% GST
+        // per direct request (2026-11-07, fourth update same day) sir — ₹2,000/mo, ₹1,890/mo-
+        // equivalent yearly (was ₹1,900) — FINAL, GST-inclusive totals (see Pro's comment above,
+        // same reasoning).
         billingCycles: {
-            monthly: buildCycle(1500, 30),
-            yearly: buildCycle(1300 * 12, 365),
+            monthly: buildCycle(1694.92, 30, 2000),
+            yearly: buildCycle(1601.70 * 12, 365, 1890 * 12),
         },
         features: [
             '300 AI uses per month (ATS reviews + new chats)',
