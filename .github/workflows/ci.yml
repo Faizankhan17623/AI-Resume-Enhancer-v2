@@ -31,24 +31,16 @@ jobs:
         run: npm ci
 
       - name: Run test suite
-        # Backend/tests/ is currently gitignored (local-only test files) sir, so a fresh CI
-        # checkout has ZERO tracked test files — not even tests/setup.js, which
-        # package.json's jest.setupFilesAfterEach points at unconditionally. Jest fails at
-        # config-validation time ("Module tests/setup.js ... was not found"), before it even
-        # gets to "no tests found", so --passWithNoTests alone can't fix this: the failure
-        # happens one step earlier. Marked continue-on-error FOR NOW, with a clearly-named follow-
-        # up step that reports it rather than hiding it, until real tracked test files (including
-        # setup.js) exist. Remove continue-on-error the moment that's true — this must not stay
-        # silently soft-failing once there's something real for it to catch.
-        id: backend_tests
-        continue-on-error: true
-        run: npm test
-
-      - name: Report backend test status
-        run: |
-          if [ "${{ steps.backend_tests.outcome }}" = "failure" ]; then
-            echo "::warning::Backend tests did not run — Backend/tests/ (including tests/setup.js) is not yet tracked in git, so CI has nothing to execute. This step is intentionally non-blocking until real test files are committed; see the comment on the 'Run test suite' step above."
-          fi
+        # --passWithNoTests sir — Backend/tests/ is currently gitignored (local-only test files),
+        # so a fresh CI checkout has zero tracked test files and Jest would otherwise exit
+        # non-zero on "no tests found", permanently failing this pipeline before any test exists.
+        # Backend/package.json's jest config no longer points setupFilesAfterEnv at
+        # tests/setup.js (removed — that file is also gitignored, so a fresh checkout doesn't
+        # have it either; it pointed at a file that can't exist here). Once real test files,
+        # including a committed setup.js, exist in git, restore that setupFilesAfterEnv line
+        # and this still runs the real suite normally — this flag only changes what happens
+        # when there are none.
+        run: npm test -- --passWithNoTests
 
   frontend-lint-and-build:
     runs-on: ubuntu-latest
