@@ -185,6 +185,17 @@ exports.createUser = async (req, res) => {
             },
         });
     } catch (error) {
+        // duplicate-key race sir — the pre-checks above (existingEmail/existingNumber) can't
+        // catch two signups landing on User.create() near-simultaneously; the unique index is
+        // the real guard. Same 409 + field shape as those pre-checks, instead of a scary 500,
+        // for the one field that actually has a unique index (email) — see 2026-11-07 audit.
+        if (error.code === 11000 && error.keyPattern?.email) {
+            return res.status(409).json({
+                success: false,
+                field: 'email',
+                message: 'A user with this email already exists',
+            });
+        }
         (req.log || logger).error('create user failed', { err: error })
         return res.status(500).json({
             success: false,
