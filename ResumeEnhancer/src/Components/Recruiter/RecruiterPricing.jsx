@@ -37,6 +37,15 @@ const RecruiterPricing = () => {
   const [loading, setLoading] = useState(true)
   const [cycle, setCycle] = useState('monthly')
 
+  // real max savings across every paid plan sir, computed live instead of hardcoded — per
+  // 2026-11-08 audit, the previous "Save up to 13%" badge was wrong for ProMax (actually 20%)
+  const maxYearlySavingsPct = plans.reduce((max, plan) => {
+    const { monthly, yearly } = plan.billingCycles || {}
+    if (!monthly || !yearly) return max
+    const pct = Math.round((1 - yearly.priceInRupees / (monthly.priceInRupees * 12)) * 100)
+    return Math.max(max, pct)
+  }, 0)
+
   useEffect(() => {
     (async () => {
       setLoading(true)
@@ -99,7 +108,7 @@ const RecruiterPricing = () => {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                   cycle === 'yearly' ? 'bg-richblack-900/20 text-richblack-900' : 'bg-caribgreen-700/30 text-caribgreen-100'
                 }`}>
-                  Save up to 13%
+                  Save up to {maxYearlySavingsPct}%
                 </span>
               </button>
             </div>

@@ -159,9 +159,12 @@ const PlanCheckout = () => {
                       </span>
                       <span className="text-xs text-richblack-300 mb-0.5">/ {c === 'yearly' ? 'year' : 'month'}</span>
                     </div>
-                    {c === 'yearly' && (
+                    {/* real per-plan savings sir, computed from this plan's own monthly/yearly
+                        prices instead of a hardcoded number — matches the fix applied to
+                        RecruiterPlanCheckout.jsx on the same audit pass */}
+                    {c === 'yearly' && plan?.billingCycles?.monthly && (
                       <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-caribgreen-700/30 text-caribgreen-100">
-                        Save up to 12% vs monthly
+                        Save {Math.round((1 - data.priceInRupees / (plan.billingCycles.monthly.priceInRupees * 12)) * 100)}% vs monthly
                       </span>
                     )}
                   </button>

@@ -135,6 +135,16 @@ const Pricing = () => {
   // page. Basic ignores this entirely (it's free, no billingCycles at all).
   const [cycle, setCycle] = useState('monthly')
 
+  // the real max savings across every paid plan sir, computed from live prices instead of a
+  // hardcoded number — per 2026-11-08 audit, a stale hardcoded % silently went wrong once a
+  // plan's price changed (found on RecruiterPricing.jsx's equivalent badge)
+  const maxYearlySavingsPct = plans.reduce((max, plan) => {
+    const { monthly, yearly } = plan.billingCycles || {}
+    if (!monthly || !yearly) return max
+    const pct = Math.round((1 - yearly.priceInRupees / (monthly.priceInRupees * 12)) * 100)
+    return Math.max(max, pct)
+  }, 0)
+
   useEffect(() => {
     dispatch(GetAllPlans())
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,7 +221,7 @@ const Pricing = () => {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                   cycle === 'yearly' ? 'bg-richblack-900/20 text-richblack-900' : 'bg-caribgreen-700/30 text-caribgreen-100'
                 }`}>
-                  Save up to 12%
+                  Save up to {maxYearlySavingsPct}%
                 </span>
               </button>
             </div>
