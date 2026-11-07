@@ -1,0 +1,45 @@
+# Failover for Backend/worker.js's test-invite-reminder cron sir — see job-feature-flag-reenable.yml
+# for the full explanation of why this file exists and how it's safe to run alongside the EC2
+# worker (short version: Mongo lease in jobLease.js, whichever process is alive wins each tick).
+#
+# Real EC2 schedule: 0 * * * * UTC (Backend/utils/TestInviteReminderCron.js). Offset 30 min.
+#
+# NOTE: this job existed in worker.js but had no runJob.js entry and no failover workflow at all
+# until it was found during the 2026-11-08 audit — it could only ever run via the long-lived EC2
+# worker process, with no GitHub Actions fallback like every other job has.
+
+name: 'Job: test-invite-reminder'
+
+on:
+  schedule:
+    - cron: '30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Backend
+        run: npm ci --omit=dev
+
+      - name: Run test-invite-reminder
+        working-directory: Backend
+        env:
+          NODE_ENV: production
+          MONGO_DB_URL: ${{ secrets.MONGO_DB_URL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: node jobs/runJob.js test-invite-reminder

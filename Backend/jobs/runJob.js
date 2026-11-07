@@ -39,6 +39,9 @@ const { reconcileOrphanedCreditSpends } = require('../utils/CreditReconcileCron'
 const { closeExpiredJobs } = require('../utils/JobExpiryCron')
 const { expireStaleInterviewProposals } = require('../utils/InterviewScheduleExpiryCron')
 const { checkJobAlerts } = require('../utils/JobAlertCron')
+const { expireStaleTestInvites } = require('../utils/TestInviteExpiryCron')
+const { sendTestInviteReminders } = require('../utils/TestInviteReminderCron')
+const { sendPlanExpiryReminders } = require('../utils/PlanExpiryReminderCron')
 
 // the same jobs worker.js schedules sir. `leaseMs` must comfortably exceed the job's realistic
 // runtime while staying well under its interval.
@@ -62,6 +65,12 @@ const JOBS = {
     'job-expiry': { leaseMs: 5 * 60 * 1000, task: closeExpiredJobs },
     'interview-schedule-expiry': { leaseMs: 5 * 60 * 1000, task: expireStaleInterviewProposals },
     'job-alert-check': { leaseMs: 5 * 60 * 1000, task: checkJobAlerts },
+    // these three sir were in worker.js but missing here — per 2026-11-08 audit, that meant they
+    // had no GitHub Actions fallback like every other job does, only worker.js's long-lived
+    // process could ever run them.
+    'test-invite-expiry': { leaseMs: 5 * 60 * 1000, task: expireStaleTestInvites },
+    'test-invite-reminder': { leaseMs: 5 * 60 * 1000, task: sendTestInviteReminders },
+    'plan-expiry-reminder': { leaseMs: 5 * 60 * 1000, task: sendPlanExpiryReminders },
 }
 
 const main = async () => {
