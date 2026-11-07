@@ -51,14 +51,14 @@ const PlanCheckout = () => {
   const plan = plans.find((p) => p.key === planKey)
   const cycleData = plan?.billingCycles?.[cycle]
 
-  // next-renewal date sir, per direct request — "17 August 2026" style (day, full month name,
-  // year), computed as the snapshotted `nowMs` + this cycle's validityDays. Same format the
-  // backend's PlanExpiryReminderCron.js emails use (en-GB with these options renders exactly this
-  // way), so the date shown here always matches what the reminder emails will later say.
+  // next-renewal date sir, per direct request (2026-11-08) — DD/MM/YYYY style now, this page
+  // only. The actual reminder emails (Backend/utils/PlanExpiryReminderCron.js) still use their
+  // own "17 August 2026" style — left untouched per direct request, so this page's date no
+  // longer matches those emails' wording exactly, just the day itself.
   const renewalDateFormatted = cycleData
     ? new Date(nowMs + cycleData.validityDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
       })
     : ''
@@ -196,7 +196,7 @@ const PlanCheckout = () => {
                 This is a one-time charge for your {cycle === 'yearly' ? 'full year' : 'month'} of access.
                 Your plan will not renew automatically — it's valid until{' '}
                 <strong className="text-richblack-100">{renewalDateFormatted}</strong>. We'll email you
-                7, 3 and 1 day before that date, and again on the day it expires, so you can renew at the
+                7 days, 3 days and 1 day before that date, and again on the day it expires, so you can renew at the
                 then-current price of ₹{cycleData?.priceInRupees.toLocaleString('en-IN')}. No card is stored.
               </p>
             </div>
