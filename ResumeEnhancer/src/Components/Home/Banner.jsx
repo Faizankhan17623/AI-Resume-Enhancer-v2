@@ -174,7 +174,7 @@ const Banner = () => {
             </div>
             <div>
               <p className="text-xs text-richblack-300 text-left">ATS Score</p>
-              <p className="font-display font-bold text-2xl text-caribgreen-100 leading-none mt-0.5"><CountUp value={87} /></p>
+              <p className="font-display font-bold text-2xl text-caribgreen-100 leading-none mt-0.5"><CountUp value={100} /></p>
             </div>
           </div>
         </div>
