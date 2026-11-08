@@ -13,11 +13,14 @@ import { JobAlertApi } from '../../Services/Apis/JobAlertApi'
 export default function JobAlerts() {
   const { token } = useSelector((s) => s.auth)
   const [alerts, setAlerts] = useState(null)
+  const [loadError, setLoadError] = useState(false)
 
+  // loadError sir, per 2026-11-08 audit — a failed fetch used to render as "No saved alerts
+  // yet", hiding real saved alerts with no indication anything went wrong
   const load = () => {
     apiConnector('GET', JobAlertApi.list, null, { Authorization: `Bearer ${token}` })
-      .then((r) => setAlerts(r.data.alerts))
-      .catch(() => setAlerts([]))
+      .then((r) => { setAlerts(r.data.alerts); setLoadError(false) })
+      .catch(() => setLoadError(true))
   }
 
   useEffect(() => {
@@ -44,6 +47,7 @@ export default function JobAlerts() {
     }
   }
 
+  if (loadError) return <DashboardLayout title="Job Alerts"><p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load your job alerts, please try again.</p></DashboardLayout>
   if (!alerts) return <DashboardLayout title="Job Alerts"><Loading text="Loading your job alerts..." /></DashboardLayout>
 
   return (

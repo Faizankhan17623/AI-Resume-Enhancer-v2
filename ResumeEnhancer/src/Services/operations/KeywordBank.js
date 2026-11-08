@@ -22,6 +22,10 @@ export function GetKeywordBank(token) {
             dispatch(setSummary(response.data.summary))
         } catch (error) {
             logApiError("Error fetching your keyword bank", error)
+            // toast sir, per 2026-11-08 audit — this used to only log, leaving items/summary
+            // whatever they were before (often empty on first load), rendering as a false "no
+            // keywords tracked yet" with no indication the fetch actually failed
+            toast.error(error?.response?.data?.message || "Could not load your keyword bank")
         } finally {
             dispatch(setLoading(false))
         }

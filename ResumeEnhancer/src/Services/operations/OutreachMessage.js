@@ -57,6 +57,9 @@ export function GetAllOutreachMessages(token) {
             dispatch(setAllMessages(response.data.messages))
         } catch (error) {
             logApiError("Error fetching the outreach messages", error)
+            // toast sir, per 2026-11-08 audit — same false-empty-list bug as KeywordBank.js's,
+            // the two sibling actions in this same file already toast correctly
+            toast.error(error?.response?.data?.message || "Could not load your outreach messages")
         } finally {
             dispatch(setLoading(false))
         }

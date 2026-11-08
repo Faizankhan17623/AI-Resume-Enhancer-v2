@@ -29,12 +29,16 @@ const formatSlot = (slot) => {
 export default function MyInterviews() {
   const { token } = useSelector((s) => s.auth)
   const [schedules, setSchedules] = useState(null)
+  const [loadError, setLoadError] = useState(false)
   const [busyId, setBusyId] = useState(null)
 
+  // loadError sir, per 2026-11-08 audit — a failed fetch used to render as "No interview
+  // invitations yet", silently hiding real pending proposals from a candidate on a network blip
+  // or stale token. Interview scheduling is time-sensitive, so this matters more than most.
   const load = () => {
     apiConnector('GET', InterviewApi.myInterviews, null, { Authorization: `Bearer ${token}` })
-      .then((r) => setSchedules(r.data.schedules))
-      .catch(() => setSchedules([]))
+      .then((r) => { setSchedules(r.data.schedules); setLoadError(false) })
+      .catch(() => setLoadError(true))
   }
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export default function MyInterviews() {
     }
   }
 
+  if (loadError) return <DashboardLayout title="My Interviews"><p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load your interviews, please try again.</p></DashboardLayout>
   if (!schedules) return <DashboardLayout title="My Interviews"><Loading text="Loading your interviews..." /></DashboardLayout>
 
   return (

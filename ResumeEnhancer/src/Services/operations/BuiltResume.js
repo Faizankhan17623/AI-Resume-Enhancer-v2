@@ -159,6 +159,9 @@ export function GetBuiltResumeVersions(resumeId, token) {
             return response.data.versions
         } catch (error) {
             logApiError("Error fetching resume versions", error)
+            // toast sir, per 2026-11-08 audit — returning [] on failure rendered as "No earlier
+            // versions yet" in the version-history dropdown with no indication the load failed
+            toast.error(error?.response?.data?.message || "Could not load earlier versions")
             return []
         }
     }

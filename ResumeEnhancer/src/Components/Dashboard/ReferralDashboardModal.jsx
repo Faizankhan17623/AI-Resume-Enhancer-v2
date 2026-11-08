@@ -19,6 +19,12 @@ const StatTile = ({ label, invites, credits }) => (
 const ReferralDashboardModal = ({ open, onClose, token }) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  // loadError sir, per 2026-11-08 audit — GetReferralHistory returns null on a failed fetch,
+  // which with the old `loading || !data` render check meant the compact loader just spun
+  // forever instead of showing an error: loading correctly became false, but !data stayed
+  // permanently true. Tracked separately so the modal can tell "still loading" apart from
+  // "finished loading, nothing came back".
+  const [loadError, setLoadError] = useState(false)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
 
@@ -26,6 +32,7 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
     setLoading(true)
     const result = await GetReferralHistory(token, from, to)()
     setData(result)
+    setLoadError(!result)
     setLoading(false)
   }
 
@@ -45,6 +52,7 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
     GetReferralHistory(token)().then((result) => {
       if (cancelled) return
       setData(result)
+      setLoadError(!result)
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -75,8 +83,10 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
               </button>
             </div>
 
-            {loading || !data ? (
+            {loading ? (
               <Loading text="Loading your referral history..." size="compact" />
+            ) : loadError ? (
+              <p className="text-sm text-richblack-400 mt-5">Could not load your referral history, please try again.</p>
             ) : (
               <>
                 {/* totals sir — week/month/year/all-time, always shown; custom slots in as a 5th
