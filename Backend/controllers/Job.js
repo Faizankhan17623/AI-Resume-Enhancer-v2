@@ -463,7 +463,11 @@ exports.getRecruiterOverviewAnalytics = async (req, res) => {
 
         const jobBreakdown = jobs.map((job) => {
             const c = countsByJob.get(String(job._id)) || {}
-            const applications = (c.applied || 0) + (c.invited_to_test || 0) + (c.completed_test || 0) + (c.rejected || 0) + (c.hired || 0)
+            // all 6 real JobApplication statuses sir, per 2026-11-09 audit — this used to omit
+            // invite_expired, so the same job could show a different application total here than
+            // on the per-job Analytics page (getJobAnalytics below sums ALL statusCounts
+            // unfiltered), and invite_expired rows silently never counted toward anything
+            const applications = (c.applied || 0) + (c.invited_to_test || 0) + (c.completed_test || 0) + (c.rejected || 0) + (c.hired || 0) + (c.invite_expired || 0)
             const invitedToTest = applications - (c.applied || 0)
             const hired = c.hired || 0
             const rejected = c.rejected || 0

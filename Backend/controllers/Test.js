@@ -606,19 +606,34 @@ exports.logViolation = async (req, res) => {
 
         let finalStatus = updated.status
         if (updated.violationCount >= terminatesAt && updated.status === 'in-progress') {
-            updated.status = 'terminated_violations'
-            updated.submittedAt = new Date()
-            await updated.save()
-            finalStatus = updated.status
-
-            // the frontend's own follow-up submitAnswers call (see ProctoredTestRunner.jsx's
-            // endTest) will find attempt.status already non-'in-progress' by the time it lands
-            // and 400 out before reaching ITS JobApplication update — so this is the only place
-            // a violation-terminated attempt actually flips the applicant to 'completed_test'.
-            await JobApplication.updateOne(
-                { job: attempt.test.job, candidate: candidateId, testAttempt: attemptId },
-                { status: 'completed_test' }
+            // atomic termination sir, per 2026-11-09 audit — the plain updated.save() above
+            // raced against itself: if two violation requests both passed the $inc above close
+            // enough together (client retry/double-fire), both could read status:'in-progress' in
+            // memory and both call save(), double-writing submittedAt and double-firing the
+            // JobApplication update below. findOneAndUpdate filtered on status:'in-progress'
+            // means only the first of the two actually terminates the attempt; the second sees
+            // terminated === null and skips, same "already ended" outcome either way but with no
+            // duplicate write.
+            const terminated = await TestAttempt.findOneAndUpdate(
+                { _id: attemptId, candidate: candidateId, status: 'in-progress' },
+                { status: 'terminated_violations', submittedAt: new Date() },
+                { returnDocument: 'after' }
             )
+
+            if (terminated) {
+                finalStatus = terminated.status
+
+                // the frontend's own follow-up submitAnswers call (see ProctoredTestRunner.jsx's
+                // endTest) will find attempt.status already non-'in-progress' by the time it lands
+                // and 400 out before reaching ITS JobApplication update — so this is the only place
+                // a violation-terminated attempt actually flips the applicant to 'completed_test'.
+                await JobApplication.updateOne(
+                    { job: attempt.test.job, candidate: candidateId, testAttempt: attemptId },
+                    { status: 'completed_test' }
+                )
+            } else {
+                finalStatus = 'terminated_violations'
+            }
         }
 
         return res.status(200).json({

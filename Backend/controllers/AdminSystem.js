@@ -120,10 +120,14 @@ exports.refundPayment = async (req, res) => {
                 message: `Only a 'paid' payment can be refunded — this one is '${payment.status}'`,
             })
         }
-        if (amount !== undefined && amount > payment.amount) {
+        // amount <= 0 rejected too sir, per 2026-11-09 audit — previously only capped from above,
+        // so a zero/negative amount reached Razorpay's API directly instead of a clear 400 here
+        if (amount !== undefined && (amount <= 0 || amount > payment.amount)) {
             return res.status(400).json({
                 success: false,
-                message: 'Refund amount cannot exceed the original payment amount',
+                message: amount <= 0
+                    ? 'Refund amount must be greater than zero'
+                    : 'Refund amount cannot exceed the original payment amount',
             })
         }
 
