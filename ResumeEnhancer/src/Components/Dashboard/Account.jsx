@@ -20,6 +20,7 @@ import { GetPaymentHistory } from '../../Services/operations/Payment'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
 import { swalDark, passwordInputClass, passwordLabelClass, passwordErrorClass } from '../../utils/accountShared'
+import { formatPlanExpiryDate } from '../../utils/formatDate'
 
 // Support/Admin only sir — a normal User has nothing here worth showing, the badge would
 // just be noise ("User" on every single account)
@@ -418,7 +419,7 @@ const Account = () => {
 
             {plan.expiresAt && (
               <p className="mt-4 text-xs text-richblack-300">
-                Valid until <span className="text-richblack-5 font-medium">{new Date(plan.expiresAt).toDateString()}</span>
+                Valid until <span className="text-richblack-5 font-medium">{formatPlanExpiryDate(plan.expiresAt)}</span>
               </p>
             )}
 

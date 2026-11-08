@@ -19,6 +19,7 @@ import { GetProfile, UpdateNotificationPrefs, ChangePassword, UpdateFirstName, U
 import { GetPushSubscriptionStatus, EnablePushNotifications, DisablePushNotifications } from '../../Services/operations/Notification'
 import { LogoutUser, DeleteAccount } from '../../Services/operations/Auth'
 import { getInitial, getAvatarColor } from '../../utils/avatar'
+import { formatPlanExpiryDate } from '../../utils/formatDate'
 
 // one usage meter row sir — "X of Y used this month", null limit renders as "Unlimited"
 const UsageBar = ({ label, used, limit }) => {
@@ -258,7 +259,7 @@ const RecruiterAccount = () => {
             {recruiterPlan.expiresAt && (
               <p className="mt-4 text-xs text-richblack-300">
                 Valid until <span className="text-richblack-5 font-medium">
-                  {new Date(recruiterPlan.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatPlanExpiryDate(recruiterPlan.expiresAt)}
                 </span>
               </p>
             )}
