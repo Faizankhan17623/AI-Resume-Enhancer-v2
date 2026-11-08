@@ -277,6 +277,19 @@ exports.updateUserAdminNote = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid user id' })
         }
 
+        // staff accounts excluded sir, per 2026-11-09 audit — this route is isSupport (admits
+        // both Admin and Support), but unlike every other Support-reachable endpoint in this file
+        // (see getUsers' own "Support sees ONLY User and Recruiter, never Admin" comment) this one
+        // had no role check at all, letting a Support agent who knows/guesses an Admin's userId
+        // write a note onto that Admin's own record.
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+        if (targetForRoleCheck.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
+        }
+
         const user = await User.findByIdAndUpdate(
             userId,
             { adminNote: note || '' },
@@ -309,6 +322,17 @@ exports.resendPasswordReset = async (req, res) => {
 
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({ success: false, message: 'Invalid user id' })
+        }
+
+        // staff accounts excluded sir, per 2026-11-09 audit — same gap/fix as updateUserAdminNote
+        // above: a Support agent could otherwise trigger a password-reset token + email for an
+        // Admin's own account
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+        if (targetForRoleCheck.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
         }
 
         const token = crypto.randomBytes(20).toString('hex')
