@@ -750,6 +750,14 @@ exports.generateResume = async (req, res) => {
                 message: 'Please describe your background, skills and experience first',
             })
         }
+        // length cap sir, per 2026-11-08 audit — this is the most open-ended free text field in
+        // the app (per its own comment below) and had no bound at all before this
+        if (rawInfo.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: 'That description is too long, please keep it under 20000 characters',
+            })
+        }
         if (!templateId) {
             return res.status(400).json({
                 success: false,
@@ -846,6 +854,13 @@ exports.tailorResume = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'A job description is required',
+            })
+        }
+        // length cap sir, per 2026-11-08 audit — same bound as CoverLetter.js's
+        if (jd.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Job Description is too long, please keep it under 20000 characters',
             })
         }
         if (!templateId) {

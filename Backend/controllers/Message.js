@@ -93,6 +93,20 @@ exports.sendMessage = async (req, res) => {
 
         const { thread, application, isRecruiter } = result
 
+        // cap sir, per 2026-11-08 audit — this thread's messages array had no cap at all, unlike
+        // Chat.js's plan-based cap (fixed earlier this session); two parties could exchange
+        // unlimited messages, growing one document toward Mongo's 16MB limit, which would hard-
+        // crash this thread rather than degrading gracefully. 500 is generous for a job-application
+        // conversation (no read receipts/attachments, per this model's own comment) while still
+        // being a real ceiling.
+        const MAX_THREAD_MESSAGES = 500
+        if (thread.messages.length >= MAX_THREAD_MESSAGES) {
+            return res.status(400).json({
+                success: false,
+                message: 'This conversation has reached its message limit',
+            })
+        }
+
         thread.messages.push({ sender: isRecruiter ? 'recruiter' : 'candidate', text })
         thread.lastMessageAt = new Date()
         if (isRecruiter) {

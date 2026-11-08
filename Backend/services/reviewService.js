@@ -84,6 +84,13 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
     if (!jd || typeof jd !== 'string' || !jd.trim()) {
         return { ok: false, status: 400, message: 'Job Description and Resume are required' }
     }
+    // length cap sir, per 2026-11-08 audit — this is the single chokepoint both of
+    // controllers/AI.js's endpoints go through (see this function's own docstring above), and
+    // the highest-traffic AI call in the app, so it had the most to lose from an unbounded jd.
+    // Same 20000-char bound as every other AI-feature endpoint this audit fixed.
+    if (jd.length > 20000) {
+        return { ok: false, status: 400, message: 'Job Description is too long, please keep it under 20000 characters' }
+    }
 
     const spend = await consumeCredit(userId)
     if (!spend.ok) {

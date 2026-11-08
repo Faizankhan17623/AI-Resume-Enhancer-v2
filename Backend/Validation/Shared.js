@@ -41,6 +41,17 @@ const objectId = z
 
 const planKey = z.enum(['Basic', 'Pro', 'ProMax'], { error: 'Please pick a valid plan' })
 
+// freeform user text that gets embedded in an LLM prompt sir (job description, generated-resume
+// raw input, etc.) — per 2026-11-08 audit, several AI-feature endpoints took this straight from
+// req.body with no length check at all, so a huge paste multiplied token cost/latency on every
+// call for that session with no user-facing error. 20000 chars matches the one schema that
+// already had this bound right (Career.js's applicationCopilotSchema.jobText).
+const jdText = (label = 'This field') => z
+    .string({ error: `${label} is required` })
+    .trim()
+    .min(1, `${label} is required`)
+    .max(20000, `${label} is too long`)
+
 // shared by createUserSchema (recruiter signup, Auth.js) and recruiterApplicationSchema (the
 // post-hoc /For-Recruiters flow, RecruiterApplication.js) sir — one definition, same options either way
 const companySize = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], { error: 'Please select your company size' })
@@ -67,4 +78,5 @@ module.exports = {
     companySize,
     employmentType,
     pagination,
+    jdText,
 }

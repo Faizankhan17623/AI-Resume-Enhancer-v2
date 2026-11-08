@@ -57,6 +57,14 @@ exports.generateOutreachMessage = async (req, res) => {
             })
         }
 
+        // length cap sir, per 2026-11-08 audit — same bound as CoverLetter.js's
+        if (jd.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Job Description is too long, please keep it under 20000 characters',
+            })
+        }
+
         // moderation pass sir — on the JD text, before the PDF is even parsed. See
         // utils/Moderation.js; fails open if the classifier itself errors.
         const modResult = await moderateText(jd, { feature: 'outreach-message' })

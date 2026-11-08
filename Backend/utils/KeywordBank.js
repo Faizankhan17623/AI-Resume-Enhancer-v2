@@ -49,6 +49,12 @@ const syncKeywordBankFromReview = async (userId, reviewId, review) => {
                 update.status = status
             }
             await KeywordBankItem.updateOne({ _id: existing._id }, update)
+            // $slice cap sir, per 2026-11-08 audit — a long-time user running hundreds of reviews
+            // that all mention a common keyword ("JavaScript") would otherwise accumulate that
+            // many ObjectIds on one item forever. $addToSet can't take a $slice directly, so this
+            // runs as a tiny separate update right after — keeps the most recent 50, which is
+            // plenty for a field nobody reads as a list anyway (only its length/presence matters).
+            await KeywordBankItem.updateOne({ _id: existing._id }, { $push: { sourceReviews: { $each: [], $slice: -50 } } })
         }
     } catch (err) {
         logger.error('keyword bank sync failed', { err: err })

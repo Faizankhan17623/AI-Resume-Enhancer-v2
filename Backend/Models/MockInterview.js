@@ -17,13 +17,17 @@ const mockInterviewSchema = new mongoose.Schema(
             trim: true,
             maxlength: 80,
         },
+        // 20000-char bounds sir, per 2026-11-08 audit — defense-in-depth, matching the
+        // controller's own input checks (MockInterview.js's startMockInterview/answerMockInterview)
         resumeText: {
             type: String,
             required: true,
+            maxlength: 20000,
         },
         jd: {
             type: String,
             required: true,
+            maxlength: 20000,
         },
         status: {
             type: String,
@@ -35,8 +39,9 @@ const mockInterviewSchema = new mongoose.Schema(
                 question: { type: String, required: true },
                 category: { type: String, trim: true },
                 difficulty: { type: String, enum: ['easy', 'medium', 'hard'] },
-                // filled in once the user answers sir — null/absent means still awaiting an answer
-                answer: { type: String },
+                // filled in once the user answers sir — null/absent means still awaiting an answer.
+                // 5000-char bound matches the controller's own check, per 2026-11-08 audit
+                answer: { type: String, maxlength: 5000 },
                 score: { type: Number, min: 1, max: 10 },
                 feedback: { type: String },
                 sampleAnswer: { type: String },
