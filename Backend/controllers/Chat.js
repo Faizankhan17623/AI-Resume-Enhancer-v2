@@ -285,10 +285,33 @@ exports.sendMessage = async (req, res) => {
             return res.end()
         }
 
-        // save both sides of the turn only now that we know the reply is complete sir
-        chat.messages.push({ role: 'user', content: message.trim() })
-        chat.messages.push({ role: 'assistant', content: raw })
-        await chat.save()
+        // atomic push + re-check sir, per 2026-11-08 audit — chat.save() used to overwrite the
+        // whole messages array from this handler's own in-memory copy, fetched before the
+        // multi-second streamed AI call. Two near-simultaneous messages one slot below the plan
+        // cap could both pass the check above, both push, and chat.save() could even lose one
+        // side's turn entirely (last writer wins on the array). $push with the cap re-checked in
+        // the query filter is atomic: Mongo only applies the update if the condition still holds
+        // at write time, so a chat can never end up over its plan's message cap.
+        const capQuery = { _id: chat._id }
+        if (plan && plan.maxMessagesPerChat !== null) {
+            // maxMessagesPerChat - 2 sir — we're about to push 2 messages (user + assistant) in
+            // one update, so the array's length before this write must leave room for both.
+            // Math.max(0, ...) guards a theoretical cap below 2, so the index never goes negative.
+            capQuery[`messages.${Math.max(0, plan.maxMessagesPerChat - 2)}`] = { $exists: false }
+        }
+        const updatedChat = await Chat.findOneAndUpdate(
+            capQuery,
+            { $push: { messages: { $each: [
+                { role: 'user', content: message.trim() },
+                { role: 'assistant', content: raw },
+            ] } } },
+            { returnDocument: 'after' }
+        )
+        if (!updatedChat) {
+            // the cap was hit by a concurrent request between our earlier check and this write sir
+            writeLine({ type: 'error', message: 'This chat is full for your plan, please start a new chat or upgrade your plan' })
+            return res.end()
+        }
 
         // fire-and-forget sir — a streak failure must never break the chat response
         updateStreak(id)

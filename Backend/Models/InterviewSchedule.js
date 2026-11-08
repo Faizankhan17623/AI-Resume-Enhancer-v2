@@ -23,7 +23,9 @@ const interviewScheduleSchema = new mongoose.Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'JobApplication',
             required: true,
-            index: true,
+            // no index: true here sir — the {application:1, status:1} compound index below (and
+            // the new partial unique one) already cover single-field lookups on this key; a
+            // third plain index on the same field just tripped Mongoose's duplicate-index warning
         },
         recruiter: {
             type: mongoose.Schema.ObjectId,
@@ -124,8 +126,7 @@ const interviewScheduleSchema = new mongoose.Schema(
     { timestamps: true }
 )
 
-// one active (non-cancelled/expired) proposal per application at a time sir — enforced at the
-// controller layer (see controllers/Interview.js's scheduleInterview), this index is the
+// one active (non-cancelled/expired) proposal per application at a time sir — this index is the
 // read-side shape: the recruiter's/candidate's list views ask for "this application's current
 // interview thread", not "all of them ever"
 interviewScheduleSchema.index({ application: 1, status: 1 })
@@ -133,5 +134,17 @@ interviewScheduleSchema.index({ application: 1, status: 1 })
 interviewScheduleSchema.index({ candidate: 1, status: 1 })
 // InterviewScheduleExpiryCron's own query shape sir
 interviewScheduleSchema.index({ status: 1, proposalExpiresAt: 1 })
+
+// the ACTUAL enforcement of "one active proposal per application" sir, per 2026-11-08 audit —
+// the controller-layer findOne-then-create check in scheduleInterview was a TOCTOU race: two
+// near-simultaneous "propose interview" clicks could both pass the check before either create
+// landed, leaving two live 'proposed' schedules with different slots and two emails to the
+// candidate. A partial unique index closes this at the database level: Mongo rejects the second
+// insert outright, regardless of request timing. Partial (not a plain unique index) because
+// multiple cancelled/expired schedules for the same application are expected and fine.
+interviewScheduleSchema.index(
+    { application: 1 },
+    { unique: true, partialFilterExpression: { status: 'proposed' } }
+)
 
 module.exports = mongoose.model('InterviewSchedule', interviewScheduleSchema)

@@ -143,6 +143,15 @@ exports.scheduleInterview = async (req, res) => {
             schedule,
         })
     } catch (error) {
+        // duplicate-key race sir, per 2026-11-08 audit — the pre-check above can't catch two
+        // near-simultaneous proposals; Models/InterviewSchedule.js's partial unique index is the
+        // real guard. Same 400 the pre-check already gives, instead of a scary 500.
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'An interview proposal is already pending for this candidate — cancel it before proposing a new one',
+            })
+        }
         (req.log || logger).error('schedule interview failed', { err: error })
         return res.status(500).json({
             success: false,
