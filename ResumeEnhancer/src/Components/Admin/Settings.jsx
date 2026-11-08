@@ -72,6 +72,13 @@ const Settings = () => {
   }
 
   const handleSaveNote = (setting) => {
+    // in-flight guard sir, per 2026-11-09 audit — this fired on every onBlur with no check for
+    // an already-in-flight save for that same key, so clicking Save then immediately blurring
+    // (or tabbing through several note fields quickly) could fire overlapping PATCH requests,
+    // and the last response to land could silently revert a slightly newer save. `updating` is
+    // already a single shared in-flight flag across every setting on this page (see the
+    // blocking overlay below), so it covers this race for free.
+    if (updating) return
     const note = noteDrafts[setting.key]
     if (note === undefined || note === setting.note) return
     dispatch(UpdateSetting(setting.key, setting.enabled, note, token, setting.disabledUntil, setUpdating))

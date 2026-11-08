@@ -18,14 +18,18 @@ const CannedResponses = () => {
   const { token, user: me } = useSelector((state) => state.auth)
   const isAdmin = me?.role === 'Admin'
   const [responses, setResponses] = useState(null)
+  // loadError sir, per 2026-11-09 audit — same pattern fixed 7 times already this session: a
+  // failed fetch used to render as "No canned responses yet", silently degrading Support's
+  // ban/appeal-reply workflow with no visible error
+  const [loadError, setLoadError] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
 
   const load = () => {
     apiConnector('GET', AdminCannedResponses.list, null, { Authorization: `Bearer ${token}` })
-      .then((r) => setResponses(r.data.responses))
-      .catch(() => setResponses([]))
+      .then((r) => { setResponses(r.data.responses); setLoadError(false) })
+      .catch(() => setLoadError(true))
   }
 
   useEffect(() => {
@@ -99,7 +103,11 @@ const CannedResponses = () => {
           </form>
         )}
 
-        {!responses ? (
+        {loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">
+            <p className="text-sm text-richblack-400">Could not load canned responses, please try again.</p>
+          </div>
+        ) : !responses ? (
           <Loading text="Loading canned responses..." />
         ) : responses.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">

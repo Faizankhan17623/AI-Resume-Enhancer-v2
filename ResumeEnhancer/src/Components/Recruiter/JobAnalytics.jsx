@@ -6,15 +6,7 @@ import { FaEye, FaFileAlt, FaPaperPlane, FaClipboardCheck, FaTrophy, FaTimesCirc
 import RecruiterLayout from './RecruiterLayout'
 import Loading from '../extra/Loading'
 import { GetJobAnalytics } from '../../Services/operations/Job'
-
-// same convention as JobApplicantsList.jsx's fitTierMeta sir — kept in sync manually since this
-// is the only other place fit tiers get a label/color (no shared file for it yet)
-const fitTierMeta = {
-  best_fit: { label: 'Best fit', className: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700' },
-  hireable: { label: 'Hireable', className: 'bg-warm-200/20 text-warm-25 border-warm-200' },
-  can_get_it_done: { label: 'Can get it done', className: 'bg-warm-700/30 text-warm-25 border-warm-600' },
-  not_a_fit: { label: 'Not a fit', className: 'bg-richblack-700 text-richblack-300 border-richblack-600' },
-}
+import { fitTierMeta } from '../../utils/fitTierMeta'
 
 // one funnel stage sir — width is proportional to the FIRST stage (views), not to the
 // previous stage, so the bars visually shrink left-to-right the way a real funnel does

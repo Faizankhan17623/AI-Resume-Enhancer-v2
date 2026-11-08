@@ -21,11 +21,14 @@ const actionChip = (action) => {
 const MyActivity = () => {
   const { token } = useSelector((state) => state.auth)
   const [logs, setLogs] = useState(null)
+  // loadError sir, per 2026-11-09 audit — same pattern fixed 7 times already this session: a
+  // failed fetch used to render as "No actions taken yet today", hiding a real error
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     apiConnector('GET', `${BASE_URL}/admin/my-activity`, null, { Authorization: `Bearer ${token}` })
-      .then((r) => setLogs(r.data.logs))
-      .catch(() => setLogs([]))
+      .then((r) => { setLogs(r.data.logs); setLoadError(false) })
+      .catch(() => setLoadError(true))
   }, [token])
 
   return (
@@ -42,7 +45,11 @@ const MyActivity = () => {
           Every action you've personally taken today — resets at midnight.
         </p>
 
-        {!logs ? (
+        {loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">
+            <p className="text-sm text-richblack-400">Could not load your activity, please try again.</p>
+          </div>
+        ) : !logs ? (
           <Loading text="Loading your activity..." />
         ) : logs.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md p-10 text-center">

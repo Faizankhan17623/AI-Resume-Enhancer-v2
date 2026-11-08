@@ -2,15 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { FaTimes, FaChevronLeft, FaChevronRight, FaBolt, FaExternalLinkAlt } from 'react-icons/fa'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
-
-// same fit-tier label/color convention as JobApplicantsList.jsx's own fitTierMeta sir — kept in
-// sync manually, same as JobAnalytics.jsx's copy (no shared file for it yet)
-const fitTierMeta = {
-  best_fit: { label: 'Best fit', className: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700' },
-  hireable: { label: 'Hireable', className: 'bg-warm-200/20 text-warm-25 border-warm-200' },
-  can_get_it_done: { label: 'Can get it done', className: 'bg-warm-700/30 text-warm-25 border-warm-600' },
-  not_a_fit: { label: 'Not a fit', className: 'bg-richblack-700 text-richblack-300 border-richblack-600' },
-}
+import { fitTierMeta } from '../../utils/fitTierMeta'
 
 // per direct request sir — "a recruiter reviewing 50 applicants shouldn't have to open one PDF
 // link at a time in a fresh tab". `applicants` is the SAME ranked (fit-score-first) array
@@ -20,15 +12,22 @@ const fitTierMeta = {
 const ResumeViewerModal = ({ applicants, startIndex, onClose }) => {
   const withResume = applicants.filter((a) => a.resumeUrl)
   const startAt = Math.max(0, withResume.findIndex((a) => a._id === applicants[startIndex]?._id))
-  const [index, setIndex] = useState(startAt === -1 ? 0 : startAt)
+  // tracks the selected applicant's ID sir, not a raw array position, per 2026-11-09 audit —
+  // `index` used to be computed once at mount and never revisited, so if `applicants` changed
+  // identity while this modal was open (e.g. a parent refetch after a bulk action re-sorts or
+  // filters the list), it could keep pointing at a stale position in the new array and show a
+  // different candidate's resume than the one just clicked. Looking the live index up by ID on
+  // every render means a reorder/filter can never point this at the wrong person.
+  const [selectedId, setSelectedId] = useState(withResume[startAt === -1 ? 0 : startAt]?._id)
+  const index = Math.max(0, withResume.findIndex((a) => a._id === selectedId))
 
   if (withResume.length === 0) return null
 
   const current = withResume[index]
   const fitMeta = current.fitTier ? fitTierMeta[current.fitTier] : null
 
-  const goPrev = () => setIndex((i) => Math.max(0, i - 1))
-  const goNext = () => setIndex((i) => Math.min(withResume.length - 1, i + 1))
+  const goPrev = () => setSelectedId(withResume[Math.max(0, index - 1)]._id)
+  const goNext = () => setSelectedId(withResume[Math.min(withResume.length - 1, index + 1)]._id)
 
   return (
     <AnimatePresence>

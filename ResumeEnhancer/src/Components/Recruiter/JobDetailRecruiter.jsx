@@ -74,7 +74,12 @@ const JobDetailRecruiter = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?._id])
 
+  // in-flight guard sir, per 2026-11-09 audit — loadInvites fires on mount and again after every
+  // successful invite send; two back-to-back sends before the first GET resolves used to race,
+  // and whichever response landed last won. loadingInvites was already tracked for the spinner,
+  // reusing it here closes the race for free.
   const loadInvites = async () => {
+    if (loadingInvites) return
     const result = await dispatch(GetJobInvites(jobId, token, setLoadingInvites))
     if (result) setInvites(result)
   }
