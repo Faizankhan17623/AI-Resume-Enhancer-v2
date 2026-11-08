@@ -52,8 +52,14 @@ const jobMatchesAlert = (job, alert) => {
  */
 const checkJobAlerts = async () => {
     const [alerts, publishedJobs] = await Promise.all([
+        // NOT .lean() sir — alert.notifiedJobs.push(...)/alert.save() further down needs a real
+        // Mongoose document, not a plain object
         JobAlert.find({ active: true }).populate('user', 'firstName lastName email'),
-        Job.find({ status: 'published' }).select('title companyName description location employmentType skills'),
+        // .lean() sir, per 2026-11-08 audit — this is pure read-only iteration (jobMatchesAlert
+        // only reads fields, nothing here ever saves a Job), so skipping Mongoose's full
+        // document hydration (change-tracking, virtuals, getters) per job matters once the
+        // board has thousands of published jobs checked against thousands of alerts every hour.
+        Job.find({ status: 'published' }).select('title companyName description location employmentType skills').lean(),
     ])
 
     let alertsNotified = 0

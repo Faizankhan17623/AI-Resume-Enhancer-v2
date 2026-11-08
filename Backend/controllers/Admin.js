@@ -1293,15 +1293,36 @@ exports.grantCreditsToAll = async (req, res) => {
 
         // fire-and-forget per-user emails sir, same pattern as the cron digest/streak/win-back
         // mailers in utils/StreakCron.js — this can be thousands of sends, so the response below
-        // doesn't wait on any of them
-        const recipients = await User.find({ role: 'User' }).select('firstName email')
-        for (const user of recipients) {
-            mailSender(
-                user.email,
-                "You've Received Bonus Credits",
-                creditBonusTemplate(user.firstName, credits, reason)
-            ).catch((err) => logger.error('credit bonus broadcast email failed', { err, userId: user._id }))
+        // doesn't wait on any of them.
+        //
+        // Batched via a cursor + small concurrency window, per 2026-11-08 audit — the old
+        // `User.find(...)` loaded every single User into memory at once, then fired every
+        // mailSender call in the same tick with nothing throttling them. At 50k+ users that's a
+        // large in-memory array plus an SMTP hammer with no batching, risking the relay rate-
+        // limiting this box on a broadcast this size. A cursor streams users one at a time
+        // instead, and BATCH_SIZE caps how many sends are in flight together.
+        const BATCH_SIZE = 25
+        const cursor = User.find({ role: 'User' }).select('firstName email').lean().cursor()
+        let batch = []
+        const flushBatch = async () => {
+            await Promise.allSettled(
+                batch.map((user) =>
+                    mailSender(
+                        user.email,
+                        "You've Received Bonus Credits",
+                        creditBonusTemplate(user.firstName, credits, reason)
+                    ).catch((err) => logger.error('credit bonus broadcast email failed', { err, userId: user._id }))
+                )
+            )
+            batch = []
         }
+        ;(async () => {
+            for await (const user of cursor) {
+                batch.push(user)
+                if (batch.length >= BATCH_SIZE) await flushBatch()
+            }
+            if (batch.length) await flushBatch()
+        })().catch((err) => logger.error('credit bonus broadcast loop failed', { err }))
 
         return res.status(200).json({
             success: true,

@@ -761,7 +761,7 @@ exports.toggleShortlist = async (req, res) => {
         const updated = await JobApplication.findByIdAndUpdate(
             applicationId,
             [{ $set: { shortlisted: { $not: '$shortlisted' } } }],
-            { new: true }
+            { returnDocument: 'after' }
         )
 
         return res.status(200).json({
