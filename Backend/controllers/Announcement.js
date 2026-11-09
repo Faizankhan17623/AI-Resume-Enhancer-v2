@@ -22,6 +22,23 @@ const assertActiveSlotAvailable = async (excludeId) => {
     }
 }
 
+// re-check-and-rollback sir, per 2026-11-09 audit — the countDocuments pre-check above can't
+// catch two admins (or one double-click) both turning a banner active in the same race window:
+// both can pass the count check before either write lands, leaving 3+ live banners. A plain
+// unique index can't express "max 2 of this collection", only "at most 1 per key" (that's what
+// Testimonial.js's activeSubmission fix uses, a different constraint shape), so this re-counts
+// right after the write and turns this one back off if it was the one that pushed the count over
+// — same pattern as JobAlert.js's count-cap fix.
+const rollbackIfOverCap = async (announcementId) => {
+    const activeCount = await Announcement.countDocuments({ active: true })
+    if (activeCount > MAX_ACTIVE) {
+        await Announcement.updateOne({ _id: announcementId }, { active: false })
+        const err = new Error('Only 2 announcements can be active at once — turn one off first')
+        err.statusCode = 400
+        throw err
+    }
+}
+
 // startsAt must be tomorrow or later (IST-aware "tomorrow" is a UI concern; here we just
 // require strictly-future by at least one day-ish margin) and the start->end gap can't
 // exceed 15 days sir. Returns null on success, or an error message string.
@@ -84,6 +101,10 @@ exports.createAnnouncement = async (req, res) => {
             expiresAt: expiresAt ? new Date(expiresAt) : undefined,
             createdBy: adminId,
         })
+
+        if (active) {
+            await rollbackIfOverCap(announcement._id)
+        }
 
         logAction(adminId, 'ANNOUNCEMENT_CREATE', null, { title: announcement.title })
 
@@ -192,6 +213,10 @@ exports.updateAnnouncement = async (req, res) => {
             changes,
             { returnDocument: 'after' }
         )
+
+        if (active === true && !existing.active) {
+            await rollbackIfOverCap(announcement._id)
+        }
 
         logAction(adminId, 'ANNOUNCEMENT_UPDATE', announcement, { changes })
 
