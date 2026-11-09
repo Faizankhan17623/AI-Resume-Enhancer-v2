@@ -36,6 +36,16 @@ exports.searchJobs = async (req, res) => {
                 message: 'Please describe the job you are looking for',
             })
         }
+        // length cap sir, per 2026-11-09 audit — a short search query, not a job-description-
+        // length field, so 500 chars (not the 20000-char bound used elsewhere) — this is sent
+        // straight to Tavily and the moderation classifier, same unbounded-cost risk as the
+        // other AI-adjacent endpoints fixed this session
+        if (query.length > 500) {
+            return res.status(400).json({
+                success: false,
+                message: 'That search is too long, please keep it under 500 characters',
+            })
+        }
 
         // moderation pass sir — this query is the one place in this file that leaves our own
         // server verbatim, straight to a third-party API (Tavily). No Groq call happens here

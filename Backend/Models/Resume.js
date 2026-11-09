@@ -20,10 +20,12 @@ const resumeSchema = new mongoose.Schema(
             trim: true,
             maxlength: 80,
         },
-        // the parsed text sir — same thing Chat.resumeText already stores per-chat, just reusable across reviews
+        // the parsed text sir — same thing Chat.resumeText already stores per-chat, just reusable
+        // across reviews. maxlength matches Chat.resumeText's bound, per 2026-11-09 audit.
         resumeText: {
             type: String,
             required: true,
+            maxlength: 20000,
         },
         // the one resume "New Review" pre-selects sir — only one can be true per user (enforced in the controller)
         isDefault: {

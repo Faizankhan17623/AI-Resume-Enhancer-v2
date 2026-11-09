@@ -47,7 +47,10 @@ exports.saveResume = async (req, res) => {
             user: id,
             originalFilename: PDf.name,
             label: (req.body.label || PDf.name || 'My resume').trim().slice(0, 80),
-            resumeText: result.text,
+            // length cap sir, per 2026-11-09 audit — matches Chat.resumeText's bound (same field,
+            // per this model's own comment), nothing bounded this before. This text later feeds
+            // into AI prompts (fit score, reviews) uncapped too, so this closes that path as well.
+            resumeText: result.text.slice(0, 20000),
             isDefault,
             formattingCheck,
         })

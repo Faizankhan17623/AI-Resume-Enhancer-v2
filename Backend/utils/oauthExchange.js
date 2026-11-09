@@ -1,8 +1,8 @@
 const crypto = require('crypto')
 const OAuthExchange = require('../Models/OAuthExchange')
 
-// same 5-minute TTL sir — Render's free tier cold-start (30-60s) plus the user actually
-// looking at and clicking through the provider's consent screen blew past 60s in testing
+// 5-minute TTL sir — generous headroom for the user actually looking at and clicking through
+// the provider's consent screen, which can easily take longer than 60s
 const EXCHANGE_TTL_MS = 5 * 60 * 1000
 
 // mints a single-use code and persists the payload in Mongo sir — see Models/OAuthExchange.js

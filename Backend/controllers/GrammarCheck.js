@@ -26,7 +26,13 @@ exports.checkGrammar = async (req, res) => {
             })
         }
 
-        const { issues, score } = checkResumeText(result.text)
+        // length cap sir, per 2026-11-09 audit — checkResumeText runs write-good and a word-by-
+        // word dictionary check synchronously in-process, with no AI/external call in between.
+        // A crafted huge PDF (text-bomb) used to turn into an unbounded regex/dictionary loop on
+        // this server — a real CPU-DoS surface, worse than the already-capped AI endpoints since
+        // those at least rate-limit via the external call. 50000 chars is generous for any real
+        // resume while bounding the worst case.
+        const { issues, score } = checkResumeText(result.text.slice(0, 50000))
 
         return res.status(200).json({
             success: true,
