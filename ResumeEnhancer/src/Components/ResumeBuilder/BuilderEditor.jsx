@@ -691,12 +691,12 @@ const BuilderEditor = () => {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <input className={fieldClass} value={exp.role} onChange={(e) => patchListItem('experience', i, 'role', e.target.value)} placeholder="Role" />
-                      <input className={fieldClass} value={exp.company} onChange={(e) => patchListItem('experience', i, 'company', e.target.value)} placeholder="Company" />
-                      <input className={fieldClass} value={exp.location} onChange={(e) => patchListItem('experience', i, 'location', e.target.value)} placeholder="Location" />
+                      <input className={fieldClass} value={exp.role || ''} onChange={(e) => patchListItem('experience', i, 'role', e.target.value)} placeholder="Role" />
+                      <input className={fieldClass} value={exp.company || ''} onChange={(e) => patchListItem('experience', i, 'company', e.target.value)} placeholder="Company" />
+                      <input className={fieldClass} value={exp.location || ''} onChange={(e) => patchListItem('experience', i, 'location', e.target.value)} placeholder="Location" />
                       <div className="flex gap-2">
-                        <input className={fieldClass} value={exp.startDate} onChange={(e) => patchListItem('experience', i, 'startDate', e.target.value)} placeholder="Start" />
-                        <input className={fieldClass} value={exp.endDate} onChange={(e) => patchListItem('experience', i, 'endDate', e.target.value)} placeholder="End" />
+                        <input className={fieldClass} value={exp.startDate || ''} onChange={(e) => patchListItem('experience', i, 'startDate', e.target.value)} placeholder="Start" />
+                        <input className={fieldClass} value={exp.endDate || ''} onChange={(e) => patchListItem('experience', i, 'endDate', e.target.value)} placeholder="End" />
                       </div>
                     </div>
                     <div className="mt-3 flex flex-col gap-2">
@@ -742,12 +742,12 @@ const BuilderEditor = () => {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <input className={fieldClass} value={edu.school} onChange={(e) => patchListItem('education', i, 'school', e.target.value)} placeholder="School" />
-                      <input className={fieldClass} value={edu.degree} onChange={(e) => patchListItem('education', i, 'degree', e.target.value)} placeholder="Degree" />
-                      <input className={fieldClass} value={edu.field} onChange={(e) => patchListItem('education', i, 'field', e.target.value)} placeholder="Field of study" />
-                      <input className={fieldClass} value={edu.gpa} onChange={(e) => patchListItem('education', i, 'gpa', e.target.value)} placeholder="GPA (optional)" />
-                      <input className={fieldClass} value={edu.startDate} onChange={(e) => patchListItem('education', i, 'startDate', e.target.value)} placeholder="Start" />
-                      <input className={fieldClass} value={edu.endDate} onChange={(e) => patchListItem('education', i, 'endDate', e.target.value)} placeholder="End" />
+                      <input className={fieldClass} value={edu.school || ''} onChange={(e) => patchListItem('education', i, 'school', e.target.value)} placeholder="School" />
+                      <input className={fieldClass} value={edu.degree || ''} onChange={(e) => patchListItem('education', i, 'degree', e.target.value)} placeholder="Degree" />
+                      <input className={fieldClass} value={edu.field || ''} onChange={(e) => patchListItem('education', i, 'field', e.target.value)} placeholder="Field of study" />
+                      <input className={fieldClass} value={edu.gpa || ''} onChange={(e) => patchListItem('education', i, 'gpa', e.target.value)} placeholder="GPA (optional)" />
+                      <input className={fieldClass} value={edu.startDate || ''} onChange={(e) => patchListItem('education', i, 'startDate', e.target.value)} placeholder="Start" />
+                      <input className={fieldClass} value={edu.endDate || ''} onChange={(e) => patchListItem('education', i, 'endDate', e.target.value)} placeholder="End" />
                     </div>
                   </div>
                 ))}
@@ -784,13 +784,13 @@ const BuilderEditor = () => {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <input className={fieldClass} value={proj.name} onChange={(e) => patchListItem('projects', i, 'name', e.target.value)} placeholder="Project name" />
-                      <input className={fieldClass} value={proj.link} onChange={(e) => patchListItem('projects', i, 'link', e.target.value)} placeholder="Link (optional)" />
+                      <input className={fieldClass} value={proj.name || ''} onChange={(e) => patchListItem('projects', i, 'name', e.target.value)} placeholder="Project name" />
+                      <input className={fieldClass} value={proj.link || ''} onChange={(e) => patchListItem('projects', i, 'link', e.target.value)} placeholder="Link (optional)" />
                     </div>
                     <textarea
                       className={`${fieldClass} mt-3 resize-none`}
                       rows={2}
-                      value={proj.description}
+                      value={proj.description || ''}
                       onChange={(e) => patchListItem('projects', i, 'description', e.target.value)}
                       placeholder="Short description"
                     />
@@ -812,10 +812,10 @@ const BuilderEditor = () => {
               <div className="flex flex-col gap-3">
                 {(current.certifications || []).map((cert, i) => (
                   <div key={i} className="rounded-xl bg-richblack-900 border border-richblack-700 p-4 grid grid-cols-3 gap-3">
-                    <input className={fieldClass} value={cert.name} onChange={(e) => patchListItem('certifications', i, 'name', e.target.value)} placeholder="Certification" />
-                    <input className={fieldClass} value={cert.issuer} onChange={(e) => patchListItem('certifications', i, 'issuer', e.target.value)} placeholder="Issuer" />
+                    <input className={fieldClass} value={cert.name || ''} onChange={(e) => patchListItem('certifications', i, 'name', e.target.value)} placeholder="Certification" />
+                    <input className={fieldClass} value={cert.issuer || ''} onChange={(e) => patchListItem('certifications', i, 'issuer', e.target.value)} placeholder="Issuer" />
                     <div className="flex gap-2">
-                      <input className={fieldClass} value={cert.date} onChange={(e) => patchListItem('certifications', i, 'date', e.target.value)} placeholder="Date" />
+                      <input className={fieldClass} value={cert.date || ''} onChange={(e) => patchListItem('certifications', i, 'date', e.target.value)} placeholder="Date" />
                       <button onClick={() => removeListItem('certifications', i)} className="text-richblack-400 hover:text-pink-200 cursor-pointer shrink-0">
                         <FaTrash className="text-xs" />
                       </button>
