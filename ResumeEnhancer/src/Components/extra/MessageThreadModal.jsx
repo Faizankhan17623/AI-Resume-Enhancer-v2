@@ -16,23 +16,26 @@ import { modalBackdrop, modalPanel } from '../../utils/motion'
 const MessageThreadModal = ({ applicationId, myRole, onClose }) => {
   const { token } = useSelector((s) => s.auth)
   const [thread, setThread] = useState(null)
+  const [loadError, setLoadError] = useState(false)
+  const [retryTick, setRetryTick] = useState(0)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
 
-  const load = () => {
-    apiConnector('GET', `${MessageApi.thread}/${applicationId}/messages`, null, { Authorization: `Bearer ${token}` })
-      .then((r) => setThread(r.data.thread))
-      .catch((error) => {
-        toast.error(error?.response?.data?.message || 'Could not load the conversation')
-        onClose()
-      })
-  }
-
+  // loadError sir, per 2026-11-09 audit — a failed fetch used to call onClose() unconditionally,
+  // closing the whole modal (and losing the user's typed draft) over what could just be a brief
+  // network blip. Now shows an inline error with a retry instead (retryTick re-runs this effect).
+  //
+  // alive guard sir, per the same audit — switching applicationId quickly (e.g. recruiter clicks
+  // Message on applicant A, then closes and reopens on applicant B before A's slower GET
+  // resolves) could let A's stale response land after B's and overwrite the thread actually open.
   useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId])
+    let alive = true
+    apiConnector('GET', `${MessageApi.thread}/${applicationId}/messages`, null, { Authorization: `Bearer ${token}` })
+      .then((r) => { if (alive) { setThread(r.data.thread); setLoadError(false) } })
+      .catch(() => { if (alive) setLoadError(true) })
+    return () => { alive = false }
+  }, [applicationId, token, retryTick])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,7 +76,18 @@ const MessageThreadModal = ({ applicationId, myRole, onClose }) => {
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-            {!thread ? (
+            {loadError ? (
+              <div className="text-center mt-6">
+                <p className="text-xs text-richblack-400">Could not load the conversation.</p>
+                <button
+                  type="button"
+                  onClick={() => setRetryTick((t) => t + 1)}
+                  className="mt-2 text-xs font-semibold text-yellow-50 hover:underline cursor-pointer"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : !thread ? (
               <p className="text-xs text-richblack-400 text-center mt-6">Loading...</p>
             ) : thread.messages.length === 0 ? (
               <p className="text-xs text-richblack-400 text-center mt-6">No messages yet — say hello.</p>
