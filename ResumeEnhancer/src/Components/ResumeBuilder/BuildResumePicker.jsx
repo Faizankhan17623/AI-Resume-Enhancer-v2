@@ -57,7 +57,8 @@ const BuildResumePicker = () => {
 
   const handleChooseMode = (modeId) => {
     setMode(modeId)
-    if (modeId === 'blank' && hasIncomingTemplate) {
+    // generating guard sir, per 2026-11-09 audit — same reasoning as handlePickTemplate above
+    if (modeId === 'blank' && hasIncomingTemplate && !generating) {
       dispatch(CreateBuiltResume(incomingTemplate, token, navigate, incomingColor))
       setStep('creating')
       return
@@ -80,7 +81,10 @@ const BuildResumePicker = () => {
 
   const handlePickTemplate = (templateId) => {
     setSelectedTemplate(templateId)
-    if (mode === 'blank') {
+    // generating guard sir, per 2026-11-09 audit — same double-submit guard the other two modes
+    // (handleGenerate/handleTailor below) already have on their buttons; this path had none at
+    // all, so a fast double-click on a template thumbnail could fire two create calls
+    if (mode === 'blank' && !generating) {
       dispatch(CreateBuiltResume(templateId, token, navigate, selectedColor))
     }
   }
@@ -305,10 +309,11 @@ const BuildResumePicker = () => {
                   key={t.id}
                   layout
                   variants={fadeUp}
-                  whileHover={{ y: -3 }}
-                  whileTap={{ scale: 0.97 }}
+                  disabled={generating}
+                  whileHover={generating ? undefined : { y: -3 }}
+                  whileTap={generating ? undefined : { scale: 0.97 }}
                   onClick={() => handlePickTemplate(t.id)}
-                  className={`group text-left rounded-xl overflow-hidden border transition-colors duration-200 cursor-pointer ${
+                  className={`group text-left rounded-xl overflow-hidden border transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedTemplate === t.id ? 'border-warm-200 ring-2 ring-warm-200/40' : 'border-richblack-700 hover:border-richblack-500'
                   }`}
                 >

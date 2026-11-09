@@ -9,8 +9,14 @@ const { create, all, single, update, remove, generate, tailor, review, downloadD
 
 // create an (almost) empty resume right after picking a template sir, then the caller navigates to the editor.
 // color is optional — carried over when the user picked an accent on the dedicated Templates page.
+//
+// dispatches `generating` sir, per 2026-11-09 audit — this used to fire no loading flag at all,
+// unlike GenerateResume/TailorResume on the same page, which both guard their buttons on it. A
+// fast double-click on a template thumbnail could fire two create calls before the first
+// navigate() unmounted the page, leaving a duplicate BuiltResume document behind.
 export function CreateBuiltResume(templateId, token, navigate, color) {
-    return async () => {
+    return async (dispatch) => {
+        dispatch(setGenerating(true))
         try {
             const response = await apiConnector("POST", create, { templateId, ...(color ? { color } : {}) }, {
                 Authorization: `Bearer ${token}`
@@ -26,6 +32,8 @@ export function CreateBuiltResume(templateId, token, navigate, color) {
             logApiError("Error creating the resume", error)
             toast.error(error?.response?.data?.message || "Could not create the resume")
             return null
+        } finally {
+            dispatch(setGenerating(false))
         }
     }
 }
