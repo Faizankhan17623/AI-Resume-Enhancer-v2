@@ -220,10 +220,14 @@ const UserCreation = new mongoose.Schema(
             type: [String],
             default: [],
         },
-        // consecutive-day activity streak sir — bumped by any review or chat message
+        // consecutive-day activity streak sir — bumped by any review or chat message. Indexed
+        // descending sir, per 2026-11-09 audit — Leaderboard.js sorts on this field with a $gt:0
+        // filter and no index backed it, so every leaderboard view was a full collection scan +
+        // in-memory sort that would degrade as the user base grows.
         currentStreak: {
             type: Number,
-            default: 0
+            default: 0,
+            index: -1,
         },
         longestStreak: {
             type: Number,

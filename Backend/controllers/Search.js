@@ -19,6 +19,7 @@ const JobApplication = require('../Models/JobApplication')
 const Job = require('../Models/Job')
 const Test = require('../Models/Test')
 const Report = require('../Models/Report')
+const User = require('../Models/User')
 const logger = require('../utils/logger')
 
 const RESULT_LIMIT = 5 // per category sir — a palette shows a handful, not a full list
@@ -31,12 +32,22 @@ const containsRegex = (q) => new RegExp(escapeRegex(q), 'i')
 const searchAsUser = async (userId, q) => {
     const re = containsRegex(q)
 
-    const [resumes, builtResumes, coverLetters, applications] = await Promise.all([
+    // matching job IDs found FIRST sir, per 2026-11-09 audit — the old limit(RESULT_LIMIT*2) on
+    // JobApplication.find() truncated the candidate set BEFORE populate's match ran, so a user
+    // with many non-matching applications could have all the real matches fall outside that
+    // window and see zero results even though matches existed. Querying Job directly for matches
+    // (which already has a title index via its own text-search needs) means the limit on the
+    // JobApplication query below applies AFTER matching, not before.
+    const [resumes, builtResumes, coverLetters, matchingJobIds] = await Promise.all([
         Resume.find({ user: userId, label: re }).select('label').limit(RESULT_LIMIT),
         BuiltResume.find({ user: userId, title: re }).select('title').limit(RESULT_LIMIT),
         CoverLetter.find({ user: userId, title: re }).select('title').limit(RESULT_LIMIT),
-        JobApplication.find({ candidate: userId }).populate({ path: 'job', match: { title: re }, select: 'title companyName' }).limit(RESULT_LIMIT * 2),
+        Job.find({ title: re }).select('_id'),
     ])
+
+    const applications = await JobApplication.find({ candidate: userId, job: { $in: matchingJobIds.map((j) => j._id) } })
+        .populate('job', 'title companyName')
+        .limit(RESULT_LIMIT)
 
     return {
         resumes: resumes.map((r) => ({ id: r._id, label: r.label, link: '/Dashboard/Resumes' })),
@@ -44,7 +55,6 @@ const searchAsUser = async (userId, q) => {
         coverLetters: coverLetters.map((c) => ({ id: c._id, label: c.title, link: '/Dashboard/Cover-Letter' })),
         applications: applications
             .filter((a) => a.job)
-            .slice(0, RESULT_LIMIT)
             .map((a) => ({ id: a._id, label: `${a.job.title} at ${a.job.companyName}`, link: '/Dashboard/My-Applications' })),
     }
 }
@@ -58,19 +68,23 @@ const searchAsRecruiter = async (recruiterId, q) => {
     ])
 
     // applicants matched by candidate name/email sir — scoped to jobs this recruiter owns,
-    // never a global user lookup
+    // never a global user lookup. Matching candidate IDs found FIRST sir, per 2026-11-09 audit —
+    // same limit-before-match bug as searchAsUser's application search above, fixed the same way.
     const recruiterJobIds = await Job.find({ recruiter: recruiterId }).select('_id')
-    const applicants = await JobApplication.find({ job: { $in: recruiterJobIds.map((j) => j._id) } })
-        .populate({ path: 'candidate', match: { $or: [{ firstName: re }, { lastName: re }, { email: re }] }, select: 'firstName lastName email' })
+    const matchingCandidateIds = await User.find({ $or: [{ firstName: re }, { lastName: re }, { email: re }] }).select('_id')
+    const applicants = await JobApplication.find({
+        job: { $in: recruiterJobIds.map((j) => j._id) },
+        candidate: { $in: matchingCandidateIds.map((u) => u._id) },
+    })
+        .populate('candidate', 'firstName lastName email')
         .populate('job', 'title')
-        .limit(RESULT_LIMIT * 3)
+        .limit(RESULT_LIMIT)
 
     return {
         jobs: jobs.map((j) => ({ id: j._id, label: j.title, link: `/Recruiter/Jobs/${j._id}` })),
         tests: tests.map((t) => ({ id: t._id, label: t.title, link: '/Recruiter/Tests' })),
         applicants: applicants
             .filter((a) => a.candidate)
-            .slice(0, RESULT_LIMIT)
             .map((a) => ({ id: a._id, label: `${a.candidate.firstName} ${a.candidate.lastName} — ${a.job?.title || ''}`, link: `/Recruiter/Jobs/${a.job?._id}/applicants` })),
     }
 }
