@@ -30,6 +30,9 @@ exports.submitTestimonial = async (req, res) => {
             })
         }
 
+        // pre-check kept for a fast, friendly message sir — the REAL enforcement is
+        // Models/Testimonial.js's partial unique index on activeSubmission, added per
+        // 2026-11-09 audit after this check alone proved to be a TOCTOU race
         const existing = await Testimonial.findOne({ user: userId, status: { $in: ['pending', 'approved'] } })
         if (existing) {
             return res.status(400).json({
@@ -40,12 +43,27 @@ exports.submitTestimonial = async (req, res) => {
             })
         }
 
-        const testimonial = await Testimonial.create({
-            user: userId,
-            role: role.trim().slice(0, 100),
-            quote: quote.trim().slice(0, 500),
-            rating: ratingNum,
-        })
+        let testimonial
+        try {
+            testimonial = await Testimonial.create({
+                user: userId,
+                role: role.trim().slice(0, 100),
+                quote: quote.trim().slice(0, 500),
+                rating: ratingNum,
+                activeSubmission: true,
+            })
+        } catch (createError) {
+            // duplicate-key race sir — the pre-check above can't catch two near-simultaneous
+            // submissions; the partial unique index is the real guard. Same 400 the pre-check
+            // already gives, instead of a scary 500.
+            if (createError.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'You already have a testimonial pending or live on the site',
+                })
+            }
+            throw createError
+        }
 
         return res.status(201).json({
             success: true,
@@ -125,9 +143,15 @@ exports.moderateTestimonial = async (req, res) => {
             })
         }
 
+        // activeSubmission unset on rejection sir, per 2026-11-09 audit — a rejected testimonial
+        // can be resubmitted (per this file's own top comment), so the partial unique index
+        // guarding "one pending/approved at a time" must stop counting this row once rejected.
+        // Stays true on approval: an approved testimonial still occupies the user's one slot.
         const testimonial = await Testimonial.findByIdAndUpdate(
             testimonialId,
-            { status, reviewedBy: adminId },
+            status === 'rejected'
+                ? { $set: { status, reviewedBy: adminId }, $unset: { activeSubmission: 1 } }
+                : { $set: { status, reviewedBy: adminId } },
             { returnDocument: 'after' }
         ).populate('user', 'firstName lastName email')
 
