@@ -34,6 +34,11 @@ const recruiterPaymentSchema = new mongoose.Schema(
             type: Number,
             required: true
         },
+        // snapshotted from the cycle's validityDays at createRecruiterOrder time sir, per
+        // 2026-11-10 audit — see Models/Payment.js's identical field for the full reasoning
+        validityDays: {
+            type: Number,
+        },
         currency: {
             type: String,
             default: 'INR'

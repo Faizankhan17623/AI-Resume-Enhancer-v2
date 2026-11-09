@@ -62,12 +62,18 @@ const activatePaidOrder = async (orderId, paymentId, signature) => {
         }
 
         // billingCycle sir — which of the plan's two cycles (monthly/yearly) this Payment
-        // record was actually created for (see createOrder below); validityDays now lives on
-        // that cycle sub-object, not on the plan itself, since a plan no longer has one fixed
-        // duration
+        // record was actually created for (see createOrder below).
+        //
+        // validityDays read from the Payment row itself sir, per 2026-11-10 audit — previously
+        // re-read from the LIVE utils/Plans.js config at activation time, not from what was
+        // actually priced at purchase. If Plans.js changes between order creation and the
+        // webhook/verify firing (up to the full 30-minute payment-session window later), the
+        // user could be granted a different duration than they paid for. Falls back to the live
+        // config only for pre-existing rows created before this field was added (see this
+        // field's own comment on Models/Payment.js).
         const plan = PLANS[payment.plan]
-        const cycle = plan.billingCycles[payment.billingCycle]
-        const expires = new Date(Date.now() + cycle.validityDays * 24 * 60 * 60 * 1000)
+        const validityDays = payment.validityDays ?? plan.billingCycles[payment.billingCycle].validityDays
+        const expires = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000)
 
         // unlock the plan sir — count goes back to 0 so the new credits start fresh
         await User.findByIdAndUpdate(
@@ -168,12 +174,14 @@ exports.createOrder = async (req, res) => {
             }
         })
 
-        // keep our own record of the order so verify can find it later sir
+        // keep our own record of the order so verify can find it later sir — validityDays
+        // snapshotted here too, per 2026-11-10 audit, see Models/Payment.js's own comment
         await Payment.create({
             user: id,
             plan,
             billingCycle,
             amount: cycle.price,
+            validityDays: cycle.validityDays,
             orderId: order.id,
             status: 'created'
         })
@@ -390,6 +398,29 @@ exports.paymentWebhook = async (req, res) => {
 
         if (existing.status === 'paid') {
             return res.status(200).json({ success: true, message: 'Already processed' })
+        }
+
+        // amount/currency match sir, per 2026-11-10 audit — the signature above only proves this
+        // event genuinely came from Razorpay, never that the amount Razorpay actually captured
+        // equals what createOrder told it to charge. Without this check, any discrepancy
+        // (partial capture, a mismatched/reused order id, a Razorpay-side bug) would still
+        // silently activate the full plan on signature alone. Flag and refuse instead of
+        // granting access on an amount we never actually confirmed.
+        const capturedAmount = paymentEntity?.amount
+        const capturedCurrency = paymentEntity?.currency
+        if (
+            capturedAmount !== undefined && capturedAmount !== existing.amount ||
+            capturedCurrency !== undefined && capturedCurrency !== existing.currency
+        ) {
+            logger.error('payment webhook amount/currency mismatch, refusing to activate', {
+                orderId,
+                expectedAmount: existing.amount,
+                capturedAmount,
+                expectedCurrency: existing.currency,
+                capturedCurrency,
+            })
+            await Payment.updateOne({ orderId }, { status: 'failed' })
+            return res.status(200).json({ success: true, message: 'Amount mismatch, flagged for review' })
         }
 
         // signature on the webhook envelope already proves this event came from Razorpay sir —

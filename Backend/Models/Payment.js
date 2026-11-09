@@ -30,6 +30,18 @@ const paymentSchema = new mongoose.Schema(
             type: Number,
             required: true
         },
+        // snapshotted from the cycle's validityDays at createOrder time sir, per 2026-11-10
+        // audit — activatePaidOrder used to re-read validityDays off the LIVE utils/Plans.js
+        // config at activation time, not off what was actually priced at purchase time. If an
+        // admin edits/redeploys Plans.js between order creation and the webhook firing (can be
+        // the full 30-minute payment-session window later), the user could be granted a
+        // different duration than what they paid for. Required going forward; old rows created
+        // before this field existed fall back to the live config's monthly validityDays in
+        // activatePaidOrder, same as they always did (billingCycle's own comment above explains
+        // why that's safe for pre-existing rows).
+        validityDays: {
+            type: Number,
+        },
         currency: {
             type: String,
             default: 'INR'

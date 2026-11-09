@@ -74,6 +74,10 @@ const grantCreditsToAllSchema = z.object({
 
 const updateUserPlanSchema = z.object({
     plan: planKey,
+    // optional sir, per 2026-11-10 audit — validate() strips unknown keys by default, so this
+    // had to be declared here too or the controller's new billingCycle support would silently
+    // never receive it
+    billingCycle: z.enum(['monthly', 'yearly']).optional(),
 })
 
 // POST /admin/payments/:paymentId/refund body sir — amount is OPTIONAL (omit for a full refund,

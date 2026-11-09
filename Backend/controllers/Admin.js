@@ -655,7 +655,7 @@ exports.updateUserPlan = async (req, res) => {
     try {
         const adminId = req?.User.id
         const { userId } = req.params
-        const { plan } = req.body
+        const { plan, billingCycle } = req.body
 
         if (!mongoose.isValidObjectId(userId)) {
             return res.status(400).json({
@@ -668,6 +668,19 @@ exports.updateUserPlan = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Plan must be 'Basic', 'Pro' or 'ProMax'",
+            })
+        }
+
+        // billingCycle sir, per 2026-11-10 audit — optional, defaults to monthly (unchanged
+        // behavior for every existing caller that doesn't send it). Lets Support/Admin grant a
+        // yearly-equivalent window for a goodwill/refund-compensation case, which this endpoint
+        // previously had no way to express at all — every manual grant was silently capped to
+        // the monthly validity window regardless of intent.
+        const grantCycle = billingCycle === 'yearly' ? 'yearly' : 'monthly'
+        if (plan !== 'Basic' && !PLANS[plan].billingCycles[grantCycle]) {
+            return res.status(400).json({
+                success: false,
+                message: `${plan} has no '${grantCycle}' billing cycle`,
             })
         }
 
@@ -689,16 +702,16 @@ exports.updateUserPlan = async (req, res) => {
         }
 
         // Basic means clearing the subscription sir; paid plans get a fresh credit count and a
-        // full validity window. This manual grant always uses the MONTHLY cycle's validityDays
-        // sir — an Admin giveaway/refund-goodwill grant isn't a real yearly purchase, and
-        // PLANS[plan] no longer has one fixed validityDays now that Pro/ProMax each have two
-        // (monthly/yearly) billingCycles (see utils/Plans.js).
+        // full validity window. Defaults to the MONTHLY cycle's validityDays sir — an Admin
+        // giveaway/refund-goodwill grant isn't a real purchase, so monthly stays the sane default
+        // — but grantCycle above now lets a caller explicitly ask for 'yearly' instead, per
+        // 2026-11-10 audit.
         const update = plan === 'Basic'
             ? { Subscription: false, SubType: 'Basic', SubscriptionExpires: null }
             : {
                 Subscription: true,
                 SubType: plan,
-                SubscriptionExpires: new Date(Date.now() + PLANS[plan].billingCycles.monthly.validityDays * 24 * 60 * 60 * 1000),
+                SubscriptionExpires: new Date(Date.now() + PLANS[plan].billingCycles[grantCycle].validityDays * 24 * 60 * 60 * 1000),
                 count: 0,
             }
 
@@ -712,7 +725,7 @@ exports.updateUserPlan = async (req, res) => {
             })
         }
 
-        logAction(adminId, 'PLAN_CHANGE', user, { to: plan })
+        logAction(adminId, 'PLAN_CHANGE', user, { to: plan, billingCycle: plan === 'Basic' ? undefined : grantCycle })
 
         return res.status(200).json({
             success: true,

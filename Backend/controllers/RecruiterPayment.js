@@ -42,9 +42,12 @@ const activateRecruiterOrder = async (orderId, paymentId, signature) => {
             return { payment: existing, plan: RECRUITER_PLANS[existing.plan], expires: existing.updatedAt, alreadyPaid: true }
         }
 
+        // validityDays read from the Payment row itself sir, per 2026-11-10 audit — same fix as
+        // controllers/Payment.js's activatePaidOrder, see that file's comment for the full
+        // reasoning (config could change between order creation and activation)
         const plan = RECRUITER_PLANS[payment.plan]
-        const cycle = plan.billingCycles[payment.billingCycle]
-        const expires = new Date(Date.now() + cycle.validityDays * 24 * 60 * 60 * 1000)
+        const validityDays = payment.validityDays ?? plan.billingCycles[payment.billingCycle].validityDays
+        const expires = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000)
 
         // recruiterPlan/recruiterPlanExpiresAt ONLY sir — never Subscription/SubType/
         // SubscriptionExpires, those belong solely to the User plan system (utils/Plans.js)
@@ -134,11 +137,14 @@ exports.createRecruiterOrder = async (req, res) => {
             }
         })
 
+        // validityDays snapshotted here too, per 2026-11-10 audit — same fix as
+        // controllers/Payment.js's createOrder
         await RecruiterPayment.create({
             user: id,
             plan,
             billingCycle,
             amount: cycle.price,
+            validityDays: cycle.validityDays,
             orderId: order.id,
             status: 'created'
         })
@@ -320,6 +326,25 @@ exports.recruiterPaymentWebhook = async (req, res) => {
 
         if (existing.status === 'paid') {
             return res.status(200).json({ success: true, message: 'Already processed' })
+        }
+
+        // amount/currency match sir, per 2026-11-10 audit — same fix as controllers/Payment.js's
+        // paymentWebhook, see that file's comment for the full reasoning
+        const capturedAmount = paymentEntity?.amount
+        const capturedCurrency = paymentEntity?.currency
+        if (
+            capturedAmount !== undefined && capturedAmount !== existing.amount ||
+            capturedCurrency !== undefined && capturedCurrency !== existing.currency
+        ) {
+            logger.error('recruiter payment webhook amount/currency mismatch, refusing to activate', {
+                orderId,
+                expectedAmount: existing.amount,
+                capturedAmount,
+                expectedCurrency: existing.currency,
+                capturedCurrency,
+            })
+            await RecruiterPayment.updateOne({ orderId }, { status: 'failed' })
+            return res.status(200).json({ success: true, message: 'Amount mismatch, flagged for review' })
         }
 
         const activation = await activateRecruiterOrder(orderId, razorpayPaymentId || existing.paymentId, existing.signature)
