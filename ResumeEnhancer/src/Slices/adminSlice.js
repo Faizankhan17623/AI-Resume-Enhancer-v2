@@ -29,7 +29,11 @@ const initialState = {
     reports: [],
     recruiterApplications: [],
     recruiterDataHealth: null,
-    loading: false
+    loading: false,
+    // keyed by thunk name (e.g. 'health', 'aiStats') sir, per 2026-11-10 audit — Overview.jsx's
+    // 8 monitor cards used to show "Loading..." forever on a failed fetch, identical to a fetch
+    // that's genuinely still in flight, with no way to tell the admin anything actually broke
+    fetchErrors: {}
 };
 
 const adminSlice = createSlice({
@@ -113,12 +117,17 @@ const adminSlice = createSlice({
         },
         setLoading(state, value) {
             state.loading = value.payload
+        },
+        // payload: { key, failed } sir — failed=true marks the card's fetch as broken,
+        // failed=false clears it (a retry/refresh succeeded)
+        setFetchError(state, value) {
+            state.fetchErrors[value.payload.key] = value.payload.failed
         }
     }
 })
 
 export const {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setTrafficRange, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading, setFetchError
 } = adminSlice.actions
 export default adminSlice.reducer

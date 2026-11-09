@@ -3,7 +3,7 @@ import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
-    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading
+    setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading, setFetchError
 } from '../../Slices/adminSlice.js'
 import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications, AdminRecruiterDataHealth } from '../Apis/AdminApi.js'
 
@@ -53,8 +53,10 @@ export function GetAiStats(token) {
             }
 
             dispatch(setAiStats(response.data))
+            dispatch(setFetchError({ key: 'aiStats', failed: false }))
         } catch (error) {
             logApiError("Error fetching the AI stats", error)
+            dispatch(setFetchError({ key: 'aiStats', failed: true }))
         }
     }
 }
@@ -73,8 +75,10 @@ export function GetAiUsageByUser(token) {
             }
 
             dispatch(setAiUsageByUser(response.data.usage))
+            dispatch(setFetchError({ key: 'aiUsageByUser', failed: false }))
         } catch (error) {
             logApiError("Error fetching per-user AI usage", error)
+            dispatch(setFetchError({ key: 'aiUsageByUser', failed: true }))
         }
     }
 }
@@ -91,8 +95,10 @@ export function GetHealth(token) {
             }
 
             dispatch(setHealth(response.data.health))
+            dispatch(setFetchError({ key: 'health', failed: false }))
         } catch (error) {
             logApiError("Error fetching the health", error)
+            dispatch(setFetchError({ key: 'health', failed: true }))
         }
     }
 }
@@ -109,8 +115,10 @@ export function GetDeletions(token) {
             }
 
             dispatch(setDeletions(response.data.deletions))
+            dispatch(setFetchError({ key: 'deletions', failed: false }))
         } catch (error) {
             logApiError("Error fetching the deletion stats", error)
+            dispatch(setFetchError({ key: 'deletions', failed: true }))
         }
     }
 }
@@ -127,8 +135,10 @@ export function GetReconciliation(token) {
             }
 
             dispatch(setReconciliation(response.data.reconciliation))
+            dispatch(setFetchError({ key: 'reconciliation', failed: false }))
         } catch (error) {
             logApiError("Error fetching the reconciliation stats", error)
+            dispatch(setFetchError({ key: 'reconciliation', failed: true }))
         }
     }
 }
@@ -145,8 +155,10 @@ export function GetSecurity(token) {
             }
 
             dispatch(setSecurity(response.data.security))
+            dispatch(setFetchError({ key: 'security', failed: false }))
         } catch (error) {
             logApiError("Error fetching the security stats", error)
+            dispatch(setFetchError({ key: 'security', failed: true }))
         }
     }
 }
@@ -165,8 +177,10 @@ export function GetAtRisk(token) {
             }
 
             dispatch(setAtRisk(response.data.atRisk))
+            dispatch(setFetchError({ key: 'atRisk', failed: false }))
         } catch (error) {
             logApiError("Error fetching at-risk users", error)
+            dispatch(setFetchError({ key: 'atRisk', failed: true }))
         }
     }
 }
@@ -185,8 +199,10 @@ export function GetReferralAbuse(token) {
             }
 
             dispatch(setReferralAbuse(response.data.referralAbuse))
+            dispatch(setFetchError({ key: 'referralAbuse', failed: false }))
         } catch (error) {
             logApiError("Error fetching referral abuse signals", error)
+            dispatch(setFetchError({ key: 'referralAbuse', failed: true }))
         }
     }
 }

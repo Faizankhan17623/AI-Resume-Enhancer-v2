@@ -97,7 +97,7 @@ const Overview = () => {
   // sir, but per direct request Support should never see revenue figures — the stat card AND
   // the Revenue chart further down are both hidden for that role
   const isSupport = user?.role === 'Support'
-  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading } = useSelector((state) => state.admin)
+  const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading, fetchErrors } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
   // readyz badge sir — separate from GetHealth above, see READYZ_URL comment. null while
@@ -344,7 +344,7 @@ const Overview = () => {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-richblack-400">Checking...</p>
+              <p className="text-sm text-richblack-400">{fetchErrors.health ? 'Could not load, please refresh.' : 'Checking...'}</p>
             )}
           </div>
 
@@ -370,7 +370,7 @@ const Overview = () => {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-richblack-400">Loading...</p>
+              <p className="text-sm text-richblack-400">{fetchErrors.aiStats ? 'Could not load, please refresh.' : 'Loading...'}</p>
             )}
           </div>
 
@@ -405,7 +405,7 @@ const Overview = () => {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-richblack-400">Loading...</p>
+              <p className="text-sm text-richblack-400">{fetchErrors.deletions ? 'Could not load, please refresh.' : 'Loading...'}</p>
             )}
           </div>
 
@@ -442,7 +442,7 @@ const Overview = () => {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-richblack-400">Loading...</p>
+              <p className="text-sm text-richblack-400">{fetchErrors.reconciliation ? 'Could not load, please refresh.' : 'Loading...'}</p>
             )}
           </div>
 
@@ -479,7 +479,7 @@ const Overview = () => {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-richblack-400">Loading...</p>
+              <p className="text-sm text-richblack-400">{fetchErrors.security ? 'Could not load, please refresh.' : 'Loading...'}</p>
             )}
           </div>
         </div>
@@ -540,7 +540,7 @@ const Overview = () => {
               )}
             </>
           ) : (
-            <p className="text-sm text-richblack-400">Loading...</p>
+            <p className="text-sm text-richblack-400">{fetchErrors.atRisk ? 'Could not load, please refresh.' : 'Loading...'}</p>
           )}
         </div>
 
@@ -596,7 +596,7 @@ const Overview = () => {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-richblack-400">Loading...</p>
+            <p className="text-sm text-richblack-400">{fetchErrors.referralAbuse ? 'Could not load, please refresh.' : 'Loading...'}</p>
           )}
         </div>
 

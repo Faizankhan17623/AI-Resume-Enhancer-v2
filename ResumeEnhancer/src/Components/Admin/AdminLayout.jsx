@@ -101,6 +101,9 @@ const GlobalAdminSearch = () => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
+  // searchError sir, per 2026-11-10 audit — a failed search used to fake an empty
+  // { users: [], payments: [] } result, rendering "No matches." for a real backend/network error
+  const [searchError, setSearchError] = useState(false)
 
   useEffect(() => {
     const trimmed = query.trim()
@@ -112,8 +115,9 @@ const GlobalAdminSearch = () => {
       try {
         const data = await GlobalSearch(trimmed, token)
         setResults(data)
+        setSearchError(false)
       } catch {
-        setResults({ users: [], payments: [] })
+        setSearchError(true)
       } finally {
         setLoading(false)
       }
@@ -190,7 +194,7 @@ const GlobalAdminSearch = () => {
           >
             {!results || (!hasResults && !loading) ? (
               <p className="text-xs text-richblack-400 px-4 py-4 text-center">
-                {loading ? 'Searching...' : 'No matches.'}
+                {loading ? 'Searching...' : searchError ? 'Could not search, please try again.' : 'No matches.'}
               </p>
             ) : (
               <div className="max-h-96 overflow-y-auto">

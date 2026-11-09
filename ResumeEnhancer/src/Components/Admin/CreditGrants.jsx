@@ -63,6 +63,10 @@ const CreditGrants = () => {
 
   const [data, setData] = useState({ admin: null, referral: null })
   const [loading, setLoading] = useState(true)
+  // loadError sir, per 2026-11-10 audit — a failed fetch used to set data back to
+  // { admin: null, referral: null }, which renders identically to "nothing recorded yet" on
+  // a genuine financial audit page, hiding a real backend error from the admin
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -70,9 +74,9 @@ const CreditGrants = () => {
       setLoading(true)
       try {
         const result = await GetCreditGrants(token, { adminPage, referralPage, search })
-        if (!cancelled) setData(result)
+        if (!cancelled) { setData(result); setLoadError(false) }
       } catch {
-        if (!cancelled) setData({ admin: null, referral: null })
+        if (!cancelled) setLoadError(true)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -128,7 +132,9 @@ const CreditGrants = () => {
           </button>
         </form>
 
-        {loading && !data.admin && !data.referral ? (
+        {loadError ? (
+          <p className="text-richblack-300 text-sm text-center mt-8">Could not load credit grants, please try again.</p>
+        ) : loading && !data.admin && !data.referral ? (
           <Loading text="Loading credit grants..." />
         ) : (
           <div className="space-y-10">
