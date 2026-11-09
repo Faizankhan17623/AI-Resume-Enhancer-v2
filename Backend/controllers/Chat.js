@@ -43,6 +43,14 @@ exports.createChat = async (req, res) => {
                 message: 'Job Description is required',
             })
         }
+        // length cap sir, per 2026-11-09 audit — same 20000-char bound used everywhere else this
+        // session; this JD gets moderated AND saved below, both uncapped before this
+        if (jd.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Job Description is too long, please keep it under 20000 characters',
+            })
+        }
 
         // moderation pass sir — on the JD, BEFORE the transaction below (consumeCredit lives
         // inside it, alongside the Chat insert). This has to be checked out here rather than
@@ -83,7 +91,10 @@ exports.createChat = async (req, res) => {
             const [chat] = await Chat.create([{
                 user: id,
                 title,
-                resumeText: result.text,
+                // sliced sir, per 2026-11-09 audit — the schema's maxlength alone would throw a
+                // ValidationError (a scary 500) if a PDF parsed to more than this; clamping here
+                // means the save always succeeds cleanly instead
+                resumeText: result.text.slice(0, 20000),
                 jd,
                 messages: []
             }], { session })

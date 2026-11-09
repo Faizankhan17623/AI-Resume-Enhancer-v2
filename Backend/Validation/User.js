@@ -17,6 +17,12 @@ const notificationPrefsSchema = z.object({
     notifyWinBack: z.boolean().optional(),
     notifyDigest: z.boolean().optional(),
     notifyHealthCheck: z.boolean().optional(),
+    // was missing sir, per 2026-11-09 audit — Account.jsx sends { notifyInterviewPrep: value }
+    // alone when this one toggle is flipped. Since validate() strips unknown keys by default
+    // (Zod non-passthrough), the controller received {}, hit its "no fields" guard, and the
+    // toggle silently never saved. The field exists on Models/User.js, it was just never added
+    // here.
+    notifyInterviewPrep: z.boolean().optional(),
     notifyNewApplicant: z.boolean().optional(),
 })
 

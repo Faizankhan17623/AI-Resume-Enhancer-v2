@@ -16,15 +16,19 @@ const chatSchema = new mongoose.Schema(
             trim: true,
             maxlength: 80
         },
-        // the parsed resume text, saved once when the chat starts sir
+        // the parsed resume text, saved once when the chat starts sir. maxlength matches
+        // MockInterview.js's identical pair of fields, per 2026-11-09 audit — this was the one
+        // place in the app still missing the cap, after everywhere else got it this session.
         resumeText: {
             type: String,
-            required: true
+            required: true,
+            maxlength: 20000
         },
         // the job description this chat is about sir
         jd: {
             type: String,
-            required: true
+            required: true,
+            maxlength: 20000
         },
         // messages sir — count is already gated by plan.maxMessagesPerChat in controllers/Chat.js
         // (250/500 depending on plan) before a push happens, and per-message content length is

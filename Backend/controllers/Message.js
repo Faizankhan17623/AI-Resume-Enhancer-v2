@@ -94,11 +94,16 @@ exports.sendMessage = async (req, res) => {
         const { thread, application, isRecruiter } = result
 
         // cap sir, per 2026-11-08 audit — this thread's messages array had no cap at all, unlike
-        // Chat.js's plan-based cap (fixed earlier this session); two parties could exchange
-        // unlimited messages, growing one document toward Mongo's 16MB limit, which would hard-
-        // crash this thread rather than degrading gracefully. 500 is generous for a job-application
-        // conversation (no read receipts/attachments, per this model's own comment) while still
-        // being a real ceiling.
+        // Chat.js's plan-based cap; two parties could exchange unlimited messages, growing one
+        // document toward Mongo's 16MB limit, which would hard-crash this thread rather than
+        // degrading gracefully. 500 is generous for a job-application conversation (no read
+        // receipts/attachments, per this model's own comment) while still being a real ceiling.
+        //
+        // atomic push + re-check sir, per 2026-11-09 audit — the pre-check above alone was a
+        // TOCTOU race: thread at 499/500, recruiter and candidate both send at once, both read
+        // length:499 before either saves, both push, thread ends at 501. $push with the cap
+        // re-checked in the query filter is atomic, same shape as Chat.js's own fix — Mongo only
+        // applies the update if the condition still holds at write time.
         const MAX_THREAD_MESSAGES = 500
         if (thread.messages.length >= MAX_THREAD_MESSAGES) {
             return res.status(400).json({
@@ -107,14 +112,24 @@ exports.sendMessage = async (req, res) => {
             })
         }
 
-        thread.messages.push({ sender: isRecruiter ? 'recruiter' : 'candidate', text })
-        thread.lastMessageAt = new Date()
-        if (isRecruiter) {
-            thread.candidateUnreadCount += 1
-        } else {
-            thread.recruiterUnreadCount += 1
+        const unreadField = isRecruiter ? 'candidateUnreadCount' : 'recruiterUnreadCount'
+        const updatedThread = await MessageThread.findOneAndUpdate(
+            { _id: thread._id, [`messages.${MAX_THREAD_MESSAGES - 1}`]: { $exists: false } },
+            {
+                $push: { messages: { sender: isRecruiter ? 'recruiter' : 'candidate', text } },
+                $set: { lastMessageAt: new Date() },
+                $inc: { [unreadField]: 1 },
+            },
+            { returnDocument: 'after' }
+        )
+
+        if (!updatedThread) {
+            // the cap was hit by a concurrent send between our earlier check and this write sir
+            return res.status(400).json({
+                success: false,
+                message: 'This conversation has reached its message limit',
+            })
         }
-        await thread.save()
 
         // best-effort sir — same pattern as every other non-critical mail send in this
         // app: the message is already saved regardless of whether the email lands.
@@ -149,7 +164,7 @@ exports.sendMessage = async (req, res) => {
             (req.log || logger).error('new message mail failed', { err: mailError, applicationId })
         }
 
-        return res.status(201).json({ success: true, message: 'Message sent', thread })
+        return res.status(201).json({ success: true, message: 'Message sent', thread: updatedThread })
     } catch (error) {
         (req.log || logger).error('send message failed', { err: error })
         return res.status(500).json({
