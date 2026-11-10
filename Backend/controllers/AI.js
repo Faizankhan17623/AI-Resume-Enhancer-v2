@@ -1,4 +1,5 @@
 
+const mongoose = require('mongoose');
 const { PDFParse } = require('pdf-parse');
 
 const Resume = require('../Models/Resume');
@@ -90,6 +91,14 @@ exports.CallingFromSavedResume = async (req, res) => {
     try {
         const id = req?.User.id
         const { resumeId } = req.params
+
+        // bad id should be a clean 400, not a crash into the 500 sir
+        if (!mongoose.isValidObjectId(resumeId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid resume id',
+            })
+        }
 
         const resume = await Resume.findOne({ _id: resumeId, user: id })
         if (!resume) {

@@ -23,6 +23,9 @@ const User = require('../Models/User')
 const logger = require('../utils/logger')
 
 const RESULT_LIMIT = 5 // per category sir — a palette shows a handful, not a full list
+// cap for an intermediate ID-only lookup sir, per 2026-11-10 audit — these feed an $in filter
+// downstream, not the response directly, so this just needs to be "plenty", not RESULT_LIMIT-tight
+const ID_LOOKUP_LIMIT = 500
 
 // builds a case-insensitive "contains" regex sir — escaped so a query like "c++" or "a.b" can't
 // be (mis)read as regex syntax by whatever the caller typed
@@ -42,7 +45,7 @@ const searchAsUser = async (userId, q) => {
         Resume.find({ user: userId, label: re }).select('label').limit(RESULT_LIMIT),
         BuiltResume.find({ user: userId, title: re }).select('title').limit(RESULT_LIMIT),
         CoverLetter.find({ user: userId, title: re }).select('title').limit(RESULT_LIMIT),
-        Job.find({ title: re }).select('_id'),
+        Job.find({ title: re }).select('_id').limit(ID_LOOKUP_LIMIT).lean(),
     ])
 
     const applications = await JobApplication.find({ candidate: userId, job: { $in: matchingJobIds.map((j) => j._id) } })
@@ -70,8 +73,8 @@ const searchAsRecruiter = async (recruiterId, q) => {
     // applicants matched by candidate name/email sir — scoped to jobs this recruiter owns,
     // never a global user lookup. Matching candidate IDs found FIRST sir, per 2026-11-09 audit —
     // same limit-before-match bug as searchAsUser's application search above, fixed the same way.
-    const recruiterJobIds = await Job.find({ recruiter: recruiterId }).select('_id')
-    const matchingCandidateIds = await User.find({ $or: [{ firstName: re }, { lastName: re }, { email: re }] }).select('_id')
+    const recruiterJobIds = await Job.find({ recruiter: recruiterId }).select('_id').limit(ID_LOOKUP_LIMIT).lean()
+    const matchingCandidateIds = await User.find({ $or: [{ firstName: re }, { lastName: re }, { email: re }] }).select('_id').limit(ID_LOOKUP_LIMIT).lean()
     const applicants = await JobApplication.find({
         job: { $in: recruiterJobIds.map((j) => j._id) },
         candidate: { $in: matchingCandidateIds.map((u) => u._id) },

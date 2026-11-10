@@ -515,12 +515,24 @@ exports.submitAnswers = async (req, res) => {
         // server is the source of truth on time sir, never the client's own countdown —
         // a late submit still lands here as a timeout rather than a completion
         const timedOut = Date.now() > attempt.endsAt.getTime()
+        const status = timedOut ? 'terminated_timeout' : 'completed'
+        const score = scoreAnswers(attempt.test.questions, answers || [])
 
-        attempt.answers = answers || []
-        attempt.status = timedOut ? 'terminated_timeout' : 'completed'
-        attempt.submittedAt = new Date()
-        attempt.score = scoreAnswers(attempt.test.questions, attempt.answers)
-        await attempt.save()
+        // atomic status: 'in-progress' -> terminal sir, per 2026-11-10 audit — same race class
+        // logViolation already closes below: the plain findOne-then-save above could let two
+        // concurrent submits both pass the in-progress check and both save. Re-checked here so
+        // only the first write wins; the loser gets the same "already ended" response as a retry.
+        const updated = await TestAttempt.findOneAndUpdate(
+            { _id: attemptId, candidate: candidateId, status: 'in-progress' },
+            { answers: answers || [], status, submittedAt: new Date(), score },
+            { returnDocument: 'after' }
+        )
+        if (!updated) {
+            return res.status(400).json({
+                success: false,
+                message: 'This test attempt has already ended',
+            })
+        }
 
         // the applicant's status now reflects "done with the test step" sir, regardless of
         // WHICH terminal state ended it — the recruiter cares that it's finished and reviewable,
@@ -533,8 +545,8 @@ exports.submitAnswers = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: timedOut ? 'Time was up — your answers were auto-submitted' : 'Test submitted',
-            status: attempt.status,
-            score: attempt.score,
+            status: updated.status,
+            score: updated.score,
         })
     } catch (error) {
         (req.log || logger).error('submit answers failed', { err: error })
