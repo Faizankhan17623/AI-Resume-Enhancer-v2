@@ -2,7 +2,10 @@
 // retention: { weeklyActiveUsers, reviewCompletionRate, reviewAttempts, inactiveUsers } from
 // utils/AdminDigestCron.js's getRetentionStats — reviewCompletionRate is null when there were
 // zero review attempts that week (nothing to divide by), rendered as "—" rather than 0%
+const { escapeHtml } = require('../utils/escapeHtml')
+
 exports.adminDigestTemplate = (name, { counts, totalActions, retention, weekStart, weekEnd }) => {
+  name = escapeHtml(name)
   const rows = counts.map((c) => `
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #2C333F;color:#F9FAFB;font-size:14px;">${c.action.replace(/_/g, ' ')}</td>
