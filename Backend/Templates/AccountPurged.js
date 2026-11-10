@@ -2,7 +2,12 @@
 // deleted the account, not the earlier "scheduled for deletion" notice (see DeleteAccount.js,
 // sent when the 2-day recovery window STARTS). Same visual language as that template, but no
 // recovery notice — this action is irreversible and the email says so.
+const { escapeHtml } = require('../utils/escapeHtml')
+
 exports.accountPurgedEmail = (email, firstName, lastName) => {
+  email = escapeHtml(email)
+  firstName = escapeHtml(firstName)
+  lastName = escapeHtml(lastName)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

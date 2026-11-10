@@ -4,7 +4,10 @@
 // markup shape that renders consistently everywhere. Colors pulled from the real current app
 // palette (ResumeEnhancer/src/index.css) rather than OTP.js's older cyan/yellow pair, so this
 // actually matches what the user just saw in the product.
+const { escapeHtml } = require('../utils/escapeHtml')
+
 exports.welcomeEmail = (firstName, loginUrl) => {
+  firstName = escapeHtml(firstName)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -1,4 +1,9 @@
+const { escapeHtml } = require('../utils/escapeHtml')
+
 exports.deleteAccountEmail = (email, firstName, lastName, deletionDate) => {
+  email = escapeHtml(email)
+  firstName = escapeHtml(firstName)
+  lastName = escapeHtml(lastName)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

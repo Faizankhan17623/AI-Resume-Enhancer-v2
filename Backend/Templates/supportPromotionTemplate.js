@@ -1,4 +1,7 @@
+const { escapeHtml } = require('../utils/escapeHtml')
+
 exports.supportPromotionTemplate = (name) => {
+  name = escapeHtml(name)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

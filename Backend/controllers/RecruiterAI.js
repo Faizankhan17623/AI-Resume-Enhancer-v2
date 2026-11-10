@@ -4,6 +4,7 @@
 // than growing controllers/Job.js further since these three are their own product surface
 // (not job-posting/application mutations).
 
+const mongoose = require('mongoose')
 const Grok = require('groq-sdk')
 
 const Job = require('../Models/Job')
@@ -178,6 +179,11 @@ exports.generateCandidateSummary = async (req, res) => {
     try {
         const recruiterId = req?.User.id
         const { applicationId } = req.params
+
+        // bad id should be a clean 400, not a crash into the 500 sir
+        if (!mongoose.isValidObjectId(applicationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid application id' })
+        }
 
         const application = await JobApplication.findById(applicationId).populate('job')
         if (!application || !application.job) {
