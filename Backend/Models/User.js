@@ -128,10 +128,6 @@ const UserCreation = new mongoose.Schema(
         BufferTiming:{
             type:String
         },
-        Newchat:[{
-            type:mongoose.Schema.ObjectId,
-            ref:"Chat"
-        }],
         // RBAC sir — User is normal, Support can view/help but not destroy, Admin can do everything,
         // Recruiter owns proctored tests (see Models/Test.js, Models/TestAttempt.js) and is
         // otherwise isolated from both the admin tools and the candidate-facing product features

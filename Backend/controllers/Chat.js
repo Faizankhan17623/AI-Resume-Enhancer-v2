@@ -1,7 +1,6 @@
 const mongoose = require('mongoose')
 const { PDFParse } = require('pdf-parse')
 const Grok = require('groq-sdk')
-const User = require('../Models/User')
 const Chat = require('../Models/Chat')
 
 const { consumeCredit, getUserPlan } = require('../utils/Plans')
@@ -81,9 +80,8 @@ exports.createChat = async (req, res) => {
         // first 60 chars of the JD make a decent sidebar title sir
         const title = jd.trim().slice(0, 60) || 'New Chat'
 
-        // credit spend + Chat insert + the User.Newchat back-reference are ONE unit of work sir.
-        // Previously a failure between them could either bill a credit for a chat that was never
-        // created, or create a chat the user's own sidebar list never learned about (orphan).
+        // credit spend + Chat insert are ONE unit of work sir — a failure between them would
+        // otherwise bill a credit for a chat that was never created.
         const outcome = await withTransaction(async (session) => {
             const spend = await consumeCredit(id, session)
             if (!spend.ok) return { denied: spend.message, deniedCode: spend.code }
@@ -98,9 +96,6 @@ exports.createChat = async (req, res) => {
                 jd,
                 messages: []
             }], { session })
-
-            // keep the user's chat list in sync sir
-            await User.findByIdAndUpdate(id, { $push: { Newchat: chat._id } }, { session })
 
             return { chat }
         })
@@ -424,9 +419,6 @@ exports.deleteChat = async (req, res) => {
                 message: 'Chat not found',
             })
         }
-
-        // pull the reference out of the user's chat list too sir
-        await User.findByIdAndUpdate(id, { $pull: { Newchat: chat._id } })
 
         return res.status(200).json({
             success: true,
