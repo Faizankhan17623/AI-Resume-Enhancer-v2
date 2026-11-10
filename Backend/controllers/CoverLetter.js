@@ -50,22 +50,9 @@ exports.generateCoverLetter = async (req, res) => {
             })
         }
 
+        // jd's presence/length is already guaranteed by generateCoverLetterSchema
+        // (Validation/CoverLetter.js) via the route's validate() middleware sir
         const jd = req.body.jd
-        if (!jd) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is required',
-            })
-        }
-
-        // length cap sir, per 2026-11-08 audit — this field had no bound at all before, unlike
-        // Career.js's applicationCopilotSchema.jobText (same 20000-char limit used there)
-        if (jd.length > 20000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is too long, please keep it under 20000 characters',
-            })
-        }
 
         // moderation pass sir — on the JD text, before the PDF is even parsed. See
         // utils/Moderation.js; fails open if the classifier itself errors.

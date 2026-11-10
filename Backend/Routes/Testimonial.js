@@ -2,6 +2,8 @@ const express = require('express')
 const route = express.Router()
 const { Auth, isUserOrRecruiter, isSupport, isAdmin } = require('../Middlewares/Auth.js')
 const { adminWriteLimiter, adminReadLimiter, testimonialLimiter } = require('../Middlewares/RateLimit.js')
+const { validate } = require('../Middlewares/Validate.js')
+const { submitTestimonialSchema, moderateTestimonialSchema } = require('../Validation/schemas.js')
 const {
     submitTestimonial,
     getMyTestimonial,
@@ -12,12 +14,12 @@ const {
 } = require('../controllers/Testimonial.js')
 
 // user-facing sir — both a candidate and a Recruiter can share a story; Admin/Support still blocked
-route.post('/testimonials', Auth, isUserOrRecruiter, testimonialLimiter, submitTestimonial)
+route.post('/testimonials', Auth, isUserOrRecruiter, testimonialLimiter, validate({ body: submitTestimonialSchema }), submitTestimonial)
 route.get('/testimonials/mine', Auth, isUserOrRecruiter, getMyTestimonial)
 
 // moderation sir — Support can view the queue, only Admin can approve/reject/delete
 route.get('/admin/testimonials', Auth, isSupport, adminReadLimiter, getTestimonials)
-route.patch('/admin/testimonials/:testimonialId', Auth, isAdmin, adminWriteLimiter, moderateTestimonial)
+route.patch('/admin/testimonials/:testimonialId', Auth, isAdmin, adminWriteLimiter, validate({ body: moderateTestimonialSchema }), moderateTestimonial)
 route.delete('/admin/testimonials/:testimonialId', Auth, isAdmin, adminWriteLimiter, deleteTestimonial)
 
 // public sir — the homepage reads this, no login needed

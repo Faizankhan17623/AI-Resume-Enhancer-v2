@@ -101,21 +101,9 @@ exports.startMockInterview = async (req, res) => {
             })
         }
 
+        // jd's presence/length is already guaranteed by startMockInterviewSchema
+        // (Validation/MockInterview.js) via the route's validate() middleware sir
         const jd = req.body.jd
-        if (!jd || !jd.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is required',
-            })
-        }
-
-        // length cap sir, per 2026-11-08 audit — same bound as CoverLetter.js's
-        if (jd.length > 20000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is too long, please keep it under 20000 characters',
-            })
-        }
 
         // parse the upload BEFORE spending sir — a bad PDF used to cost a credit on the way to a 400
         const parser = new PDFParse({ data: PDf.data })
@@ -210,27 +198,14 @@ exports.answerMockInterview = async (req, res) => {
     try {
         const id = req?.User.id
         const { sessionId } = req.params
+        // answer's presence/length is already guaranteed by answerMockInterviewSchema
+        // (Validation/MockInterview.js) via the route's validate() middleware sir
         const answer = req.body.answer
 
         if (!mongoose.isValidObjectId(sessionId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid session id',
-            })
-        }
-
-        if (!answer || !answer.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'An answer is required',
-            })
-        }
-
-        // length cap sir, per 2026-11-08 audit — same 5000-char bound Chat.js's message cap uses
-        if (answer.trim().length > 5000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Your answer is too long, please keep it under 5000 characters',
             })
         }
 

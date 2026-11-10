@@ -12,27 +12,15 @@ const logger = require('../utils/logger')
 exports.submitReport = async (req, res) => {
     try {
         const userId = req?.User.id
+        // type/title/description are already guaranteed valid by submitReportSchema
+        // (Validation/Report.js) via the route's validate() middleware sir
         const { type, title, description } = req.body
-
-        if (!['bug', 'feature'].includes(type)) {
-            return res.status(400).json({
-                success: false,
-                message: "Type must be 'bug' or 'feature'",
-            })
-        }
-
-        if (!title?.trim() || !description?.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Title and description are both required',
-            })
-        }
 
         const report = await Report.create({
             user: userId,
             type,
-            title: title.trim().slice(0, 150),
-            description: description.trim().slice(0, 2000),
+            title,
+            description,
         })
 
         return res.status(201).json({
@@ -101,6 +89,8 @@ exports.updateReportStatus = async (req, res) => {
     try {
         const adminId = req?.User.id
         const { reportId } = req.params
+        // status/adminNote are already guaranteed valid by updateReportStatusSchema
+        // (Validation/Report.js) via the route's validate() middleware sir
         const { status, adminNote } = req.body
 
         if (!mongoose.isValidObjectId(reportId)) {
@@ -110,16 +100,9 @@ exports.updateReportStatus = async (req, res) => {
             })
         }
 
-        if (!['open', 'in_progress', 'planned', 'resolved', 'declined'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid status',
-            })
-        }
-
         const report = await Report.findByIdAndUpdate(
             reportId,
-            { status, reviewedBy: adminId, ...(adminNote !== undefined && { adminNote: adminNote?.trim()?.slice(0, 1000) }) },
+            { status, reviewedBy: adminId, ...(adminNote !== undefined && { adminNote }) },
             { returnDocument: 'after' }
         ).populate('user', 'firstName lastName email')
 

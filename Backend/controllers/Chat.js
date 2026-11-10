@@ -34,22 +34,9 @@ exports.createChat = async (req, res) => {
             })
         }
 
+        // jd's presence/length is already guaranteed by createChatSchema (Validation/Chat.js)
+        // via the route's validate() middleware sir
         const jd = req.body.jd
-        // not case sir
-        if (!jd) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is required',
-            })
-        }
-        // length cap sir, per 2026-11-09 audit — same 20000-char bound used everywhere else this
-        // session; this JD gets moderated AND saved below, both uncapped before this
-        if (jd.length > 20000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Job Description is too long, please keep it under 20000 characters',
-            })
-        }
 
         // moderation pass sir — on the JD, BEFORE the transaction below (consumeCredit lives
         // inside it, alongside the Chat insert). This has to be checked out here rather than
@@ -130,6 +117,8 @@ exports.sendMessage = async (req, res) => {
     try {
         const id = req?.User.id
         const { chatId } = req.params
+        // message's presence/length is already guaranteed by sendChatMessageSchema
+        // (Validation/Chat.js) via the route's validate() middleware sir
         const message = req.body.message
 
         // bad id should be a clean 400, not a crash into the 500 sir
@@ -137,23 +126,6 @@ exports.sendMessage = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid chat id',
-            })
-        }
-
-        // not case sir
-        if (!message || !message.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Message is required',
-            })
-        }
-
-        // length cap sir, per 2026-11-08 audit — nothing bounded a chat message's size before
-        // this, same 5000-char ceiling Validation/Job.js's description field already uses
-        if (message.trim().length > 5000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Message is too long, please keep it under 5000 characters',
             })
         }
 

@@ -41,30 +41,15 @@ exports.getFeedbackStatus = async (req, res) => {
 exports.submitFeedback = async (req, res) => {
     try {
         const id = req?.User.id
+        // rating/referralScore/reviewText are already guaranteed valid by submitFeedbackSchema
+        // (Validation/Feedback.js) via the route's validate() middleware sir
         const { rating, referralScore, reviewText } = req.body
-
-        const ratingNum = Number(rating)
-        const referralNum = Number(referralScore)
-
-        if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rating must be a whole number between 1 and 5',
-            })
-        }
-
-        if (!Number.isInteger(referralNum) || referralNum < 0 || referralNum > 10) {
-            return res.status(400).json({
-                success: false,
-                message: 'Referral score must be a whole number between 0 and 10',
-            })
-        }
 
         await Feedback.create({
             user: id,
-            rating: ratingNum,
-            referralScore: referralNum,
-            reviewText: reviewText?.trim()?.slice(0, 1000),
+            rating,
+            referralScore,
+            reviewText,
         })
 
         await User.findByIdAndUpdate(id, { feedbackSubmitted: true })

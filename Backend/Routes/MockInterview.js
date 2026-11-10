@@ -2,6 +2,8 @@ const express = require('express')
 const route = express.Router()
 const { Auth, isUser } = require('../Middlewares/Auth.js')
 const { aiLimiter } = require('../Middlewares/RateLimit.js')
+const { validate } = require('../Middlewares/Validate.js')
+const { startMockInterviewSchema, answerMockInterviewSchema } = require('../Validation/schemas.js')
 const {
     startMockInterview,
     answerMockInterview,
@@ -14,8 +16,8 @@ const {
 // isUser blocks Admin/Support, this is a product feature, strictly User-only
 
 // both of these hit Groq sir so they get the AI rate limit
-route.post('/mock-interview', aiLimiter, Auth, isUser, startMockInterview)
-route.post('/mock-interview/:sessionId/answer', aiLimiter, Auth, isUser, answerMockInterview)
+route.post('/mock-interview', aiLimiter, Auth, isUser, validate({ body: startMockInterviewSchema }), startMockInterview)
+route.post('/mock-interview/:sessionId/answer', aiLimiter, Auth, isUser, validate({ body: answerMockInterviewSchema }), answerMockInterview)
 route.get('/mock-interview', Auth, isUser, getMockInterviews)
 route.get('/mock-interview/:sessionId', Auth, isUser, getMockInterview)
 route.delete('/mock-interview/:sessionId', Auth, isUser, deleteMockInterview)

@@ -13,48 +13,26 @@ const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
 exports.createApplication = async (req, res) => {
     try {
         const id = req?.User.id
+        // company/role/status/location/jobUrl/notes/appliedDate shape+length and
+        // resume/builtResume/review's id FORMAT are already guaranteed valid by
+        // createApplicationSchema (Validation/Application.js) via the route's validate()
+        // middleware sir — only the ownership checks below (does this id belong to THIS user)
+        // still need to happen here, since that needs an async DB lookup Zod can't do
         const { company, role, status, location, jobUrl, notes, appliedDate, resume, builtResume, review } = req.body
 
-        if (!company?.trim() || !role?.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Company and role are required',
-            })
-        }
-
-        if (status && !STATUSES.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid status',
-            })
-        }
-
         if (resume) {
-            if (!mongoose.isValidObjectId(resume)) {
-                return res.status(400).json({ success: false, message: 'Invalid resume id' })
-            }
-            // must be one of THIS user's own resumes sir — same ownership check as review below,
-            // which resume/builtResume were missing (only their ObjectId FORMAT was validated,
-            // never that the id actually belongs to the caller)
             const ownedResume = await Resume.exists({ _id: resume, user: id })
             if (!ownedResume) {
                 return res.status(400).json({ success: false, message: 'Resume not found' })
             }
         }
         if (builtResume) {
-            if (!mongoose.isValidObjectId(builtResume)) {
-                return res.status(400).json({ success: false, message: 'Invalid built resume id' })
-            }
             const ownedBuiltResume = await BuiltResume.exists({ _id: builtResume, user: id })
             if (!ownedBuiltResume) {
                 return res.status(400).json({ success: false, message: 'Built resume not found' })
             }
         }
         if (review) {
-            if (!mongoose.isValidObjectId(review)) {
-                return res.status(400).json({ success: false, message: 'Invalid review id' })
-            }
-            // must be one of THIS user's own reviews sir, not just any valid id
             const owned = await Review.exists({ _id: review, user: id })
             if (!owned) {
                 return res.status(400).json({ success: false, message: 'Review not found' })
@@ -63,12 +41,12 @@ exports.createApplication = async (req, res) => {
 
         const application = await Application.create({
             user: id,
-            company: company.trim().slice(0, 120),
-            role: role.trim().slice(0, 120),
+            company,
+            role,
             status: status || 'Applied',
-            location: location?.trim().slice(0, 120),
-            jobUrl: jobUrl?.trim().slice(0, 500),
-            notes: notes?.trim().slice(0, 2000),
+            location,
+            jobUrl,
+            notes,
             appliedDate: appliedDate || Date.now(),
             resume: resume || undefined,
             builtResume: builtResume || undefined,
@@ -125,12 +103,10 @@ exports.updateApplication = async (req, res) => {
             })
         }
 
-        if (status && !STATUSES.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid status',
-            })
-        }
+        // status/company/role/location/jobUrl/notes/appliedDate shape+length and
+        // resume/builtResume/review's id FORMAT are already guaranteed valid by
+        // updateApplicationSchema (Validation/Application.js) via the route's validate()
+        // middleware sir — only the ownership checks below still need to happen here
 
         const application = await Application.findOne({ _id: applicationId, user: id })
         if (!application) {
@@ -140,18 +116,15 @@ exports.updateApplication = async (req, res) => {
             })
         }
 
-        if (typeof company === 'string' && company.trim()) application.company = company.trim().slice(0, 120)
-        if (typeof role === 'string' && role.trim()) application.role = role.trim().slice(0, 120)
+        if (typeof company === 'string' && company.trim()) application.company = company
+        if (typeof role === 'string' && role.trim()) application.role = role
         if (status) application.status = status
-        if (typeof location === 'string') application.location = location.trim().slice(0, 120)
-        if (typeof jobUrl === 'string') application.jobUrl = jobUrl.trim().slice(0, 500)
-        if (typeof notes === 'string') application.notes = notes.trim().slice(0, 2000)
+        if (typeof location === 'string') application.location = location
+        if (typeof jobUrl === 'string') application.jobUrl = jobUrl
+        if (typeof notes === 'string') application.notes = notes
         if (appliedDate) application.appliedDate = appliedDate
         if (resume !== undefined) {
             if (resume) {
-                if (!mongoose.isValidObjectId(resume)) {
-                    return res.status(400).json({ success: false, message: 'Invalid resume id' })
-                }
                 const ownedResume = await Resume.exists({ _id: resume, user: id })
                 if (!ownedResume) {
                     return res.status(400).json({ success: false, message: 'Resume not found' })
@@ -161,9 +134,6 @@ exports.updateApplication = async (req, res) => {
         }
         if (builtResume !== undefined) {
             if (builtResume) {
-                if (!mongoose.isValidObjectId(builtResume)) {
-                    return res.status(400).json({ success: false, message: 'Invalid built resume id' })
-                }
                 const ownedBuiltResume = await BuiltResume.exists({ _id: builtResume, user: id })
                 if (!ownedBuiltResume) {
                     return res.status(400).json({ success: false, message: 'Built resume not found' })
@@ -173,9 +143,6 @@ exports.updateApplication = async (req, res) => {
         }
         if (review !== undefined) {
             if (review) {
-                if (!mongoose.isValidObjectId(review)) {
-                    return res.status(400).json({ success: false, message: 'Invalid review id' })
-                }
                 const owned = await Review.exists({ _id: review, user: id })
                 if (!owned) {
                     return res.status(400).json({ success: false, message: 'Review not found' })

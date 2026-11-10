@@ -2,6 +2,8 @@ const express = require('express')
 const route = express.Router()
 const { Auth, isUser } = require('../Middlewares/Auth.js')
 const { aiLimiter } = require('../Middlewares/RateLimit.js')
+const { validate } = require('../Middlewares/Validate.js')
+const { createApplicationSchema, updateApplicationSchema } = require('../Validation/schemas.js')
 const {
     createApplication,
     getApplications,
@@ -23,9 +25,9 @@ const {
 // isValidObjectId check
 route.get('/applications/analytics', Auth, isUser, getApplicationAnalytics)
 route.get('/applications/rejection-patterns', Auth, isUser, getRejectionPatterns)
-route.post('/applications', Auth, isUser, createApplication)
+route.post('/applications', Auth, isUser, validate({ body: createApplicationSchema }), createApplication)
 route.get('/applications', Auth, isUser, getApplications)
-route.patch('/applications/:applicationId', Auth, isUser, updateApplication)
+route.patch('/applications/:applicationId', Auth, isUser, validate({ body: updateApplicationSchema }), updateApplication)
 route.delete('/applications/:applicationId', Auth, isUser, deleteApplication)
 route.post('/applications/:applicationId/diagnose', aiLimiter, Auth, isUser, diagnoseRejection)
 

@@ -71,21 +71,9 @@ exports.getLearningResources = async (req, res) => {
             })
         }
 
+        // query's presence/length is already guaranteed by getLearningResourcesSchema
+        // (Validation/LearningResources.js) via the route's validate() middleware sir
         const query = req.body.query
-        if (!query || !query.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'A search query is required',
-            })
-        }
-        // length cap sir, per 2026-11-09 audit — same 500-char bound as JobSearch.js's query,
-        // this is also used as a cache key and sent to Tavily
-        if (query.length > 500) {
-            return res.status(400).json({
-                success: false,
-                message: 'That search is too long, please keep it under 500 characters',
-            })
-        }
 
         const results = await fetchResourcesFor(query.trim())
 

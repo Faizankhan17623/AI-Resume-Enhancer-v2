@@ -125,11 +125,9 @@ exports.getPushPublicKey = async (req, res) => {
 exports.subscribeToPush = async (req, res) => {
     try {
         const userId = req.User.id
+        // endpoint/keys/userAgent are already guaranteed valid by subscribeToPushSchema
+        // (Validation/Notification.js) via the route's validate() middleware sir
         const { endpoint, keys, userAgent } = req.body
-
-        if (!endpoint || !keys?.p256dh || !keys?.auth) {
-            return res.status(400).json({ success: false, message: 'Invalid push subscription' })
-        }
 
         await PushSubscription.findOneAndUpdate(
             { endpoint },
@@ -153,11 +151,9 @@ exports.subscribeToPush = async (req, res) => {
 exports.unsubscribeFromPush = async (req, res) => {
     try {
         const userId = req.User.id
+        // endpoint's presence is already guaranteed by unsubscribeFromPushSchema
+        // (Validation/Notification.js) via the route's validate() middleware sir
         const { endpoint } = req.body
-
-        if (!endpoint) {
-            return res.status(400).json({ success: false, message: 'endpoint is required' })
-        }
 
         await PushSubscription.deleteOne({ endpoint, user: userId })
 

@@ -13,22 +13,9 @@ const logger = require('../utils/logger')
 exports.submitTestimonial = async (req, res) => {
     try {
         const userId = req?.User.id
+        // role/quote/rating are already guaranteed valid by submitTestimonialSchema
+        // (Validation/Testimonial.js) via the route's validate() middleware sir
         const { role, quote, rating } = req.body
-
-        if (!role?.trim() || !quote?.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Role and quote are both required',
-            })
-        }
-
-        const ratingNum = Number(rating)
-        if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rating must be a whole number between 1 and 5',
-            })
-        }
 
         // pre-check kept for a fast, friendly message sir — the REAL enforcement is
         // Models/Testimonial.js's partial unique index on activeSubmission, added per
@@ -47,9 +34,9 @@ exports.submitTestimonial = async (req, res) => {
         try {
             testimonial = await Testimonial.create({
                 user: userId,
-                role: role.trim().slice(0, 100),
-                quote: quote.trim().slice(0, 500),
-                rating: ratingNum,
+                role,
+                quote,
+                rating,
                 activeSubmission: true,
             })
         } catch (createError) {
@@ -127,19 +114,14 @@ exports.moderateTestimonial = async (req, res) => {
     try {
         const adminId = req?.User.id
         const { testimonialId } = req.params
+        // status is already guaranteed valid by moderateTestimonialSchema
+        // (Validation/Testimonial.js) via the route's validate() middleware sir
         const { status } = req.body
 
         if (!mongoose.isValidObjectId(testimonialId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid testimonial id',
-            })
-        }
-
-        if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: "Status must be 'approved' or 'rejected'",
             })
         }
 

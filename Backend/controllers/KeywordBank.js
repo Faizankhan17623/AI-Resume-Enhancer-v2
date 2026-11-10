@@ -44,19 +44,14 @@ exports.updateKeywordStatus = async (req, res) => {
     try {
         const id = req?.User.id
         const { itemId } = req.params
+        // status is already guaranteed to be one of the 3 valid values by
+        // updateKeywordStatusSchema (Validation/KeywordBank.js) via the route's validate() sir
         const { status } = req.body
 
         if (!mongoose.isValidObjectId(itemId)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid keyword id',
-            })
-        }
-
-        if (!['added', 'ignored', 'missing'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Status must be added, ignored, or missing',
             })
         }
 

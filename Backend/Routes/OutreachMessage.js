@@ -2,6 +2,8 @@ const express = require('express')
 const route = express.Router()
 const { Auth, isUser } = require('../Middlewares/Auth.js')
 const { aiLimiter } = require('../Middlewares/RateLimit.js')
+const { validate } = require('../Middlewares/Validate.js')
+const { generateOutreachMessageSchema } = require('../Validation/schemas.js')
 const {
     generateOutreachMessage,
     getOutreachMessages,
@@ -11,7 +13,7 @@ const {
 // AI-drafted outreach messages sir — Pro+ feature, gated inside the controller.
 // isUser blocks Admin/Support too, this is a product feature, strictly User-only
 
-route.post('/outreach-message', aiLimiter, Auth, isUser, generateOutreachMessage)
+route.post('/outreach-message', aiLimiter, Auth, isUser, validate({ body: generateOutreachMessageSchema }), generateOutreachMessage)
 route.get('/outreach-message', Auth, isUser, getOutreachMessages)
 route.get('/outreach-message/:outreachMessageId', Auth, isUser, getOutreachMessage)
 

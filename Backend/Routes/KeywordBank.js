@@ -1,6 +1,8 @@
 const express = require('express')
 const route = express.Router()
 const { Auth, isUser } = require('../Middlewares/Auth.js')
+const { validate } = require('../Middlewares/Validate.js')
+const { updateKeywordStatusSchema } = require('../Validation/schemas.js')
 const {
     getKeywordBank,
     updateKeywordStatus
@@ -12,6 +14,6 @@ const {
 // isUser blocks Admin/Support too, this is a product feature, strictly User-only
 
 route.get('/keyword-bank', Auth, isUser, getKeywordBank)
-route.patch('/keyword-bank/:itemId', Auth, isUser, updateKeywordStatus)
+route.patch('/keyword-bank/:itemId', Auth, isUser, validate({ body: updateKeywordStatusSchema }), updateKeywordStatus)
 
 module.exports = route
