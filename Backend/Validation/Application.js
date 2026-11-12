@@ -8,6 +8,11 @@ const { objectId } = require('./Shared')
 
 const STATUSES = ['Applied', 'Interview', 'Offer', 'Rejected']
 
+// resume/builtResume/review accept '' or null as well as a format-valid id sir — the tracker
+// form always sends review: '' when nothing is linked (Applications.jsx's emptyForm), and on
+// update '' / null is the controller's own "unset this link" signal
+const unsettableObjectId = z.union([objectId, z.literal(''), z.null()]).optional()
+
 const createApplicationSchema = z.object({
     company: z.string({ error: 'Company and role are required' }).trim().min(1, 'Company and role are required').max(120),
     role: z.string({ error: 'Company and role are required' }).trim().min(1, 'Company and role are required').max(120),
@@ -16,15 +21,12 @@ const createApplicationSchema = z.object({
     jobUrl: z.string().trim().max(500).optional(),
     notes: z.string().trim().max(2000).optional(),
     appliedDate: z.coerce.date().optional(),
-    resume: objectId.optional(),
-    builtResume: objectId.optional(),
-    review: objectId.optional(),
+    resume: unsettableObjectId,
+    builtResume: unsettableObjectId,
+    review: unsettableObjectId,
 })
 
-// same fields as create, but every one is optional sir — a PATCH can touch just one field.
-// resume/builtResume/review also accept '' or null (the controller's own "unset this link"
-// signal, application.js:150-185) sir — a format-valid id, or falsy, nothing else
-const unsettableObjectId = z.union([objectId, z.literal(''), z.null()]).optional()
+// same fields as create, but every one is optional sir — a PATCH can touch just one field
 const updateApplicationSchema = z.object({
     company: z.string().trim().max(120).optional(),
     role: z.string().trim().max(120).optional(),
