@@ -90,19 +90,32 @@ const allowedOrigins = process.env.FRONTEND_URL
 // own slug + team id so it can't be satisfied by an unrelated vercel.app site.
 const VERCEL_PROJECT_ORIGIN = /^https:\/\/ai-resume-enhancer-v2(-[a-z0-9]+)?-faizan-khans-projects-6a6ea604\.vercel\.app$/
 
+const originAllowed = (origin) =>
+    allowedOrigins === true ||
+    (Array.isArray(allowedOrigins) && (allowedOrigins.includes(origin) || VERCEL_PROJECT_ORIGIN.test(origin)))
+
 const isAllowedOrigin = (origin, callback) => {
     if (!origin) return callback(null, true) // same-origin / non-browser clients send no Origin header
-    if (allowedOrigins === true) return callback(null, true)
-    if (Array.isArray(allowedOrigins) && (allowedOrigins.includes(origin) || VERCEL_PROJECT_ORIGIN.test(origin))) {
-        return callback(null, true)
-    }
-    return callback(null, false)
+    return callback(null, originAllowed(origin))
 }
 
 app.use(cors({
     origin: isAllowedOrigin,
     credentials: true
 }))
+
+// CSRF guard sir — the auth cookie is sameSite:'none' (utils/session.js), so a browser attaches
+// it to a cross-site form POST too, and CORS only stops the attacker READING the response, not
+// the request running. Browsers always send Origin on a cross-site write, so a write whose
+// Origin is not ours is refused here, before any body is parsed. No Origin at all (Razorpay's
+// webhooks, curl, server-to-server) is not a browser and carries no victim cookie, so it passes.
+app.use((req, res, next) => {
+    const origin = req.headers.origin
+    if (!origin || ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || originAllowed(origin)) return next()
+    // this server's own pages (the /api-docs "try it out" button) sir
+    try { if (new URL(origin).host === req.headers.host) return next() } catch { /* 'null' or junk origin */ }
+    return res.status(403).json({ success: false, message: 'Cross-site request blocked' })
+})
 app.use(cookieParser())
 
 // request id + per-request logger sir — must come before the routes so every log line emitted
