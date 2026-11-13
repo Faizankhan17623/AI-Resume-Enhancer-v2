@@ -73,11 +73,25 @@ const JobDetail = () => {
     setApplyOpen(true)
   }
 
-  if (loading || !job) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-richblack-900 flex flex-col">
         <Navbar />
         <Loading text="Loading the job..." />
+      </div>
+    )
+  }
+
+  // distinct from the loading branch above sir, per 2026-11-14 audit — a failed/deleted-job
+  // fetch used to fold into "Loading the job..." forever since loading alone gated this screen
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-richblack-900 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-richblack-300">
+          <p>Could not load this job. It may have been removed.</p>
+          <Link to="/Jobs" className="text-yellow-50 hover:underline">Back to jobs</Link>
+        </div>
       </div>
     )
   }

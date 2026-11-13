@@ -573,6 +573,9 @@ export function GetPublicJob(jobId) {
         } catch (error) {
             logApiError("Error fetching the job", error)
             toast.error(error?.response?.data?.message || "Could not load the job")
+            // cleared sir, per 2026-11-14 audit — otherwise a failed fetch left the PREVIOUS
+            // job's data in place, rendering it under this job's URL instead of an error state
+            dispatch(setCurrentPublicJob(null))
         } finally {
             dispatch(setLoading(false))
         }
