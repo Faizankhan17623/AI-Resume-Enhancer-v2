@@ -43,8 +43,12 @@ const paymentCookieOptions = {
 // duplicate event can never stack a second 30 days onto SubscriptionExpires.
 const activatePaidOrder = async (orderId, paymentId, signature) => {
     return withTransaction(async (session) => {
+        // status: {$in: ['created','failed']} sir, per 2026-11-14 audit — NOT status:{$ne:'paid'}.
+        // That used to also match 'refunded', so a late/retried Razorpay webhook arriving after an
+        // admin refund (AdminSystem.js's refundPayment) would silently flip the row back to 'paid'
+        // and re-extend the subscription, undoing the refund with no one noticing.
         const payment = await Payment.findOneAndUpdate(
-            { orderId, status: { $ne: 'paid' } },
+            { orderId, status: { $in: ['created', 'failed'] } },
             {
                 status: 'paid',
                 paymentId,
