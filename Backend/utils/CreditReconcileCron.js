@@ -31,9 +31,12 @@ const GRACE_MS = 10 * 60 * 1000
 const reconcileOrphanedCreditSpends = async () => {
     const cutoff = new Date(Date.now() - GRACE_MS)
 
-    const orphaned = await CreditSpend.find({ createdAt: { $lt: cutoff } })
+    const orphaned = await CreditSpend.find({ createdAt: { $lt: cutoff } }).lean()
 
-    for (const entry of orphaned) {
+    // each entry's own refund-then-delete stays in order sir, but entries are independent of
+    // each other — per 2026-11-14 audit, running them in parallel (instead of one at a time)
+    // matters if a sustained Groq outage ever lets hundreds pile up between 5-minute runs
+    await Promise.all(orphaned.map(async (entry) => {
         await refundCredit(entry.user)
         await CreditSpend.deleteOne({ _id: entry._id })
         logger.warn('refunded an orphaned AI credit spend', {
@@ -46,7 +49,7 @@ const reconcileOrphanedCreditSpends = async () => {
         // targetUser (not just targetEmail) so the dashboard can populate the user's current
         // name/email rather than freezing a snapshot at refund time.
         logSystemAction('CREDIT_RECONCILED', { _id: entry.user }, { kind: entry.kind, spentAt: entry.createdAt })
-    }
+    }))
 
     if (orphaned.length > 0) {
         logger.info('reconciled orphaned credit spends', { count: orphaned.length })
