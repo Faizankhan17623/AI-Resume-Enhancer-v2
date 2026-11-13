@@ -219,6 +219,14 @@ exports.publishJob = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Job not found' })
         }
 
+        // re-publishing a CLOSED job is intentional (see the comment below on expiresAt), but
+        // an already-published job has nothing to re-publish sir, per 2026-11-14 audit — without
+        // this, a replayed request or a stale tab's still-visible "Publish" button could call this
+        // on a job that's already live, double-charging the recruiter's monthly posting quota.
+        if (job.status === 'published') {
+            return res.status(400).json({ success: false, message: 'This job is already published' })
+        }
+
         if (!job.compensationType) {
             return res.status(400).json({
                 success: false,
