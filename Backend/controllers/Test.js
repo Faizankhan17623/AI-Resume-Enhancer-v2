@@ -536,9 +536,14 @@ exports.submitAnswers = async (req, res) => {
 
         // the applicant's status now reflects "done with the test step" sir, regardless of
         // WHICH terminal state ended it — the recruiter cares that it's finished and reviewable,
-        // the specific reason (timeout vs clean submit vs violations) is on the attempt itself
+        // the specific reason (timeout vs clean submit vs violations) is on the attempt itself.
+        //
+        // status: {$nin: ['rejected','hired']} sir, per 2026-11-14 audit — setApplicationOutcome
+        // can reject an application at ANY stage, including mid-test, by design. Without this
+        // guard, the candidate finishing their test a few seconds later would silently overwrite
+        // that rejection back to 'completed_test' with no log and no one noticing.
         await JobApplication.updateOne(
-            { job: attempt.test.job, candidate: candidateId, testAttempt: attempt._id },
+            { job: attempt.test.job, candidate: candidateId, testAttempt: attempt._id, status: { $nin: ['rejected', 'hired'] } },
             { status: 'completed_test' }
         )
 
@@ -639,8 +644,12 @@ exports.logViolation = async (req, res) => {
                 // endTest) will find attempt.status already non-'in-progress' by the time it lands
                 // and 400 out before reaching ITS JobApplication update — so this is the only place
                 // a violation-terminated attempt actually flips the applicant to 'completed_test'.
+                //
+                // status: {$nin: ['rejected','hired']} sir, per 2026-11-14 audit — same guard as
+                // submitAnswers' own JobApplication update above, for the same reason: a rejection
+                // mid-test must never be silently overwritten once the attempt itself terminates.
                 await JobApplication.updateOne(
-                    { job: attempt.test.job, candidate: candidateId, testAttempt: attemptId },
+                    { job: attempt.test.job, candidate: candidateId, testAttempt: attemptId, status: { $nin: ['rejected', 'hired'] } },
                     { status: 'completed_test' }
                 )
             } else {
