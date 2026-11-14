@@ -349,8 +349,8 @@ const Report = () => {
           <Section title="Keyword Analysis">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {[
-                { label: 'Matched', words: review.keywordAnalysis.matched, chip: 'bg-caribgreen-700/20 text-caribgreen-25 border-caribgreen-700' },
-                { label: 'Weak', words: review.keywordAnalysis.weak, chip: 'bg-yellow-700/20 text-yellow-25 border-yellow-700' },
+                { label: 'Matched', words: review.keywordAnalysis.matched, chip: 'bg-caribgreen-700/30 text-caribgreen-100 border-caribgreen-700' },
+                { label: 'Weak', words: review.keywordAnalysis.weak, chip: 'bg-yellow-700/30 text-yellow-100 border-yellow-700' },
                 { label: 'Missing', words: review.keywordAnalysis.missing, chip: 'bg-pink-700/20 text-pink-100 border-pink-700' },
               ].map((group) => (
                 <div key={group.label}>
