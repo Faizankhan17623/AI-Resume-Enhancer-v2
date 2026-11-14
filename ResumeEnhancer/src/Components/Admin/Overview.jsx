@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { Helmet } from 'react-helmet-async'
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaUsers, FaRupeeSign, FaFileAlt, FaPercent, FaRobot, FaHeartbeat, FaGlobe, FaSignInAlt, FaNetworkWired, FaUserClock, FaExclamationTriangle, FaShieldAlt, FaCoins, FaUserSecret, FaUserSlash, FaBriefcase, FaUserTie } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
@@ -100,6 +100,15 @@ const Overview = () => {
   const { stats, charts, aiStats, aiUsageByUser, health, deletions, reconciliation, security, atRisk, referralAbuse, traffic, trafficRange, loading, fetchErrors } = useSelector((state) => state.admin)
   const { seriesBlue, seriesAqua, grid, axis, tooltipStyle } = useChartTheme()
 
+  // hero chart metric toggle sir, per the Black Dashboard-style restyle request — the
+  // reference's "Performance" card switches between Accounts/Purchases/Sessions; this app's
+  // real equivalent 30-day trend datasets are Signups/Reviews/Revenue (all three already
+  // loaded via GetDashboardStats below, previously only shown as separate small bottom-row
+  // charts — this hero card now features one of them big, full-width, at the top of the page).
+  // Revenue is dropped from the options entirely for Support, same rule as everywhere else on
+  // this page (isSupport never sees revenue figures).
+  const [heroMetric, setHeroMetric] = useState('signups')
+
   // readyz badge sir — separate from GetHealth above, see READYZ_URL comment. null while
   // checking, then true/false. Caught, not thrown: a down backend must render "DOWN", not
   // break this page.
@@ -150,18 +159,33 @@ const Overview = () => {
   // banner sir — that cron previously only emailed ADMIN_ALERT_EMAIL, invisible in-app
   const latestCostAlert = deletions?.recentCostAlert
 
+  // circular badge colors sir, per the Black Dashboard-style restyle — one solid accent per
+  // card so each stat reads as its own "kind of thing" at a glance, same intent as the
+  // reference's pink/purple/teal/red circles. Reusing this app's own existing accent palette
+  // (blue/caribgreen/yellow/pink) rather than introducing new hex values.
   const statCards = [
-    { icon: <FaUsers className="text-blue-100" />, label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified`, to: '/Admin/Users' },
+    { icon: <FaUsers className="text-white" />, badge: 'bg-blue-200', label: 'Total Users', value: stats.users.total, sub: `${stats.users.verified} verified`, to: '/Admin/Users' },
     ...(isSupport ? [] : [
-      { icon: <FaRupeeSign className="text-caribgreen-100" />, label: 'Revenue', prefix: '₹', value: Number(stats.revenue.totalRupees) || 0, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
+      { icon: <FaRupeeSign className="text-white" />, badge: 'bg-caribgreen-200', label: 'Revenue', prefix: '₹', value: Number(stats.revenue.totalRupees) || 0, sub: `${stats.revenue.paidOrders} paid orders`, to: '/Admin/Payments' },
     ]),
-    { icon: <FaFileAlt className="text-yellow-50" />, label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
-    { icon: <FaPercent className="text-pink-100" />, label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
+    { icon: <FaFileAlt className="text-white" />, badge: 'bg-caribgreen-300', label: 'Reviews', value: stats.usage.totalReviews, sub: `avg score ${stats.usage.avgAtsScore}` },
+    { icon: <FaPercent className="text-white" />, badge: 'bg-pink-200', label: 'Paid Conversion', value: `${stats.users.paidConversion}%`, sub: `Pro ${stats.users.plans.Pro} · Max ${stats.users.plans.ProMax}`, to: '/Admin/Payments' },
     // three small system-health tiles sir, per direct request — genuinely missing before now
-    { icon: <FaUserSlash className="text-pink-100" />, label: 'Banned Users', value: stats.users.banned, to: '/Admin/Users' },
-    { icon: <FaBriefcase className="text-blue-100" />, label: 'Published Jobs', value: stats.jobs.published, to: '/Admin/Recruiter-Data-Health' },
-    { icon: <FaUserTie className="text-warm-25" />, label: 'Pending Recruiter Apps', value: stats.recruiterApplications.pending, to: '/Admin/Recruiter-Applications' },
+    { icon: <FaUserSlash className="text-white" />, badge: 'bg-pink-300', label: 'Banned Users', value: stats.users.banned, to: '/Admin/Users' },
+    { icon: <FaBriefcase className="text-white" />, badge: 'bg-blue-300', label: 'Published Jobs', value: stats.jobs.published, to: '/Admin/Recruiter-Data-Health' },
+    { icon: <FaUserTie className="text-white" />, badge: 'bg-blue-100', label: 'Pending Recruiter Apps', value: stats.recruiterApplications.pending, to: '/Admin/Recruiter-Applications' },
   ]
+
+  // hero metric options sir — data/key/label per toggle choice, see heroMetric comment above
+  const HERO_METRICS = {
+    signups: { label: 'Signups', data: charts?.signupsPerDay || [], dataKey: 'count', valueFormatter: (v) => v },
+    reviews: { label: 'Reviews', data: charts?.reviewsPerDay || [], dataKey: 'count', valueFormatter: (v) => v },
+    ...(isSupport ? {} : {
+      revenue: { label: 'Revenue', data: charts?.revenuePerDay || [], dataKey: 'amount', valueFormatter: (v) => `₹${v}` },
+    }),
+  }
+  const activeHero = HERO_METRICS[heroMetric] || HERO_METRICS.signups
+  const heroTotal = activeHero.data.reduce((sum, d) => sum + (d[activeHero.dataKey] || 0), 0)
 
   return (
     <AdminLayout title="Overview">
@@ -194,6 +218,51 @@ const Overview = () => {
           )}
         </AnimatePresence>
 
+        {/* Hero performance chart sir, per the Black Dashboard-style restyle request — the
+            reference's big featured "Performance" card with an Accounts/Purchases/Sessions
+            toggle. Real equivalent here: Signups/Reviews/Revenue, same 30-day data these three
+            metrics already had as small bottom-row charts (now removed from there, only shown
+            here, so the same numbers aren't duplicated twice on one page). */}
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-1">
+            <div>
+              <p className="text-xs font-medium text-richblack-400">Last 30 days</p>
+              <h2 className="font-display text-2xl text-richblack-5">Performance</h2>
+            </div>
+            <div className="flex items-center gap-1 bg-richblack-900 rounded-lg p-1">
+              {Object.entries(HERO_METRICS).map(([key, m]) => (
+                <button
+                  key={key}
+                  onClick={() => setHeroMetric(key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    heroMetric === key
+                      ? 'bg-yellow-50 text-richblack-900'
+                      : 'text-richblack-300 hover:text-richblack-5'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="font-display text-3xl text-richblack-5 mb-5">{activeHero.valueFormatter(heroTotal)}</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={activeHero.data}>
+              <defs>
+                <linearGradient id="heroFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={seriesBlue} stopOpacity={0.28} />
+                  <stop offset="95%" stopColor={seriesBlue} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
+              <XAxis dataKey="_id" stroke={axis} fontSize={11} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
+              <YAxis stroke={axis} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} labelFormatter={(d) => d?.slice(5)} formatter={(v) => [activeHero.valueFormatter(v), activeHero.label]} />
+              <Area type="monotone" dataKey={activeHero.dataKey} name={activeHero.label} stroke={seriesBlue} fill="url(#heroFill)" strokeWidth={2.5} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* Stat cards sir — grid-cols-3 for Support (Revenue card removed above, statCards only
             has 3 entries for that role), so the cards actually fill the row instead of leaving
             an empty 4th slot the way a fixed 4-column grid did */}
@@ -202,18 +271,25 @@ const Overview = () => {
             <motion.div
               key={index}
               variants={fadeUp}
-              className={`rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5 ${card.to ? 'cursor-pointer transition-colors hover:bg-richblack-700' : ''}`}
+              className={`rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5 flex items-center justify-between gap-4 ${card.to ? 'cursor-pointer transition-colors hover:bg-richblack-700' : ''}`}
               onClick={card.to ? () => navigate(card.to) : undefined}
               role={card.to ? 'button' : undefined}
               tabIndex={card.to ? 0 : undefined}
               onKeyDown={card.to ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.to) } } : undefined}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-lg bg-yellow-900/15 flex items-center justify-center">{card.icon}</div>
-                <span className="text-xs font-medium text-richblack-300">{card.label}</span>
+              {/* circular icon badge sir, per the Black Dashboard-style restyle request —
+                  swapped from the earlier square tile. Each card keeps its own icon color
+                  (card.icon already carries a text-* class) but the badge itself is now a
+                  colored circle sized to match: w-14/h-14 so the icon (text-xl here vs the
+                  old inline-sized icon) sits centered with real padding around it. */}
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-richblack-300 mb-1">{card.label}</p>
+                <p className="font-display text-2xl text-richblack-5 truncate">{typeof card.value === 'number' ? <>{card.prefix}<CountUp value={card.value} /></> : card.value}</p>
+                {card.sub && <p className="text-xs text-richblack-400 mt-1 truncate">{card.sub}</p>}
               </div>
-              <p className="font-display text-2xl text-richblack-5">{typeof card.value === 'number' ? <>{card.prefix}<CountUp value={card.value} /></> : card.value}</p>
-              <p className="text-xs text-richblack-400 mt-1">{card.sub}</p>
+              <div className={`w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-xl ${card.badge}`}>
+                {card.icon}
+              </div>
             </motion.div>
           ))}
         </motion.div>
@@ -600,52 +676,6 @@ const Overview = () => {
           )}
         </div>
 
-        {/* 30-day charts sir — one categorical slot (validated blue) per single-series chart,
-            so every chart in this row reads as the same "kind of thing" rather than four
-            unrelated ad-hoc colors. lg:grid-cols-2 for Support sir (Revenue card removed below,
-            same rule as the stat card above — Support never sees revenue figures) */}
-        <div className={`grid grid-cols-1 ${isSupport ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <h3 className="font-display text-base text-richblack-5 mb-4">Signups — 30 days</h3>
-            <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={charts?.signupsPerDay || []}>
-                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
-                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} />
-                <Bar dataKey="count" name="Signups" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-            <h3 className="font-display text-base text-richblack-5 mb-4">Reviews — 30 days</h3>
-            <ResponsiveContainer width="100%" height={190}>
-              <LineChart data={charts?.reviewsPerDay || []}>
-                <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
-                <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: grid }} />
-                <Line type="monotone" dataKey="count" name="Reviews" stroke={seriesBlue} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#FFFFFF' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {!isSupport && (
-            <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-5">
-              <h3 className="font-display text-base text-richblack-5 mb-4">Revenue (₹) — 30 days</h3>
-              <ResponsiveContainer width="100%" height={190}>
-                <BarChart data={charts?.revenuePerDay || []}>
-                  <CartesianGrid strokeDasharray="none" stroke={grid} vertical={false} />
-                  <XAxis dataKey="_id" stroke={axis} fontSize={10} tickLine={false} axisLine={{ stroke: grid }} tickFormatter={(d) => d?.slice(5)} />
-                  <YAxis stroke={axis} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: grid, opacity: 0.3 }} formatter={(value) => [`₹${value}`, 'Revenue']} />
-                  <Bar dataKey="amount" name="Revenue" fill={seriesBlue} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
 
         {/* AI tokens sir — pulled out of the grid above into its own full-width row. It used to
             be the 3rd/4th card in that grid (Signups, Reviews, [Revenue], AI tokens), which
