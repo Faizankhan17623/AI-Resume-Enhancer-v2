@@ -30,8 +30,12 @@ const paymentCookieOptions = {
 // can never accidentally share a code path.
 const activateRecruiterOrder = async (orderId, paymentId, signature) => {
     return withTransaction(async (session) => {
+        // $in:['created','failed'] not $ne:'paid' sir, pre-emptively, same reasoning as
+        // controllers/Payment.js's activatePaidOrder: the enum has no 'refunded' value today so
+        // this is not yet exploitable, but if a recruiter-refund admin tool is ever added, $ne
+        // would let a late/retried webhook silently reactivate a refunded payment.
         const payment = await RecruiterPayment.findOneAndUpdate(
-            { orderId, status: { $ne: 'paid' } },
+            { orderId, status: { $in: ['created', 'failed'] } },
             { status: 'paid', paymentId, signature },
             { returnDocument: 'after', session }
         )
