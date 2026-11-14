@@ -400,7 +400,12 @@ exports.paymentWebhook = async (req, res) => {
         const paymentEntity = event.payload?.payment?.entity
         const razorpayPaymentId = paymentEntity?.id
 
-        if (!orderId) {
+        // typeof check sir, per 2026-11-14 audit (CodeQL js/sql-injection #425) — this feeds
+        // activatePaidOrder's Payment.findOneAndUpdate filter below, same as verifyPayment's own
+        // razorpay_order_id. The HMAC check above already proves this payload came from Razorpay,
+        // but CodeQL's data-flow analysis doesn't model that as removing taint, and the !orderId
+        // check alone only guards against falsy, not a non-string shape.
+        if (typeof orderId !== 'string' || !orderId) {
             logger.warn('payment webhook had no order id in payload, ignoring')
             return res.status(200).json({ success: true, message: 'No order id in payload, ignored' })
         }

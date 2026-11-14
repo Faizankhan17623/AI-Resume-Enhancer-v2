@@ -327,7 +327,9 @@ exports.recruiterPaymentWebhook = async (req, res) => {
         const paymentEntity = event.payload?.payment?.entity
         const razorpayPaymentId = paymentEntity?.id
 
-        if (!orderId) {
+        // typeof check sir, per 2026-11-14 audit (CodeQL js/sql-injection #426) — same hardening
+        // as Payment.js's paymentWebhook, see that file's comment for the full reasoning
+        if (typeof orderId !== 'string' || !orderId) {
             logger.warn('recruiter payment webhook had no order id in payload, ignoring')
             return res.status(200).json({ success: true, message: 'No order id in payload, ignored' })
         }
