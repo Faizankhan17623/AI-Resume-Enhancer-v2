@@ -6,6 +6,7 @@ import { FaSearch, FaCoins, FaUserFriends } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
+import Pagination from '../extra/Pagination'
 import { GetCreditGrants } from '../../Services/operations/Admin'
 
 // one row of either section sir — admin grants and referral rewards render through the same
@@ -23,29 +24,6 @@ const GrantRow = ({ icon: Icon, iconClass, actorLine, detailLine, credits, when 
     <span className="shrink-0 text-xs text-richblack-400 md:w-40 md:text-right">{new Date(when).toLocaleString()}</span>
   </div>
 )
-
-const Pager = ({ page, pages, onChange }) => {
-  if (!pages || pages <= 1) return null
-  return (
-    <div className="flex items-center justify-center gap-4 mt-4">
-      <button
-        disabled={page <= 1}
-        onClick={() => onChange(page - 1)}
-        className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
-      >
-        Previous
-      </button>
-      <span className="text-sm text-richblack-300 font-mono">{page} / {pages}</span>
-      <button
-        disabled={page >= pages}
-        onClick={() => onChange(page + 1)}
-        className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
-      >
-        Next
-      </button>
-    </div>
-  )
-}
 
 // every source of bonus credits, split into the two sections that actually make sense sir —
 // admin grants (Users.jsx's "Grant bonus credits" + "Grant bonus to all") and referral rewards
@@ -177,7 +155,7 @@ const CreditGrants = () => {
                 </div>
               )}
               {data.admin && (
-                <Pager page={adminPage} pages={data.admin.pagination.pages} onChange={(p) => updateParams({ adminPage: p })} />
+                <Pagination page={adminPage} totalPages={data.admin.pagination.pages} onPageChange={(p) => updateParams({ adminPage: p })} />
               )}
             </section>
 
@@ -212,7 +190,7 @@ const CreditGrants = () => {
                 </div>
               )}
               {data.referral && (
-                <Pager page={referralPage} pages={data.referral.pagination.pages} onChange={(p) => updateParams({ referralPage: p })} />
+                <Pagination page={referralPage} totalPages={data.referral.pagination.pages} onPageChange={(p) => updateParams({ referralPage: p })} />
               )}
             </section>
 

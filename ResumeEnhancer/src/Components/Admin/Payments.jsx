@@ -6,6 +6,7 @@ import { FaFileDownload, FaUndo } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
 import Loading from '../extra/Loading'
 import PageTransition from '../extra/PageTransition'
+import Pagination from '../extra/Pagination'
 import { GetPayments, RefundPayment } from '../../Services/operations/Admin'
 import { downloadCsv } from '../../utils/csvExport'
 import { swalDark } from '../../utils/accountShared'
@@ -265,23 +266,7 @@ const Payments = () => {
 
         {/* Pagination sir */}
         {payments?.pagination && payments.pagination.pages > 1 && (
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-              className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="text-sm text-richblack-300 font-mono">{page} / {payments.pagination.pages}</span>
-            <button
-              disabled={page >= payments.pagination.pages}
-              onClick={() => setPage(page + 1)}
-              className="px-4 py-2 text-sm text-richblack-100 border border-richblack-600 rounded-lg hover:bg-richblack-800 disabled:opacity-40 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
+          <Pagination page={page} totalPages={payments.pagination.pages} onPageChange={setPage} />
         )}
       </PageTransition>
     </AdminLayout>
