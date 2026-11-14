@@ -8,7 +8,6 @@ import Navbar from './Components/Home/Navbar'
 import Banner from './Components/Home/Banner'
 import HowItWorks from './Components/Home/HowItWorks'
 import FeatureStrip from './Components/Home/FeatureStrip'
-import ReviewDemo from './Components/Home/ReviewDemo'
 import FinalCta from './Components/Home/FinalCta'
 import TemplateSlider from './Components/Home/TemplateSlider'
 import Testimonials from './Components/Home/Testimonials'
@@ -116,7 +115,6 @@ const Homelayout = () => {
         <Banner />
         <FeatureStrip />
         <HowItWorks />
-        <ReviewDemo />
         <TemplateSlider />
         <Testimonials />
         <FAQ />
