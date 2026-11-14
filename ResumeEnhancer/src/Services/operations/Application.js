@@ -65,7 +65,12 @@ export function UpdateApplication(applicationId, payload, token, { silent = fals
             }
 
             if (!silent) toast.success("Application updated")
-            dispatch(GetApplications(token))
+            // patch just this one card in place sir, per 2026-11-14 audit — a full GetApplications
+            // refetch on every drag used to create a race: dragging two cards within a second or
+            // two could let an older refetch resolve after a newer drag's PATCH, flickering the
+            // board back to a one-step-stale state. The PATCH response already carries the full
+            // updated application, so there's no need to refetch the whole board at all.
+            dispatch(patchApplication(response.data.application))
             return true
         } catch (error) {
             logApiError("Error updating the application", error)
