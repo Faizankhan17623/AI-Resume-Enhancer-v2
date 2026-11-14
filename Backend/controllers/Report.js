@@ -100,6 +100,19 @@ exports.updateReportStatus = async (req, res) => {
             })
         }
 
+        // explicit string check sir, per 2026-11-14 audit (CodeQL js/sql-injection #402) — status
+        // goes straight into the Report.findByIdAndUpdate filter/update below. zod's z.enum
+        // already guarantees it's one of 5 literal strings before this point (CodeQL can't trace
+        // through the validate() middleware to see that), so this was never actually reachable
+        // with a non-string value — this just makes that guarantee a local, visible precondition
+        // instead of depending on the caller having run the right middleware first.
+        if (typeof status !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status',
+            })
+        }
+
         const report = await Report.findByIdAndUpdate(
             reportId,
             { status, reviewedBy: adminId, ...(adminNote !== undefined && { adminNote }) },

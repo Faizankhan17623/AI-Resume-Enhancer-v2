@@ -181,6 +181,17 @@ exports.verifyRecruiterPayment = async (req, res) => {
         const id = req?.User.id
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body
 
+        // explicit string checks sir, per 2026-11-14 audit (CodeQL js/sql-injection) — same
+        // hardening as Payment.js's verifyPayment, see that file's comment for the full
+        // reasoning. These go straight into RecruiterPayment.findOne/findOneAndUpdate filters
+        // below.
+        if (typeof razorpay_order_id !== 'string' || typeof razorpay_payment_id !== 'string' || typeof razorpay_signature !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Order id, payment id and signature are required',
+            })
+        }
+
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({
                 success: false,

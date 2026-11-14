@@ -220,6 +220,20 @@ exports.verifyPayment = async (req, res) => {
         const id = req?.User.id
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body
 
+        // explicit string checks sir, per 2026-11-14 audit (CodeQL js/sql-injection) — these three
+        // go straight into Payment.findOne/findOneAndUpdate filters below. In practice a non-
+        // string value (e.g. {"$ne": null} in the JSON body) already can't reach the query: the
+        // strict session.orderId !== razorpay_order_id check a few lines down compares against a
+        // signed JWT string and would never match an object, so it 400s first. But that's an
+        // INDIRECT protection the query itself doesn't assert — this makes the type a precondition
+        // of the function, not an accident of a different check's ordering.
+        if (typeof razorpay_order_id !== 'string' || typeof razorpay_payment_id !== 'string' || typeof razorpay_signature !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Order id, payment id and signature are required',
+            })
+        }
+
         // not case sir — all three come back from the razorpay checkout
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({
