@@ -651,13 +651,18 @@ const JobApplicantsList = () => {
                             placeholder="e.g. Strong on system design, weak on communication"
                             className="w-full min-h-16 rounded-lg bg-richblack-900/60 border border-richblack-700 px-3 py-2 text-sm text-richblack-5 placeholder:text-richblack-500 focus:outline-none focus:border-yellow-50 resize-none"
                           />
-                          <button
-                            onClick={() => handleSaveNotes(app._id)}
-                            disabled={savingNotesFor === app._id || (notesDrafts[app._id] ?? app.recruiterNotes ?? '').trim() === (app.recruiterNotes || '')}
-                            className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {savingNotesFor === app._id ? 'Saving...' : 'Save notes'}
-                          </button>
+                          {(() => {
+                            const hasUnsavedNotes = (notesDrafts[app._id] ?? app.recruiterNotes ?? '').trim() !== (app.recruiterNotes || '')
+                            return (
+                              <button
+                                onClick={() => handleSaveNotes(app._id)}
+                                disabled={savingNotesFor === app._id || !hasUnsavedNotes}
+                                className="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-richblack-700 text-richblack-100 border border-richblack-600 hover:bg-richblack-600 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {savingNotesFor === app._id ? 'Saving...' : 'Save notes'}
+                              </button>
+                            )
+                          })()}
                         </div>
                       </div>
                     </motion.div>
