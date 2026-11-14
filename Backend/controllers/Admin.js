@@ -20,6 +20,7 @@ const { supportAppealFinalTemplate } = require('../Templates/SupportAppealFinal.
 const { winBackEmailHtml } = require('../utils/StreakCron.js')
 const { notify } = require('../utils/NotificationLog.js')
 const { passwordResetTemplate } = require('../Templates/passwordResetTemplate.js')
+const { jobWithdrawnTemplate } = require('../Templates/JobWithdrawn')
 
 // everything the admin dashboard needs lives here sir — every route is behind Auth + isAdmin
 
@@ -233,6 +234,15 @@ exports.getUserDetail = async (req, res) => {
                 success: false,
                 message: 'User not found',
             })
+        }
+
+        // staff accounts excluded sir, per 2026-11-14 audit — same gap as updateUserAdminNote/
+        // resendPasswordReset already had fixed (2026-11-09): this route is isSupport (admits
+        // both Admin and Support), and had no role check at all, letting a Support agent who
+        // knows/guesses an Admin's userId read that Admin's full profile (adminNote,
+        // tokenVersion, ban state, email) plus their review/payment history below.
+        if (user.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
         }
 
         // their activity in parallel sir
@@ -777,11 +787,58 @@ exports.deleteUser = async (req, res) => {
             Review.deleteMany({ user: userId }),
         ])
 
+        // role-specific cascade sir, per 2026-11-14 audit — this used to only clean up
+        // Chat/Review, leaving a deleted Recruiter's Job documents permanently orphaned (still
+        // live, accepting applications, unclosable by anyone since every Job route requires an
+        // ownership match against a now-nonexistent user), and a deleted candidate User's
+        // JobApplication rows dangling with a null candidate. Job.js's own deleteJob already
+        // cascades JobApplication.deleteMany when a JOB is deleted — this applies the same
+        // pattern for when the USER is deleted instead.
+        if (user.role === 'Recruiter') {
+            const jobs = await Job.find({ recruiter: userId }).select('_id title companyName')
+            if (jobs.length > 0) {
+                const jobIds = jobs.map((j) => j._id)
+                const applications = await JobApplication.find({ job: { $in: jobIds } }).populate('candidate', 'firstName lastName email')
+
+                await Promise.all([
+                    Job.deleteMany({ recruiter: userId }),
+                    JobApplication.deleteMany({ job: { $in: jobIds } }),
+                ])
+
+                const frontendUrl = process.env.FRONTEND_URL
+                    ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
+                    : 'http://localhost:5173'
+                const jobById = new Map(jobs.map((j) => [String(j._id), j]))
+
+                // allSettled sir, same reasoning as Job.js's deleteJob — one bad/dead candidate
+                // email must not stop the rest from being notified
+                await Promise.allSettled(applications.map((application) => {
+                    if (!application.candidate?.email) return Promise.resolve()
+                    const job = jobById.get(String(application.job))
+                    if (!job) return Promise.resolve()
+                    return mailSender(
+                        application.candidate.email,
+                        'A Job You Applied To Was Withdrawn',
+                        jobWithdrawnTemplate(
+                            application.candidate.firstName,
+                            job.title,
+                            job.companyName,
+                            `${frontendUrl}/Jobs`
+                        )
+                    ).catch((mailError) => {
+                        (req.log || logger).error('job withdrawn mail failed on recruiter delete', { err: mailError, userId, candidateId: application.candidate._id })
+                    })
+                }))
+            }
+        } else if (user.role === 'User') {
+            await JobApplication.deleteMany({ candidate: userId })
+        }
+
         logAction(adminId, 'USER_DELETE', user, {})
 
         return res.status(200).json({
             success: true,
-            message: `${user.email} and all their chats/reviews were deleted`,
+            message: `${user.email} and all their data were deleted`,
         })
     } catch (error) {
         (req.log || logger).error('delete user failed', { err: error })
@@ -1458,6 +1515,16 @@ exports.getUserReviews = async (req, res) => {
             })
         }
 
+        // staff accounts excluded sir, per 2026-11-14 audit — same IDOR gap as getUserDetail,
+        // this is isSupport (admits both Admin and Support) with no role check on the target
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+        if (targetForRoleCheck.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
+        }
+
         const reviews = await Review.find({ user: userId })
             .select('jdTitle atsScore verdict plan createdAt')
             .sort({ createdAt: -1 })
@@ -1485,6 +1552,16 @@ exports.getUserChats = async (req, res) => {
                 success: false,
                 message: 'Invalid user id',
             })
+        }
+
+        // staff accounts excluded sir, per 2026-11-14 audit — same IDOR gap as getUserDetail,
+        // this is isSupport (admits both Admin and Support) with no role check on the target
+        const targetForRoleCheck = await User.findById(userId).select('role')
+        if (!targetForRoleCheck) {
+            return res.status(404).json({ success: false, message: 'User not found' })
+        }
+        if (targetForRoleCheck.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
         }
 
         const chats = await Chat.find({ user: userId })
@@ -1518,13 +1595,20 @@ exports.getChatDetail = async (req, res) => {
 
         const chat = await Chat.findById(chatId)
             .select('user title jd messages createdAt updatedAt')
-            .populate('user', 'firstName lastName email')
+            .populate('user', 'firstName lastName email role')
 
         if (!chat) {
             return res.status(404).json({
                 success: false,
                 message: 'Chat not found',
             })
+        }
+
+        // staff accounts excluded sir, per 2026-11-14 audit — same IDOR gap as getUserDetail,
+        // this is isSupport (admits both Admin and Support) with no role check on the chat's
+        // owner, letting a Support agent read the full message contents of an Admin's own chat
+        if (chat.user?.role === 'Admin') {
+            return res.status(403).json({ success: false, message: 'Admin accounts cannot be targeted this way' })
         }
 
         return res.status(200).json({
