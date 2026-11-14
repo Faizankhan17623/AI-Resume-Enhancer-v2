@@ -38,12 +38,20 @@ const getThreadForCaller = async (applicationId, userId) => {
 
     let thread = await MessageThread.findOne({ application: applicationId })
     if (!thread) {
-        thread = await MessageThread.create({
-            job: application.job._id,
-            application: application._id,
-            recruiter: application.job.recruiter,
-            candidate: application.candidate,
-        })
+        // duplicate-key race sir, per 2026-11-14 audit — MessageThread.application has a unique
+        // index, so if both parties open a brand-new thread at nearly the same moment, the
+        // loser's create() throws E11000 instead of just returning the winner's thread
+        try {
+            thread = await MessageThread.create({
+                job: application.job._id,
+                application: application._id,
+                recruiter: application.job.recruiter,
+                candidate: application.candidate,
+            })
+        } catch (err) {
+            if (err.code !== 11000) throw err
+            thread = await MessageThread.findOne({ application: applicationId })
+        }
     }
 
     return { thread, application, isRecruiter }
