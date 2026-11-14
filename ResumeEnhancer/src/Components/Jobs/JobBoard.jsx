@@ -27,9 +27,15 @@ const JobBoard = () => {
   const [location, setLocation] = useState('')
   const [employmentType, setEmploymentType] = useState('')
   const [page, setPage] = useState(1)
+  // the last SUBMITTED search/location sir, per 2026-11-14 audit — separate from the live input
+  // state above. Without this, clicking Next/Previous while mid-typing a new keyword (before
+  // pressing Search) refires this effect on the page change and silently searches with the
+  // half-typed text instead of what the user actually submitted.
+  const [submittedSearch, setSubmittedSearch] = useState('')
+  const [submittedLocation, setSubmittedLocation] = useState('')
 
   useEffect(() => {
-    dispatch(GetPublicJobs({ page, search, location, employmentType }))
+    dispatch(GetPublicJobs({ page, search: submittedSearch, location: submittedLocation, employmentType }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, employmentType])
 
@@ -61,6 +67,8 @@ const JobBoard = () => {
 
   const handleSearch = (e) => {
     e.preventDefault()
+    setSubmittedSearch(search)
+    setSubmittedLocation(location)
     setPage(1)
     dispatch(GetPublicJobs({ page: 1, search, location, employmentType }))
   }
