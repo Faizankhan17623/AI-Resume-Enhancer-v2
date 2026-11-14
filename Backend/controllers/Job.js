@@ -234,22 +234,41 @@ exports.publishJob = async (req, res) => {
             })
         }
 
+        // atomic status-not-already-published guard sir, per 2026-11-14 audit — the plain
+        // check above alone was a TOCTOU race: two near-simultaneous publish requests (double-
+        // click, retry, or landing on the two different PM2 cluster workers) could both read
+        // the same pre-published status before either writes, both pass the check above, and
+        // both proceed to consumeJobPosting below, double-charging the quota for one job. This
+        // re-checks the SAME precondition atomically at the database level, so only one of the
+        // two requests can actually win the transition — the loser gets a clean 400 before ever
+        // touching the quota.
+        const claimed = await Job.findOneAndUpdate(
+            { _id: jobId, recruiter: recruiterId, status: { $ne: 'published' } },
+            { $set: { status: 'published' } },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(400).json({ success: false, message: 'This job is already published' })
+        }
+
         // one active job posting sir — consumed here, at PUBLISH, not at draft-creation, since a
         // recruiter should be free to create and discard as many drafts as they like without it
         // counting against their monthly plan limit (see utils/RecruiterPlans.js)
         const { consumeJobPosting } = require('../utils/RecruiterPlans')
         const spend = await consumeJobPosting(recruiterId)
         if (!spend.ok) {
+            // roll the status transition back sir — the quota wasn't spent, so the job must not
+            // end up stuck 'published' with nothing paid for it
+            await Job.updateOne({ _id: jobId }, { $set: { status: job.status } })
             return res.status(400).json({ success: false, message: spend.message, code: spend.code })
         }
 
-        job.status = 'published'
         // 30-day expiry sir, starting fresh from THIS publish (re-publishing a closed job later
         // would reset the clock, which is the right behavior — it's a new listing going live again)
-        job.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        await job.save()
+        claimed.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        await claimed.save()
 
-        return res.status(200).json({ success: true, message: 'Job published', job })
+        return res.status(200).json({ success: true, message: 'Job published', job: claimed })
     } catch (error) {
         (req.log || logger).error('publish job failed', { err: error })
         return res.status(500).json({
