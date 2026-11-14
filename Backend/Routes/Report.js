@@ -1,7 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const { Auth, isSupport, isAdmin } = require('../Middlewares/Auth.js')
-const { adminWriteLimiter, adminReadLimiter } = require('../Middlewares/RateLimit.js')
+const { adminWriteLimiter, adminReadLimiter, authedWriteLimiter } = require('../Middlewares/RateLimit.js')
 const { validate } = require('../Middlewares/Validate.js')
 const { submitReportSchema, updateReportStatusSchema } = require('../Validation/schemas.js')
 const {
@@ -14,7 +14,7 @@ const {
 
 // user-facing sir — any logged-in role can report a bug or suggest a feature,
 // not gated to isUser since Admin/Support can hit bugs too
-route.post('/reports', Auth, validate({ body: submitReportSchema }), submitReport)
+route.post('/reports', Auth, authedWriteLimiter, validate({ body: submitReportSchema }), submitReport)
 route.get('/reports/mine', Auth, getMyReports)
 
 // triage sir — Support can view/update, only Admin can delete

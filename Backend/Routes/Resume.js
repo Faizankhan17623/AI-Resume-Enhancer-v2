@@ -1,7 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const { Auth, isUser } = require('../Middlewares/Auth.js')
-const { grammarCheckLimiter } = require('../Middlewares/RateLimit.js')
+const { grammarCheckLimiter, authedWriteLimiter } = require('../Middlewares/RateLimit.js')
 const { validate } = require('../Middlewares/Validate.js')
 const { updateResumeSchema } = require('../Validation/schemas.js')
 const {
@@ -17,8 +17,8 @@ const {
 // isUser blocks Admin/Support too, this is a product feature, strictly User-only
 
 route.post('/resumes', Auth, isUser, grammarCheckLimiter, saveResume)
-route.get('/resumes', Auth, isUser, getResumes)
-route.patch('/resumes/:resumeId', Auth, isUser, validate({ body: updateResumeSchema }), updateResume)
+route.get('/resumes', Auth, isUser, authedWriteLimiter, getResumes)
+route.patch('/resumes/:resumeId', Auth, isUser, authedWriteLimiter, validate({ body: updateResumeSchema }), updateResume)
 route.delete('/resumes/:resumeId', Auth, isUser, deleteResume)
 
 module.exports = route

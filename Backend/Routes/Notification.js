@@ -1,6 +1,7 @@
 const express = require('express')
 const route = express.Router()
 const { Auth } = require('../Middlewares/Auth.js')
+const { authedWriteLimiter } = require('../Middlewares/RateLimit.js')
 const { validate } = require('../Middlewares/Validate.js')
 const { subscribeToPushSchema, unsubscribeFromPushSchema } = require('../Validation/schemas.js')
 const {
@@ -22,7 +23,7 @@ route.patch('/notifications/:notificationId/read', Auth, markAsRead)
 // real Web Push sir, per direct request — public-key is genuinely public (no Auth), the
 // subscribe/unsubscribe pair is per-logged-in-user
 route.get('/notifications/push/public-key', getPushPublicKey)
-route.post('/notifications/push/subscribe', Auth, validate({ body: subscribeToPushSchema }), subscribeToPush)
-route.post('/notifications/push/unsubscribe', Auth, validate({ body: unsubscribeFromPushSchema }), unsubscribeFromPush)
+route.post('/notifications/push/subscribe', Auth, authedWriteLimiter, validate({ body: subscribeToPushSchema }), subscribeToPush)
+route.post('/notifications/push/unsubscribe', Auth, authedWriteLimiter, validate({ body: unsubscribeFromPushSchema }), unsubscribeFromPush)
 
 module.exports = route

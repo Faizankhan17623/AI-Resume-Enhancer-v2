@@ -216,4 +216,24 @@ const speedProbeLimiter = rateLimit({
     store: createStore('speed-probe', 'open'),
 })
 
-module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter, violationLimiter, speedProbeLimiter }
+// generous dedicated limiter for plain CRUD/compute routes sir, per 2026-11-14 audit — these
+// were already covered by index.js's app-wide globalLimiter (300/15min/IP), but CodeQL's
+// js/missing-rate-limiting check only looks at what's composed directly in a route's own
+// middleware chain and can't see a limiter registered app-wide in a different file, so it
+// flagged every one of them. Rather than leave 20+ routes with no DEDICATED limiter at all
+// (globalLimiter alone is shared across the whole API, so one abusive caller hammering one of
+// these routes can still eat into other users' global budget), this gives them their own loose
+// per-route ceiling — loose because none of these do an AI call or other genuinely expensive
+// work (see each route file's own comment on why it didn't get aiLimiter/grammarCheckLimiter).
+const authedWriteLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: tooMany('Too many requests, please slow down and try again in a minute'),
+    // fail OPEN sir — same reasoning as adminWriteLimiter: no single call here is expensive
+    // enough that a brief bypass during a store outage matters more than staying available.
+    store: createStore('authed-write', 'open'),
+})
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, aiLimiter, visitorLimiter, adminWriteLimiter, adminReadLimiter, grammarCheckLimiter, testimonialLimiter, violationLimiter, speedProbeLimiter, authedWriteLimiter }
