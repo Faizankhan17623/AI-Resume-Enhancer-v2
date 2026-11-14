@@ -21,11 +21,18 @@ const CreditSpendSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
-        // which feature spent the credit sir — purely for the reconcile job's log line, no
-        // behavioural difference between kinds
+        // which feature spent the credit sir. For the original four (candidate credits,
+        // refunded via the single shared refundCredit) this is just a log label. For the
+        // Recruiter AI quota kinds added 2026-11-14 (fit-score/jd-writer/interview-question-gen/
+        // candidate-summary) it ALSO selects which RecruiterPlans.js refund function
+        // CreditReconcileCron.js calls — each recruiter quota has its own counter field, unlike
+        // the single shared User credit.
         kind: {
             type: String,
-            enum: ['review', 'resume-generate', 'resume-tailor', 'rejection-diagnosis'],
+            enum: [
+                'review', 'resume-generate', 'resume-tailor', 'rejection-diagnosis',
+                'fit-score', 'jd-writer', 'interview-question-gen', 'candidate-summary',
+            ],
             required: true,
         },
     },

@@ -15,10 +15,19 @@
 // in-process. This job sweeps entries still sitting there past a grace window comfortably longer
 // than the Groq client's own 30s timeout + one retry (see services/reviewService.js) — anything
 // still pending at that point was orphaned by a crash, not a slow-but-alive request — and applies
-// the exact same refundCredit compensating action the in-process failure paths already use.
+// the exact same refund compensating action the in-process failure paths already use.
+//
+// 2026-11-14 audit: the four Recruiter AI quotas (fit-score/jd-writer/interview-question-gen/
+// candidate-summary, see services/fitScoreService.js + controllers/RecruiterAI.js) had the exact
+// same consume-before-Groq-call-refund-only-in-catch shape as the User credit system, but no
+// write-ahead marker of their own — a crash mid-call permanently burned a unit of a scarce
+// monthly quota. They now share this same CreditSpend collection/cron rather than a parallel one,
+// since unlike the User credit system each recruiter quota has its OWN counter field, so the
+// refund function to call depends on `kind`.
 
 const CreditSpend = require('../Models/CreditSpend')
 const { refundCredit } = require('./Plans')
+const { refundAiScore, refundJdWrite, refundInterviewQGen, refundSummary } = require('./RecruiterPlans')
 const { scheduleJob } = require('./scheduler')
 const { logSystemAction } = require('./AdminLog')
 const logger = require('./logger')
@@ -27,6 +36,15 @@ const logger = require('./logger')
 // so this has wide headroom before a still-in-flight, not-yet-crashed request could be mistaken
 // for an orphan.
 const GRACE_MS = 10 * 60 * 1000
+
+// maps a CreditSpend.kind to the refund function that returns its unit sir — everything not
+// listed here is a User-credit kind, refunded via the single shared refundCredit
+const RECRUITER_REFUNDERS = {
+    'fit-score': refundAiScore,
+    'jd-writer': refundJdWrite,
+    'interview-question-gen': refundInterviewQGen,
+    'candidate-summary': refundSummary,
+}
 
 const reconcileOrphanedCreditSpends = async () => {
     const cutoff = new Date(Date.now() - GRACE_MS)
@@ -37,7 +55,8 @@ const reconcileOrphanedCreditSpends = async () => {
     // each other — per 2026-11-14 audit, running them in parallel (instead of one at a time)
     // matters if a sustained Groq outage ever lets hundreds pile up between 5-minute runs
     await Promise.all(orphaned.map(async (entry) => {
-        await refundCredit(entry.user)
+        const refund = RECRUITER_REFUNDERS[entry.kind] || refundCredit
+        await refund(entry.user)
         await CreditSpend.deleteOne({ _id: entry._id })
         logger.warn('refunded an orphaned AI credit spend', {
             user: entry.user,

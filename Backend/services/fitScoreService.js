@@ -10,6 +10,7 @@ const { consumeAiScore, refundAiScore } = require('../utils/RecruiterPlans')
 const { buildFitScorePrompt } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { AI_MODEL } = require('../utils/AiModel')
+const CreditSpend = require('../Models/CreditSpend')
 const logger = require('../utils/logger')
 
 // same lazy-construction reasoning as reviewService.js sir — merely requiring this module must
@@ -50,6 +51,14 @@ const runFitScore = async ({ recruiterId, jobDescription, resumeText }) => {
         return { ok: false, reason: spend.message }
     }
 
+    // write-ahead marker sir — see Models/CreditSpend.js. Resolved (deleted) on every path
+    // below; CreditReconcileCron.js sweeps and refunds anything still sitting here after a
+    // crash orphans it, same discipline as reviewService.js's credit spends.
+    const ledgerEntry = await CreditSpend.create({ user: recruiterId, kind: 'fit-score' })
+    const resolveSpend = () => CreditSpend.deleteOne({ _id: ledgerEntry._id }).catch((err) =>
+        logger.error('failed to resolve credit-spend ledger entry', { err, recruiterId, ledgerEntryId: ledgerEntry._id })
+    )
+
     const messages = [
         { role: 'user', content: buildFitScorePrompt(jobDescription, resumeText) },
     ]
@@ -77,6 +86,7 @@ const runFitScore = async ({ recruiterId, jobDescription, resumeText }) => {
     } catch (aiErr) {
         if (!isJsonValidationFailure(aiErr)) {
             await refundAiScore(recruiterId)
+            await resolveSpend()
             logger.error('fit score AI call failed', { err: aiErr, recruiterId })
             return { ok: false, reason: 'Scoring is temporarily unavailable' }
         }
@@ -84,6 +94,7 @@ const runFitScore = async ({ recruiterId, jobDescription, resumeText }) => {
             completion = await callGroq() // one retry only sir, same as reviewService.js
         } catch (retryErr) {
             await refundAiScore(recruiterId)
+            await resolveSpend()
             logger.error('fit score AI call failed on retry', { err: retryErr, recruiterId })
             return { ok: false, reason: 'Scoring is temporarily unavailable' }
         }
@@ -92,6 +103,7 @@ const runFitScore = async ({ recruiterId, jobDescription, resumeText }) => {
     let raw = completion?.choices?.[0]?.message?.content
     if (!raw) {
         await refundAiScore(recruiterId)
+        await resolveSpend()
         return { ok: false, reason: 'The AI returned an empty response' }
     }
 
@@ -106,14 +118,17 @@ const runFitScore = async ({ recruiterId, jobDescription, resumeText }) => {
         // real resume
         logger.warn('fit score JSON parse failed', { err: parseErr, recruiterId, rawPreview: raw?.slice(0, 200) })
         await refundAiScore(recruiterId)
+        await resolveSpend()
         return { ok: false, reason: 'The AI response was not in the expected format' }
     }
 
     if (typeof result.fitScore !== 'number' || !VALID_TIERS.includes(result.fitTier)) {
         await refundAiScore(recruiterId)
+        await resolveSpend()
         return { ok: false, reason: 'The AI response was incomplete' }
     }
 
+    await resolveSpend()
     return {
         ok: true,
         fitScore: Math.max(0, Math.min(100, Math.round(result.fitScore))),

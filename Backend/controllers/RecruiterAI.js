@@ -14,7 +14,17 @@ const { buildJobDescriptionPrompt, buildInterviewQuestionsPrompt, buildCandidate
 const { logAi } = require('../utils/AdminLog')
 const { AI_MODEL } = require('../utils/AiModel')
 const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
+const CreditSpend = require('../Models/CreditSpend')
 const logger = require('../utils/logger')
+
+// write-ahead marker helper sir — see Models/CreditSpend.js / services/fitScoreService.js.
+// CreditReconcileCron.js sweeps and refunds anything still sitting here after a crash orphans it.
+const openLedgerEntry = async (userId, kind) => {
+    const ledgerEntry = await CreditSpend.create({ user: userId, kind })
+    return () => CreditSpend.deleteOne({ _id: ledgerEntry._id }).catch((err) =>
+        logger.error('failed to resolve credit-spend ledger entry', { err, userId, kind, ledgerEntryId: ledgerEntry._id })
+    )
+}
 
 // same lazy-construction reasoning as reviewService.js/fitScoreService.js sir
 let grokClient = null
@@ -80,6 +90,7 @@ exports.generateJobDescription = async (req, res) => {
         if (!spend.ok) {
             return res.status(403).json({ success: false, message: spend.message, code: spend.code })
         }
+        const resolveSpend = await openLedgerEntry(recruiterId, 'jd-writer')
 
         // moderation pass sir — AFTER consumeJdWrite above, not before: moderation makes a real
         // Groq call, and checking it first means a zero-credit recruiter's request still burns
@@ -93,6 +104,7 @@ exports.generateJobDescription = async (req, res) => {
         const modResult = await moderateText(`${title.trim()}\n${mustHaves.trim()}`, { feature: 'recruiter-jd-writer' })
         if (modResult.flagged) {
             await refundJdWrite(recruiterId)
+            await resolveSpend()
             return res.status(400).json(moderationBlockedResponse(modResult))
         }
 
@@ -109,6 +121,7 @@ exports.generateJobDescription = async (req, res) => {
             logAi({ user: recruiterId, type: 'jd-writer', plan: spend.plan, model: AI_MODEL, usage: completion.usage, latencyMs: Date.now() - t0, success: true })
         } catch (aiErr) {
             await refundJdWrite(recruiterId)
+            await resolveSpend()
             logger.error('job description AI call failed', { err: aiErr, recruiterId })
             return res.status(502).json({ success: false, message: 'Drafting is temporarily unavailable, please try again' })
         }
@@ -116,9 +129,11 @@ exports.generateJobDescription = async (req, res) => {
         const description = completion?.choices?.[0]?.message?.content?.trim()
         if (!description) {
             await refundJdWrite(recruiterId)
+            await resolveSpend()
             return res.status(502).json({ success: false, message: 'The AI returned an empty response, please try again' })
         }
 
+        await resolveSpend()
         return res.status(200).json({ success: true, description })
     } catch (error) {
         (req.log || logger).error('generate job description failed', { err: error })
@@ -142,6 +157,7 @@ exports.generateInterviewQuestions = async (req, res) => {
         if (!spend.ok) {
             return res.status(403).json({ success: false, message: spend.message, code: spend.code })
         }
+        const resolveSpend = await openLedgerEntry(recruiterId, 'interview-question-gen')
 
         const count = Math.min(20, Math.max(1, parseInt(questionCount) || 8))
 
@@ -155,6 +171,7 @@ exports.generateInterviewQuestions = async (req, res) => {
             })
         } catch (aiErr) {
             await refundInterviewQGen(recruiterId)
+            await resolveSpend()
             logger.error('interview question generation AI call failed', { err: aiErr, recruiterId })
             return res.status(502).json({ success: false, message: 'Question generation is temporarily unavailable, please try again' })
         }
@@ -162,9 +179,11 @@ exports.generateInterviewQuestions = async (req, res) => {
         const result = parseJson(completion?.choices?.[0]?.message?.content)
         if (!result || !Array.isArray(result.questions)) {
             await refundInterviewQGen(recruiterId)
+            await resolveSpend()
             return res.status(502).json({ success: false, message: 'The AI response was not in the expected format, please try again' })
         }
 
+        await resolveSpend()
         return res.status(200).json({ success: true, questions: result.questions })
     } catch (error) {
         (req.log || logger).error('generate interview questions failed', { err: error })
@@ -200,6 +219,7 @@ exports.generateCandidateSummary = async (req, res) => {
         if (!spend.ok) {
             return res.status(403).json({ success: false, message: spend.message, code: spend.code })
         }
+        const resolveSpend = await openLedgerEntry(recruiterId, 'candidate-summary')
 
         // re-fetch and re-parse the resume text sir — the application only stores the uploaded
         // FILE (resumeUrl), not its extracted text, so a fresh on-demand summary re-downloads and
@@ -213,6 +233,7 @@ exports.generateCandidateSummary = async (req, res) => {
             resumeText = parsed?.text || ''
         } catch (fetchErr) {
             await refundSummary(recruiterId)
+            await resolveSpend()
             logger.error('resume re-fetch for summary failed', { err: fetchErr, applicationId })
             return res.status(502).json({ success: false, message: 'Could not read this candidate\'s resume, please try again' })
         }
@@ -227,6 +248,7 @@ exports.generateCandidateSummary = async (req, res) => {
             })
         } catch (aiErr) {
             await refundSummary(recruiterId)
+            await resolveSpend()
             logger.error('candidate summary AI call failed', { err: aiErr, recruiterId })
             return res.status(502).json({ success: false, message: 'Summarizing is temporarily unavailable, please try again' })
         }
@@ -234,11 +256,13 @@ exports.generateCandidateSummary = async (req, res) => {
         const result = parseJson(completion?.choices?.[0]?.message?.content)
         if (!result || typeof result.summary !== 'string') {
             await refundSummary(recruiterId)
+            await resolveSpend()
             return res.status(502).json({ success: false, message: 'The AI response was not in the expected format, please try again' })
         }
 
         application.fitScoreReasoning = result.summary.slice(0, 1000)
         await application.save()
+        await resolveSpend()
 
         return res.status(200).json({ success: true, summary: result.summary })
     } catch (error) {
