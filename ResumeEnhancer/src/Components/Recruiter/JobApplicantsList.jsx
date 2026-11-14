@@ -428,7 +428,8 @@ const JobApplicantsList = () => {
                         {app.resumeUrl && (
                           <button
                             onClick={() => handleRegenerateSummary(app._id)}
-                            className="flex items-center gap-1 text-[11px] text-richblack-400 hover:text-yellow-50 cursor-pointer"
+                            disabled={busy}
+                            className="flex items-center gap-1 text-[11px] text-richblack-400 hover:text-yellow-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FaMagic className="text-[9px]" /> {app.fitScoreReasoning ? 'Regenerate' : 'Generate'} AI summary
                           </button>
