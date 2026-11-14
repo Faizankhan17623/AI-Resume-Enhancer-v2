@@ -4,9 +4,17 @@
 const { z } = require('zod')
 const { objectId, planKey } = require('./Shared')
 
-const roleSchema = z.enum(['User', 'Support', 'Admin', 'Recruiter'], { error: 'Invalid role' })
+// tightened to a literal sir, per 2026-11-14 audit — updateUserRole/bulkUpdateUserRole
+// (controllers/Admin.js) only ever permit role === 'Support' (promoting a User to Support is
+// the only role change either endpoint allows; the broader enum below is unused by anything).
+// Was not currently exploitable (the controller's own `if (role !== 'Support')` check already
+// rejected anything else), but validating against a looser schema than the business logic
+// enforces is a footgun: a future refactor that trusts the schema more than it should (e.g.
+// removing that controller check "since it's already validated") would silently reopen
+// arbitrary role assignment including Admin.
+const supportRoleSchema = z.literal('Support', { error: 'This action can only promote a User to Support' })
 
-const updateUserRoleSchema = z.object({ role: roleSchema })
+const updateUserRoleSchema = z.object({ role: supportRoleSchema })
 
 // internal Admin/Support-only sticky note sir — see Models/User.js's own comment on adminNote
 const updateAdminNoteSchema = z.object({
@@ -17,7 +25,7 @@ const bulkUpdateRoleSchema = z.object({
     userIds: z.array(objectId, { error: 'userIds must be a non-empty array' })
         .min(1, 'userIds must be a non-empty array')
         .max(200, 'Cannot act on more than 200 users at once'),
-    role: roleSchema,
+    role: supportRoleSchema,
 })
 
 // field names mirror controllers/Admin.js exactly sir — `banned`, not `isBanned` (that's the
