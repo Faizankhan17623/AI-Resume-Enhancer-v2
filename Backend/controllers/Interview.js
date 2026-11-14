@@ -203,9 +203,21 @@ exports.confirmSlot = async (req, res) => {
             return res.status(400).json({ success: false, message: 'That slot no longer exists' })
         }
 
+        // atomic status:'proposed' precondition sir, per 2026-11-14 audit — same pattern as this
+        // file's own scheduleInterview and Test.js/Message.js/MockInterview.js's transitions. A
+        // double-click or client retry could otherwise let two requests both pass the plain
+        // schedule.status check above and both .save(), sending duplicate confirmation emails/
+        // calendar invites and letting whichever save landed second silently overwrite the slot.
+        const confirmed = await InterviewSchedule.findOneAndUpdate(
+            { _id: scheduleId, candidate: candidateId, status: 'proposed' },
+            { $set: { status: 'confirmed', confirmedSlot: slot } },
+            { returnDocument: 'after' }
+        )
+        if (!confirmed) {
+            return res.status(409).json({ success: false, message: 'This interview was already confirmed' })
+        }
         schedule.status = 'confirmed'
         schedule.confirmedSlot = slot
-        await schedule.save()
 
         const whenLabel = formatSlotLabel(slot.start, slot.end)
 
