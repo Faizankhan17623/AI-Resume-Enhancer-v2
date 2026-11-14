@@ -1,5 +1,16 @@
 const mongoose = require('mongoose')
 
+// array-length cap sir, per 2026-11-14 audit — every STRING field here already had a maxlength,
+// but the arrays themselves (experience/education/skills/projects/certifications, and the
+// bullets nested inside experience/projects) had none, and updateBuiltResume writes them
+// straight from client input via Object.assign. Not currently reachable (express.json's default
+// 100kb body limit already bounds how many entries a single request can carry), but this closes
+// the gap properly rather than leaving it dependent on that limit never changing — same category
+// of fix already applied twice elsewhere in this codebase for unbounded array growth
+// (Chat.js/MessageThread.js). 100 is generous for any real resume section.
+const MAX_ARRAY_LEN = 100
+const arrayLimit = { validator: (arr) => arr.length <= MAX_ARRAY_LEN, message: `Cannot have more than ${MAX_ARRAY_LEN} entries` }
+
 // one experience/education/project entry sir — no _id noise needed, these are always
 // rewritten as a whole array from the frontend, never patched field-by-field
 const experienceSchema = new mongoose.Schema({
@@ -9,7 +20,7 @@ const experienceSchema = new mongoose.Schema({
     startDate: { type: String, trim: true, maxlength: 30 },
     endDate: { type: String, trim: true, maxlength: 30 },
     current: { type: Boolean, default: false },
-    bullets: [{ type: String, trim: true, maxlength: 300 }],
+    bullets: { type: [{ type: String, trim: true, maxlength: 300 }], validate: arrayLimit },
 }, { _id: false })
 
 const educationSchema = new mongoose.Schema({
@@ -25,7 +36,7 @@ const projectSchema = new mongoose.Schema({
     name: { type: String, trim: true, maxlength: 150 },
     description: { type: String, trim: true, maxlength: 400 },
     link: { type: String, trim: true, maxlength: 300 },
-    bullets: [{ type: String, trim: true, maxlength: 300 }],
+    bullets: { type: [{ type: String, trim: true, maxlength: 300 }], validate: arrayLimit },
 }, { _id: false })
 
 const certificationSchema = new mongoose.Schema({
@@ -48,11 +59,11 @@ const versionSchema = new mongoose.Schema({
         website: { type: String, trim: true, maxlength: 300, default: '' },
     },
     summary: { type: String, trim: true, maxlength: 800, default: '' },
-    experience: [experienceSchema],
-    education: [educationSchema],
-    skills: [{ type: String, trim: true, maxlength: 60 }],
-    projects: [projectSchema],
-    certifications: [certificationSchema],
+    experience: { type: [experienceSchema], validate: arrayLimit },
+    education: { type: [educationSchema], validate: arrayLimit },
+    skills: { type: [{ type: String, trim: true, maxlength: 60 }], validate: arrayLimit },
+    projects: { type: [projectSchema], validate: arrayLimit },
+    certifications: { type: [certificationSchema], validate: arrayLimit },
     savedAt: { type: Date, default: Date.now },
 }, { _id: true })
 
@@ -88,11 +99,11 @@ const builtResumeSchema = new mongoose.Schema(
             website: { type: String, trim: true, maxlength: 300, default: '' },
         },
         summary: { type: String, trim: true, maxlength: 800, default: '' },
-        experience: [experienceSchema],
-        education: [educationSchema],
-        skills: [{ type: String, trim: true, maxlength: 60 }],
-        projects: [projectSchema],
-        certifications: [certificationSchema],
+        experience: { type: [experienceSchema], validate: arrayLimit },
+        education: { type: [educationSchema], validate: arrayLimit },
+        skills: { type: [{ type: String, trim: true, maxlength: 60 }], validate: arrayLimit },
+        projects: { type: [projectSchema], validate: arrayLimit },
+        certifications: { type: [certificationSchema], validate: arrayLimit },
         // optional headshot for templates that render a photo sir — a Cloudinary secure_url
         photoUrl: { type: String, trim: true, maxlength: 500, default: '' },
         // per-resume accent color sir — hex string, each template maps this onto its own
