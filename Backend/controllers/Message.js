@@ -7,6 +7,7 @@ const logger = require('../utils/logger')
 const mailSender = require('../utils/Nodemailer')
 const { notify } = require('../utils/NotificationLog')
 const { newMessageTemplate } = require('../Templates/NewMessage')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 const frontendOrigin = () => process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/+$/, '')
@@ -100,6 +101,18 @@ exports.sendMessage = async (req, res) => {
         if (result.error) return res.status(result.error.status).json({ success: false, message: result.error.message })
 
         const { thread, application, isRecruiter } = result
+
+        // moderation pass sir, per 2026-11-15 audit — every other user-text field feeding an AI
+        // prompt in this app (Chat.js, MockInterview.js, RecruiterAI.js, OutreachMessage.js) runs
+        // through moderateText first; this real-time recruiter<->candidate thread had none at
+        // all, so harassment/abuse text could flow in either direction with zero safety-pipeline
+        // coverage, even though it's stored, emailed (newMessageTemplate), and surfaced as an
+        // in-app notification same as any of those. Fails open if the classifier itself errors
+        // (see utils/Moderation.js) — never blocks a legitimate message on a moderation outage.
+        const modResult = await moderateText(text, { feature: 'recruiter-message' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
+        }
 
         // cap sir, per 2026-11-08 audit — this thread's messages array had no cap at all, unlike
         // Chat.js's plan-based cap; two parties could exchange unlimited messages, growing one
