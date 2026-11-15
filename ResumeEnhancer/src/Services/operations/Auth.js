@@ -104,7 +104,11 @@ export function CreateTheUser(signupData, otp, navigate, onStatus) {
 // drive one centered status panel instead of a toast, matching the same status-overlay pattern
 // OAuthComplete.jsx uses for the OAuth login path. navigate is still called on success, but only
 // AFTER a short pause so the success checkmark is actually visible before the redirect fires.
-export function LoginUser(email, password, navigate, onStatus) {
+// `from` sir, per 2026-11-15 audit — the path a candidate was bounced here from (Apply button,
+// Save job, a private invite link). Only honored for a 'User' role: an Admin/Support/Recruiter
+// account logging in here (rare, but the same form) has no business landing on a candidate-only
+// job path.
+export function LoginUser(email, password, navigate, from, onStatus) {
     return async (dispatch) => {
         dispatch(setLoading(true))
         onStatus?.('loading', 'Logging in...')
@@ -131,8 +135,11 @@ export function LoginUser(email, password, navigate, onStatus) {
                 : "Login successful"
             onStatus?.('success', successMessage)
 
-            // each role lands on its OWN dashboard sir — never a shared landing page
-            const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support' : '/Dashboard'
+            // each role lands on its OWN dashboard sir — never a shared landing page, UNLESS a
+            // User role was bounced here from a specific job/invite page, in which case they
+            // return there instead
+            const landingPath = user?.role === 'Admin' ? '/Admin' : user?.role === 'Support' ? '/Support'
+                : user?.role === 'User' && from ? from : '/Dashboard'
 
             // setLogin(true) is DELAYED along with the redirect sir, not dispatched immediately —
             // Login/User.jsx is wrapped in OpenRoute, which watches isLoggedIn and instantly

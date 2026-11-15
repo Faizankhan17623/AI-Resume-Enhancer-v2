@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate, useLocation, Link } from 'react-router'
 import { Helmet } from 'react-helmet-async'
 import Navbar from '../Home/Navbar'
 import IconBtn from '../extra/IconBtn'
@@ -36,7 +36,12 @@ const User = () => {
   const { register, handleSubmit, formState: { errors } } = useForm()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const { loading } = useSelector((state) => state.auth)
+  // JobDetail.jsx/JobInviteLanding.jsx/SavedJobs.jsx redirect here with this sir, per 2026-11-15
+  // audit — previously written in three places and read nowhere, so a candidate bounced to
+  // login from "Apply" always landed on /Dashboard afterward, losing the job they came for
+  const from = location.state?.from
   // drives LoginStatusOverlay sir — { status: 'loading'|'success'|'error'|null, message }.
   // Replaces the old toast.loading/success/error trio (see Services/operations/Auth.js's
   // LoginUser, which now calls onStatus instead of toasting directly).
@@ -45,7 +50,7 @@ const User = () => {
   const [lastMethod] = useState(getLastLoginMethod)
 
   const onSubmit = (data) => {
-    dispatch(LoginUser(data.email, data.password, navigate, (status, message) => {
+    dispatch(LoginUser(data.email, data.password, navigate, from, (status, message) => {
       setLoginStatus({ status, message })
       // an error clears itself after a moment sir so the form is usable again for a retry —
       // loading/success don't need this, they're cleared by the redirect (success) or the next
