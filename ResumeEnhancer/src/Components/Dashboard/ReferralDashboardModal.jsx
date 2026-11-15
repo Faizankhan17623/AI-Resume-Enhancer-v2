@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaTimes, FaUserFriends } from 'react-icons/fa'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
@@ -27,10 +27,18 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
   const [loadError, setLoadError] = useState(false)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  // request-id latch sir, per 2026-11-15 audit — the mount effect below already guards against
+  // a stale response with its own `cancelled` flag, but load() (used by handleApplyCustomRange)
+  // had none at all. Clicking "Apply" twice in quick succession, or adjusting dates and
+  // re-clicking before the first request lands, could let an older response overwrite a newer
+  // one with no sign anything was stale.
+  const latestRequestIdRef = useRef(0)
 
   const load = async (from, to) => {
+    const requestId = ++latestRequestIdRef.current
     setLoading(true)
     const result = await GetReferralHistory(token, from, to)()
+    if (requestId !== latestRequestIdRef.current) return
     setData(result)
     setLoadError(!result)
     setLoading(false)
@@ -47,10 +55,11 @@ const ReferralDashboardModal = ({ open, onClose, token }) => {
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    const requestId = ++latestRequestIdRef.current
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     GetReferralHistory(token)().then((result) => {
-      if (cancelled) return
+      if (cancelled || requestId !== latestRequestIdRef.current) return
       setData(result)
       setLoadError(!result)
       setLoading(false)
