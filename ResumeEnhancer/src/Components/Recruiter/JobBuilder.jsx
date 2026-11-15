@@ -64,6 +64,10 @@ const JobBuilder = () => {
   // Pro/ProMax upsell sir — drafts the description from a title + a few must-have bullet points,
   // metered by utils/RecruiterPlans.js's recruiterJdWritesUsed
   const handleDraftWithAi = async () => {
+    // isLocked check added sir, per 2026-11-15 audit — same reasoning as TestBuilder.jsx's own
+    // AI-suggest button fix: left ungated client-side despite the real Groq cost, unlike the
+    // submit button right next to it
+    if (isLocked) return toast.error("Your recruiter account is pending admin approval")
     if (!title.trim()) return toast.error("Enter a job title first")
     if (!mustHaves.trim()) return toast.error("Give the AI a few must-have requirements to work from")
 
@@ -127,7 +131,7 @@ const JobBuilder = () => {
             <button
               type="button"
               onClick={handleDraftWithAi}
-              disabled={draftingAi}
+              disabled={draftingAi || isLocked}
               className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-yellow-50 text-richblack-900 hover:brightness-95 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaMagic className="text-[10px]" /> Draft description with AI

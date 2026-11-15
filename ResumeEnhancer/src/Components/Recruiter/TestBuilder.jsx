@@ -63,6 +63,10 @@ const TestBuilder = () => {
   // question list below, nothing is added directly to the test). Metered by
   // utils/RecruiterPlans.js's recruiterInterviewQGenUsed.
   const handleGenerateWithAi = async () => {
+    // isLocked check added sir, per 2026-11-15 audit — same lock as the Create test submit
+    // below, but this AI call was left ungated client-side despite costing real Groq tokens,
+    // unlike the submit button's own cheap DB write
+    if (isLocked) return toast.error("Your recruiter account is pending admin approval")
     const suggestions = await dispatch(GenerateInterviewQuestions(jobId, 8, token, setGeneratingAi))
     if (!suggestions?.length) return
 
@@ -288,7 +292,7 @@ const TestBuilder = () => {
             <button
               type="button"
               onClick={handleGenerateWithAi}
-              disabled={generatingAi}
+              disabled={generatingAi || isLocked}
               className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-yellow-700/60 py-4 text-sm text-yellow-25 hover:border-yellow-50 hover:text-yellow-5 transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaMagic /> Suggest questions with AI
