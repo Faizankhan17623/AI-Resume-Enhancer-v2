@@ -362,9 +362,13 @@ exports.deleteJob = async (req, res) => {
 
         const applications = await JobApplication.find({ job: jobId }).populate('candidate', 'firstName lastName email')
 
+        // JobInvite cascade added sir, per 2026-11-15 audit — this job's invite-only links
+        // (Models/JobInvite.js, one per job+email pair) were left orphaned, pointing at a job
+        // that no longer exists, reachable forever through their own token-gated page
         await Promise.all([
             Job.deleteOne({ _id: jobId }),
             JobApplication.deleteMany({ job: jobId }),
+            JobInvite.deleteMany({ job: jobId }),
         ])
 
         const frontendUrl = process.env.FRONTEND_URL
@@ -883,10 +887,11 @@ exports.setApplicationOutcome = async (req, res) => {
             })
         }
 
+        let eligibleFromStatuses
         if (status === 'hired') {
             const jobHasTest = !!application.job.test
-            const eligible = jobHasTest ? application.status === 'completed_test' : application.status === 'applied'
-            if (!eligible) {
+            eligibleFromStatuses = jobHasTest ? ['completed_test'] : ['applied']
+            if (!eligibleFromStatuses.includes(application.status)) {
                 return res.status(400).json({
                     success: false,
                     message: jobHasTest
@@ -894,10 +899,30 @@ exports.setApplicationOutcome = async (req, res) => {
                         : 'This candidate cannot be hired from its current status',
                 })
             }
+        } else {
+            // 'rejected' sir — reachable from any non-terminal status, so the atomic claim below
+            // just needs to exclude the two terminal ones themselves
+            eligibleFromStatuses = ['applied', 'invite_expired', 'invited_to_test', 'completed_test']
         }
 
+        // atomic claim sir, per 2026-11-15 audit — same pattern as Interview.js's confirmSlot/
+        // Test.js's submitAnswers. The plain read-then-write above left a real race: two requests
+        // (a double-click, or a recruiter hitting hire while a bulk-reject request is in flight)
+        // could both pass the eligibility check against the same stale `application` object, both
+        // .save(), and both send their own outcome email — a candidate could be persisted as
+        // 'rejected' but emailed "You're Hired!", or vice versa.
+        const claimed = await JobApplication.findOneAndUpdate(
+            { _id: application._id, status: { $in: eligibleFromStatuses } },
+            { $set: { status } },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({
+                success: false,
+                message: 'This application was already updated by another request',
+            })
+        }
         application.status = status
-        await application.save()
 
         // best-effort hire/reject email sir — same pattern as every other non-critical mail send
         // in this file (test invites, job-withdrawn notices), wrapped so a relay hiccup never
@@ -1060,32 +1085,49 @@ exports.bulkSetApplicationOutcome = async (req, res) => {
         const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId }).populate('candidate', 'firstName lastName email')
 
         // same rule as the single-application version above sir — 'rejected' works from ANY
-        // status (the manual "close this application" action), 'hired' still needs the test
-        // completed if the job has one, or 'applied' if it doesn't
+        // non-terminal status (the manual "close this application" action), 'hired' still needs
+        // the test completed if the job has one, or 'applied' if it doesn't
         const jobHasTest = !!job.test
-        const updated = []
-        const skipped = []
-        const toEmail = []
-        for (const application of applications) {
-            const eligible = status === 'rejected'
-                ? true
-                : jobHasTest ? application.status === 'completed_test' : application.status === 'applied'
-            if (!eligible) {
-                skipped.push(String(application._id))
-                continue
-            }
-            updated.push(String(application._id))
-            if (application.candidate?.email) toEmail.push(application.candidate)
-        }
+        const eligibleFromStatuses = status === 'rejected'
+            ? ['applied', 'invite_expired', 'invited_to_test', 'completed_test']
+            : jobHasTest ? ['completed_test'] : ['applied']
 
-        // one bulkWrite sir instead of N sequential .save() calls — same fix and same reasoning
-        // as bulkInviteApplicantsToTest above (found in the 2026-11-07 audit)
-        if (updated.length) {
-            await JobApplication.updateMany(
-                { _id: { $in: updated } },
-                { $set: { status } }
+        const candidateById = new Map(applications.map((a) => [String(a._id), a.candidate]))
+        const toClaim = applications.filter((a) => eligibleFromStatuses.includes(a.status))
+        const skipped = applications
+            .filter((a) => !eligibleFromStatuses.includes(a.status))
+            .map((a) => String(a._id))
+
+        // atomic per-application claim sir, per 2026-11-15 audit — same race as
+        // setApplicationOutcome's own fix above, just at bulk scale. The old updateMany matched
+        // on an id list computed from a stale in-memory read with NO status precondition in the
+        // actual write, so a concurrent single-application action on one of these same rows could
+        // get silently overwritten (or overwrite this one) with no one noticing, and still send
+        // its own contradicting email. findOneAndUpdate (one per application, run concurrently)
+        // is used instead of updateMany specifically because each call directly reports whether
+        // ITS OWN claim succeeded — updateMany only returns a total count, which can't tell us
+        // which specific ids to email.
+        const claims = await Promise.all(
+            toClaim.map((a) =>
+                JobApplication.findOneAndUpdate(
+                    { _id: a._id, status: { $in: eligibleFromStatuses } },
+                    { $set: { status } }
+                )
             )
-        }
+        )
+
+        const updated = []
+        const toEmail = []
+        claims.forEach((claimedDoc, i) => {
+            const id = String(toClaim[i]._id)
+            if (!claimedDoc) {
+                skipped.push(id)
+                return
+            }
+            updated.push(id)
+            const candidate = candidateById.get(id)
+            if (candidate?.email) toEmail.push(candidate)
+        })
 
         // best-effort hire/reject emails sir — allSettled, same reasoning as bulkInviteApplicantsToTest's
         // own mail send above: one bad address must not stop the rest
