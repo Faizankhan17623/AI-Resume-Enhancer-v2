@@ -219,8 +219,14 @@ export function GetTraffic(token, range = 'week') {
             }
 
             dispatch(setTraffic(response.data))
+            dispatch(setFetchError({ key: 'traffic', failed: false }))
         } catch (error) {
             logApiError("Error fetching the traffic stats", error)
+            // per 2026-11-15 audit — this was the only one of GetTraffic's ~9 sibling fetchers
+            // with no setFetchError dispatch, so a failed fetch left stale data on screen with
+            // no error indicator, even while the Day/Week/Month range toggle itself still
+            // visually updated as if the new range had loaded successfully
+            dispatch(setFetchError({ key: 'traffic', failed: true }))
         }
     }
 }
@@ -572,9 +578,11 @@ export function CreateAnnouncement(title, message, token, options = {}, onLoadin
 
             toast.success(response.data.message || "Announcement published")
             dispatch(GetAnnouncements(token))
+            return true
         } catch (error) {
             logApiError("Error creating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not publish")
+            return false
         } finally {
             onLoadingChange?.(false)
         }
@@ -595,9 +603,11 @@ export function UpdateAnnouncement(announcementId, payload, token, onLoadingChan
 
             toast.success(response.data.message || "Announcement updated")
             dispatch(GetAnnouncements(token))
+            return true
         } catch (error) {
             logApiError("Error updating the announcement", error)
             toast.error(error?.response?.data?.message || "Could not update")
+            return false
         } finally {
             onLoadingChange?.(false)
         }

@@ -315,6 +315,15 @@ const Overview = () => {
             </div>
           </div>
 
+          {/* error notice sir, per 2026-11-15 audit — Traffic was the one card of ~9 parallel
+              fetchers with no fetchErrors dispatch at all. Shown separately from the
+              traffic-is-null branch below because the real gap was a failed fetch for a NEWLY
+              selected range leaving the PREVIOUS range's stale data on screen with no indicator,
+              while the Day/Week/Month toggle itself still visually updated to the new selection */}
+          {fetchErrors.traffic && (
+            <p className="text-xs text-pink-100 mb-3">Could not load this range, showing the last loaded data — please refresh.</p>
+          )}
+
           {traffic ? (
             <>
               <div className="grid grid-cols-3 gap-4 mb-6">
