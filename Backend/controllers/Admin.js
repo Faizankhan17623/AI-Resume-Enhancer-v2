@@ -9,6 +9,8 @@ const Review = require('../Models/Review')
 const Payment = require('../Models/Payment')
 const Job = require('../Models/Job')
 const JobApplication = require('../Models/JobApplication')
+const JobAlert = require('../Models/JobAlert')
+const JobInvite = require('../Models/JobInvite')
 const { PLANS, getEffectivePlan } = require('../utils/Plans')
 const { logAction } = require('../utils/AdminLog')
 const mailSender = require('../utils/Nodemailer.js')
@@ -800,9 +802,13 @@ exports.deleteUser = async (req, res) => {
                 const jobIds = jobs.map((j) => j._id)
                 const applications = await JobApplication.find({ job: { $in: jobIds } }).populate('candidate', 'firstName lastName email')
 
+                // JobInvite cascade added sir, per 2026-11-15 audit — same gap as deleteJob's own
+                // fix (Job.js): this recruiter's invite-only links were left orphaned, pointing at
+                // jobs that no longer exist
                 await Promise.all([
                     Job.deleteMany({ recruiter: userId }),
                     JobApplication.deleteMany({ job: { $in: jobIds } }),
+                    JobInvite.deleteMany({ job: { $in: jobIds } }),
                 ])
 
                 const frontendUrl = process.env.FRONTEND_URL
@@ -831,7 +837,13 @@ exports.deleteUser = async (req, res) => {
                 }))
             }
         } else if (user.role === 'User') {
-            await JobApplication.deleteMany({ candidate: userId })
+            // JobAlert cascade added sir, per 2026-11-15 audit — this candidate's saved job
+            // alerts (Models/JobAlert.js) were left orphaned, still matched against and emailed
+            // out by the alert cron (see JobAlertCron.js) for an account that no longer exists
+            await Promise.all([
+                JobApplication.deleteMany({ candidate: userId }),
+                JobAlert.deleteMany({ user: userId }),
+            ])
         }
 
         logAction(adminId, 'USER_DELETE', user, {})
