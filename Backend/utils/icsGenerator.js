@@ -13,8 +13,15 @@ const toIcsDate = (date) => date.toISOString().replace(/[-:]/g, '').split('.')[0
 // every field this app puts in one (a job title, a company name, a meeting link) realistically
 // never approaches that length; adding fold logic for a case that can't occur would just be
 // unexercised code
+//
+// bare \r stripped, not just escaped, sir — per 2026-11-15 audit. A recruiter-supplied
+// meetingLink/notes with a raw carriage return (no matching \n) used to pass straight through:
+// RFC 5545 lines are CRLF-terminated, so an embedded \r followed by this file's own \n elsewhere
+// in the string closes the current line early and starts a new, attacker-controlled .ics
+// property/line inside the calendar invite emailed to a real candidate. \\ and \n are escaped
+// (not stripped) since those are legitimate content; \r has no legitimate use in a one-line field.
 const escapeIcsText = (text = '') =>
-    String(text).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+    String(text).replace(/\r/g, '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
 
 /**
  * Builds a single-event .ics file sir — used for the interview-confirmed email
