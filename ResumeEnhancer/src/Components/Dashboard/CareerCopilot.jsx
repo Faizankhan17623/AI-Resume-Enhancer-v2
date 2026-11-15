@@ -5,37 +5,40 @@ import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
-import { apiConnector } from '../../Services/apiConnector'
-import { CareerApi } from '../../Services/Apis/CareerApi'
+import {
+  GetCareerOverview, AnalyzeApplicationCopilot, BuildCareerRoadmap, GetInterviewFeedback,
+  AddCareerFollowUp, ToggleCareerFollowUp, ShareCareerProfile,
+} from '../../Services/operations/Career'
 
 const Card = ({ title, children }) => <section className="rounded-2xl bg-richblack-800 p-5 shadow-md"><h2 className="text-sm font-semibold text-richblack-5 mb-3">{title}</h2>{children}</section>
 
 export default function CareerCopilot() {
   const { token } = useSelector(s => s.auth); const [data, setData] = useState(null); const [loadError, setLoadError] = useState(false); const [jobText, setJobText] = useState(''); const [role, setRole] = useState(''); const [roadmap, setRoadmap] = useState(null); const [copilot, setCopilot] = useState(null); const [feedback, setFeedback] = useState(null); const [question, setQuestion] = useState('Tell me about a project you are proud of.'); const [answer, setAnswer] = useState(''); const [followUp, setFollowUp] = useState({ title: '', dueAt: '' }); const [busy, setBusy] = useState(false); const [analyzing, setAnalyzing] = useState(false); const [reviewing, setReviewing] = useState(false)
-  const load = async () => { const r = await apiConnector('GET', CareerApi.overview, null, { Authorization: `Bearer ${token}` }); setData(r.data) }
+  // apiConnector moved out to Services/operations/Career.js sir, per 2026-11-15 audit — this
+  // component used to call apiConnector directly 7 times, the one place in the app that did;
+  // every other feature keeps that call in its own operations file. No careerSlice exists
+  // because nothing here is needed outside this one page, so these stay plain async functions
+  // that return data/null instead of thunks that dispatch — same shape as Review.js's own
+  // DownloadReviewPdf.
+  const load = async () => { const result = await GetCareerOverview(token); if (result) setData(result); else toast.error('Could not refresh Career Copilot, please reload the page.') }
   // loadError sir, per 2026-11-08 audit — a failed initial fetch used to leave data null forever,
   // so the page showed "Loading Career Copilot..." permanently on a stale token or a 500, with no
   // way out but a manual reload. Same fix pattern as Recruiter/CandidateMatches.jsx.
-  useEffect(() => { let alive = true; apiConnector('GET', CareerApi.overview, null, { Authorization: `Bearer ${token}` }).then(r => { if (alive) setData(r.data) }).catch(() => { if (alive) setLoadError(true) }); return () => { alive = false } }, [token])
+  useEffect(() => { let alive = true; GetCareerOverview(token).then(result => { if (!alive) return; if (result) setData(result); else setLoadError(true) }); return () => { alive = false } }, [token])
   if (loadError) return <DashboardLayout title="Career Copilot"><p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load Career Copilot, please try again.</p></DashboardLayout>
   if (!data) return <DashboardLayout title="Career Copilot"><Loading text="Loading Career Copilot..." /></DashboardLayout>
   const analyzeApplication = async () => {
     if (!jobText.trim()) return
     setAnalyzing(true)
-    try {
-      const r = await apiConnector('POST', CareerApi.applicationCopilot, { jobText }, { Authorization: `Bearer ${token}` })
-      setCopilot(r.data)
-    } catch {
-      toast.error('Could not analyze this application, please try again.')
-    } finally {
-      setAnalyzing(false)
-    }
+    const result = await AnalyzeApplicationCopilot(jobText, token)
+    if (result) setCopilot(result)
+    setAnalyzing(false)
   }
-  const makeRoadmap = async e => { e.preventDefault(); setBusy(true); try { const r = await apiConnector('POST', CareerApi.roadmap, { targetRole: role, jobText }, { Authorization: `Bearer ${token}` }); setRoadmap(r.data) } catch { toast.error('Could not build the roadmap, please try again.') } finally { setBusy(false) } }
-  const reviewAnswer = async e => { e.preventDefault(); if (reviewing || !answer.trim()) return; setReviewing(true); try { const r = await apiConnector('POST', CareerApi.interviewFeedback, { question, answer }, { Authorization: `Bearer ${token}` }); setFeedback(r.data.feedback) } catch { toast.error('Could not review your answer, please try again.') } finally { setReviewing(false) } }
-  const addFollowUp = async e => { e.preventDefault(); try { await apiConnector('POST', CareerApi.followUps, followUp, { Authorization: `Bearer ${token}` }); setFollowUp({ title: '', dueAt: '' }); load() } catch { toast.error('Could not add that reminder, please try again.') } }
-  const toggleFollowUp = async item => { try { await apiConnector('PATCH', `${CareerApi.followUps}/${item._id}`, { completed: !item.completed }, { Authorization: `Bearer ${token}` }); load() } catch { toast.error('Could not update that reminder, please try again.') } }
-  const shareProfile = async () => { try { const r = await apiConnector('POST', CareerApi.profileShare, null, { Authorization: `Bearer ${token}` }); if (r.data.shareId) navigator.clipboard?.writeText(`${window.location.origin}/Career/${r.data.shareId}`) } catch { toast.error('Could not share your profile, please try again.') } }
+  const makeRoadmap = async e => { e.preventDefault(); setBusy(true); const result = await BuildCareerRoadmap(role, jobText, token); if (result) setRoadmap(result); setBusy(false) }
+  const reviewAnswer = async e => { e.preventDefault(); if (reviewing || !answer.trim()) return; setReviewing(true); const result = await GetInterviewFeedback(question, answer, token); if (result) setFeedback(result); setReviewing(false) }
+  const addFollowUp = async e => { e.preventDefault(); const ok = await AddCareerFollowUp(followUp, token); if (ok) { setFollowUp({ title: '', dueAt: '' }); load() } }
+  const toggleFollowUp = async item => { const ok = await ToggleCareerFollowUp(item._id, !item.completed, token); if (ok) load() }
+  const shareProfile = async () => { const shareId = await ShareCareerProfile(token); if (shareId) navigator.clipboard?.writeText(`${window.location.origin}/Career/${shareId}`) }
   return <DashboardLayout title="Career Copilot"><Helmet><title>Career Copilot | Resumify</title></Helmet><p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Turn every job opportunity into a clear next step.</p><div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-6 py-4">
     <Card title="Application Copilot"><p className="text-xs text-richblack-400 mb-3">Paste a job description and get a practical application plan using {data.resume ? (data.resume.label || 'your saved resume') : 'your saved resume'}.</p><textarea value={jobText} onChange={e => setJobText(e.target.value)} placeholder="Paste the job description here..." className="w-full min-h-28 rounded-lg bg-richblack-900 border border-richblack-700 p-3 text-sm text-richblack-5" /><div className="flex flex-wrap gap-2 mt-3"><button type="button" disabled={analyzing || !jobText.trim()} onClick={analyzeApplication} className="rounded-lg bg-yellow-50 px-4 py-2 text-sm font-semibold text-richblack-900">{analyzing ? 'Analyzing...' : 'Analyze application'}</button><button type="button" disabled={busy || !jobText.trim()} onClick={makeRoadmap} className="rounded-lg border border-richblack-600 px-4 py-2 text-sm text-richblack-200">{busy ? 'Building...' : 'Build skill roadmap'}</button></div>{copilot && <div className="mt-5 space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs text-richblack-400">Resume fit</p><p className="font-display text-4xl text-yellow-50">{copilot.fit.score}%</p><p className="text-sm text-richblack-200">{copilot.fit.tier}</p></div>{copilot.recommendedResume && <div className="text-right"><p className="text-xs text-richblack-400">Recommended built resume</p><p className="text-sm font-semibold text-richblack-5">{copilot.recommendedResume.title} · {copilot.recommendedResume.score}%</p></div>}</div><div><p className="text-xs text-richblack-400 mb-2">Missing or weak keywords</p>{copilot.fit.missing.length ? copilot.fit.missing.slice(0, 10).map(s => <span key={s} className="inline-block mr-2 mb-2 rounded-full bg-pink-900/30 px-2 py-1 text-xs text-pink-100">{s}</span>) : <p className="text-sm text-caribgreen-100">Your resume covers the main terms in this job.</p>}</div><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">{copilot.checklist.map(item => <Link key={item.key} to={item.action} className={`rounded-lg border p-3 text-xs ${item.complete ? 'border-caribgreen-700/60 bg-caribgreen-900/15 text-caribgreen-100' : 'border-richblack-700 bg-richblack-900/50 text-richblack-200 hover:border-yellow-50/50'}`}><span className="block font-semibold">{item.complete ? '✓ ' : '→ '}{item.label}</span>{!item.complete && <span className="text-richblack-400">Open next</span>}</Link>)}</div>{copilot.nextSteps.length > 0 && <div className="rounded-lg bg-richblack-900/60 p-3"><p className="text-xs font-semibold text-richblack-300 mb-1">Before you apply</p>{copilot.nextSteps.map(step => <p key={step} className="text-xs text-richblack-400">• {step}</p>)}</div>}</div>}</Card>
     <Card title="Skill roadmap workspace"><form onSubmit={makeRoadmap} className="flex gap-2 mt-3"><input value={role} onChange={e => setRole(e.target.value)} placeholder="Target role (optional)" className="flex-1 rounded-lg bg-richblack-900 border border-richblack-700 px-3 py-2 text-sm text-richblack-5" /><button disabled={busy || !jobText.trim()} className="rounded-lg bg-caribgreen-700 px-4 py-2 text-sm font-semibold text-white">{busy ? 'Building...' : 'Build roadmap'}</button></form>{roadmap && <div className="mt-4 grid md:grid-cols-2 gap-3"><div><p className="text-xs text-richblack-400">Current match</p><p className="font-display text-3xl text-yellow-50">{roadmap.match.score}%</p><p className="text-sm text-richblack-200">{roadmap.match.tier}</p></div><div><p className="text-xs text-richblack-400 mb-2">Priority skill gaps</p>{roadmap.plan.skills.slice(0, 6).map(s => <span key={s.name} className="inline-block mr-2 mb-2 rounded-full bg-pink-900/30 px-2 py-1 text-xs text-pink-100">{s.name}</span>)}</div></div>}</Card>
