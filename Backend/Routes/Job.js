@@ -2,6 +2,7 @@ const express = require('express')
 const route = express.Router()
 const { Auth, isRecruiter, isApprovedRecruiter, isUser } = require('../Middlewares/Auth.js')
 const { validate } = require('../Middlewares/Validate.js')
+const { grammarCheckLimiter } = require('../Middlewares/RateLimit.js')
 const {
     createJobSchema,
     updateJobSchema,
@@ -104,7 +105,11 @@ route.get('/public/jobs/invite/:token', getJobInviteByToken)
 route.get('/public/jobs/:jobId', getPublicJob)
 
 // candidate side
-route.post('/jobs/:jobId/apply', Auth, isUser, parseMultipartJson, validate({ body: applyToJobSchema }), applyToJob)
+// grammarCheckLimiter sir, per 2026-11-15 audit — applyToJob does a PDF parse + Cloudinary
+// upload + AI fit-score call per request, a heavier cost profile than grammar-check's own PDF
+// parse alone, so it reuses that same tight 10/min fail-closed limiter rather than relying on
+// the loose app-wide globalLimiter alone
+route.post('/jobs/:jobId/apply', Auth, isUser, grammarCheckLimiter, parseMultipartJson, validate({ body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
 route.patch('/job-applications/:applicationId/shortlist', Auth, isRecruiter, isApprovedRecruiter, toggleShortlist)
