@@ -57,7 +57,9 @@ const Leaderboard = () => {
   const [activeBoard, setActiveBoard] = useState('scores')
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { leaderboard, weeklyReviewsLeaderboard, streaksLeaderboard, loading } = useSelector((state) => state.review)
+  // own loading flag per board sir, per 2026-11-15 audit — see reviewSlice.js's own comment on
+  // why these three can no longer share one flag between them
+  const { leaderboard, weeklyReviewsLeaderboard, streaksLeaderboard, leaderboardLoading, weeklyReviewsLoading, streaksLoading } = useSelector((state) => state.review)
   const rowsRef = useRef(null)
 
   useEffect(() => {
@@ -73,9 +75,15 @@ const Leaderboard = () => {
     weeklyReviews: weeklyReviewsLeaderboard,
     streaks: streaksLeaderboard,
   }
+  const boardLoading = {
+    scores: leaderboardLoading,
+    weeklyReviews: weeklyReviewsLoading,
+    streaks: streaksLoading,
+  }
 
   const board = BOARDS.find((b) => b.id === activeBoard)
   const rows = boardData[activeBoard]
+  const loading = boardLoading[activeBoard]
 
   const switchBoard = (id) => {
     if (id === activeBoard) return

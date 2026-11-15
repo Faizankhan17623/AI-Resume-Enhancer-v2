@@ -22,7 +22,15 @@ const initialState = {
     streak: null,
     leaderboard: [],
     weeklyReviewsLeaderboard: [],
-    streaksLeaderboard: []
+    streaksLeaderboard: [],
+    // one loading flag PER board sir, per 2026-11-15 audit — these three used to all share the
+    // single `loading` flag above. Leaderboard.jsx fires all three fetches in the same effect
+    // tick; whichever resolved first flipped the shared flag to false while the other two were
+    // still in flight, flashing a false "No scores yet"/"No reviews this week"/"No active
+    // streaks" empty-state for whichever board(s) hadn't finished yet.
+    leaderboardLoading: false,
+    weeklyReviewsLoading: false,
+    streaksLoading: false
 };
 
 const reviewSlice = createSlice({
@@ -79,12 +87,22 @@ const reviewSlice = createSlice({
         },
         setStreaksLeaderboard(state, value) {
             state.streaksLeaderboard = value.payload
+        },
+        setLeaderboardLoading(state, value) {
+            state.leaderboardLoading = value.payload
+        },
+        setWeeklyReviewsLoading(state, value) {
+            state.weeklyReviewsLoading = value.payload
+        },
+        setStreaksLoading(state, value) {
+            state.streaksLoading = value.payload
         }
     }
 })
 
 export const {
     setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
-    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard
+    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard,
+    setLeaderboardLoading, setWeeklyReviewsLoading, setStreaksLoading
 } = reviewSlice.actions
 export default reviewSlice.reducer

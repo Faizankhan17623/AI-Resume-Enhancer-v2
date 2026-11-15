@@ -3,7 +3,8 @@ import { apiConnector, axiosinstance } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
     setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
-    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard
+    setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard,
+    setLeaderboardLoading, setWeeklyReviewsLoading, setStreaksLoading
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
 import { ResumeData } from '../Apis/ResumeApi.js'
@@ -291,9 +292,11 @@ export function GetStreak(token) {
 }
 
 // anonymized top-score leaderboard sir — no resume content, no identity
+// own dedicated loading flag sir, per 2026-11-15 audit — see reviewSlice.js's own comment on
+// why these three no longer share the plain `loading` flag
 export function GetLeaderboard(token) {
     return async (dispatch) => {
-        dispatch(setLoading(true))
+        dispatch(setLeaderboardLoading(true))
         try {
             const response = await apiConnector("GET", leaderboard, null, {
                 Authorization: `Bearer ${token}`
@@ -308,7 +311,7 @@ export function GetLeaderboard(token) {
             logApiError("Error fetching the leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the leaderboard")
         } finally {
-            dispatch(setLoading(false))
+            dispatch(setLeaderboardLoading(false))
         }
     }
 }
@@ -316,7 +319,7 @@ export function GetLeaderboard(token) {
 // "resumes reviewed this week" board sir — rewards activity, counts every review run in the last 7 days
 export function GetWeeklyReviewsLeaderboard(token) {
     return async (dispatch) => {
-        dispatch(setLoading(true))
+        dispatch(setWeeklyReviewsLoading(true))
         try {
             const response = await apiConnector("GET", weeklyReviews, null, {
                 Authorization: `Bearer ${token}`
@@ -331,7 +334,7 @@ export function GetWeeklyReviewsLeaderboard(token) {
             logApiError("Error fetching the weekly reviews leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the weekly leaderboard")
         } finally {
-            dispatch(setLoading(false))
+            dispatch(setWeeklyReviewsLoading(false))
         }
     }
 }
@@ -339,7 +342,7 @@ export function GetWeeklyReviewsLeaderboard(token) {
 // longest current activity streaks sir
 export function GetStreaksLeaderboard(token) {
     return async (dispatch) => {
-        dispatch(setLoading(true))
+        dispatch(setStreaksLoading(true))
         try {
             const response = await apiConnector("GET", streaks, null, {
                 Authorization: `Bearer ${token}`
@@ -354,7 +357,7 @@ export function GetStreaksLeaderboard(token) {
             logApiError("Error fetching the streaks leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the streaks leaderboard")
         } finally {
-            dispatch(setLoading(false))
+            dispatch(setStreaksLoading(false))
         }
     }
 }
