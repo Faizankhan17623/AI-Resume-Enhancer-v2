@@ -7,9 +7,13 @@ const { email, phoneNumber, name } = require('./Shared')
 const updateFirstNameSchema = z.object({ firstName: name('First name') })
 const updateLastNameSchema = z.object({ lastName: name('Last name') })
 // no OTP on this one sir — changing the account email is gated by the existing session
-// (Auth middleware), matching what controllers/user.js#updateEmail actually enforces.
+// (Auth middleware) PLUS currentPassword (per 2026-11-15 audit — re-authentication before a
+// takeover-sensitive change, matching what controllers/user.js#updateEmail actually enforces).
 // Adding an OTP requirement here would have been a silent breaking API change.
-const updateEmailSchema = z.object({ email })
+const updateEmailSchema = z.object({
+    email,
+    currentPassword: z.string({ error: 'Please confirm your current password' }).min(1, 'Please confirm your current password'),
+})
 const updateNumberSchema = z.object({ number: phoneNumber, CountryCode: z.string().trim().min(1).optional() })
 
 const notificationPrefsSchema = z.object({

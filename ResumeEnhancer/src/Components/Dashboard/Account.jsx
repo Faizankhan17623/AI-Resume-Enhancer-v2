@@ -65,13 +65,20 @@ const statusChip = {
 // `saving` here still gates the pencil buttons (disabled mid-save), while the actual visible
 // loader is the shared full-screen overlay in Account below, driven by the same onSave call
 // via its own onLoadingChange param
-export const EditableField = ({ label, value, onSave, type = 'text' }) => {
+//
+// requirePassword sir, per 2026-11-15 audit — only the Email field sets this. The backend now
+// requires currentPassword to change the account email (re-auth before a takeover-sensitive
+// change, matching the password-change screen's own pattern), so this field grows one extra
+// password input only when that's actually required, instead of every field paying for it.
+export const EditableField = ({ label, value, onSave, type = 'text', requirePassword = false }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
+  const [currentPassword, setCurrentPassword] = useState('')
   const [saving, setSaving] = useState(false)
 
   const startEdit = () => {
     setDraft(value)
+    setCurrentPassword('')
     setEditing(true)
   }
 
@@ -81,7 +88,7 @@ export const EditableField = ({ label, value, onSave, type = 'text' }) => {
       return
     }
     setSaving(true)
-    const ok = await onSave(draft.trim())
+    const ok = await onSave(draft.trim(), currentPassword)
     setSaving(false)
     if (ok) setEditing(false)
   }
@@ -91,14 +98,26 @@ export const EditableField = ({ label, value, onSave, type = 'text' }) => {
       <div className="min-w-0 flex-1">
         <p className="text-xs text-richblack-400">{label}</p>
         {editing ? (
-          <input
-            type={type}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            aria-label={`Edit ${label}`}
-            autoFocus
-            className="mt-1 w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-1.5 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
-          />
+          <>
+            <input
+              type={type}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              aria-label={`Edit ${label}`}
+              autoFocus
+              className="mt-1 w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-1.5 text-sm text-richblack-5 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+            />
+            {requirePassword && (
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Confirm current password"
+                aria-label="Confirm current password"
+                className="mt-1.5 w-full rounded-lg bg-richblack-900 border border-richblack-600 px-3 py-1.5 text-sm text-richblack-5 placeholder:text-richblack-500 focus:outline-none focus:border-yellow-50 transition-colors duration-200"
+              />
+            )}
+          </>
         ) : (
           <p className="text-sm text-richblack-5 mt-0.5 truncate">{value}</p>
         )}
@@ -107,7 +126,7 @@ export const EditableField = ({ label, value, onSave, type = 'text' }) => {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || (requirePassword && !currentPassword)}
             aria-label={`Save ${label}`}
             className="p-2 text-caribgreen-100 hover:bg-richblack-700 rounded-full transition-colors duration-200 cursor-pointer disabled:opacity-50"
           >
@@ -546,7 +565,8 @@ const Account = () => {
                 label="Email"
                 value={user.email}
                 type="email"
-                onSave={(v) => dispatch(UpdateEmail(v, token, withBusyLabel('Saving...', setBusy)))}
+                requirePassword
+                onSave={(v, currentPassword) => dispatch(UpdateEmail(v, currentPassword, token, withBusyLabel('Saving...', setBusy)))}
               />
               <EditableField
                 label="Phone number"

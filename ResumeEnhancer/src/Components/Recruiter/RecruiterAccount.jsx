@@ -349,7 +349,8 @@ const RecruiterAccount = () => {
                 label="Email"
                 value={user.email}
                 type="email"
-                onSave={(v) => dispatch(UpdateEmail(v, token, withBusyLabel('Saving...', setBusy)))}
+                requirePassword
+                onSave={(v, currentPassword) => dispatch(UpdateEmail(v, currentPassword, token, withBusyLabel('Saving...', setBusy)))}
               />
               <EditableField
                 label="Phone number"

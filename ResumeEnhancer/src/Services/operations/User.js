@@ -131,8 +131,10 @@ export function CompleteOnboarding(token) {
 
 // one shared helper sir — every profile-field edit follows the same call → merge → toast
 // pattern. `onLoadingChange` shows the real centered spinner instead of a toast.loading, same
-// as ChangePassword above.
-const updateProfileField = (url, body, token, fieldForError, onLoadingChange) => {
+// as ChangePassword above. `fieldsForState` sir, per 2026-11-15 audit — defaults to `body` for
+// every existing caller, but UpdateEmail passes a narrower object so a one-time credential like
+// currentPassword never gets merged into the cached profile/localStorage.
+const updateProfileField = (url, body, token, fieldForError, onLoadingChange, fieldsForState = body) => {
     return async (dispatch) => {
         onLoadingChange?.(true)
         try {
@@ -144,7 +146,7 @@ const updateProfileField = (url, body, token, fieldForError, onLoadingChange) =>
                 throw new Error(response.data.message)
             }
 
-            dispatch(setProfileUserFields(body))
+            dispatch(setProfileUserFields(fieldsForState))
             toast.success(response.data.message || "Updated successfully")
             return true
         } catch (error) {
@@ -159,7 +161,12 @@ const updateProfileField = (url, body, token, fieldForError, onLoadingChange) =>
 
 export const UpdateFirstName = (firstName, token, onLoadingChange) => updateProfileField(updatefirstname, { firstName }, token, "first name", onLoadingChange)
 export const UpdateLastName = (lastName, token, onLoadingChange) => updateProfileField(updatelastname, { lastName }, token, "last name", onLoadingChange)
-export const UpdateEmail = (email, token, onLoadingChange) => updateProfileField(updateemail, { email }, token, "email", onLoadingChange)
+// currentPassword sir, per 2026-11-15 audit — the backend now requires re-authentication to
+// change the account email. Sent in the request body but NEVER merged into the cached profile
+// (see updateProfileField's own `fieldsForState` below) — it's a one-time credential, not a
+// profile field.
+export const UpdateEmail = (email, currentPassword, token, onLoadingChange) =>
+    updateProfileField(updateemail, { email, currentPassword }, token, "email", onLoadingChange, { email })
 export const UpdateNumber = (number, token, onLoadingChange) => updateProfileField(updatenumber, { number }, token, "phone number", onLoadingChange)
 
 // self-signup request to become a Recruiter sir — role stays 'User' until an Admin approves

@@ -13,6 +13,7 @@ const mailSender = require('../utils/Nodemailer.js')
 const { logSystemAction } = require('../utils/AdminLog.js')
 
 const { deleteAccountEmail } = require('../Templates/DeleteAccount.js')
+const { emailChangedTemplate } = require('../Templates/EmailChanged.js')
 const {passwordResetTemplate} = require('../Templates/passwordResetTemplate.js')
 const { otpEmail } = require('../Templates/OTP.js')
 const { welcomeEmail } = require('../Templates/Welcome.js')
@@ -792,13 +793,43 @@ exports.updateEmail = async (req, res) => {
     try {
 
           const userId = req.User.id;
-        const { email } = req.body;
+        const { email, currentPassword } = req.body;
 
         // not case sir
         if (!email) {
             return res.status(400).json({
                 success: false,
                 message: 'Email is required',
+            });
+        }
+        if (!currentPassword) {
+            return res.status(400).json({
+                success: false,
+                field: 'currentPassword',
+                message: 'Please confirm your current password to change your email',
+            });
+        }
+
+        // logged-in user id from the auth middleware sir — re-fetched WITH the password hash
+        // (findByIdAndUpdate below selects it out) so we can re-authenticate before touching
+        // anything. Per 2026-11-15 audit: this endpoint used to accept the new email on session
+        // auth alone, no password re-entry, no tokenVersion bump, no notice to the old address —
+        // unlike every sibling sensitive action in this file (password change, account deletion,
+        // logout). A stolen/XSS'd session token could silently take over an account permanently
+        // by changing the email then using forgot-password on the new one.
+        const existingUser = await User.findById(userId);
+        if (!existingUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+        const passwordMatches = await bcrypt.compare(currentPassword, existingUser.password);
+        if (!passwordMatches) {
+            return res.status(401).json({
+                success: false,
+                field: 'currentPassword',
+                message: 'Password not matched',
             });
         }
 
@@ -812,12 +843,14 @@ exports.updateEmail = async (req, res) => {
             });
         }
 
-        // logged-in user id from the auth middleware sir
-      
+        const oldEmail = existingUser.email;
 
+        // bump tokenVersion sir, same as updatePassword/resetPassword/deleteAccount — revokes
+        // every existing session on every device, since a token issued under the old email
+        // must not keep validating after the account identity changes
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { email: email },
+            { email: email, $inc: { tokenVersion: 1 } },
             { returnDocument: 'after' }
         ).select('-password');
 
@@ -828,10 +861,28 @@ exports.updateEmail = async (req, res) => {
             });
         }
 
+        // re-issue a token carrying the new version sir, same pattern as updatePassword — this
+        // device is already proven (just gave the correct current password) so it stays signed in
+        const token = issueSession(res, updatedUser)
+        await User.findByIdAndUpdate(userId, { token })
+
+        // best-effort notice to the OLD address sir — the only way the real owner finds out if
+        // this wasn't them. Never blocks the response.
+        if (oldEmail) {
+            mailSender(
+                oldEmail,
+                'Your Email Was Changed — Resumify',
+                emailChangedTemplate(existingUser.firstName, email)
+            ).catch((mailError) => {
+                (req.log || logger).error('email-changed notice failed', { err: mailError, userId })
+            })
+        }
+
         return res.status(200).json({
             success: true,
             message: 'Email updated successfully',
             user: updatedUser,
+            token,
         });
     } catch (error) {
         // duplicate-key race sir — same gap as createUser's/updateNumber's, see 2026-11-08: the
