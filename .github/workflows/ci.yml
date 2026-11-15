@@ -42,6 +42,33 @@ jobs:
         # when there are none.
         run: npm test -- --passWithNoTests
 
+      - name: Route-collision check
+        # per 2026-11-15 audit sir — Backend/tests/ staying gitignored (by explicit request)
+        # means the real Jest suite can't run here, so this is the one meaningful backend
+        # check CI can still run for free: every Routes/*.js file actually loads with no
+        # syntax/require error, AND no two routes collide on the same method+path (the exact
+        # check this repo's own .claude/testing.md already tells a human to run by hand after
+        # any route change — this just makes CI run it automatically instead of relying on
+        # someone remembering to).
+        #
+        # .env.example copied to .env sir — requiring Routes/index.js loads every controller,
+        # and several (Chat.js's Groq client, Razorpay.js, Cloudinary) construct an SDK client
+        # at module-load time that throws if its env var is simply missing, not just wrong. No
+        # real secret is needed to just load the modules and inspect their route tables, so the
+        # committed, secret-free .env.example (placeholder values only) is enough.
+        run: |
+          cp .env.example .env
+          node -e "
+            require('dotenv').config();
+            const { findCollisions } = require('./Routes/index.js');
+            const collisions = findCollisions();
+            if (collisions.length > 0) {
+              console.error('Route collisions found:', collisions);
+              process.exit(1);
+            }
+            console.log('No route collisions.');
+          "
+
   frontend-lint-and-build:
     runs-on: ubuntu-latest
     defaults:
