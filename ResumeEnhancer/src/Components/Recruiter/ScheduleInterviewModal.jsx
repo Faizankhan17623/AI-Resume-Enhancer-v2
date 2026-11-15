@@ -51,6 +51,14 @@ const ScheduleInterviewModal = ({ applicationId, onClose, onScheduled }) => {
       toast.error('Fill in a date and time for every slot')
       return
     }
+    // past-slot check added sir, per 2026-11-15 audit — toIsoRange only ever checked the date
+    // parsed to a valid Date, never that it was actually in the future. A fat-fingered date (or
+    // a typo) proposed a slot that's already passed with no client-side signal anything was
+    // wrong, relying entirely on whatever the backend does with it (not audited in this group).
+    if (parsed.some((s) => new Date(s.start).getTime() <= Date.now())) {
+      toast.error('Every proposed slot must be in the future')
+      return
+    }
 
     setBusy(true)
     try {
@@ -99,6 +107,7 @@ const ScheduleInterviewModal = ({ applicationId, onClose, onScheduled }) => {
                     value={slot.date}
                     onChange={(e) => updateSlot(i, 'date', e.target.value)}
                     required
+                    min={new Date().toISOString().slice(0, 10)}
                     className="rounded-lg bg-richblack-900 border border-richblack-700 px-3 py-2 text-sm text-richblack-5 flex-1"
                   />
                   <input
