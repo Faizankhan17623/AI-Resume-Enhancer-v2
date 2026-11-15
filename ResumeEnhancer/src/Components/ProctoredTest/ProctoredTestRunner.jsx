@@ -242,6 +242,43 @@ const ProctoredTestRunner = () => {
         }, 'image/jpeg', 0.8)
     }, [attemptId, token, maxViolations, dispatch, endTest])
 
+    // tab-switch / window-blur detection sir, per 2026-11-15 audit — the webcam-yaw check above
+    // only ever catches a candidate turning away from the camera. It fires nothing at all if they
+    // alt-tab to search an answer or just use a second monitor, since their face stays centered
+    // the whole time. No snapshot here — there's no camera frame tied to the moment a tab switch
+    // happens, unlike a sustained look-away. Same VIOLATION_COOLDOWN_MS reuse as reportViolation
+    // so a flurry of blur/focus events (e.g. an OS notification popup) can't double-count.
+    const reportTabSwitch = useCallback(async () => {
+        const now = Date.now()
+        if (now - lastViolationAtRef.current < VIOLATION_COOLDOWN_MS) return
+        lastViolationAtRef.current = now
+        if (endedRef.current) return
+
+        const result = await dispatch(LogViolation(attemptId, null, token, 'tab-switch'))
+        if (!result) return
+
+        setWarningCount(result.violationCount)
+        if (result.terminated) {
+            endTest('violations')
+            return
+        }
+        toast(`Warning ${result.violationCount}/${maxViolations} — stay on the test tab`, { icon: '⚠️' })
+    }, [attemptId, token, maxViolations, dispatch, endTest])
+
+    useEffect(() => {
+        if (!modelReady) return
+        const onVisibilityChange = () => {
+            if (document.hidden) reportTabSwitch()
+        }
+        const onBlur = () => reportTabSwitch()
+        document.addEventListener('visibilitychange', onVisibilityChange)
+        window.addEventListener('blur', onBlur)
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibilityChange)
+            window.removeEventListener('blur', onBlur)
+        }
+    }, [modelReady, reportTabSwitch])
+
     // the detection loop sir — draws the video frame + landmark dots onto the visible canvas
     // (so the candidate sees their REAL face being tracked, not an abstract render), and checks
     // yaw against the threshold to decide if a sustained look-away should fire a violation.

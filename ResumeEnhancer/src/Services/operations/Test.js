@@ -286,11 +286,15 @@ export function SubmitTestAnswers(attemptId, answersMap, token, navigate, onLoad
 // snapshotBlob sir — a canvas.toBlob() JPEG captured at the moment of the violation.
 // Returns the response data so ProctoredTestRunner can decide whether to show a warning
 // toast or the final "test ended" modal, without this thunk needing any UI concerns of its own.
-export function LogViolation(attemptId, snapshotBlob, token) {
+// type sir, per 2026-11-15 audit — defaults to 'look-away' (the existing webcam-based check,
+// always has a snapshot). 'tab-switch' has no camera frame tied to the moment it fires, so
+// snapshotBlob is optional for it — see controllers/Test.js#logViolation's own matching change.
+export function LogViolation(attemptId, snapshotBlob, token, type = 'look-away') {
     return async (dispatch) => {
         try {
             const formData = new FormData()
-            formData.append("snapshot", snapshotBlob, "violation.jpg")
+            if (snapshotBlob) formData.append("snapshot", snapshotBlob, "violation.jpg")
+            if (type !== 'look-away') formData.append("type", type)
 
             const response = await apiConnector("POST", `${logViolation}/${attemptId}/violations`, formData, {
                 Authorization: `Bearer ${token}`

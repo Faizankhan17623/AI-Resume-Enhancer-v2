@@ -575,15 +575,23 @@ exports.logViolation = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid attempt id' })
         }
 
+        // 'tab-switch' sir, per 2026-11-15 audit — fired from the browser's own
+        // visibilitychange/blur events, no camera frame exists for that moment so no snapshot is
+        // sent or required, unlike the webcam-based 'look-away' type which always has one
+        const violationType = req.body?.type === 'tab-switch' ? 'tab-switch' : 'look-away'
+
         const snapshot = req.files?.snapshot
-        if (!snapshot) {
-            return res.status(400).json({ success: false, message: 'A snapshot image is required' })
-        }
-        if (!ALLOWED_SNAPSHOT_MIMES.includes(snapshot.mimetype)) {
-            return res.status(400).json({ success: false, message: 'Snapshot must be a JPG, PNG, or WEBP image' })
-        }
-        if (snapshot.size > MAX_SNAPSHOT_BYTES) {
-            return res.status(400).json({ success: false, message: 'Snapshot must be under 2MB' })
+        let snapshotUrl
+        if (violationType === 'look-away') {
+            if (!snapshot) {
+                return res.status(400).json({ success: false, message: 'A snapshot image is required' })
+            }
+            if (!ALLOWED_SNAPSHOT_MIMES.includes(snapshot.mimetype)) {
+                return res.status(400).json({ success: false, message: 'Snapshot must be a JPG, PNG, or WEBP image' })
+            }
+            if (snapshot.size > MAX_SNAPSHOT_BYTES) {
+                return res.status(400).json({ success: false, message: 'Snapshot must be under 2MB' })
+            }
         }
 
         const attempt = await TestAttempt.findOne({ _id: attemptId, candidate: candidateId }).populate('test')
@@ -595,13 +603,16 @@ exports.logViolation = async (req, res) => {
             return res.status(400).json({ success: false, message: 'This test attempt has already ended' })
         }
 
-        const upload = await cloudinary.uploader.upload(
-            `data:${snapshot.mimetype};base64,${snapshot.data.toString('base64')}`,
-            {
-                folder: 'test-violations',
-                public_id: `${attemptId}-${Date.now()}`,
-            }
-        )
+        if (violationType === 'look-away') {
+            const upload = await cloudinary.uploader.upload(
+                `data:${snapshot.mimetype};base64,${snapshot.data.toString('base64')}`,
+                {
+                    folder: 'test-violations',
+                    public_id: `${attemptId}-${Date.now()}`,
+                }
+            )
+            snapshotUrl = upload.secure_url
+        }
 
         const maxViolations = attempt.test.maxViolations || 4
         const terminatesAt = maxViolations + 1
@@ -611,7 +622,7 @@ exports.logViolation = async (req, res) => {
         const updated = await TestAttempt.findOneAndUpdate(
             { _id: attemptId, candidate: candidateId, status: 'in-progress' },
             {
-                $push: { violations: { type: 'look-away', snapshotUrl: upload.secure_url } },
+                $push: { violations: { type: violationType, snapshotUrl } },
                 $inc: { violationCount: 1 },
             },
             { returnDocument: 'after' }

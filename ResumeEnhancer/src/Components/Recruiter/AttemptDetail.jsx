@@ -82,7 +82,9 @@ const AttemptDetail = () => {
                     <div className="w-full aspect-video bg-richblack-700 flex items-center justify-center text-xs text-richblack-400">No image</div>
                   )}
                   <div className="p-2 bg-richblack-900/60">
-                    <p className="text-[11px] text-richblack-300">#{i + 1} · Looked away</p>
+                    {/* 'tab-switch' added sir, per 2026-11-15 audit — this label was hardcoded to
+                        the one violation type that existed at the time */}
+                    <p className="text-[11px] text-richblack-300">#{i + 1} · {v.type === 'tab-switch' ? 'Switched tabs' : 'Looked away'}</p>
                     <p className="text-[10px] text-richblack-400">{utcDateToIstDisplay(v.createdAt)}</p>
                   </div>
                 </div>

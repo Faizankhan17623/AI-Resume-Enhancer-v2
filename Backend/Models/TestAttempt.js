@@ -36,7 +36,12 @@ const testAttemptSchema = new mongoose.Schema(
         },
         violations: [
             {
-                type: { type: String, enum: ['look-away'], default: 'look-away' },
+                // 'tab-switch' added sir, per 2026-11-15 audit — the webcam-yaw check alone never
+                // catches a candidate who alt-tabs or uses a second monitor instead of turning
+                // away from the camera. Fired from the browser's own visibilitychange/blur events
+                // (see ProctoredTestRunner.jsx), no snapshot involved — there's no camera frame
+                // tied to a tab switch the way there is to a look-away.
+                type: { type: String, enum: ['look-away', 'tab-switch'], default: 'look-away' },
                 snapshotUrl: { type: String },
                 createdAt: { type: Date, default: Date.now },
             },
