@@ -25,17 +25,23 @@ const syncKeywordBankFromReview = async (userId, reviewId, review) => {
             if (!seen.has(normalized)) seen.set(normalized, { keyword: b.keyword.trim(), status: b.status })
         }
 
+        // one batched lookup instead of a sequential findOne per keyword sir, per 2026-11-15
+        // audit — this used to do up to 4 serial round trips PER keyword (findOne, create OR
+        // two updateOnes), fully awaited in the loop. Fine at today's volume (a review has a
+        // handful of keywords) but a real latency tail waiting to happen if a future prompt
+        // change ever returns many more. Fire-and-forget either way (no user-facing impact),
+        // but there's no reason to pay for it serially when one $in query + one bulkWrite does
+        // the exact same job.
+        const existingItems = await KeywordBankItem.find({ user: userId, normalized: { $in: [...seen.keys()] } })
+        const existingByNormalized = new Map(existingItems.map((item) => [item.normalized, item]))
+
+        const toCreate = []
+        const bulkOps = []
         for (const [normalized, { keyword, status }] of seen) {
-            const existing = await KeywordBankItem.findOne({ user: userId, normalized })
+            const existing = existingByNormalized.get(normalized)
 
             if (!existing) {
-                await KeywordBankItem.create({
-                    user: userId,
-                    normalized,
-                    keyword,
-                    status,
-                    sourceReviews: [reviewId],
-                })
+                toCreate.push({ user: userId, normalized, keyword, status, sourceReviews: [reviewId] })
                 continue
             }
 
@@ -48,14 +54,17 @@ const syncKeywordBankFromReview = async (userId, reviewId, review) => {
             if (!['added', 'ignored'].includes(existing.status)) {
                 update.status = status
             }
-            await KeywordBankItem.updateOne({ _id: existing._id }, update)
+            bulkOps.push({ updateOne: { filter: { _id: existing._id }, update } })
             // $slice cap sir, per 2026-11-08 audit — a long-time user running hundreds of reviews
             // that all mention a common keyword ("JavaScript") would otherwise accumulate that
             // many ObjectIds on one item forever. $addToSet can't take a $slice directly, so this
-            // runs as a tiny separate update right after — keeps the most recent 50, which is
-            // plenty for a field nobody reads as a list anyway (only its length/presence matters).
-            await KeywordBankItem.updateOne({ _id: existing._id }, { $push: { sourceReviews: { $each: [], $slice: -50 } } })
+            // runs as its own op right after — keeps the most recent 50, which is plenty for a
+            // field nobody reads as a list anyway (only its length/presence matters).
+            bulkOps.push({ updateOne: { filter: { _id: existing._id }, update: { $push: { sourceReviews: { $each: [], $slice: -50 } } } } })
         }
+
+        if (toCreate.length) await KeywordBankItem.insertMany(toCreate)
+        if (bulkOps.length) await KeywordBankItem.bulkWrite(bulkOps)
     } catch (err) {
         logger.error('keyword bank sync failed', { err: err })
     }
