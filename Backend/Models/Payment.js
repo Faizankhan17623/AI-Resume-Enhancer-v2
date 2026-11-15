@@ -62,7 +62,12 @@ const paymentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['created', 'paid', 'failed', 'refunded'],
+            // 'refunding' sir, per 2026-11-15 audit — a short-lived atomic claim set by
+            // AdminSystem.js's refundPayment right before it calls Razorpay's refund API, so a
+            // double-click/retry can't both pass the status==='paid' check and both hit Razorpay.
+            // Never shown to the user; becomes 'refunded' on success or rolls back to 'paid' if
+            // the Razorpay call itself fails.
+            enum: ['created', 'paid', 'failed', 'refunded', 'refunding'],
             default: 'created'
         },
         // set once an Admin issues a real Razorpay refund sir — refundId is Razorpay's own

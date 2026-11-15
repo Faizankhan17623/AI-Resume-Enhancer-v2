@@ -131,6 +131,21 @@ exports.refundPayment = async (req, res) => {
             })
         }
 
+        // atomic status:'paid' -> 'refunding' claim sir, per 2026-11-15 audit — same pattern as
+        // Interview.js's confirmSlot/Job.js's publishJob. Without this, a double-click or client
+        // retry could both pass the plain payment.status check above and both call Razorpay's
+        // refund API before either write landed, refunding real money twice for one payment.
+        // 'refunding' is a short-lived claim marker, never shown to the user — it's set back to
+        // 'refunded' (success) or rolled back to 'paid' (Razorpay call failed) below.
+        const claimed = await Payment.findOneAndUpdate(
+            { _id: paymentId, status: 'paid' },
+            { $set: { status: 'refunding' } },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({ success: false, message: 'This payment is already being refunded' })
+        }
+
         // hits Razorpay's real refund API sir — this actually moves money back to the customer,
         // unlike updateUserPlan's Basic-downgrade which only ever touched our own DB
         let refund
@@ -140,6 +155,9 @@ exports.refundPayment = async (req, res) => {
                 notes: { reason: reason || 'Admin-initiated refund', paymentDbId: String(payment._id) },
             })
         } catch (razorpayError) {
+            // roll the claim back sir — Razorpay never actually refunded this, so it must become
+            // refundable again rather than getting stuck in 'refunding' forever
+            await Payment.updateOne({ _id: paymentId }, { $set: { status: 'paid' } })
             (req.log || logger).error('razorpay refund call failed', { err: razorpayError, paymentId })
             return res.status(502).json({
                 success: false,
