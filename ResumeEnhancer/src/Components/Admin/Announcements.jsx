@@ -149,7 +149,7 @@ const Announcements = () => {
     return { startsAt, expiresAt }
   }
 
-  const handlePublish = (e) => {
+  const handlePublish = async (e) => {
     e.preventDefault()
     if (!title.trim() || !message.trim()) {
       toast.error("Title and message are both required")
@@ -159,12 +159,15 @@ const Announcements = () => {
     if (schedule === null) return
 
     setPublishLabel(editingId ? 'Saving...' : 'Publishing...')
-    if (editingId) {
-      dispatch(UpdateAnnouncement(editingId, { title: title.trim(), message: message.trim(), ...schedule }, token, setPublishing))
-    } else {
-      dispatch(CreateAnnouncement(title.trim(), message.trim(), token, schedule, setPublishing))
-    }
-    resetForm()
+    // awaited now, and resetForm only runs on success sir, per 2026-11-15 audit — this used to
+    // call resetForm() unconditionally right after firing the (unawaited) dispatch, wiping the
+    // whole compose form — title, message, both schedules — even when the save failed and the
+    // operation's own toast.error was the only sign anything went wrong. The admin's draft was
+    // gone either way.
+    const ok = editingId
+      ? await dispatch(UpdateAnnouncement(editingId, { title: title.trim(), message: message.trim(), ...schedule }, token, setPublishing))
+      : await dispatch(CreateAnnouncement(title.trim(), message.trim(), token, schedule, setPublishing))
+    if (ok) resetForm()
   }
 
   return (
