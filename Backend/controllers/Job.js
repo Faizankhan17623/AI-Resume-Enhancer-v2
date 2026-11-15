@@ -1312,10 +1312,12 @@ exports.applyToJob = async (req, res) => {
 
         // extract the resume's plain text sir — same PDFParse call every other resume-intake
         // controller in this app already uses (controllers/AI.js's Calling), needed below to
-        // feed the AI fit-score
+        // feed the AI fit-score. Capped at 20000 chars, per 2026-11-15 audit — same bound
+        // Resume.js's saveResume already applies to this same kind of parsed-PDF text; this was
+        // the one path still unbounded past the file-upload size limit.
         const parser = new PDFParse({ data: resumeFile.data })
         const parsed = await parser.getText()
-        const resumeText = parsed?.text || ''
+        const resumeText = (parsed?.text || '').slice(0, 20000)
 
         // upload the actual PDF to Cloudinary sir — resource_type:'raw' since this is a
         // non-image file, which every other Cloudinary upload in this app (photos, snapshots)

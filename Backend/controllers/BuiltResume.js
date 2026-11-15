@@ -913,7 +913,11 @@ exports.tailorResume = async (req, res) => {
             (req.log || logger).error('failed to resolve credit-spend ledger entry', { err, userId: id, ledgerEntryId: ledgerEntry._id })
         )
 
-        const userContent = `=== JOB DESCRIPTION ===\n${jd}\n\n=== CANDIDATE'S EXISTING RESUME ===\n${result.text}\n\nReturn only the JSON resume.`
+        // length cap sir, per 2026-11-15 audit — matches Resume.js's saveResume cap on this same
+        // kind of parsed-PDF text; unlike jd (already capped 20000 chars), this was unbounded
+        // past the file-upload size limit, inflating token cost and risking a Groq TPM 413 on a
+        // dense-text resume near that limit
+        const userContent = `=== JOB DESCRIPTION ===\n${jd}\n\n=== CANDIDATE'S EXISTING RESUME ===\n${result.text.slice(0, 20000)}\n\nReturn only the JSON resume.`
 
         const { data, error } = await runBuilderAi({
             userId: id,
