@@ -260,8 +260,14 @@ exports.generateCandidateSummary = async (req, res) => {
             return res.status(502).json({ success: false, message: 'The AI response was not in the expected format, please try again' })
         }
 
-        application.fitScoreReasoning = result.summary.slice(0, 1000)
-        await application.save()
+        // targeted $set sir, per 2026-11-15 audit — a full-document application.save() here used
+        // to overwrite the ENTIRE document, including `status`. The AI round-trip above can take
+        // several seconds; if a recruiter hires/rejects this same candidate (Job.js's
+        // setApplicationOutcome, itself an atomic claim) while this request is still in flight,
+        // the stale in-memory `application` object's old status would silently win and revert
+        // the recruiter's own decision with no error, no log, nothing. Same atomic-write pattern
+        // already used everywhere else in this codebase for exactly this reason.
+        await JobApplication.updateOne({ _id: application._id }, { $set: { fitScoreReasoning: result.summary.slice(0, 1000) } })
         await resolveSpend()
 
         return res.status(200).json({ success: true, summary: result.summary })
