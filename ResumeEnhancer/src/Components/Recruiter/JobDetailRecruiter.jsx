@@ -362,11 +362,22 @@ const JobDetailRecruiter = () => {
         )}
 
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
-          <h2 className="text-sm font-semibold text-richblack-5 mb-3">Compensation</h2>
-          <div className="flex gap-3 mb-4">
+          <h2 className="text-sm font-semibold text-richblack-5 mb-1">Compensation</h2>
+          {/* draft-only lock added sir, per 2026-11-15 audit — same rule as the Visibility
+              section right above (both go through updateJob, which rejects ANY edit once
+              job.status !== 'draft'), but this section had no warning at all before, so editing
+              compensation on an already-published job just produced a confusing 400 on save with
+              no indication beforehand that it would fail */}
+          <p className="text-xs text-richblack-400 mb-3">
+            {job.status === 'draft'
+              ? 'Pick how this role is compensated before publishing.'
+              : 'Locked once the job leaves draft — close it and create a new one to change this.'}
+          </p>
+          <div className={`flex gap-3 mb-4 ${job.status !== 'draft' ? 'opacity-60 pointer-events-none' : ''}`}>
             <button
               type="button"
               onClick={() => setCompensationType('paid')}
+              disabled={job.status !== 'draft'}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-200 cursor-pointer ${
                 compensationType === 'paid' ? 'bg-yellow-50 text-richblack-900 border-yellow-50' : 'border-richblack-600 text-richblack-200 hover:border-richblack-400'
               }`}
@@ -376,6 +387,7 @@ const JobDetailRecruiter = () => {
             <button
               type="button"
               onClick={() => setCompensationType('unpaid')}
+              disabled={job.status !== 'draft'}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-200 cursor-pointer ${
                 compensationType === 'unpaid' ? 'bg-yellow-50 text-richblack-900 border-yellow-50' : 'border-richblack-600 text-richblack-200 hover:border-richblack-400'
               }`}
@@ -385,32 +397,32 @@ const JobDetailRecruiter = () => {
           </div>
 
           {compensationType === 'paid' && (
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className={`grid grid-cols-2 gap-3 mb-4 ${job.status !== 'draft' ? 'opacity-60 pointer-events-none' : ''}`}>
               <div>
                 <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Minimum CTC</label>
-                <input type="number" min="0" value={ctcMin} onChange={(e) => setCtcMin(e.target.value)} placeholder="e.g. 450000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+                <input type="number" min="0" value={ctcMin} onChange={(e) => setCtcMin(e.target.value)} disabled={job.status !== 'draft'} placeholder="e.g. 450000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Maximum CTC</label>
-                <input type="number" min="0" value={ctcMax} onChange={(e) => setCtcMax(e.target.value)} placeholder="e.g. 880000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+                <input type="number" min="0" value={ctcMax} onChange={(e) => setCtcMax(e.target.value)} disabled={job.status !== 'draft'} placeholder="e.g. 880000" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
               </div>
             </div>
           )}
 
           {compensationType === 'unpaid' && (
-            <div className="space-y-3 mb-4">
+            <div className={`space-y-3 mb-4 ${job.status !== 'draft' ? 'opacity-60 pointer-events-none' : ''}`}>
               <div>
                 <label className="block text-xs font-semibold text-richblack-200 mb-1.5">Duration (months)</label>
-                <input type="number" min="0" value={unpaidDurationMonths} onChange={(e) => setUnpaidDurationMonths(e.target.value)} placeholder="e.g. 3" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
+                <input type="number" min="0" value={unpaidDurationMonths} onChange={(e) => setUnpaidDurationMonths(e.target.value)} disabled={job.status !== 'draft'} placeholder="e.g. 3" className="w-full rounded-xl bg-richblack-900/60 border border-richblack-600 px-4 py-3 text-richblack-5 text-sm placeholder:text-richblack-400 focus:outline-none focus:border-yellow-50 transition-colors duration-200" />
               </div>
               <label className="flex items-center gap-2 text-sm text-richblack-200 cursor-pointer">
-                <input type="checkbox" checked={certificateProvided} onChange={(e) => setCertificateProvided(e.target.checked)} />
+                <input type="checkbox" checked={certificateProvided} onChange={(e) => setCertificateProvided(e.target.checked)} disabled={job.status !== 'draft'} />
                 A completion certificate will be issued
               </label>
             </div>
           )}
 
-          {compensationType && (
+          {compensationType && job.status === 'draft' && (
             <IconBtn text="Save compensation" onclick={handleSaveCompensation} disabled={savingComp} customClasses="text-sm" />
           )}
         </div>
