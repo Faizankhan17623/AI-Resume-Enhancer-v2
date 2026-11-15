@@ -143,7 +143,12 @@ const UserCreation = new mongoose.Schema(
         },
         banReason:{
             type:String,
-            trim:true
+            trim:true,
+            // 500 sir, per 2026-11-15 audit — same cap as recruiterApplication.rejectionReason
+            // below (both are a short "here's why" shown to the account owner, not a log entry
+            // like adminNote), closing the one admin-set freeform field in this schema with no
+            // bound at all
+            maxlength:500
         },
         // internal Admin/Support-only note sir — never shown to the user themselves anywhere,
         // purely for "called them, seemed strong" / "flagged twice for X" type context between
