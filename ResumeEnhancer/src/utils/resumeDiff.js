@@ -99,16 +99,23 @@ export const diffResumeVersions = (oldVersion, newVersion) => {
     result.skills = diffStringList(oldVersion?.skills, newVersion?.skills)
 
     // experience/education/projects/certifications are OBJECT lists sir — diff by a stable-ish
-    // identity field, then word-diff whichever text field actually carries the substance
+    // identity field, then word-diff whichever text field actually carries the substance.
+    //
+    // date/location folded into textOf sir, per 2026-11-15 audit — an entry whose ONLY edit was
+    // its date range or location used to come back type:'changed' (the JSON.stringify check in
+    // diffObjectList below still caught the real difference) but with an EMPTY word-diff, since
+    // textOf only ever looked at bullets/field/gpa. That rendered the yellow "something changed
+    // here" row with literally nothing visibly different inside it — same bullets, same role,
+    // no highlighted word anywhere.
     result.experience = diffObjectList(
         oldVersion?.experience, newVersion?.experience,
         (e) => `${e?.company || ''}|${e?.role || ''}`,
-        (e) => (e?.bullets || []).join(' ')
+        (e) => `${e?.startDate || ''} ${e?.current ? 'Present' : (e?.endDate || '')} ${e?.location || ''} ${(e?.bullets || []).join(' ')}`
     )
     result.education = diffObjectList(
         oldVersion?.education, newVersion?.education,
         (e) => `${e?.school || ''}|${e?.degree || ''}`,
-        (e) => `${e?.field || ''} ${e?.gpa || ''}`
+        (e) => `${e?.field || ''} ${e?.gpa || ''} ${e?.startDate || ''} ${e?.endDate || ''}`
     )
     result.projects = diffObjectList(
         oldVersion?.projects, newVersion?.projects,
