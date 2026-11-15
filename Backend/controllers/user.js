@@ -909,13 +909,20 @@ exports.updateEmail = async (req, res) => {
 exports.updateNumber = async (req, res) => {
     try {
           const userId = req.User.id;
-        const { number } = req.body;
+        const { number, currentPassword } = req.body;
 
         // not case sir
         if (!number) {
             return res.status(400).json({
                 success: false,
                 message: 'Number is required',
+            });
+        }
+        if (!currentPassword) {
+            return res.status(400).json({
+                success: false,
+                field: 'currentPassword',
+                message: 'Please confirm your current password to change your number',
             });
         }
 
@@ -925,6 +932,29 @@ exports.updateNumber = async (req, res) => {
                 success: false,
                 field: 'number',
                 message: 'Phone number must be exactly 10 digits',
+            });
+        }
+
+        // re-auth check sir, per 2026-11-15 audit — same currentPassword requirement updateEmail
+        // got hardened with. Phone isn't a login/password-reset identifier anywhere in this
+        // codebase (unlike email), so this skips updateEmail's extra tokenVersion bump/old-value
+        // notice — those exist specifically because taking over the EMAIL is how an attacker
+        // would pivot to a full account takeover via forgot-password; changing the phone alone
+        // doesn't open that path. This still closes the plainer gap: a stolen/XSS'd session
+        // token silently changing an account-identity field with zero friction.
+        const existingUser = await User.findById(userId);
+        if (!existingUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+        const passwordMatches = await bcrypt.compare(currentPassword, existingUser.password);
+        if (!passwordMatches) {
+            return res.status(401).json({
+                success: false,
+                field: 'currentPassword',
+                message: 'Password not matched',
             });
         }
 

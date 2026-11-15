@@ -356,7 +356,8 @@ const RecruiterAccount = () => {
                 label="Phone number"
                 value={user.number}
                 type="tel"
-                onSave={(v) => dispatch(UpdateNumber(v, token, withBusyLabel('Saving...', setBusy)))}
+                requirePassword
+                onSave={(v, currentPassword) => dispatch(UpdateNumber(v, currentPassword, token, withBusyLabel('Saving...', setBusy)))}
               />
             </div>
           </div>

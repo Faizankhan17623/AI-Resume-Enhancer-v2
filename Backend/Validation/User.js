@@ -14,7 +14,14 @@ const updateEmailSchema = z.object({
     email,
     currentPassword: z.string({ error: 'Please confirm your current password' }).min(1, 'Please confirm your current password'),
 })
-const updateNumberSchema = z.object({ number: phoneNumber, CountryCode: z.string().trim().min(1).optional() })
+// currentPassword required sir, per 2026-11-15 audit — same re-auth requirement updateEmail
+// got hardened with, see controllers/user.js#updateNumber's own comment on why this skips that
+// fix's tokenVersion bump/old-value notice (phone isn't a login/reset identifier, email is)
+const updateNumberSchema = z.object({
+    number: phoneNumber,
+    CountryCode: z.string().trim().min(1).optional(),
+    currentPassword: z.string({ error: 'Please confirm your current password' }).min(1, 'Please confirm your current password'),
+})
 
 const notificationPrefsSchema = z.object({
     notifyStreak: z.boolean().optional(),

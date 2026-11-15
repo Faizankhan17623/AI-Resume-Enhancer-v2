@@ -167,7 +167,10 @@ export const UpdateLastName = (lastName, token, onLoadingChange) => updateProfil
 // profile field.
 export const UpdateEmail = (email, currentPassword, token, onLoadingChange) =>
     updateProfileField(updateemail, { email, currentPassword }, token, "email", onLoadingChange, { email })
-export const UpdateNumber = (number, token, onLoadingChange) => updateProfileField(updatenumber, { number }, token, "phone number", onLoadingChange)
+// currentPassword sir, per 2026-11-15 audit — same re-auth requirement UpdateEmail got, see
+// controllers/user.js#updateNumber's own comment
+export const UpdateNumber = (number, currentPassword, token, onLoadingChange) =>
+    updateProfileField(updatenumber, { number, currentPassword }, token, "phone number", onLoadingChange, { number })
 
 // self-signup request to become a Recruiter sir — role stays 'User' until an Admin approves
 // it (see Admin/RecruiterApplications.jsx). Reuses the same profile-merge action as the other
