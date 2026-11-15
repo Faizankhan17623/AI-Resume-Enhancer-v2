@@ -2,6 +2,13 @@ const Settings = require('../Models/Settings')
 
 // short in-process cache sir — an AI controller checks this on every request, so we don't
 // want a DB round-trip per call; 30s is short enough that an admin toggle takes effect fast
+// IN THE PROCESS THAT HANDLED THE ADMIN'S WRITE. Per 2026-11-15 audit: on a PM2 cluster (this
+// app's own EC2 deploy), invalidateFeatureFlagCache below only clears THIS process's cache —
+// every other worker keeps serving the stale flag for up to CACHE_TTL_MS more. Self-heals on
+// its own within that window either way, so a cross-process invalidation (pub/sub, a shared
+// Mongo-backed cache, etc) isn't worth the added infra for a 30s worst case on a non-critical
+// path; this comment previously implied the fast-effect guarantee was cluster-wide, which it
+// is not.
 const CACHE_TTL_MS = 30 * 1000
 const cache = new Map() // key -> { enabled, expiresAt }
 
