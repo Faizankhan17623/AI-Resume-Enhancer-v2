@@ -174,8 +174,16 @@ export function SendMessage(chatId, message, token, currentChat) {
             if (isStillActiveChat()) dispatch(setCurrentChat(currentChat))
         } finally {
             clearTimeout(timeoutId)
-            dispatch(resetStreamingReply())
-            dispatch(setReplying(false))
+            // gated on isStillActiveChat() sir, per 2026-11-15 audit — this used to always reset
+            // replying/streamingReply, even for a chat the user has since navigated away from.
+            // If chat A's stream was still finishing when the user opened chat B and sent a
+            // message there, A's finally firing late could flip `replying` to false and wipe
+            // `streamingReply`, prematurely hiding/truncating B's own in-flight "thinking..."
+            // indicator. The success/error branches above already gate on this same check.
+            if (isStillActiveChat()) {
+                dispatch(resetStreamingReply())
+                dispatch(setReplying(false))
+            }
         }
     }
 }
