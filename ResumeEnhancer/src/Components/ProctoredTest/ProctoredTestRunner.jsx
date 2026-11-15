@@ -63,6 +63,11 @@ const ProctoredTestRunner = () => {
     const lookAwaySinceRef = useRef(null)
     const lastViolationAtRef = useRef(0)
     const endedRef = useRef(false)
+    // tracks which check actually fired the violation that ended the test sir, per 2026-11-15
+    // audit — the submitted screen used to hardcode "looking away from the screen" even when a
+    // tab-switch (reportTabSwitch) was what actually terminated it, which is both wrong and
+    // confusing if the candidate contests the outcome with the recruiter
+    const lastViolationTypeRef = useRef('look-away')
 
     const [modelReady, setModelReady] = useState(false)
     const [cameraError, setCameraError] = useState(null)
@@ -78,6 +83,11 @@ const ProctoredTestRunner = () => {
     // when it wasn't the candidate's own Submit click, instead of a separate Swal alert stacked
     // in front of the same confirmation
     const [endReason, setEndReason] = useState('manual')
+    // 'look-away' | 'tab-switch' sir, per 2026-11-15 audit — only meaningful when endReason is
+    // 'violations'; snapshotted from lastViolationTypeRef the moment endTest actually fires, so
+    // the submitted screen can say which check caused the termination instead of always blaming
+    // "looking away from the screen" even when a tab-switch is what ended it
+    const [terminatedByViolationType, setTerminatedByViolationType] = useState('look-away')
 
     // consent must have happened on the previous screen sir — a direct link to /run without it
     // (bookmark, back button after declining) bounces to the consent screen instead of ever
@@ -96,6 +106,7 @@ const ProctoredTestRunner = () => {
 
         if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
         setEndReason(reason)
+        setTerminatedByViolationType(lastViolationTypeRef.current)
 
         const result = await dispatch(SubmitTestAnswers(attempt._id, answers, token, null, setSubmitting))
         if (result) {
@@ -233,6 +244,7 @@ const ProctoredTestRunner = () => {
             const result = await dispatch(LogViolation(attemptId, blob, token))
             if (!result) return
 
+            lastViolationTypeRef.current = 'look-away'
             setWarningCount(result.violationCount)
             if (result.terminated) {
                 endTest('violations')
@@ -257,6 +269,7 @@ const ProctoredTestRunner = () => {
         const result = await dispatch(LogViolation(attemptId, null, token, 'tab-switch'))
         if (!result) return
 
+        lastViolationTypeRef.current = 'tab-switch'
         setWarningCount(result.violationCount)
         if (result.terminated) {
             endTest('violations')
@@ -408,7 +421,7 @@ const ProctoredTestRunner = () => {
 
                     {endedEarly && (
                         <p className="text-sm text-pink-100 -mt-2">
-                            You received too many warnings for looking away from the screen, so the
+                            You received too many warnings for {terminatedByViolationType === 'tab-switch' ? 'switching away from this tab' : 'looking away from the screen'}, so the
                             test ended automatically.
                         </p>
                     )}
