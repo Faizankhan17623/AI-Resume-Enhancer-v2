@@ -227,7 +227,7 @@ const BuilderEditor = () => {
 
   const removeBullet = (listKey, itemIndex, bulletIndex) => {
     const list = [...(current[listKey] || [])]
-    list[itemIndex] = { ...list[itemIndex], bullets: list[itemIndex].bullets.filter((_, i) => i !== bulletIndex) }
+    list[itemIndex] = { ...list[itemIndex], bullets: (list[itemIndex].bullets || []).filter((_, i) => i !== bulletIndex) }
     patch({ [listKey]: list })
   }
 
