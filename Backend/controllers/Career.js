@@ -157,13 +157,24 @@ exports.createFollowUp = async (req, res) => {
 }
 exports.toggleFollowUp = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.followUpId)) return res.status(400).json({ success: false, message: 'Follow-up is invalid' })
+  // 'completed' in req.body sir, per 2026-11-16 audit — the schema's `completed` field is
+  // optional, so a stale/retried client call with no body used to still force-write
+  // completed:false unconditionally (!!undefined), silently un-completing a follow-up the user
+  // had just marked done.
+  if (!('completed' in req.body)) return res.status(400).json({ success: false, message: "'completed' is required" })
   const item = await CareerFollowUp.findOneAndUpdate({ _id: req.params.followUpId, user: req.User.id }, { $set: { completed: !!req.body.completed } }, { returnDocument: 'after' }); return item ? res.json({ success: true, followUp: item }) : res.status(404).json({ success: false, message: 'Follow-up not found' })
 }
 
 exports.getProfile = async (req, res) => { const user = await User.findById(req.User.id).select('firstName lastName email role recruiterApplication referralCode'); return res.json({ success: true, profile: user }) }
 exports.shareProfile = async (req, res) => { const shareId = crypto.randomBytes(12).toString('base64url'); await User.findByIdAndUpdate(req.User.id, { $set: { careerShareId: shareId } }); return res.json({ success: true, shareId }) }
 exports.getSharedProfile = async (req, res) => {
-  const user = await User.findOne({ careerShareId: req.params.shareId }).select('firstName lastName role recruiterApplication.companyName recruiterApplication.location')
+  // -_id sir, per 2026-11-16 audit — .select() with a plain field list always includes _id
+  // unless explicitly excluded. This is the one public-profile endpoint that was never brought
+  // in line with its two siblings (Review.js's getPublicReview, BuiltResume.js's
+  // getPublicPortfolio), both of which deliberately exclude it. Leaking a stable internal
+  // Mongo id to an unauthenticated visitor aids account enumeration/correlation for no display
+  // benefit — PublicCareerProfile.jsx never renders it.
+  const user = await User.findOne({ careerShareId: req.params.shareId }).select('firstName lastName role recruiterApplication.companyName recruiterApplication.location -_id')
   return user ? res.json({ success: true, profile: user }) : res.status(404).json({ success: false, message: 'Profile not found' })
 }
 

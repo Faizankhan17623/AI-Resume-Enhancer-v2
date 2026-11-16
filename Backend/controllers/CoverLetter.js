@@ -74,7 +74,10 @@ exports.generateCoverLetter = async (req, res) => {
         const Messages = [
             {
                 role: 'system',
-                content: buildCoverLetterPrompt(result.text, jd),
+                // length cap sir, per 2026-11-16 audit — matches the cap every other AI entry
+                // point that feeds parsed-PDF text into a prompt already applies (Resume.js,
+                // BuiltResume.js, Chat.js, MockInterview.js); this one was missed.
+                content: buildCoverLetterPrompt(result.text.slice(0, 20000), jd),
             },
             {
                 role: 'user',

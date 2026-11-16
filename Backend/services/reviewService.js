@@ -19,7 +19,7 @@ const Grok = require('groq-sdk')
 const Review = require('../Models/Review')
 const CreditSpend = require('../Models/CreditSpend')
 const { consumeCredit, refundCredit } = require('../utils/Plans')
-const { buildReviewSystemPrompt } = require('../utils/Prompts')
+const { buildReviewSystemPrompt, inertBlock } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { syncKeywordBankFromReview } = require('../utils/KeywordBank')
 const { updateStreak } = require('../utils/Streak')
@@ -128,8 +128,11 @@ const runReview = async ({ userId, resumeText, jd, formattingCheck = null }) => 
     const messages = [
         { role: 'system', content: buildReviewSystemPrompt(spend.plan) },
         {
+            // inertBlock sir, per 2026-11-16 audit — same prompt-injection mitigation applied to
+            // every other untrusted-text interpolation in Prompts.js, just inlined here since
+            // this particular prompt is built in this file rather than a build*Prompt function.
             role: 'user',
-            content: `Analyze the following.\n\n=== JOB DESCRIPTION ===\n${jd}\n\n=== RESUME ===\n${resumeText}\n\nReturn only the JSON review.`,
+            content: `Analyze the following.\n\n${inertBlock('JOB DESCRIPTION', jd)}\n\n${inertBlock('RESUME', resumeText)}\n\nReturn only the JSON review.`,
         },
     ]
 

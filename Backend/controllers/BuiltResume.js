@@ -10,7 +10,7 @@ const CreditSpend = require('../Models/CreditSpend')
 const PortfolioView = require('../Models/PortfolioView')
 const { consumeCredit, refundCredit, getUserPlan } = require('../utils/Plans')
 const logger = require('../utils/logger')
-const { buildResumeGeneratorPrompt, buildResumeTailorPrompt } = require('../utils/Prompts')
+const { buildResumeGeneratorPrompt, buildResumeTailorPrompt, inertBlock } = require('../utils/Prompts')
 const { logAi } = require('../utils/AdminLog')
 const { builtResumeToText } = require('../utils/BuiltResumeText')
 const { getModelForPlan } = require('../utils/AiModel')
@@ -794,8 +794,10 @@ exports.generateResume = async (req, res) => {
             (req.log || logger).error('failed to resolve credit-spend ledger entry', { err, userId: id, ledgerEntryId: ledgerEntry._id })
         )
 
-        const userContent = `=== CANDIDATE'S OWN DESCRIPTION OF THEIR BACKGROUND ===\n${rawInfo}\n\n${
-            targetRole ? `=== TARGET ROLE ===\n${targetRole}\n\n` : ''
+        // inertBlock sir, per 2026-11-16 audit — same prompt-injection mitigation as every other
+        // untrusted-text interpolation in this app's AI prompts
+        const userContent = `${inertBlock("CANDIDATE'S OWN DESCRIPTION OF THEIR BACKGROUND", rawInfo)}\n\n${
+            targetRole ? `${inertBlock('TARGET ROLE', targetRole)}\n\n` : ''
         }Return only the JSON resume.`
 
         const { data, error } = await runBuilderAi({
@@ -916,8 +918,9 @@ exports.tailorResume = async (req, res) => {
         // length cap sir, per 2026-11-15 audit — matches Resume.js's saveResume cap on this same
         // kind of parsed-PDF text; unlike jd (already capped 20000 chars), this was unbounded
         // past the file-upload size limit, inflating token cost and risking a Groq TPM 413 on a
-        // dense-text resume near that limit
-        const userContent = `=== JOB DESCRIPTION ===\n${jd}\n\n=== CANDIDATE'S EXISTING RESUME ===\n${result.text.slice(0, 20000)}\n\nReturn only the JSON resume.`
+        // dense-text resume near that limit. inertBlock added per 2026-11-16 audit — same
+        // prompt-injection mitigation as every other untrusted-text interpolation.
+        const userContent = `${inertBlock('JOB DESCRIPTION', jd)}\n\n${inertBlock("CANDIDATE'S EXISTING RESUME", result.text.slice(0, 20000))}\n\nReturn only the JSON resume.`
 
         const { data, error } = await runBuilderAi({
             userId: id,

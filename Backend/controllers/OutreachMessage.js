@@ -73,7 +73,9 @@ exports.generateOutreachMessage = async (req, res) => {
         const Messages = [
             {
                 role: 'system',
-                content: buildOutreachMessagePrompt(result.text, jd),
+                // length cap sir, per 2026-11-16 audit — same fix as CoverLetter.js, matching
+                // every other AI entry point's cap on this kind of parsed-PDF text
+                content: buildOutreachMessagePrompt(result.text.slice(0, 20000), jd),
             },
             {
                 role: 'user',
