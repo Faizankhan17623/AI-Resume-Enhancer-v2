@@ -40,10 +40,27 @@ const serializeError = (err) => {
     }
 }
 
+// secret-shaped key names redacted sir, per 2026-11-16 audit — unlike `err` (always run through
+// serializeError's explicit allowlist above), every OTHER meta field was spread into the log
+// line completely unfiltered. No current call site passes a raw secret this way, but every
+// caller in this codebase already writes `{ err, userId, ... }` by habit, so a future call like
+// `logger.error('payment failed', { err, razorpaySignature, webhookPayload })` would print that
+// verbatim to stdout/stderr in production with zero warning — exactly what this module's own
+// header comment says it was built to prevent, just not actually enforced past `err`.
+const SECRET_KEY_PATTERN = /pass|secret|token|signature|authorization|apikey|api_key/i
+const redactSecretFields = (obj) => {
+    const result = {}
+    for (const [key, value] of Object.entries(obj)) {
+        result[key] = SECRET_KEY_PATTERN.test(key) ? '[redacted]' : value
+    }
+    return result
+}
+
 const write = (level, context, message, meta = {}) => {
     if (LEVELS[level] < configuredLevel()) return
 
-    const { err, ...rest } = meta
+    const { err, ...rawRest } = meta
+    const rest = redactSecretFields(rawRest)
     const entry = {
         level,
         time: new Date().toISOString(),
