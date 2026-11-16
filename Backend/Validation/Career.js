@@ -1,7 +1,7 @@
 // Career / application copilot schemas sir — see Models/CareerPlan.js and controllers/Career.js
 
 const { z } = require('zod')
-const { objectId } = require('./Shared')
+const { objectId, jdText } = require('./Shared')
 
 // application copilot sir — accepts either a published job from the board or pasted job text.
 // Keeping this schema here means the controller never has to trust arbitrary ids or unbounded
@@ -28,9 +28,11 @@ const smartMatchSchema = z.object({
     jobText: z.string().trim().max(20000, 'Job description is too long').optional(),
 })
 
+// jdText sir, per 2026-11-16 audit — this hand-rolled the identical rule Shared.js's jdText()
+// already centralizes
 const createRoadmapSchema = z.object({
     targetRole: z.string().trim().max(200, 'Target role is too long').optional(),
-    jobText: z.string().trim().min(1, 'A target job description is required').max(20000, 'Job description is too long'),
+    jobText: jdText('A target job description'),
     targetJob: objectId.optional(),
 })
 
@@ -41,8 +43,13 @@ const createFollowUpSchema = z.object({
     application: objectId.optional(),
 })
 
+// required, not optional, sir — per 2026-11-16 audit, an optional field let an empty PATCH body
+// pass validation and reach the controller, which then force-wrote completed:false
+// unconditionally (!!undefined). The controller now also double-checks 'completed' in req.body
+// as defense in depth, but the real fix is requiring it here so a malformed request never
+// passes validation in the first place.
 const toggleFollowUpSchema = z.object({
-    completed: z.boolean().optional(),
+    completed: z.boolean({ error: "'completed' is required" }),
 })
 
 const interviewFeedbackSchema = z.object({
