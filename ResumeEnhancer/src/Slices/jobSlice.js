@@ -29,7 +29,17 @@ const initialState = {
     savedJobIds: [],
     savedJobs: [],
 
+    // `loading` stays for GetPublicJobs/GetPublicJob only sir — the page-blocking fetches.
+    // myApplicationsLoading/savedJobsLoading added per 2026-11-16 audit: GetMyApplications and
+    // GetSavedJobs used to share this same `loading` flag. JobBoard.jsx/JobDetail.jsx fire
+    // GetPublicJob(s) AND these two in separate effects on mount; whichever of the smaller
+    // background fetches resolved first flipped `loading` back to false while GetPublicJob(s)
+    // was still in flight, dropping the page out of its loading state and briefly rendering an
+    // empty "no job" view before the real list/job arrived. MyApplications.jsx/SavedJobs.jsx
+    // (Dashboard) still need their OWN dedicated flags since they read loading standalone.
     loading: false,
+    myApplicationsLoading: false,
+    savedJobsLoading: false,
 };
 
 const jobSlice = createSlice({
@@ -112,6 +122,12 @@ const jobSlice = createSlice({
         setLoading(state, value) {
             state.loading = value.payload
         },
+        setMyApplicationsLoading(state, value) {
+            state.myApplicationsLoading = value.payload
+        },
+        setSavedJobsLoading(state, value) {
+            state.savedJobsLoading = value.payload
+        },
     }
 })
 
@@ -132,5 +148,7 @@ export const {
     setSavedJobs,
     patchSavedJobId,
     setLoading,
+    setMyApplicationsLoading,
+    setSavedJobsLoading,
 } = jobSlice.actions
 export default jobSlice.reducer

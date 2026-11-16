@@ -39,7 +39,8 @@ const SavedJobs = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { isLoggedIn, token } = useSelector((state) => state.auth)
-  const { savedJobs, loading } = useSelector((state) => state.job)
+  // savedJobsLoading sir, per 2026-11-16 audit — see jobSlice.js's own comment
+  const { savedJobs, savedJobsLoading: loading } = useSelector((state) => state.job)
 
   useEffect(() => {
     if (!isLoggedIn) {

@@ -32,7 +32,8 @@ const statusLabel = {
 const MyApplications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { myApplications, loading } = useSelector((state) => state.job)
+  // myApplicationsLoading sir, per 2026-11-16 audit — see jobSlice.js's own comment
+  const { myApplications, myApplicationsLoading: loading } = useSelector((state) => state.job)
   // applicationId of the row whose message thread modal is open sir, null when closed
   const [messagingFor, setMessagingFor] = useState(null)
 
