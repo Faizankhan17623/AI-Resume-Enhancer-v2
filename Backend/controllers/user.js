@@ -42,15 +42,6 @@ exports.createUser = async (req, res) => {
             });
         }
 
-        // phone number must be exactly 10 digits sir — same rule as the frontend
-        if (!/^[0-9]{10}$/.test(number)) {
-            return res.status(400).json({
-                success: false,
-                field: 'number',
-                message: 'Phone number must be exactly 10 digits',
-            });
-        }
-
         // duplication checks sir — separate so the UI can show a field-specific error.
         // firstName is NOT checked for uniqueness sir — it was never a username, just a display
         // name, and two people sharing one is completely normal. That check used to live here and
@@ -926,15 +917,6 @@ exports.updateNumber = async (req, res) => {
             });
         }
 
-        // phone number must be exactly 10 digits sir — same rule as the frontend
-        if (!/^[0-9]{10}$/.test(number)) {
-            return res.status(400).json({
-                success: false,
-                field: 'number',
-                message: 'Phone number must be exactly 10 digits',
-            });
-        }
-
         // re-auth check sir, per 2026-11-15 audit — same currentPassword requirement updateEmail
         // got hardened with. Phone isn't a login/password-reset identifier anywhere in this
         // codebase (unlike email), so this skips updateEmail's extra tokenVersion bump/old-value
@@ -1434,7 +1416,22 @@ exports.getProfile = async (req, res) => {
             // the reconcile job demotes an expired subscriber (utils/SubscriptionReconcileCron.js),
             // and the frontend caches this object and renders user.SubType as the current plan —
             // so returning the raw column told lapsed users they were still on Pro.
-            user: { ...user.toObject(), SubType: plan.key },
+            //
+            // recruiterApprovalStatus added sir, per 2026-11-16 audit — same flat field
+            // utils/session.js's publicUser() computes at login. Without it, the frontend's
+            // setUser reducer does a full replacement (not a merge), so calling GetProfile mid-
+            // session dropped this field entirely — useRecruiterLock's isLocked then read
+            // undefined and silently UNLOCKED a still-pending or rejected recruiter's UI. The
+            // backend's own isApprovedRecruiter middleware still 403s the real mutating call
+            // either way, but the client misleadingly let them fill out a form that would fail.
+            // Computing it the exact same way here also fixes the inverse staleness bug: an
+            // Admin approving/rejecting mid-session now actually reaches the client on next
+            // GetProfile instead of never updating at all.
+            user: {
+                ...user.toObject(),
+                SubType: plan.key,
+                recruiterApprovalStatus: user.role === 'Recruiter' ? (user.recruiterApplication?.status || 'approved') : undefined,
+            },
             plan: user.role === 'User' ? {
                 key: plan.key,
                 name: plan.name,
