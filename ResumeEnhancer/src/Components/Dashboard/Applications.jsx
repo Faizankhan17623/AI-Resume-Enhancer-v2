@@ -32,7 +32,14 @@ const swalDark = { background: '#1F1C16', color: '#F3EFE6', confirmButtonColor: 
 const QuickAdd = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { saving } = useSelector((state) => state.application)
+  // own local flag sir, per 2026-11-16 audit — this used to read the shared Redux `saving`
+  // flag, the same one ApplicationModal's own submit button reads. Both components can be
+  // open/submitting at the same time (this popover and the modal aren't mutually exclusive),
+  // so whichever request's CreateApplication call resolved first flipped the shared flag back
+  // to false while the OTHER one was still in flight, re-enabling and relabeling the wrong
+  // form's button mid-request. CreateApplication already returns a boolean the caller can
+  // await, so there's no need to share state for this at all.
+  const [saving, setSaving] = useState(false)
   const [open, setOpen] = useState(false)
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
@@ -40,7 +47,9 @@ const QuickAdd = () => {
   const submit = async (e) => {
     e.preventDefault()
     if (!company.trim() || !role.trim()) return
+    setSaving(true)
     const ok = await dispatch(CreateApplication({ ...emptyForm, company: company.trim(), role: role.trim() }, token))
+    setSaving(false)
     if (ok) {
       setCompany('')
       setRole('')
