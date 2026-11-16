@@ -95,8 +95,6 @@ const refundPaymentSchema = z.object({
     reason: z.string().trim().max(500).optional(),
 })
 
-const userIdParamSchema = z.object({ userId: objectId })
-
 module.exports = {
     updateUserRoleSchema,
     updateAdminNoteSchema,
@@ -109,5 +107,4 @@ module.exports = {
     grantCreditsToAllSchema,
     updateUserPlanSchema,
     refundPaymentSchema,
-    userIdParamSchema,
 }
