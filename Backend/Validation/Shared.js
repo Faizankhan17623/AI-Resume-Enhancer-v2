@@ -62,7 +62,9 @@ const employmentType = z.enum(['Full-time', 'Part-time', 'Contract', 'Internship
 
 // pagination sir — coerced, bounded, and defaulted in one place instead of a parseInt in each
 // controller. The upper bound matters: an unbounded `limit` is an easy way to pull the entire
-// collection in one request.
+// collection in one request. Not yet wired into a route (every list endpoint still parses
+// page/limit by hand) — kept and tested anyway per 2026-11-16 audit, since the point is to use
+// it next time a list route is touched, not to delete the one place this rule is already right.
 const pagination = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
