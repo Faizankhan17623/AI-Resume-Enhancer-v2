@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import toast from 'react-hot-toast'
+import Swal from 'sweetalert2'
 import { motion, AnimatePresence } from 'motion/react'
 import { FaBullhorn, FaTrash, FaEdit, FaTimes } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
@@ -12,6 +13,7 @@ import { useMinDurationLoading } from '../../Hooks/useMinDurationLoading'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetAnnouncements, CreateAnnouncement, UpdateAnnouncement, ToggleAnnouncement, DeleteAnnouncement } from '../../Services/operations/Admin'
 import { istPartsToUtcDate, utcDateToIstDisplay, utcDateToIstParts, istDateStrFromNow } from '../../utils/istTime'
+import { swalDark } from '../../utils/accountShared'
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1)
 const MINUTES = Array.from({ length: 60 }, (_, i) => i)
@@ -116,6 +118,21 @@ const Announcements = () => {
     setStartSchedule(item.startsAt ? scheduleFromUtc(item.startsAt) : emptySchedule(1))
     setEndSchedule(item.expiresAt ? scheduleFromUtc(item.expiresAt) : emptySchedule(1))
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // confirm added sir, per 2026-11-16 audit — this fired immediately with zero confirmation,
+  // the only destructive delete in this file with none, unlike every other admin delete in the
+  // app (Users.jsx's DeleteUser, etc.)
+  const handleDeleteClick = async (item) => {
+    const { isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: 'Delete this announcement?',
+      text: item.title,
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#C1443C',
+    })
+    if (isConfirmed) dispatch(DeleteAnnouncement(item._id, token))
   }
 
   const buildScheduleDates = () => {
@@ -292,7 +309,7 @@ const Announcements = () => {
                       {item.active ? 'Turn off' : 'Go live'}
                     </button>
                     <button
-                      onClick={() => dispatch(DeleteAnnouncement(item._id, token))}
+                      onClick={() => handleDeleteClick(item)}
                       className="p-2 rounded-lg text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
                     >
                       <FaTrash className="text-sm" />

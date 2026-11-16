@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'motion/react'
+import Swal from 'sweetalert2'
 import { FaBug, FaLightbulb, FaTrash, FaClipboardList } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
@@ -9,6 +10,7 @@ import Loading from '../extra/Loading'
 import { useMinDurationFlag } from '../../Hooks/useMinDurationFlag'
 import { fadeUp, staggerContainer } from '../../utils/motion'
 import { GetReports, UpdateReportStatus, DeleteReport } from '../../Services/operations/Admin'
+import { swalDark } from '../../utils/accountShared'
 
 const TYPE_FILTERS = [
   { label: 'All types', value: '' },
@@ -67,6 +69,21 @@ const Reports = () => {
   const handleStatusFilterChange = (value) => {
     triggerSwitchingFilter()
     setStatusFilter(value)
+  }
+
+  // confirm added sir, per 2026-11-16 audit — this fired immediately with zero confirmation,
+  // the only destructive delete in this file with none, unlike every other admin delete in the
+  // app (Users.jsx's DeleteUser, etc.)
+  const handleDeleteClick = async (item) => {
+    const { isConfirmed } = await Swal.fire({
+      ...swalDark,
+      title: 'Delete this report?',
+      text: item.title,
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#C1443C',
+    })
+    if (isConfirmed) dispatch(DeleteReport(item._id, token, typeFilter, statusFilter))
   }
 
   return (
@@ -167,7 +184,7 @@ const Reports = () => {
                       </select>
                       {isAdmin && (
                         <button
-                          onClick={() => dispatch(DeleteReport(item._id, token, typeFilter, statusFilter))}
+                          onClick={() => handleDeleteClick(item)}
                           title="Delete"
                           className="p-2 rounded-lg text-pink-200 hover:bg-richblack-700 transition-colors duration-200 cursor-pointer"
                         >
