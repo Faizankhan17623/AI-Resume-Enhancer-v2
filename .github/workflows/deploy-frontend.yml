@@ -20,6 +20,12 @@ on:
         required: true
         type: string
 
+# contents: read only sir, per 2026-11-16 audit - this workflow never needs a write-capable
+# GITHUB_TOKEN; without an explicit permissions block it runs with whatever the repo-wide
+# default is, which could silently be write-capable.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -45,9 +51,17 @@ jobs:
         run: npx vercel --prod --token="$VERCEL_TOKEN" --yes
 
       - name: Verify the live domain served the new build
+        # vars.PROD_URL sir, per 2026-11-16 audit — was hardcoded here; if the production domain
+        # is ever repointed (custom domain swap, project rename) this silently stopped verifying
+        # the actual live site with nobody noticing until a bad deploy shipped unverified. Falls
+        # back to today's real domain if the repo variable is never set, so this needs no action
+        # right now — only matters if the domain changes later (Settings -> Secrets and
+        # variables -> Actions -> Variables -> PROD_URL).
+        env:
+          PROD_URL: ${{ vars.PROD_URL || 'https://ai-resume-enhancer-v2.vercel.app' }}
         run: |
           sleep 10
-          LIVE_HASH=$(curl -s https://ai-resume-enhancer-v2.vercel.app/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
+          LIVE_HASH=$(curl -s "$PROD_URL" | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
           echo "Live bundle hash: $LIVE_HASH"
           if [ -z "$LIVE_HASH" ]; then
             echo "::error::Could not find a bundle hash on the live domain — the deploy may not have gone live yet, or the page structure changed."

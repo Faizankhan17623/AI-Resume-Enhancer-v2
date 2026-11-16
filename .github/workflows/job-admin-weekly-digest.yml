@@ -11,6 +11,12 @@ on:
     - cron: '10 9 * * 1'
   workflow_dispatch:
 
+# contents: read only sir, per 2026-11-16 audit - this workflow never needs a write-capable
+# GITHUB_TOKEN; without an explicit permissions block it runs with whatever the repo-wide
+# default is, which could silently be write-capable.
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest

@@ -2,7 +2,10 @@
 # for the full explanation of why this file exists and how it's safe to run alongside the EC2
 # worker (short version: Mongo lease in jobLease.js, whichever process is alive wins each tick).
 #
-# Real EC2 schedule: 0 * * * * UTC (Backend/utils/TestInviteExpiryCron.js). Offset 30 min.
+# Real EC2 schedule: 0 * * * * UTC (Backend/utils/TestInviteExpiryCron.js). Offset 35 min.
+# (was 30 min, same as job-plan-expiry-reminder.yml and job-test-invite-reminder.yml — all three
+# landed on the identical offset, firing 3 separate runners at once every hour and defeating the
+# whole point of staggering. Fixed per 2026-11-16 audit.)
 #
 # NOTE: this job existed in worker.js but had no runJob.js entry and no failover workflow at all
 # until it was found during the 2026-11-08 audit — it could only ever run via the long-lived EC2
@@ -12,8 +15,11 @@ name: 'Job: test-invite-expiry'
 
 on:
   schedule:
-    - cron: '30 * * * *'
+    - cron: '35 * * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   run:

@@ -10,10 +10,19 @@ on:
     # that hasn't changed, not just new code as it's pushed
     - cron: '0 3 * * 1'
 
+# cancels a superseded run sir, per 2026-11-16 audit — same reasoning as ci.yml's own group
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze JavaScript
     runs-on: ubuntu-latest
+    # 20 min sir, per 2026-11-16 audit — JS/TS CodeQL analysis isn't instant, so this is looser
+    # than ci.yml's 15, but this job had NO timeout at all before, exposed to the 360-minute
+    # default on every push/PR plus the weekly Monday cron
+    timeout-minutes: 20
     permissions:
       actions: read
       contents: read

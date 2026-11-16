@@ -11,9 +11,26 @@ on:
   pull_request:
     branches: [main]
 
+# contents: read only sir, per 2026-11-16 audit - this workflow never needs a write-capable
+# GITHUB_TOKEN; without an explicit permissions block it runs with whatever the repo-wide
+# default is, which could silently be write-capable.
+permissions:
+  contents: read
+
+# cancels a superseded run sir, per 2026-11-16 audit — pushing several commits in quick
+# succession (rebase, force-push during review) used to queue multiple redundant runs instead
+# of canceling the one this new push already supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
     runs-on: ubuntu-latest
+    # 15 min sir, per 2026-11-16 audit — this job had no timeout at all, so a hung npm ci
+    # (registry issue, lockfile drift) would run until the 360-minute GitHub Actions default,
+    # burning CI minutes silently on every push/PR to main.
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: Backend
@@ -71,6 +88,7 @@ jobs:
 
   frontend-lint-and-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ResumeEnhancer
