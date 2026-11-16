@@ -7,7 +7,9 @@ const { applicationCopilotSchema } = require('../Validation/schemas')
 const { smartMatchSchema, createRoadmapSchema, createFollowUpSchema, toggleFollowUpSchema, interviewFeedbackSchema } = require('../Validation/Career')
 const c = require('../controllers/Career')
 route.get('/career/overview', Auth, isUser, c.getOverview)
-route.post('/career/application-copilot', Auth, isUser, validate({ body: applicationCopilotSchema }), c.applicationCopilot)
+// authedWriteLimiter added sir, per 2026-11-16 audit — the one write route in this file still
+// missing it, despite doing multiple DB reads/populates per call just like its siblings below
+route.post('/career/application-copilot', Auth, isUser, authedWriteLimiter, validate({ body: applicationCopilotSchema }), c.applicationCopilot)
 route.post('/career/match', Auth, isUser, authedWriteLimiter, validate({ body: smartMatchSchema }), c.smartMatch)
 route.post('/career/roadmap', Auth, isUser, authedWriteLimiter, validate({ body: createRoadmapSchema }), c.createRoadmap)
 route.get('/career/follow-ups', Auth, isUser, c.listFollowUps)
