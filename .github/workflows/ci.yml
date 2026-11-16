@@ -1,7 +1,9 @@
-# Continuous Integration sir — runs on every push and pull request against main. Lints and
-# builds the frontend, and runs the backend test suite. Deployment is a SEPARATE, manual step
-# (see deploy-backend.yml / deploy-frontend.yml) — this workflow never deploys anything, it only
-# verifies the code is sound before a human decides to ship it.
+# Continuous Integration + Deployment sir — runs on every push and pull request against main.
+# Lints and builds the frontend, runs the backend test suite + both package audits, and (PUSH TO
+# MAIN ONLY, never on a PR) deploys to production once everything above is green. Per direct
+# request 2026-11-16 — previously deployment was a separate manual step
+# (deploy-backend.yml / deploy-frontend.yml, still kept for one-off manual redeploys with no new
+# commit); now a push to main that passes CI ships automatically, no button.
 
 name: CI
 
@@ -59,6 +61,14 @@ jobs:
         # when there are none.
         run: npm test -- --passWithNoTests
 
+      - name: Audit dependencies
+        # high/critical only sir, per direct request 2026-11-16 — the current baseline has 5
+        # pre-existing LOW severity advisories, all inside jest's own dependency chain (dev-only,
+        # never shipped). A bare `npm audit` would fail this (and block every future deploy) on
+        # noise unrelated to any real change; --audit-level=high still fails the build the moment
+        # something high/critical shows up.
+        run: npm audit --audit-level=high
+
       - name: Route-collision check
         # per 2026-11-15 audit sir — Backend/tests/ staying gitignored (by explicit request)
         # means the real Jest suite can't run here, so this is the one meaningful backend
@@ -115,3 +125,39 @@ jobs:
         env:
           VITE_MAIN_BACKEND_URL: https://ci-build-placeholder.invalid/api/v1
         run: npm run build
+
+      - name: Audit dependencies
+        # high/critical only sir — same reasoning as the backend audit step above (4 pre-existing
+        # LOW severity advisories today, all inside vite-plugin-pwa's own dependency chain)
+        run: npm audit --audit-level=high
+
+  # push-to-main auto-deploy sir, per direct request 2026-11-16 — needs BOTH jobs above to have
+  # actually passed (not just finished), and only runs on a push to main, never on a pull_request
+  # (a PR from a fork wouldn't even have these secrets, and shouldn't deploy regardless). Calls
+  # the same two workflows the manual "click Run workflow" button always has
+  # (deploy-frontend.yml / deploy-backend.yml are unchanged otherwise — see their own updated
+  # header comments) via workflow_call, frontend first, then backend, matching this project's
+  # existing deploy-order convention.
+  deploy-frontend:
+    needs: [backend-test, frontend-lint-and-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-frontend.yml
+    secrets: inherit
+    # own concurrency group sir, per 2026-11-16 audit — this workflow's job-level concurrency
+    # inherits the WORKFLOW-level group above (cancel-in-progress: true), which is right for
+    # lint/test/build but wrong here: two pushes seconds apart would cancel the first push's
+    # deploy mid-Vercel-upload/mid-SSH-pm2-restart instead of just superseding a redundant test
+    # run. "deploy" (fixed, not ref-scoped) queues instead of cancelling, so deploys always run
+    # to completion, in order.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+
+  deploy-backend:
+    needs: [deploy-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-backend.yml
+    secrets: inherit
+    concurrency:
+      group: deploy
+      cancel-in-progress: false

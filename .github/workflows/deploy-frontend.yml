@@ -1,5 +1,9 @@
-# Frontend deploy sir — manual trigger ONLY (workflow_dispatch), no automatic deploy on merge to
-# main. Mirrors exactly the deploy-frontend skill's steps: deploy from the repo root (NOT from
+# Frontend deploy sir — two ways in: workflow_dispatch (you click Run workflow + type "deploy",
+# for a one-off manual redeploy with no new commit), or workflow_call (ci.yml calls this once its
+# own jobs are green on a push to main — see that file's own deploy job). Per direct request
+# 2026-11-16, a push to main that passes CI now deploys automatically; this file's actual deploy
+# steps didn't need to change, only who's allowed to trigger them without typing "deploy".
+# Mirrors exactly the deploy-frontend skill's steps: deploy from the repo root (NOT from
 # inside ResumeEnhancer/ — the linked Vercel project's Root Directory is already set to
 # ResumeEnhancer, see that skill for why running it from inside the folder breaks the path), then
 # verify the live aliased domain actually picked up the new build by comparing bundle hashes.
@@ -19,6 +23,7 @@ on:
         description: 'Type "deploy" to confirm you want to deploy to production'
         required: true
         type: string
+  workflow_call:
 
 # contents: read only sir, per 2026-11-16 audit - this workflow never needs a write-capable
 # GITHUB_TOKEN; without an explicit permissions block it runs with whatever the repo-wide
@@ -29,12 +34,14 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'deploy'
+    # workflow_call has no 'confirm' input to check sir — being CALLED (only ci.yml does, only
+    # after its own jobs pass on a push to main) IS the confirmation for that path
+    if: github.event_name == 'workflow_call' || github.event.inputs.confirm == 'deploy'
     timeout-minutes: 10
 
     steps:
       - name: Refuse to continue without explicit confirmation
-        if: github.event.inputs.confirm != 'deploy'
+        if: github.event_name != 'workflow_call' && github.event.inputs.confirm != 'deploy'
         run: |
           echo "::error::Deploy was not confirmed — input 'confirm' must be exactly 'deploy'."
           exit 1
