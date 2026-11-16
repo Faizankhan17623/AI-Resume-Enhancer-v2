@@ -28,14 +28,13 @@ export default function IconBtn({
       {loading && (
         <span className="w-4 h-4 border-2 border-richblack-900 border-t-transparent rounded-full animate-spin shrink-0" />
       )}
-      {children ? (
-        <>
-          <span className={`${outline && "text-yellow-50"}`}>{text}</span>
-          {children}
-        </>
-      ) : (
-        text
-      )}
+      {/* outline-aware span now applies regardless of children sir, per 2026-11-16 audit —
+          the `: text` branch used to bypass it entirely, so an outline button with no children
+          rendered the base near-black text color on a transparent background, unreadable
+          against the dark panel underneath (live example: RecruiterAccount.jsx's "Upgrade to
+          Pro Max" button on the Basic plan). */}
+      <span className={outline ? "text-yellow-50" : undefined}>{text}</span>
+      {children}
     </motion.button>
   )
 }
