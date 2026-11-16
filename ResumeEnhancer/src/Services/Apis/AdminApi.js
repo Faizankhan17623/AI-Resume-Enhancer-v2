@@ -14,7 +14,8 @@ export const AdminStats = {
     security: BASE_URL + "/admin/security",
     atrisk: BASE_URL + "/admin/at-risk",
     referralabuse: BASE_URL + "/admin/referral-abuse",
-    search: BASE_URL + "/admin/search"
+    search: BASE_URL + "/admin/search",
+    myactivity: BASE_URL + "/admin/my-activity"
 }
 
 export const AdminUsers = {

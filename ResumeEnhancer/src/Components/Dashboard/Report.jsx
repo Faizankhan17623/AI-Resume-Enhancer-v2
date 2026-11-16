@@ -12,9 +12,7 @@ import ScoreRing from '../extra/ScoreRing'
 import IconBtn from '../extra/IconBtn'
 import PageTransition from '../extra/PageTransition'
 import { GetSingleReview, DownloadReviewPdf, ToggleShare, UpdateShareAudience } from '../../Services/operations/Review'
-import { apiConnector } from '../../Services/apiConnector'
-import { LearningResourcesData } from '../../Services/Apis/LearningResourcesApi'
-import { logApiError } from '../../Services/logApiError'
+import { SearchLearningResources } from '../../Services/operations/LearningResources'
 
 // lazy "find real courses" lookup for one learningRoadmap item sir — only fires on click,
 // never on page load, so we don't burn Tavily calls on roadmap items the user never expands
@@ -25,14 +23,10 @@ const LearningResourceFinder = ({ query, token }) => {
   const handleFind = async () => {
     setState('loading')
     try {
-      const response = await apiConnector('POST', LearningResourcesData.search, { query }, {
-        Authorization: `Bearer ${token}`
-      })
-      if (!response.data.success) throw new Error(response.data.message)
-      setResults(response.data.results || [])
+      const results = await SearchLearningResources(query, token)
+      setResults(results)
       setState('done')
-    } catch (error) {
-      logApiError('Error finding learning resources', error)
+    } catch {
       setState('error')
     }
   }

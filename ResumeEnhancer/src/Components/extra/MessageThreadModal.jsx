@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaPaperPlane } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { MessageApi } from '../../Services/Apis/MessageApi'
+import { GetMessageThread, SendThreadMessage } from '../../Services/operations/Message'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
 // simple shared thread UI sir, per direct request — no read receipts, no typing
@@ -31,9 +30,10 @@ const MessageThreadModal = ({ applicationId, myRole, onClose }) => {
   // resolves) could let A's stale response land after B's and overwrite the thread actually open.
   useEffect(() => {
     let alive = true
-    apiConnector('GET', `${MessageApi.thread}/${applicationId}/messages`, null, { Authorization: `Bearer ${token}` })
-      .then((r) => { if (alive) { setThread(r.data.thread); setLoadError(false) } })
-      .catch(() => { if (alive) setLoadError(true) })
+    GetMessageThread(applicationId, token).then((result) => {
+      if (!alive) return
+      if (result) { setThread(result); setLoadError(false) } else { setLoadError(true) }
+    })
     return () => { alive = false }
   }, [applicationId, token, retryTick])
 
@@ -46,8 +46,8 @@ const MessageThreadModal = ({ applicationId, myRole, onClose }) => {
     if (!text.trim()) return
     setSending(true)
     try {
-      const r = await apiConnector('POST', `${MessageApi.thread}/${applicationId}/messages`, { text: text.trim() }, { Authorization: `Bearer ${token}` })
-      setThread(r.data.thread)
+      const updatedThread = await SendThreadMessage(applicationId, text.trim(), token)
+      setThread(updatedThread)
       setText('')
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Could not send the message')

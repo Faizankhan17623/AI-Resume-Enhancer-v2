@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import { FaStar, FaCommentDots } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { Testimonials as TestimonialsApi } from '../../Services/Apis/AdminApi'
+import { GetMyTestimonial, SubmitTestimonial } from '../../Services/operations/Testimonial'
 
 // lets a User or Recruiter share a homepage testimonial sir — Admin/Support never see this, they
 // have nothing to review here (mirrors isUserOrRecruiter on the backend). Rendered on both
@@ -18,18 +17,7 @@ const ShareTestimonialCard = () => {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const fetchMine = async () => {
-      try {
-        const response = await apiConnector('GET', TestimonialsApi.mine, null, {
-          Authorization: `Bearer ${token}`,
-        })
-        if (response.data.success) setMine(response.data.testimonial)
-      } catch (error) {
-        console.error('Error fetching your testimonial', error)
-        setMine(null)
-      }
-    }
-    fetchMine()
+    GetMyTestimonial(token).then(setMine)
   }, [token])
 
   const canSubmit = role.trim() && quote.trim() && rating > 0
@@ -39,15 +27,9 @@ const ShareTestimonialCard = () => {
     if (!canSubmit || submitting) return
     setSubmitting(true)
     try {
-      const response = await apiConnector(
-        'POST',
-        TestimonialsApi.submit,
-        { role: role.trim(), quote: quote.trim(), rating },
-        { Authorization: `Bearer ${token}` }
-      )
-      if (!response.data.success) throw new Error(response.data.message)
-      toast.success(response.data.message || 'Thanks for sharing!')
-      setMine(response.data.testimonial)
+      const { message, testimonial } = await SubmitTestimonial(role.trim(), quote.trim(), rating, token)
+      toast.success(message || 'Thanks for sharing!')
+      setMine(testimonial)
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Could not submit your testimonial')
     } finally {

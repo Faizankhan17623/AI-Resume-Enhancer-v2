@@ -4,8 +4,7 @@ import { useLocation } from 'react-router'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaStar, FaCommentDots } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { FeedbackApi } from '../../Services/Apis/FeedbackApi'
+import { GetFeedbackStatus, SubmitFeedback } from '../../Services/operations/Feedback'
 import { modalBackdrop } from '../../utils/motion'
 
 // in-app feedback popup sir — shows after the 1st completed feature use, then every 2nd
@@ -25,16 +24,9 @@ const FeedbackModal = () => {
 
   const checkStatus = useCallback(async (isStale) => {
     if (!isLoggedIn || !token) return
-    try {
-      const response = await apiConnector('GET', FeedbackApi.status, null, {
-        Authorization: `Bearer ${token}`,
-      })
-      if (!isStale() && response.data.success && response.data.shouldShow) {
-        setOpen(true)
-      }
-    } catch (error) {
-      // silent sir — a missed popup check should never disturb the dashboard
-      console.error('Error checking feedback status', error)
+    const shouldShow = await GetFeedbackStatus(token)
+    if (!isStale() && shouldShow) {
+      setOpen(true)
     }
   }, [isLoggedIn, token])
 
@@ -57,15 +49,7 @@ const FeedbackModal = () => {
     if (!canSubmit || submitting) return
     setSubmitting(true)
     try {
-      const response = await apiConnector(
-        'POST',
-        FeedbackApi.submit,
-        { rating, referralScore, reviewText },
-        { Authorization: `Bearer ${token}` }
-      )
-      if (!response.data.success) {
-        throw new Error(response.data.message)
-      }
+      await SubmitFeedback(rating, referralScore, reviewText, token)
       toast.success('Thanks for the feedback!')
       setOpen(false)
     } catch (error) {

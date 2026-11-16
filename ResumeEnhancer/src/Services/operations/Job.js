@@ -19,6 +19,8 @@ import {
     setSavedJobs,
     patchSavedJobId,
     setLoading,
+    setMyApplicationsLoading,
+    setSavedJobsLoading,
 } from '../../Slices/jobSlice.js'
 
 const {
@@ -619,9 +621,11 @@ export function ApplyToJob(jobId, token, formPayload, resumeFile, onLoadingChang
     }
 }
 
+// own dedicated loading flag sir, per 2026-11-16 audit — see jobSlice.js's own comment on why
+// this no longer shares `loading` with GetPublicJobs/GetPublicJob
 export function GetMyApplications(token) {
     return async (dispatch) => {
-        dispatch(setLoading(true))
+        dispatch(setMyApplicationsLoading(true))
         try {
             const response = await apiConnector("GET", listMyApplications, null, {
                 Authorization: `Bearer ${token}`
@@ -636,7 +640,7 @@ export function GetMyApplications(token) {
             logApiError("Error fetching your applications", error)
             toast.error(error?.response?.data?.message || "Could not load your applications")
         } finally {
-            dispatch(setLoading(false))
+            dispatch(setMyApplicationsLoading(false))
         }
     }
 }
@@ -663,9 +667,10 @@ export function ToggleSavedJob(jobId, token) {
     }
 }
 
+// own dedicated loading flag sir, per 2026-11-16 audit — same reasoning as GetMyApplications above
 export function GetSavedJobs(token) {
     return async (dispatch) => {
-        dispatch(setLoading(true))
+        dispatch(setSavedJobsLoading(true))
         try {
             const response = await apiConnector("GET", listSavedJobs, null, {
                 Authorization: `Bearer ${token}`
@@ -680,7 +685,7 @@ export function GetSavedJobs(token) {
             logApiError("Error fetching your saved jobs", error)
             toast.error(error?.response?.data?.message || "Could not load your saved jobs")
         } finally {
-            dispatch(setLoading(false))
+            dispatch(setSavedJobsLoading(false))
         }
     }
 }

@@ -4,8 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { FaCheck, FaTimes } from 'react-icons/fa'
 import Navbar from '../Home/Navbar'
 import PageTransition from '../extra/PageTransition'
-import { apiConnector } from '../../Services/apiConnector'
-import { DeviceAlert } from '../../Services/Apis/UserApi'
+import { ResolveDeviceAlert } from '../../Services/operations/Auth'
 
 // landing page for the two buttons in Backend/Templates/newDeviceAlertTemplate.js sir — the
 // email links here with ?token=...&action=confirm|deny, this page's only job is to fire that
@@ -35,7 +34,7 @@ const DeviceAlertConfirm = () => {
     if (!token || !['confirm', 'deny'].includes(action)) return // already handled above
 
     let alive = true
-    apiConnector('POST', DeviceAlert.resolve, { token, action })
+    ResolveDeviceAlert(token, action)
       .then((res) => {
         if (!alive) return
         // per direct request sir — "No, it wasn't me" no longer shows a status message here at

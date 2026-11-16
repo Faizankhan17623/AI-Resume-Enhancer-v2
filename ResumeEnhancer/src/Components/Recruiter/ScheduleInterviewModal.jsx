@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaPlus } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { InterviewApi } from '../../Services/Apis/InterviewApi'
+import { ScheduleInterview } from '../../Services/operations/Interview'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
 const emptySlot = () => ({ date: '', startTime: '', duration: '30' })
@@ -61,21 +60,15 @@ const ScheduleInterviewModal = ({ applicationId, onClose, onScheduled }) => {
     }
 
     setBusy(true)
-    try {
-      const r = await apiConnector('POST', `${InterviewApi.scheduleInterview}/${applicationId}/schedule-interview`, {
-        slots: parsed,
-        meetingLink: meetingLink.trim() || undefined,
-        notes: notes.trim() || undefined,
-      }, { Authorization: `Bearer ${token}` })
-
-      if (!r.data.success) throw new Error(r.data.message)
-      toast.success('Interview slots sent to the candidate')
+    const ok = await ScheduleInterview(applicationId, {
+      slots: parsed,
+      meetingLink: meetingLink.trim() || undefined,
+      notes: notes.trim() || undefined,
+    }, token)
+    setBusy(false)
+    if (ok) {
       onScheduled?.()
       onClose()
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || 'Could not propose interview slots')
-    } finally {
-      setBusy(false)
     }
   }
 

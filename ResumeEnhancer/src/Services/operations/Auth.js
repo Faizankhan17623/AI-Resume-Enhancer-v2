@@ -2,7 +2,7 @@ import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } from '../../Slices/authSlice.js'
-import { CreateUser, SendOtp, Login, Logout, Password, Account } from '../Apis/UserApi.js'
+import { CreateUser, SendOtp, Login, Logout, Password, Account, DeviceAlert } from '../Apis/UserApi.js'
 import { getClientHints } from '../../utils/clientHints.js'
 import { rememberLoginMethod } from '../../utils/lastLoginMethod.js'
 
@@ -296,4 +296,18 @@ export function DeleteAccount(token, navigate) {
             setTimeout(() => dispatch(setLogoutStatus({ status: null, message: '' })), 2200)
         }
     }
+}
+
+// plain async functions, not thunks, sir, per 2026-11-16 audit — OAuthComplete.jsx and
+// DeviceAlertConfirm.jsx both used to call apiConnector directly. Both callers own careful
+// `alive`-guard state themselves (so a slower, superseded request can't clobber a newer one),
+// which belongs in the component, not here — these are thin wrappers only, re-throwing on
+// failure so each caller's existing .then/.catch shape keeps working unchanged.
+
+export function ExchangeOAuthCode(exchangeUrl, code) {
+    return apiConnector("POST", exchangeUrl, { code })
+}
+
+export function ResolveDeviceAlert(token, action) {
+    return apiConnector('POST', DeviceAlert.resolve, { token, action })
 }

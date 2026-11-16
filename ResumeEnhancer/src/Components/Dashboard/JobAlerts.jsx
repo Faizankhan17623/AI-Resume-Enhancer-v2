@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
-import toast from 'react-hot-toast'
 import { FaBell, FaTrash, FaMapMarkerAlt, FaBriefcase } from 'react-icons/fa'
 import DashboardLayout from './DashboardLayout'
 import Loading from '../extra/Loading'
-import { apiConnector } from '../../Services/apiConnector'
-import { JobAlertApi } from '../../Services/Apis/JobAlertApi'
+import { GetJobAlerts, ToggleJobAlert, DeleteJobAlert } from '../../Services/operations/JobAlert'
 
 // candidate's saved-search list sir — created from the "Save as alert" button on the public
 // job board (Jobs/JobBoard.jsx). Simple management here: toggle active/paused, or remove.
@@ -17,10 +15,12 @@ export default function JobAlerts() {
 
   // loadError sir, per 2026-11-08 audit — a failed fetch used to render as "No saved alerts
   // yet", hiding real saved alerts with no indication anything went wrong
+  // .then() chain (not async/await) sir — keeps the setState calls past the lint rule's static
+  // "after an await" check for react-hooks/set-state-in-effect
   const load = () => {
-    apiConnector('GET', JobAlertApi.list, null, { Authorization: `Bearer ${token}` })
-      .then((r) => { setAlerts(r.data.alerts); setLoadError(false) })
-      .catch(() => setLoadError(true))
+    GetJobAlerts(token).then((result) => {
+      if (result) { setAlerts(result); setLoadError(false) } else { setLoadError(true) }
+    })
   }
 
   useEffect(() => {
@@ -29,22 +29,13 @@ export default function JobAlerts() {
   }, [])
 
   const toggleActive = async (alert) => {
-    try {
-      await apiConnector('PATCH', `${JobAlertApi.update}/${alert._id}`, { active: !alert.active }, { Authorization: `Bearer ${token}` })
-      load()
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Could not update this alert')
-    }
+    const ok = await ToggleJobAlert(alert._id, !alert.active, token)
+    if (ok) load()
   }
 
   const removeAlert = async (alertId) => {
-    try {
-      await apiConnector('DELETE', `${JobAlertApi.remove}/${alertId}`, null, { Authorization: `Bearer ${token}` })
-      toast.success('Alert removed')
-      load()
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Could not remove this alert')
-    }
+    const ok = await DeleteJobAlert(alertId, token)
+    if (ok) load()
   }
 
   if (loadError) return <DashboardLayout title="Job Alerts"><p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load your job alerts, please try again.</p></DashboardLayout>

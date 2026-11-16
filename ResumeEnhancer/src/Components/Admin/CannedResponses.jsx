@@ -6,14 +6,15 @@ import { FaComments, FaTrash, FaPlus } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
-import { apiConnector } from '../../Services/apiConnector'
-import { AdminCannedResponses } from '../../Services/Apis/AdminApi'
+import { GetCannedResponses, CreateCannedResponse, DeleteCannedResponse } from '../../Services/operations/Admin'
 
 // small library of reusable reply texts sir, per direct request — Admin manages them here,
 // Support picks from the list wherever a freeform reason/reply is typed (see Users.jsx's ban
-// dialog for the first wired-in picker). Self-contained state (plain apiConnector calls, not
-// the Redux admin slice) sir — same lightweight pattern as this session's other small admin
-// pages, simpler than threading one more slice through for a page this size.
+// dialog for the first wired-in picker). Self-contained state (plain useState, not the Redux
+// admin slice) sir — same lightweight pattern as this session's other small admin pages, simpler
+// than threading one more slice through for a page this size. apiConnector calls themselves
+// moved into Services/operations/Admin.js per 2026-11-16 audit — that's the one rule that
+// doesn't bend regardless of whether a slice backs the page.
 const CannedResponses = () => {
   const { token, user: me } = useSelector((state) => state.auth)
   const isAdmin = me?.role === 'Admin'
@@ -27,8 +28,8 @@ const CannedResponses = () => {
   const [saving, setSaving] = useState(false)
 
   const load = () => {
-    apiConnector('GET', AdminCannedResponses.list, null, { Authorization: `Bearer ${token}` })
-      .then((r) => { setResponses(r.data.responses); setLoadError(false) })
+    GetCannedResponses(token)
+      .then((responses) => { setResponses(responses); setLoadError(false) })
       .catch(() => setLoadError(true))
   }
 
@@ -42,7 +43,7 @@ const CannedResponses = () => {
     if (!title.trim() || !body.trim()) return
     setSaving(true)
     try {
-      await apiConnector('POST', AdminCannedResponses.create, { title: title.trim(), body: body.trim() }, { Authorization: `Bearer ${token}` })
+      await CreateCannedResponse(title.trim(), body.trim(), token)
       toast.success('Canned response saved')
       setTitle('')
       setBody('')
@@ -56,7 +57,7 @@ const CannedResponses = () => {
 
   const handleDelete = async (responseId) => {
     try {
-      await apiConnector('DELETE', `${AdminCannedResponses.remove}/${responseId}`, null, { Authorization: `Bearer ${token}` })
+      await DeleteCannedResponse(responseId, token)
       toast.success('Removed')
       load()
     } catch (error) {

@@ -105,6 +105,43 @@ export async function ToggleCareerFollowUp(followUpId, completed, token) {
     }
 }
 
+export async function GetCandidateMatches(jobId, token) {
+    try {
+        const response = await apiConnector("GET", `${CareerApi.candidateMatches}/${jobId}/candidate-matches`, null, {
+            Authorization: `Bearer ${token}`
+        })
+        if (!response.data.success) {
+            throw new Error(response.data.message)
+        }
+        return response.data
+    } catch (error) {
+        logApiError("Error fetching candidate matches", error)
+        return null
+    }
+}
+
+// returns { profile } on success (profile is falsy for a genuinely not-found share) sir, or
+// { error: true } on a real network/server failure — per 2026-11-10 audit's own fix, these two
+// cases must render differently (a transient fetch failure vs a legitimately deleted/unshared
+// profile), so this can't collapse both into one falsy return the way GetApprovedTestimonials
+// etc. do. The backend 404s with a real JSON body for "not found" (getSharedProfile), which
+// apiConnector/axios treats as a REJECTED promise same as any other non-2xx — unlike the plain
+// fetch() this replaced, which only ever rejected on a genuine network failure. error.response
+// being present (even for a 404) means the server actually answered; only its absence means
+// the request itself failed to complete.
+export async function GetPublicCareerProfile(shareId) {
+    try {
+        const response = await apiConnector("GET", `${CareerApi.publicProfile}/${shareId}`)
+        return { profile: response.data.profile || false }
+    } catch (error) {
+        if (error.response) {
+            return { profile: error.response.data?.profile || false }
+        }
+        logApiError("Error loading this career profile", error)
+        return { error: true }
+    }
+}
+
 export async function ShareCareerProfile(token) {
     try {
         const response = await apiConnector("POST", CareerApi.profileShare, null, {

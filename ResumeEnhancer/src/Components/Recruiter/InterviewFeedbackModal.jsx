@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaStar } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { InterviewApi } from '../../Services/Apis/InterviewApi'
+import { GetInterviewForApplication, SubmitInterviewFeedback } from '../../Services/operations/Interview'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 import Loading from '../extra/Loading'
 
@@ -34,24 +33,18 @@ const InterviewFeedbackModal = ({ applicationId, onClose }) => {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const r = await apiConnector('GET', `${InterviewApi.getInterviewForApplication}/${applicationId}/interview`, null, {
-          Authorization: `Bearer ${token}`,
-        })
-        if (!r.data.success) throw new Error(r.data.message)
-        setSchedule(r.data.schedule)
-        const existing = r.data.schedule?.feedback
+      const result = await GetInterviewForApplication(applicationId, token)
+      if (result) {
+        setSchedule(result)
+        const existing = result.feedback
         if (existing?.submittedAt) {
           setRecommendation(existing.recommendation || '')
           setRating(existing.rating || 0)
           setStrengths(existing.strengths || '')
           setConcerns(existing.concerns || '')
         }
-      } catch (error) {
-        toast.error(error?.response?.data?.message || error.message || 'Could not load this interview')
-      } finally {
-        setLoading(false)
       }
+      setLoading(false)
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,21 +57,14 @@ const InterviewFeedbackModal = ({ applicationId, onClose }) => {
       return
     }
     setBusy(true)
-    try {
-      const r = await apiConnector('POST', `${InterviewApi.submitFeedback}/${schedule._id}/feedback`, {
-        recommendation,
-        rating,
-        strengths: strengths.trim() || undefined,
-        concerns: concerns.trim() || undefined,
-      }, { Authorization: `Bearer ${token}` })
-      if (!r.data.success) throw new Error(r.data.message)
-      toast.success('Feedback saved')
-      onClose()
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || 'Could not save feedback')
-    } finally {
-      setBusy(false)
-    }
+    const ok = await SubmitInterviewFeedback(schedule._id, {
+      recommendation,
+      rating,
+      strengths: strengths.trim() || undefined,
+      concerns: concerns.trim() || undefined,
+    }, token)
+    setBusy(false)
+    if (ok) onClose()
   }
 
   const notReady = !loading && (!schedule || schedule.status !== 'confirmed')

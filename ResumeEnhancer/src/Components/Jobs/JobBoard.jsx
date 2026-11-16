@@ -12,9 +12,8 @@ import Pagination from '../extra/Pagination'
 import { Spotlight } from '../Animated/Spotlight'
 import { staggerContainer, fadeUp } from '../../utils/motion'
 import { GetPublicJobs, GetMyApplications, GetSavedJobs, ToggleSavedJob } from '../../Services/operations/Job'
+import { SaveJobAlert } from '../../Services/operations/JobAlert'
 import { formatJobDate } from '../../utils/formatDate'
-import { apiConnector } from '../../Services/apiConnector'
-import { JobAlertApi } from '../../Services/Apis/JobAlertApi'
 
 const EMPLOYMENT_TYPES = ['', 'Full-time', 'Part-time', 'Contract', 'Internship', 'Remote']
 
@@ -80,17 +79,11 @@ const JobBoard = () => {
     if (!isLoggedIn) return toast.error('Log in to save a job alert')
     if (!search.trim()) return toast.error('Enter some keywords first')
 
-    try {
-      const r = await apiConnector('POST', JobAlertApi.create, {
-        keywords: search.trim(),
-        location: location.trim() || undefined,
-        employmentType: employmentType || undefined,
-      }, { Authorization: `Bearer ${token}` })
-      if (!r.data.success) throw new Error(r.data.message)
-      toast.success("Saved — we'll email you when a matching job is posted")
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || 'Could not save this alert')
-    }
+    await SaveJobAlert({
+      keywords: search.trim(),
+      location: location.trim() || undefined,
+      employmentType: employmentType || undefined,
+    }, token)
   }
 
   return (

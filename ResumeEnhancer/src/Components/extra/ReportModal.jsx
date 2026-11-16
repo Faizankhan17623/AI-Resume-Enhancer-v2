@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'motion/react'
 import toast from 'react-hot-toast'
 import { FaTimes, FaBug, FaLightbulb } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { ReportApi } from '../../Services/Apis/ReportApi'
+import { SubmitReport } from '../../Services/operations/Report'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
 // bug report / feature suggestion modal sir — opened on demand from the FAB, unlike
@@ -35,16 +34,8 @@ const ReportModal = ({ open, onClose }) => {
     if (!canSubmit || submitting) return
     setSubmitting(true)
     try {
-      const response = await apiConnector(
-        'POST',
-        ReportApi.submit,
-        { type, title, description },
-        { Authorization: `Bearer ${token}` }
-      )
-      if (!response.data.success) {
-        throw new Error(response.data.message)
-      }
-      toast.success(response.data.message)
+      const message = await SubmitReport(type, title, description, token)
+      toast.success(message)
       handleClose()
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Could not submit your report')

@@ -4,8 +4,7 @@ import { useSelector } from 'react-redux'
 import { Helmet } from 'react-helmet-async'
 import RecruiterLayout from './RecruiterLayout'
 import Loading from '../extra/Loading'
-import { apiConnector } from '../../Services/apiConnector'
-import BASE_URL from '../../utils/backendUrl'
+import { GetCandidateMatches } from '../../Services/operations/Career'
 
 // keyed remount sir, per 2026-11-14 audit — a different jobId is conceptually a different page,
 // not an update to this one. Without the key, navigating from one job's matches to another
@@ -29,9 +28,10 @@ function CandidateMatchesForJob({ jobId }) {
   const [error, setError] = useState(false)
   useEffect(() => {
     let alive = true
-    apiConnector('GET', `${BASE_URL}/jobs/${jobId}/candidate-matches`, null, { Authorization: `Bearer ${token}` })
-      .then(r => { if (alive) setData(r.data) })
-      .catch(() => { if (alive) setError(true) })
+    GetCandidateMatches(jobId, token).then(result => {
+      if (!alive) return
+      if (result) setData(result); else setError(true)
+    })
     return () => { alive = false }
   }, [jobId, token])
   if (error) return <RecruiterLayout><div className="max-w-4xl"><p className="text-sm text-richblack-400">Could not load candidate matches, please try again.</p></div></RecruiterLayout>

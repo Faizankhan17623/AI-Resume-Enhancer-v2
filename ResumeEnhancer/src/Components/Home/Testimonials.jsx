@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FaQuoteLeft, FaStar } from 'react-icons/fa'
 import useGsapReveal from '../../Hooks/useGsapReveal'
-import { apiConnector } from '../../Services/apiConnector'
-import { Testimonials as TestimonialsApi } from '../../Services/Apis/AdminApi'
+import { GetApprovedTestimonials } from '../../Services/operations/Testimonial'
 
 const AVATAR_COLORS = ['bg-warm-25', 'bg-yellow-25', 'bg-blue-25']
 
@@ -43,23 +42,18 @@ const Testimonials = () => {
 
   useEffect(() => {
     const fetchTestimonials = async () => {
-      try {
-        const response = await apiConnector('GET', TestimonialsApi.approved)
-        if (response.data.success && response.data.testimonials?.length > 0) {
-          setTestimonials(
-            response.data.testimonials.slice(0, 3).map((t, i) => ({
-              name: `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() || 'Resumify user',
-              role: t.role,
-              avatarBg: AVATAR_COLORS[i % AVATAR_COLORS.length],
-              initials: initialsOf(t.user?.firstName, t.user?.lastName),
-              quote: t.quote,
-              rating: t.rating,
-            }))
-          )
-        }
-      } catch (error) {
-        // static fallback is fine sir — never block the homepage for this
-        console.error('Error fetching testimonials', error)
+      const testimonials = await GetApprovedTestimonials()
+      if (testimonials?.length > 0) {
+        setTestimonials(
+          testimonials.slice(0, 3).map((t, i) => ({
+            name: `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() || 'Resumify user',
+            role: t.role,
+            avatarBg: AVATAR_COLORS[i % AVATAR_COLORS.length],
+            initials: initialsOf(t.user?.firstName, t.user?.lastName),
+            quote: t.quote,
+            rating: t.rating,
+          }))
+        )
       }
     }
     fetchTestimonials()

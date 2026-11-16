@@ -6,8 +6,7 @@ import {
   FaSearch, FaFilePdf, FaMagic, FaComments, FaEnvelopeOpenText, FaBriefcase,
   FaPlus, FaUsers, FaBug, FaChartLine, FaFolderOpen, FaPaperPlane,
 } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import BASE_URL from '../../utils/backendUrl'
+import { GlobalCommandSearch } from '../../Services/operations/Search'
 import { modalBackdrop, modalPanel } from '../../utils/motion'
 
 // role-scoped quick actions sir — same shortcuts each layout's own sidebar/FAB already links
@@ -107,7 +106,7 @@ const CommandPalette = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     const timer = setTimeout(() => {
-      apiConnector('GET', `${BASE_URL}/search`, null, { Authorization: `Bearer ${token}` }, { q: query.trim() })
+      GlobalCommandSearch(query.trim(), token)
         .then((r) => { if (alive) setResults(r.data.results || {}) })
         .catch(() => { if (alive) setResults({}) })
         .finally(() => { if (alive) setLoading(false) })

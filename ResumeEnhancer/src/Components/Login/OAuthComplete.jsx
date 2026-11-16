@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router'
 import { setToken, setUser, setLogin } from '../../Slices/authSlice'
-import { apiConnector } from '../../Services/apiConnector'
+import { ExchangeOAuthCode } from '../../Services/operations/Auth'
 import { OAuth } from '../../Services/Apis/UserApi'
 import LoginStatusOverlay from './LoginStatusOverlay'
 import { rememberLoginMethod } from '../../utils/lastLoginMethod'
@@ -47,7 +47,7 @@ const OAuthComplete = () => {
     }
 
     let alive = true
-    apiConnector("POST", exchangeUrl, { code })
+    ExchangeOAuthCode(exchangeUrl, code)
       .then((response) => {
         if (!alive) return
         if (!response.data.success) throw new Error(response.data.message)

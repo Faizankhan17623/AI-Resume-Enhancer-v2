@@ -5,9 +5,12 @@ import {
     setStats, setCharts, setUsers, setUsersPagination, setUserDetail, setUserDetailLoading, setPayments,
     setAuditLogs, setAuditLogsPagination, setAnnouncements, setAiStats, setAiUsageByUser, setHealth, setDeletions, setReconciliation, setSecurity, setAtRisk, setReferralAbuse, setTraffic, setSettings, setTestimonials, setReports, setRecruiterApplications, setRecruiterDataHealth, setLoading, setFetchError
 } from '../../Slices/adminSlice.js'
-import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications, AdminRecruiterDataHealth } from '../Apis/AdminApi.js'
+import { AdminStats, AdminUsers, AdminPayments, AdminAnnouncements, AdminSettings, AdminTestimonials, AdminReports, AdminRecruiterApplications, AdminRecruiterDataHealth, AdminCannedResponses } from '../Apis/AdminApi.js'
+import { Announcement } from '../Apis/PaymentApi.js'
 
-const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl } = AdminStats
+const { activeannouncement: announcementActiveUrl } = Announcement
+
+const { dashboardstats, aistats, aiUsageByUser: aiUsageByUserUrl, health, auditlogs, creditgrants, traffic, deletions, reconciliation, security, atrisk, referralabuse, search: searchUrl, myactivity } = AdminStats
 const { allusers, userdetail, updaterole, bulkupdaterole, updateplan, banuser, bulkbanusers, bulkresendnudge, adjustcredits, grantcreditsall, deleteuser, updatenote, resendreset } = AdminUsers
 const { allpayments, refundpayment } = AdminPayments
 const { createannouncement, allannouncements, toggleannouncement, deleteannouncement } = AdminAnnouncements
@@ -445,6 +448,79 @@ export async function GetCreditGrants(token, { adminPage = 1, referralPage = 1, 
     }
 
     return { admin: response.data.admin, referral: response.data.referral }
+}
+
+// "what have I personally done today" sir, per 2026-11-16 audit — MyActivity.jsx used to call
+// apiConnector directly with a hand-built URL (BASE_URL + "/admin/my-activity") instead of a
+// named AdminStats entry + this operations file, same lightweight pattern as GlobalSearch/
+// GetCreditGrants above
+export async function GetMyActivity(token) {
+    const response = await apiConnector("GET", myactivity, null, {
+        Authorization: `Bearer ${token}`
+    })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+
+    return response.data.logs
+}
+
+// ---------- canned responses sir ----------
+// moved out of CannedResponses.jsx per 2026-11-16 audit — that component's own comment
+// defended calling apiConnector directly as "simpler than threading one more slice through,"
+// but the house rule is that apiConnector calls live in Services/operations regardless of
+// whether a slice backs them; same plain-async-function pattern as GlobalSearch/GetCreditGrants
+// above already proves a slice isn't required to follow that rule
+
+export async function GetCannedResponses(token) {
+    const response = await apiConnector("GET", AdminCannedResponses.list, null, {
+        Authorization: `Bearer ${token}`
+    })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+
+    return response.data.responses
+}
+
+export async function CreateCannedResponse(title, body, token) {
+    const response = await apiConnector("POST", AdminCannedResponses.create, { title, body }, {
+        Authorization: `Bearer ${token}`
+    })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+}
+
+export async function DeleteCannedResponse(responseId, token) {
+    const response = await apiConnector("DELETE", `${AdminCannedResponses.remove}/${responseId}`, null, {
+        Authorization: `Bearer ${token}`
+    })
+
+    if (!response.data.success) {
+        throw new Error(response.data.message)
+    }
+}
+
+// the live admin broadcast banner sir, per 2026-11-16 audit — AnnouncementBanner.jsx used to
+// call apiConnector directly against PaymentApi.js's Announcement.activeannouncement (an
+// unauthenticated, public GET — unrelated to payments, just filed there historically). No
+// operations file touched this at all.
+export async function GetActiveAnnouncement() {
+    try {
+        const response = await apiConnector("GET", announcementActiveUrl)
+        if (!response.data.success) {
+            throw new Error(response.data.message)
+        }
+        return response.data.announcement
+    } catch (error) {
+        // no banner is fine sir, same as the caller's own prior behavior — never block the app
+        logApiError("Error fetching the announcement", error)
+        return null
+    }
 }
 
 // ---------- money sir ----------

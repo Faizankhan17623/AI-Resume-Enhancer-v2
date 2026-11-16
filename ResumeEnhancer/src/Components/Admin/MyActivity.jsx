@@ -5,8 +5,7 @@ import { FaHistory } from 'react-icons/fa'
 import AdminLayout from './AdminLayout'
 import PageTransition from '../extra/PageTransition'
 import Loading from '../extra/Loading'
-import { apiConnector } from '../../Services/apiConnector'
-import BASE_URL from '../../utils/backendUrl'
+import { GetMyActivity } from '../../Services/operations/Admin'
 
 // "what have I personally done today" sir, per direct request — hard-scoped server-side to
 // the caller's own actions and today's date (see Backend/controllers/AdminSystem.js's
@@ -26,8 +25,8 @@ const MyActivity = () => {
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
-    apiConnector('GET', `${BASE_URL}/admin/my-activity`, null, { Authorization: `Bearer ${token}` })
-      .then((r) => { setLogs(r.data.logs); setLoadError(false) })
+    GetMyActivity(token)
+      .then((logs) => { setLogs(logs); setLoadError(false) })
       .catch(() => setLoadError(true))
   }, [token])
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FaBullhorn, FaTimes } from 'react-icons/fa'
-import { apiConnector } from '../../Services/apiConnector'
-import { Announcement } from '../../Services/Apis/PaymentApi'
+import { GetActiveAnnouncement } from '../../Services/operations/Admin'
 
 // the live admin broadcast sir — whatever the admin publishes from the dashboard shows here for everyone
 const AnnouncementBanner = () => {
@@ -9,18 +8,7 @@ const AnnouncementBanner = () => {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    const fetchAnnouncement = async () => {
-      try {
-        const response = await apiConnector("GET", Announcement.activeannouncement)
-        if (response.data.success && response.data.announcement) {
-          setAnnouncement(response.data.announcement)
-        }
-      } catch (error) {
-        // no banner is fine sir — never block the app for this
-        console.error("Error fetching the announcement", error)
-      }
-    }
-    fetchAnnouncement()
+    GetActiveAnnouncement().then((result) => { if (result) setAnnouncement(result) })
   }, [])
 
   if (!announcement || dismissed) return null
