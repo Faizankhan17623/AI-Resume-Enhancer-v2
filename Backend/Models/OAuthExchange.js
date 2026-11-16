@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 
 // short-lived, single-use OAuth exchange codes sir — shared Mongo store (not an in-memory Map)
-// so the code Google/Facebook/GitHub/LinkedIn callback mints on one Render instance can be
+// so the code Google/Facebook/GitHub/LinkedIn callback mints on one server instance can be
 // redeemed by a request that lands on a different instance (horizontal scaling / rolling deploy).
 // TTL index sweeps abandoned (never-redeemed) codes automatically instead of leaking forever.
 const oauthExchangeSchema = new mongoose.Schema({
