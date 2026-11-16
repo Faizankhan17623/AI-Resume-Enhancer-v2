@@ -305,10 +305,24 @@ exports.cancelInterview = async (req, res) => {
             return res.status(400).json({ success: false, message: 'This interview cannot be cancelled from its current status' })
         }
 
+        // atomic claim sir, per 2026-11-16 audit — same pattern as this file's own confirmSlot
+        // above. The plain read-then-save here could let two near-simultaneous cancel requests
+        // (recruiter and candidate both click "cancel" within the same race window, or a client
+        // double-submit) both pass the status check against the same stale in-memory `schedule`
+        // and both save — same end state ('cancelled') either way, but cancelledBy/cancelReason
+        // would reflect whichever write landed last, and the cancellation email/notification
+        // would fire twice, once per request.
+        const cancelled = await InterviewSchedule.findOneAndUpdate(
+            { _id: scheduleId, status: { $in: ['proposed', 'confirmed'] } },
+            { $set: { status: 'cancelled', cancelledBy: isRecruiter ? 'recruiter' : 'candidate', cancelReason: reason } },
+            { returnDocument: 'after' }
+        )
+        if (!cancelled) {
+            return res.status(400).json({ success: false, message: 'This interview was already cancelled' })
+        }
         schedule.status = 'cancelled'
         schedule.cancelledBy = isRecruiter ? 'recruiter' : 'candidate'
         schedule.cancelReason = reason
-        await schedule.save()
 
         // notify whichever side did NOT cancel sir
         const recipient = isRecruiter ? schedule.candidate : schedule.recruiter
