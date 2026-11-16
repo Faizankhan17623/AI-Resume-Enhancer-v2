@@ -84,7 +84,13 @@ const forgotPasswordSchema = z.object({ email })
 
 const resetPasswordSchema = withPasswordConfirmation(
     z.object({
-        token: z.string({ error: 'Reset token is required' }).min(1, 'Reset token is required'),
+        // .trim() added sir, per 2026-11-16 audit — this feeds an exact-match
+        // User.findOne({ resetPasswordToken: token }) lookup; a token copy-pasted from an email
+        // client with incidental trailing whitespace (common on mobile mail apps / quoted-text
+        // wrapping) silently failed to match, surfacing as a generic "Token is Invalid" with no
+        // indication why. deviceAlertResolveSchema.token right below already has .trim() for
+        // the identical lookup pattern — this was the one inconsistent sibling.
+        token: z.string({ error: 'Reset token is required' }).trim().min(1, 'Reset token is required'),
         newPassword: password,
         confirmNewPassword: z.string({ error: 'Please confirm your new password' }),
     }),

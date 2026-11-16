@@ -14,7 +14,12 @@ const interviewSlotSchema = z.object({
 // only an index into what the recruiter already proposed (see confirmSlotSchema below)
 const scheduleInterviewSchema = z.object({
     slots: z.array(interviewSlotSchema).min(2, 'Propose at least 2 time slots').max(4, 'Propose at most 4 time slots'),
-    meetingLink: z.string().trim().max(500).optional(),
+    // http(s)-only sir, per 2026-11-16 audit — this used to accept any string including a
+    // javascript: URI, which escapeHtml() alone can't neutralize since it's a legitimate-looking
+    // href value, not markup. A malicious/compromised recruiter could set this to a javascript:
+    // or data: URI and it would render as a clickable link in the real confirmation email sent
+    // to both the candidate and the recruiter's own copy (Templates/InterviewConfirmed.js).
+    meetingLink: z.string().trim().max(500).url('Please enter a valid meeting link').regex(/^https?:\/\//i, 'Meeting link must start with http:// or https://').optional(),
     notes: z.string().trim().max(1000).optional(),
 }).refine(
     (data) => data.slots.every((slot) => slot.start.getTime() > Date.now()),
