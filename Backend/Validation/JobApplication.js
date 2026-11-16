@@ -51,11 +51,13 @@ const workHistoryEntrySchema = z.object({
 const applyToJobSchema = z.object({
     experienceLevel: z.enum(['fresher', 'experienced'], { error: 'Please select fresher or experienced' }),
     address: addressSchema,
-    expectedSalary: z.coerce.number().min(0, 'Expected salary must be a positive number'),
+    // 100000000 (10 crore/year) cap sir, per 2026-11-16 audit — was unbounded, matches the
+    // same cap now applied to ctcMin/ctcMax in Validation/Job.js
+    expectedSalary: z.coerce.number().min(0, 'Expected salary must be a positive number').max(100000000, 'Expected salary is too high'),
     // fresher branch sir
     education: z.array(educationEntrySchema).max(10).optional(),
     // experienced branch sir
-    currentCtc: z.coerce.number().min(0).optional(),
+    currentCtc: z.coerce.number().min(0).max(100000000, 'Current CTC is too high').optional(),
     workHistory: z.array(workHistoryEntrySchema).max(20).optional(),
 }).refine(
     (data) => data.experienceLevel !== 'fresher' || (data.education && data.education.length > 0),

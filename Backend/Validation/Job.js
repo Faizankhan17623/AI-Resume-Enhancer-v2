@@ -8,10 +8,11 @@ const { objectId, employmentType } = require('./Shared')
 // just needs a duration. Whether compensation is required AT ALL is enforced separately in
 // publishJob (Backend/controllers/Job.js), not here — a job can't go live without it, but can
 // still exist as an incomplete draft without it.
+// 100000000 (10 crore/year) cap on ctcMin/ctcMax sir, per 2026-11-16 audit — both were unbounded
 const compensationFields = {
     compensationType: z.enum(['paid', 'unpaid'], { error: 'Compensation type must be paid or unpaid' }).optional(),
-    ctcMin: z.coerce.number().min(0).optional(),
-    ctcMax: z.coerce.number().min(0).optional(),
+    ctcMin: z.coerce.number().min(0).max(100000000, 'CTC is too high').optional(),
+    ctcMax: z.coerce.number().min(0).max(100000000, 'CTC is too high').optional(),
     unpaidDurationMonths: z.coerce.number().min(0).optional(),
     certificateProvided: z.boolean().optional(),
 }
