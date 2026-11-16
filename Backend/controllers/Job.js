@@ -16,6 +16,7 @@ const { testInviteTemplate } = require('../Templates/TestInvite')
 const { applicationOutcomeTemplate } = require('../Templates/ApplicationOutcome')
 const { validatePdfUpload } = require('../utils/pdfUpload')
 const { runFitScore } = require('../services/fitScoreService')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 // 2MB sir, per direct request — an application resume, not a full portfolio
 const MAX_APPLICATION_RESUME_BYTES = 2 * 1024 * 1024
@@ -34,6 +35,15 @@ exports.createJob = async (req, res) => {
     try {
         const recruiterId = req?.User.id
         const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore } = req.body
+
+        // moderation pass on description sir, per 2026-11-16 audit — this field feeds two AI
+        // prompts directly (RecruiterAI.js's generateInterviewQuestions/generateCandidateSummary)
+        // AND is shown raw to every candidate who views the job, with nothing checking it before
+        // now. See utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(description, { feature: 'job-description' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
+        }
 
         const job = await Job.create({
             recruiter: recruiterId,
@@ -137,6 +147,16 @@ exports.updateJob = async (req, res) => {
         }
 
         const { companyName, title, description, location, employmentType, skills, compensationType, ctcMin, ctcMax, unpaidDurationMonths, certificateProvided, interviewEligibilityMinScore, visibility } = req.body
+
+        // same moderation pass as createJob sir, per 2026-11-16 audit — only when description is
+        // actually being changed, same reasoning as createJob's own call
+        if (description !== undefined) {
+            const modResult = await moderateText(description, { feature: 'job-description' })
+            if (modResult.flagged) {
+                return res.status(400).json(moderationBlockedResponse(modResult))
+            }
+        }
+
         if (companyName !== undefined) job.companyName = companyName
         if (title !== undefined) job.title = title
         if (description !== undefined) job.description = description

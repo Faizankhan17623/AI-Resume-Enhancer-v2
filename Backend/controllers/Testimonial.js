@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const Testimonial = require('../Models/Testimonial')
 const { logAction } = require('../utils/AdminLog')
 const { notify } = require('../utils/NotificationLog')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 const logger = require('../utils/logger')
 
 // user-submitted homepage testimonials sir — a User submits one, Admin/Support moderates it,
@@ -16,6 +17,16 @@ exports.submitTestimonial = async (req, res) => {
         // role/quote/rating are already guaranteed valid by submitTestimonialSchema
         // (Validation/Testimonial.js) via the route's validate() middleware sir
         const { role, quote, rating } = req.body
+
+        // moderation pass sir, per 2026-11-16 audit — quote goes live on the PUBLIC homepage
+        // once an admin approves it, and until now had zero automated check at all, unlike
+        // every AI-input text field and Message.js's own recruiter-candidate thread. A busy
+        // admin approving in bulk was the only thing standing between abusive text and the
+        // public homepage. See utils/Moderation.js; fails open if the classifier itself errors.
+        const modResult = await moderateText(quote, { feature: 'testimonial' })
+        if (modResult.flagged) {
+            return res.status(400).json(moderationBlockedResponse(modResult))
+        }
 
         // pre-check kept for a fast, friendly message sir — the REAL enforcement is
         // Models/Testimonial.js's partial unique index on activeSubmission, added per

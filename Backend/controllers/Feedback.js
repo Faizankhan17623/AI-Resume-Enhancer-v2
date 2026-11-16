@@ -1,6 +1,7 @@
 const User = require('../Models/User')
 const logger = require('../utils/logger')
 const Feedback = require('../Models/Feedback')
+const { moderateText, moderationBlockedResponse } = require('../utils/Moderation')
 
 // popup shows on the 1st completed feature use, then every 2nd use after that,
 // until the user has submitted both the star rating and the referral score
@@ -44,6 +45,16 @@ exports.submitFeedback = async (req, res) => {
         // rating/referralScore/reviewText are already guaranteed valid by submitFeedbackSchema
         // (Validation/Feedback.js) via the route's validate() middleware sir
         const { rating, referralScore, reviewText } = req.body
+
+        // moderation pass sir, per 2026-11-16 audit — reviewText is stored free text read by
+        // admins, with zero automated check until now. See utils/Moderation.js; fails open if
+        // the classifier itself errors. Only runs when there's actually text to check.
+        if (reviewText) {
+            const modResult = await moderateText(reviewText, { feature: 'feedback' })
+            if (modResult.flagged) {
+                return res.status(400).json(moderationBlockedResponse(modResult))
+            }
+        }
 
         await Feedback.create({
             user: id,
