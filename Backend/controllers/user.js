@@ -519,10 +519,9 @@ exports.SendOtp = async(req,res)=>{
 
          const checkUserPresent = await User.findOne({ email:email })
         if (checkUserPresent) {
-      
-            return res.status(401).json({
-                success: false,
-                message: `User is Already Registered`,
+            return res.status(200).json({
+                success: true,
+                message: 'If this email can receive a verification code, one will be sent shortly',
             })
     }
         let OtpCreate = otpGenerator.generate(6, {
@@ -563,13 +562,13 @@ exports.SendOtp = async(req,res)=>{
             (req.log || logger).error('OTP email delivery failed', { err: mailError, email })
             return res.status(200).json({
                 success: true,
-                message: 'OTP created, but the verification email is delayed — please try again shortly if it does not arrive',
+                message: 'If this email can receive a verification code, one will be sent shortly',
             })
         }
 
         res.status(200).json({
             success: true,
-            message: `OTP Sent Successfully`,
+            message: 'If this email can receive a verification code, one will be sent shortly',
         })
 
     } catch (error) {
@@ -1022,9 +1021,9 @@ exports.forgotPassword = async (req, res) => {
 
         // not case sir — no account is registered with this email
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'No account found with this email',
+            return res.status(200).json({
+                success: true,
+                message: 'If that email is registered, a reset link is on its way — if it does not arrive shortly, please try again',
             });
         }
 
@@ -1056,7 +1055,7 @@ exports.forgotPassword = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Password reset email sent',
+            message: 'If that email is registered, a reset link is on its way — if it does not arrive shortly, please try again',
         });
     } catch (error) {
         // email is the useful correlator here sir — it's the thing being reset
