@@ -1,3 +1,12 @@
+// TODO sir (deferred from the 2026-11-24 audit, should-fix #3, not urgent on its own): this file
+// is 1550+ lines doing 5 unrelated jobs — job CRUD, recruiter analytics, single/bulk applicant
+// actions, the public job board, and candidate apply/save-job. Split into controllers/Job.js
+// (CRUD + lifecycle), controllers/JobApplicantActions.js (invite/shortlist/notes/outcome, single
+// + bulk), controllers/JobAnalytics.js (per-job + cross-job analytics), controllers/
+// PublicJobBoard.js (public listing + apply + saved jobs) — pure move, no logic change, update
+// Routes/Job.js's imports to match. Deferred because it's a mechanical refactor with real blast
+// radius (route-order comments, shared constants like TEST_INVITE_WINDOW_MS) in a live-money
+// codebase, better done in a calmer session than squeezed in alongside an actual bug fix.
 const mongoose = require('mongoose')
 const cloudinary = require('cloudinary').v2
 const { PDFParse } = require('pdf-parse')
@@ -742,9 +751,26 @@ exports.inviteApplicantToTest = async (req, res) => {
             })
         }
 
+        const testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
+
+        // atomic claim sir, per 2026-11-24 audit — same pattern as setApplicationOutcome's and
+        // bulkSetApplicationOutcome's own fix above. The plain read-then-write this replaced had
+        // no status precondition in the write itself: a reject/withdraw landing between the check
+        // above and this .save() could get silently overwritten back to invited_to_test, and the
+        // candidate would still get a test-invite email contradicting the rejection they just got.
+        const claimed = await JobApplication.findOneAndUpdate(
+            { _id: application._id, status: { $in: ['applied', 'invite_expired'] } },
+            { $set: { status: 'invited_to_test', testInviteExpiresAt } },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({
+                success: false,
+                message: 'This application was already updated by another request',
+            })
+        }
         application.status = 'invited_to_test'
-        application.testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
-        await application.save()
+        application.testInviteExpiresAt = testInviteExpiresAt
 
         // best-effort test-invite email sir — same pattern as every other non-critical mail
         // send in this file, wrapped so a relay hiccup never fails the invite itself
@@ -1017,30 +1043,43 @@ exports.bulkInviteApplicantsToTest = async (req, res) => {
         const validIds = applicationIds.filter((id) => mongoose.isValidObjectId(id))
         const applications = await JobApplication.find({ _id: { $in: validIds }, job: jobId }).populate('candidate', 'firstName lastName email')
 
-        const invited = []
-        const skipped = []
-        const toEmail = []
+        // 'invite_expired' is eligible too sir — same reasoning as the single-invite path above
+        const eligibleFromStatuses = ['applied', 'invite_expired']
+        const candidateById = new Map(applications.map((a) => [String(a._id), a.candidate]))
+        const toClaim = applications.filter((a) => eligibleFromStatuses.includes(a.status))
+        const skipped = applications
+            .filter((a) => !eligibleFromStatuses.includes(a.status))
+            .map((a) => String(a._id))
         const testInviteExpiresAt = new Date(Date.now() + TEST_INVITE_WINDOW_MS)
-        for (const application of applications) {
-            // 'invite_expired' is eligible too sir — same reasoning as the single-invite path above
-            if (!['applied', 'invite_expired'].includes(application.status)) {
-                skipped.push(String(application._id))
-                continue
-            }
-            invited.push(String(application._id))
-            if (application.candidate?.email) toEmail.push(application.candidate)
-        }
 
-        // one bulkWrite sir instead of N sequential .save() calls — found in the 2026-11-07
-        // audit: at the 200-applicant cap this was 200 separate DB round-trips before the
-        // recruiter's browser got a response. Every write here sets the exact same two fields,
-        // so one updateMany-shaped bulk op does the same job in a single round-trip.
-        if (invited.length) {
-            await JobApplication.updateMany(
-                { _id: { $in: invited } },
-                { $set: { status: 'invited_to_test', testInviteExpiresAt } }
+        // atomic per-application claim sir, per 2026-11-24 audit — same race bulkSetApplicationOutcome
+        // was already fixed for, just on this sibling action. The old updateMany matched on an id
+        // list computed from a stale in-memory read with NO status precondition in the actual write,
+        // so a concurrent reject/withdraw on one of these same rows could get silently overwritten
+        // back to invited_to_test, still emailing that candidate a test invite. findOneAndUpdate
+        // (one per application, run concurrently) is used instead of updateMany specifically because
+        // each call reports whether ITS OWN claim succeeded — updateMany only returns a total count.
+        const claims = await Promise.all(
+            toClaim.map((a) =>
+                JobApplication.findOneAndUpdate(
+                    { _id: a._id, status: { $in: eligibleFromStatuses } },
+                    { $set: { status: 'invited_to_test', testInviteExpiresAt } }
+                )
             )
-        }
+        )
+
+        const invited = []
+        const toEmail = []
+        claims.forEach((claimedDoc, i) => {
+            const id = String(toClaim[i]._id)
+            if (!claimedDoc) {
+                skipped.push(id)
+                return
+            }
+            invited.push(id)
+            const candidate = candidateById.get(id)
+            if (candidate?.email) toEmail.push(candidate)
+        })
 
         // best-effort test-invite emails sir — allSettled, same reasoning as deleteJob's
         // candidate-notification send: one bad address must not stop the rest
