@@ -10,3 +10,7 @@ Synopsis-Resumify-Updated.html
 Synopsis-Resumify-Updated.pdf
 main synopsis.pdf
 ui-screenshots/
+
+# temporary load-testing setup (staging-only, never meant to ship) — k6 scripts and any result
+# output (JSON summaries, HTML reports, etc.) stay local-only, same treatment as Backend/tests/
+loadtest/
