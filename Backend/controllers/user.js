@@ -372,17 +372,26 @@ exports.loginUser = async (req, res) => {
 
         // not case sir — the password does not match the stored one
         if (!Comparing) {
-            const attempts = existingUser.failedLoginAttempts + 1
-            const update = { failedLoginAttempts: attempts }
+            // atomic $inc sir, per 2026-11-26 audit — this used to read failedLoginAttempts into
+            // JS, add 1, and write that back, so two near-simultaneous wrong-password requests for
+            // the same account could both read the same starting count and both write back the
+            // same incremented value, letting the account take an extra guess or two before the
+            // lock kicks in. $inc with returnDocument:'after' makes the count (and the lock
+            // decision based on it) correct under concurrent guesses, same discipline every other
+            // counter in this codebase (credits, referral bonuses, the rate-limit store) already uses.
+            const updated = await User.findOneAndUpdate(
+                { _id: existingUser._id },
+                { $inc: { failedLoginAttempts: 1 } },
+                { returnDocument: 'after' }
+            )
             // lock only once the threshold is crossed sir — a past lock has already expired by now
-            if (attempts >= MAX_FAILED_ATTEMPTS) {
-                update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS)
-                update.failedLoginAttempts = 0
+            if (updated.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
                 // one entry per lockout, not per failed attempt, sir — keeps the audit log
                 // signal-heavy instead of drowning it in every bad password guess
-                logSystemAction('ACCOUNT_LOCKOUT', { email: existingUser.email }, { lockedUntil: update.lockUntil })
+                const lockUntil = new Date(Date.now() + LOCK_DURATION_MS)
+                await User.findByIdAndUpdate(existingUser._id, { failedLoginAttempts: 0, lockUntil })
+                logSystemAction('ACCOUNT_LOCKOUT', { email: existingUser.email }, { lockedUntil: lockUntil })
             }
-            await User.findByIdAndUpdate(existingUser._id, update)
 
             // same status/message as the "no account" branch above sir — see its comment
             return res.status(401).json({
