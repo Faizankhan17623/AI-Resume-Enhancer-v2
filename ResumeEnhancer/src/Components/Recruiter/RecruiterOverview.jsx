@@ -32,12 +32,20 @@ const statusBadge = {
 const RecruiterOverview = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { recruiterOverview: data, loading } = useSelector((state) => state.job)
+  const { recruiterOverview: data, loading, recruiterOverviewLoadError: loadError } = useSelector((state) => state.job)
 
   useEffect(() => {
     dispatch(GetRecruiterOverviewAnalytics(token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (loadError) {
+    return (
+      <RecruiterLayout>
+        <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load your analytics overview, please try again.</p>
+      </RecruiterLayout>
+    )
+  }
 
   if (loading || !data) {
     return (

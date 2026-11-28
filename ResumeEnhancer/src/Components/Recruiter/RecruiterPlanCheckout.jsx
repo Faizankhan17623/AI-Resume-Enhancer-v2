@@ -27,6 +27,11 @@ const RecruiterPlanCheckout = () => {
 
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
+  // a failed GetAllRecruiterPlans fetch used to leave `plans` empty, and isInvalidPlan requires
+  // plans.length > 0 to fire — so the page fell through to the main render with an undefined
+  // plan/cycleData, showing a broken checkout (₹undefined, no Subscribe price) right before a
+  // real payment sir, per 2026-11-27 audit. RecruiterPricing.jsx already got this fix.
+  const [loadError, setLoadError] = useState(false)
   const initialCycle = searchParams.get('cycle') === 'yearly' ? 'yearly' : 'monthly'
   const [cycle, setCycle] = useState(initialCycle)
   const [agreed, setAgreed] = useState(false)
@@ -43,6 +48,7 @@ const RecruiterPlanCheckout = () => {
       setLoading(true)
       const result = await dispatch(GetAllRecruiterPlans())
       setPlans(result || [])
+      setLoadError(result === null)
       setLoading(false)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,6 +100,10 @@ const RecruiterPlanCheckout = () => {
       >
         {loading ? (
           <Loading text="Loading the plan..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center flex flex-col items-center">
+            <p className="text-richblack-200">Could not load the plans, please try again.</p>
+          </div>
         ) : isInvalidPlan ? (
           <div className="rounded-xl bg-richblack-800 border border-richblack-700 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200">That plan doesn't exist, or isn't a paid plan.</p>

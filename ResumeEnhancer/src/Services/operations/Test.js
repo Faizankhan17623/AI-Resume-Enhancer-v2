@@ -7,6 +7,7 @@ import {
     setCurrentTest,
     setTestAttempts,
     setCurrentAttemptDetail,
+    setAttemptDetailLoadError,
     setLoading as setRecruiterLoading,
 } from '../../Slices/testSlice.js'
 import {
@@ -178,9 +179,11 @@ export function GetAttemptDetail(attemptId, token) {
             }
 
             dispatch(setCurrentAttemptDetail(response.data.attempt))
+            dispatch(setAttemptDetailLoadError(false))
         } catch (error) {
             logApiError("Error fetching attempt detail", error)
             toast.error(error?.response?.data?.message || "Could not load the attempt")
+            dispatch(setAttemptDetailLoadError(true))
         } finally {
             dispatch(setRecruiterLoading(false))
         }

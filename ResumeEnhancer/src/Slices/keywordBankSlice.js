@@ -5,6 +5,8 @@ const initialState = {
     items: [],
     summary: null,
     loading: false,
+    // a failed fetch used to leave `items` at its empty initial value with no signal sir
+    loadError: false,
 };
 
 const keywordBankSlice = createSlice({
@@ -19,9 +21,12 @@ const keywordBankSlice = createSlice({
         },
         setLoading(state, value) {
             state.loading = value.payload
+        },
+        setLoadError(state, value) {
+            state.loadError = value.payload
         }
     }
 })
 
-export const { setItems, setSummary, setLoading } = keywordBankSlice.actions
+export const { setItems, setSummary, setLoading, setLoadError } = keywordBankSlice.actions
 export default keywordBankSlice.reducer

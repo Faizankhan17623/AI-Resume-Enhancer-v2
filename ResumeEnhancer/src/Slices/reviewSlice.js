@@ -3,6 +3,9 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     // the review the user is looking at right now sir
     review: null,
+    // a failed GetSingleReview fetch used to leave `review` null forever, which Report.jsx's own
+    // `loading || !review` guard rendered as an endless loading spinner instead of an error sir
+    singleReviewLoadError: false,
     reviewId: null,
     // share state for the review currently open sir
     isPublic: false,
@@ -13,6 +16,9 @@ const initialState = {
     formattingCheck: null,
     // the history list + the progress graph data
     allReviews: [],
+    // a failed GetAllReviews fetch used to leave `allReviews` at its empty initial value with no
+    // signal sir — History.jsx/DashboardHome.jsx now check this before their empty-state render
+    loadError: false,
     progress: null,
     loading: false,
     // free grammar/spell pre-check sir — separate from the paid AI review
@@ -30,7 +36,13 @@ const initialState = {
     // streaks" empty-state for whichever board(s) hadn't finished yet.
     leaderboardLoading: false,
     weeklyReviewsLoading: false,
-    streaksLoading: false
+    streaksLoading: false,
+    // one loadError PER board sir, same reasoning as the per-board loading flags above — each
+    // board's toast fades after a few seconds, after which a failed fetch looked identical to a
+    // genuinely empty board with nothing in it
+    leaderboardLoadError: false,
+    weeklyReviewsLoadError: false,
+    streaksLoadError: false
 };
 
 const reviewSlice = createSlice({
@@ -39,6 +51,9 @@ const reviewSlice = createSlice({
     reducers: {
         setReview(state, value) {
             state.review = value.payload
+        },
+        setSingleReviewLoadError(state, value) {
+            state.singleReviewLoadError = value.payload
         },
         setReviewId(state, value) {
             state.reviewId = value.payload
@@ -63,6 +78,9 @@ const reviewSlice = createSlice({
         },
         setAllReviews(state, value) {
             state.allReviews = value.payload
+        },
+        setReviewsLoadError(state, value) {
+            state.loadError = value.payload
         },
         setProgress(state, value) {
             state.progress = value.payload
@@ -96,13 +114,23 @@ const reviewSlice = createSlice({
         },
         setStreaksLoading(state, value) {
             state.streaksLoading = value.payload
+        },
+        setLeaderboardLoadError(state, value) {
+            state.leaderboardLoadError = value.payload
+        },
+        setWeeklyReviewsLoadError(state, value) {
+            state.weeklyReviewsLoadError = value.payload
+        },
+        setStreaksLoadError(state, value) {
+            state.streaksLoadError = value.payload
         }
     }
 })
 
 export const {
-    setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
+    setReview, setSingleReviewLoadError, setReviewId, setFormattingCheck, setShareState, setAllReviews, setReviewsLoadError, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard,
+    setLeaderboardLoadError, setWeeklyReviewsLoadError, setStreaksLoadError,
     setLeaderboardLoading, setWeeklyReviewsLoading, setStreaksLoading
 } = reviewSlice.actions
 export default reviewSlice.reducer

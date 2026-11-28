@@ -4,18 +4,23 @@ import { logApiError } from '../logApiError.js'
 import { JobData } from '../Apis/JobApi.js'
 import {
     setMyJobs,
+    setMyJobsLoadError,
     removeMyJob,
     setCurrentJob,
     setJobApplicants,
+    setJobApplicantsLoadError,
     patchJobApplicantNotes,
     setJobAnalytics,
+    setJobAnalyticsLoadError,
     setRecruiterOverview,
+    setRecruiterOverviewLoadError,
     patchJobApplicant,
     patchJobApplicantShortlist,
     patchJobApplicantsBulk,
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
+    setMyApplicationsLoadError,
     setSavedJobs,
     patchSavedJobId,
     setLoading,
@@ -98,9 +103,11 @@ export function GetMyJobs(token) {
             }
 
             dispatch(setMyJobs(response.data.jobs))
+            dispatch(setMyJobsLoadError(false))
         } catch (error) {
             logApiError("Error fetching your jobs", error)
             toast.error(error?.response?.data?.message || "Could not load your jobs")
+            dispatch(setMyJobsLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -268,9 +275,11 @@ export function GetJobApplicants(jobId, token) {
             }
 
             dispatch(setJobApplicants({ applicants: response.data.applicants, jobHasTest: response.data.jobHasTest, testPublished: response.data.testPublished }))
+            dispatch(setJobApplicantsLoadError(false))
         } catch (error) {
             logApiError("Error fetching applicants", error)
             toast.error(error?.response?.data?.message || "Could not load the applicants")
+            dispatch(setJobApplicantsLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -290,9 +299,11 @@ export function GetJobAnalytics(jobId, token) {
             }
 
             dispatch(setJobAnalytics(response.data.analytics))
+            dispatch(setJobAnalyticsLoadError(false))
         } catch (error) {
             logApiError("Error fetching job analytics", error)
             toast.error(error?.response?.data?.message || "Could not load the job's analytics")
+            dispatch(setJobAnalyticsLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -314,9 +325,11 @@ export function GetRecruiterOverviewAnalytics(token) {
             }
 
             dispatch(setRecruiterOverview(response.data.analytics))
+            dispatch(setRecruiterOverviewLoadError(false))
         } catch (error) {
             logApiError("Error fetching your analytics overview", error)
             toast.error(error?.response?.data?.message || "Could not load your analytics overview")
+            dispatch(setRecruiterOverviewLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -636,9 +649,11 @@ export function GetMyApplications(token) {
             }
 
             dispatch(setMyApplications(response.data.applications))
+            dispatch(setMyApplicationsLoadError(false))
         } catch (error) {
             logApiError("Error fetching your applications", error)
             toast.error(error?.response?.data?.message || "Could not load your applications")
+            dispatch(setMyApplicationsLoadError(true))
         } finally {
             dispatch(setMyApplicationsLoading(false))
         }

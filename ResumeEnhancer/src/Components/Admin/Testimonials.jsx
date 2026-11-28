@@ -32,7 +32,7 @@ const Testimonials = () => {
   const [rowBusy, setRowBusy] = useState(false)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { testimonials, loading } = useSelector((state) => state.admin)
+  const { testimonials, loading, fetchErrors } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
 
   useEffect(() => {
@@ -85,6 +85,8 @@ const Testimonials = () => {
         <div className="space-y-3">
           {switchingTab || (loading && testimonials.length === 0) ? (
             <Loading text="Loading testimonials..." />
+          ) : fetchErrors.testimonials ? (
+            <p className="text-sm text-richblack-300 py-6 text-center">Could not load testimonials, please try again.</p>
           ) : testimonials.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing here sir.</p>
           ) : (

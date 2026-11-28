@@ -87,7 +87,7 @@ const Users = () => {
   const [switchingRole, triggerSwitchingRole] = useMinDurationFlag(4000)
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
-  const { users, usersPagination, loading } = useSelector((state) => state.admin)
+  const { users, usersPagination, loading, fetchErrors } = useSelector((state) => state.admin)
   const isAdmin = me?.role === 'Admin'
   const roleFilterOptions = isAdmin ? ADMIN_ROLE_FILTER_OPTIONS : SUPPORT_ROLE_FILTER_OPTIONS
   // only rows an admin can actually act on sir — same rule as the single-row ban button
@@ -515,6 +515,8 @@ const Users = () => {
 
         {switchingRole || (loading && users.length === 0) ? (
           <Loading text="Loading the users..." />
+        ) : fetchErrors.users ? (
+          <p className="text-sm text-richblack-300 py-10 text-center">Could not load the users, please try again.</p>
         ) : (
           <div className={loading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}>
             {/* Mobile card list sir — the table below is desktop/tablet only (lg+), this is

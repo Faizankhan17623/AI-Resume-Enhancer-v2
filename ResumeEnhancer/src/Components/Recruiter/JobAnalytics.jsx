@@ -46,12 +46,20 @@ const JobAnalytics = () => {
   const { jobId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { jobAnalytics: data, loading } = useSelector((state) => state.job)
+  const { jobAnalytics: data, loading, jobAnalyticsLoadError: loadError } = useSelector((state) => state.job)
 
   useEffect(() => {
     dispatch(GetJobAnalytics(jobId, token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
+
+  if (loadError) {
+    return (
+      <RecruiterLayout>
+        <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load this job's analytics, please try again.</p>
+      </RecruiterLayout>
+    )
+  }
 
   if (loading || !data) {
     return (

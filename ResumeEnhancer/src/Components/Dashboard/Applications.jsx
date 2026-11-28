@@ -413,7 +413,7 @@ const RejectionPatternBanner = () => {
 const Applications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { applications, loading } = useSelector((state) => state.application)
+  const { applications, loading, loadError } = useSelector((state) => state.application)
   const [modalState, setModalState] = useState(null) // null | 'new' | applicationObj
   const [dragOverStatus, setDragOverStatus] = useState(null)
 
@@ -478,6 +478,10 @@ const Applications = () => {
 
         {loading ? (
           <Loading text="Loading your applications..." />
+        ) : loadError ? (
+          <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your applications, please try again.</p>
+          </div>
         ) : applications.length === 0 ? (
           <div className="max-w-7xl mx-auto rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaBriefcase className="text-3xl text-richblack-400 mx-auto mb-4" />

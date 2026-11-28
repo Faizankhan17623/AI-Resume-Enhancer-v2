@@ -33,7 +33,7 @@ const MyApplications = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
   // myApplicationsLoading sir, per 2026-11-16 audit — see jobSlice.js's own comment
-  const { myApplications, myApplicationsLoading: loading } = useSelector((state) => state.job)
+  const { myApplications, myApplicationsLoading: loading, myApplicationsLoadError: loadError } = useSelector((state) => state.job)
   // applicationId of the row whose message thread modal is open sir, null when closed
   const [messagingFor, setMessagingFor] = useState(null)
 
@@ -51,6 +51,10 @@ const MyApplications = () => {
       <div className="h-full overflow-y-auto thin-scrollbar px-6 py-6 max-w-3xl mx-auto w-full">
         {loading ? (
           <Loading text="Loading your applications..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your applications, please try again.</p>
+          </div>
         ) : myApplications.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-100 mb-2 font-semibold">No applications yet</p>

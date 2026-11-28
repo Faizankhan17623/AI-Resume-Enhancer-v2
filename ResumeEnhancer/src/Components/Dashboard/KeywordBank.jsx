@@ -31,7 +31,7 @@ const FILTERS = [
 const KeywordBank = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { items, summary, loading } = useSelector((state) => state.keywordBank)
+  const { items, summary, loading, loadError } = useSelector((state) => state.keywordBank)
 
   useEffect(() => {
     dispatch(GetKeywordBank(token))
@@ -118,6 +118,10 @@ const KeywordBank = () => {
 
         {loading ? (
           <Loading text="Loading your keyword bank..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your keyword bank, please try again.</p>
+          </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaKey className="text-3xl text-richblack-400 mx-auto mb-4" />

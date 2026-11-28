@@ -3,6 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     // the sidebar list sir
     allSessions: [],
+    // a failed list fetch used to leave `allSessions` at its empty initial value with no signal
+    sessionsLoadError: false,
     // the open session with its turns
     currentSession: null,
     loading: false,
@@ -17,6 +19,9 @@ const mockInterviewSlice = createSlice({
         setAllSessions(state, value) {
             state.allSessions = value.payload
         },
+        setSessionsLoadError(state, value) {
+            state.sessionsLoadError = value.payload
+        },
         setCurrentSession(state, value) {
             state.currentSession = value.payload
         },
@@ -29,5 +34,5 @@ const mockInterviewSlice = createSlice({
     }
 })
 
-export const { setAllSessions, setCurrentSession, setLoading, setScoring } = mockInterviewSlice.actions
+export const { setAllSessions, setSessionsLoadError, setCurrentSession, setLoading, setScoring } = mockInterviewSlice.actions
 export default mockInterviewSlice.reducer

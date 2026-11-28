@@ -30,10 +30,12 @@ const InterviewFeedbackModal = ({ applicationId, onClose }) => {
   const [strengths, setStrengths] = useState('')
   const [concerns, setConcerns] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const result = await GetInterviewForApplication(applicationId, token)
+      const { schedule: result, failed } = await GetInterviewForApplication(applicationId, token)
+      setLoadError(failed)
       if (result) {
         setSchedule(result)
         const existing = result.feedback
@@ -90,6 +92,8 @@ const InterviewFeedbackModal = ({ applicationId, onClose }) => {
 
           {loading ? (
             <Loading text="Loading..." size="compact" />
+          ) : loadError ? (
+            <p className="text-sm text-richblack-300 py-6 text-center">Could not load this interview, please try again.</p>
           ) : notReady ? (
             <p className="text-sm text-richblack-300 py-6 text-center">
               {schedule?.status === 'proposed'

@@ -4,6 +4,10 @@ const initialState = {
     // the application tracker board sir — one flat list, grouped by status in the UI
     applications: [],
     loading: false,
+    // a failed fetch used to leave `applications` at its empty initial value with no signal,
+    // so the board rendered "No applications tracked yet" indistinguishably from a real empty
+    // tracker sir — set true in GetApplications' catch, checked before the empty-state render
+    loadError: false,
     saving: false,
     // outcome-linked analytics sir — score bucket -> interview rate, Pro Max only
     analytics: null,
@@ -22,6 +26,9 @@ const applicationSlice = createSlice({
     reducers: {
         setApplications(state, value) {
             state.applications = value.payload
+        },
+        setLoadError(state, value) {
+            state.loadError = value.payload
         },
         setLoading(state, value) {
             state.loading = value.payload
@@ -51,5 +58,5 @@ const applicationSlice = createSlice({
     }
 })
 
-export const { setApplications, setLoading, setSaving, setAnalytics, setAnalyticsLoading, setDiagnosingId, setRejectionPattern, patchApplication } = applicationSlice.actions
+export const { setApplications, setLoadError, setLoading, setSaving, setAnalytics, setAnalyticsLoading, setDiagnosingId, setRejectionPattern, patchApplication } = applicationSlice.actions
 export default applicationSlice.reducer

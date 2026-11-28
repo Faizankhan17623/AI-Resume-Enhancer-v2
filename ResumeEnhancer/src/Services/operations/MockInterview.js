@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setAllSessions, setCurrentSession, setLoading, setScoring } from '../../Slices/mockInterviewSlice.js'
+import { setAllSessions, setSessionsLoadError, setCurrentSession, setLoading, setScoring } from '../../Slices/mockInterviewSlice.js'
 import { MockInterviewData } from '../Apis/MockInterviewApi.js'
 import { featureDisabledMessage } from '../../utils/istTime.js'
 
@@ -51,8 +51,10 @@ export function GetAllMockInterviews(token) {
             }
 
             dispatch(setAllSessions(response.data.sessions))
+            dispatch(setSessionsLoadError(false))
         } catch (error) {
             logApiError("Error fetching the mock interview sessions", error)
+            dispatch(setSessionsLoadError(true))
         }
     }
 }

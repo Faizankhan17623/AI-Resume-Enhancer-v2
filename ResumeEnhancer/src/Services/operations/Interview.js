@@ -59,6 +59,10 @@ export async function CancelInterview(scheduleId, token) {
     }
 }
 
+// returns { schedule, failed } sir, per 2026-11-27 audit — `schedule` is genuinely null/undefined
+// both when the request fails AND when no interview exists yet for this application; `failed`
+// lets the caller tell those two cases apart instead of showing "no interview scheduled" for a
+// request that actually errored
 export async function GetInterviewForApplication(applicationId, token) {
     try {
         const response = await apiConnector('GET', `${InterviewApi.getInterviewForApplication}/${applicationId}/interview`, null, {
@@ -67,11 +71,11 @@ export async function GetInterviewForApplication(applicationId, token) {
         if (!response.data.success) {
             throw new Error(response.data.message)
         }
-        return response.data.schedule
+        return { schedule: response.data.schedule, failed: false }
     } catch (error) {
         logApiError("Error loading this interview", error)
         toast.error(error?.response?.data?.message || error.message || 'Could not load this interview')
-        return null
+        return { schedule: null, failed: true }
     }
 }
 

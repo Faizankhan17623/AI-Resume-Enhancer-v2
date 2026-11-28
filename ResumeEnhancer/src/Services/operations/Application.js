@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setApplications, setLoading, setSaving, setAnalytics, setAnalyticsLoading, setDiagnosingId, setRejectionPattern, patchApplication } from '../../Slices/applicationSlice.js'
+import { setApplications, setLoadError, setLoading, setSaving, setAnalytics, setAnalyticsLoading, setDiagnosingId, setRejectionPattern, patchApplication } from '../../Slices/applicationSlice.js'
 import { ApplicationData } from '../Apis/ApplicationApi.js'
 
 const { create, all, update, remove, analytics, diagnose, rejectionPatterns } = ApplicationData
@@ -19,8 +19,10 @@ export function GetApplications(token) {
             }
 
             dispatch(setApplications(response.data.applications))
+            dispatch(setLoadError(false))
         } catch (error) {
             logApiError("Error fetching your applications", error)
+            dispatch(setLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }

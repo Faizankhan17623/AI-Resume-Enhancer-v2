@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setBuiltResumes, setCurrentResume, setLoading, setSaving, setGenerating, patchCurrentResume } from '../../Slices/builtResumeSlice.js'
+import { setBuiltResumes, setLoadError, setCurrentResume, setLoading, setSaving, setGenerating, patchCurrentResume } from '../../Slices/builtResumeSlice.js'
 import { setReview, setReviewId, setFormattingCheck, setLoading as setReviewLoading } from '../../Slices/reviewSlice.js'
 import { BuiltResumeData } from '../Apis/BuiltResumeApi.js'
 
@@ -51,8 +51,10 @@ export function GetBuiltResumes(token) {
             }
 
             dispatch(setBuiltResumes(response.data.resumes))
+            dispatch(setLoadError(false))
         } catch (error) {
             logApiError("Error fetching your built resumes", error)
+            dispatch(setLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }

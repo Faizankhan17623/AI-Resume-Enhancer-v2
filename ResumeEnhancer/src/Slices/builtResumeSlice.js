@@ -3,6 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     // the builder list sir — lightweight (title/templateId/dates only, see backend select())
     resumes: [],
+    // a failed list fetch used to leave `resumes` at its empty initial value with no signal sir
+    loadError: false,
     // the one currently open in the editor sir — full structured data
     current: null,
     loading: false,
@@ -16,6 +18,9 @@ const builtResumeSlice = createSlice({
     reducers: {
         setBuiltResumes(state, value) {
             state.resumes = value.payload
+        },
+        setLoadError(state, value) {
+            state.loadError = value.payload
         },
         setCurrentResume(state, value) {
             state.current = value.payload
@@ -40,6 +45,7 @@ const builtResumeSlice = createSlice({
 
 export const {
     setBuiltResumes,
+    setLoadError,
     setCurrentResume,
     patchCurrentResume,
     setLoading,

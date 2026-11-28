@@ -19,7 +19,7 @@ const Resumes = () => {
   const dispatch = useDispatch()
   const fileInputRef = useRef(null)
   const { token } = useSelector((state) => state.auth)
-  const { resumes, loading, saving } = useSelector((state) => state.resume)
+  const { resumes, loading, loadError, saving } = useSelector((state) => state.resume)
   const [renamingId, setRenamingId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [search, setSearch] = useState('')
@@ -180,6 +180,10 @@ const Resumes = () => {
 
         {loading ? (
           <Loading text="Loading your resumes..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your saved resumes, please try again.</p>
+          </div>
         ) : resumes.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaFilePdf className="text-3xl text-richblack-400 mx-auto mb-4" />

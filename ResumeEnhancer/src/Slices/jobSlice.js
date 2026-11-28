@@ -5,8 +5,12 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     // recruiter-side sir
     myJobs: [],
+    // a failed fetch used to leave the list at its empty initial value with no signal sir — each
+    // field below pairs with one list/object above, same reasoning throughout this slice
+    myJobsLoadError: false,
     currentJob: null,
     jobApplicants: [],
+    jobApplicantsLoadError: false,
     // whether the CURRENT job (whichever one jobApplicants is for) has a proctored test attached
     // sir — tests are optional now, this drives whether "Invite to test" even shows
     jobHasTest: false,
@@ -15,7 +19,9 @@ const initialState = {
     // explanation rather than silently flipping status and sending no email
     testPublished: false,
     jobAnalytics: null,
+    jobAnalyticsLoadError: false,
     recruiterOverview: null,
+    recruiterOverviewLoadError: false,
 
     // public board sir
     publicJobs: [],
@@ -24,6 +30,7 @@ const initialState = {
 
     // candidate-side sir
     myApplications: [],
+    myApplicationsLoadError: false,
     // just the ids sir — cheap to carry on every board/detail page for an instant "is this saved"
     // check, without needing the full populated job on pages that don't show the Saved Jobs list
     savedJobIds: [],
@@ -49,6 +56,9 @@ const jobSlice = createSlice({
         setMyJobs(state, value) {
             state.myJobs = value.payload
         },
+        setMyJobsLoadError(state, value) {
+            state.myJobsLoadError = value.payload
+        },
         // after a successful DELETE sir — pulls the job straight out of the list, no refetch needed
         removeMyJob(state, value) {
             state.myJobs = state.myJobs.filter((job) => job._id !== value.payload)
@@ -61,11 +71,20 @@ const jobSlice = createSlice({
             state.jobHasTest = value.payload.jobHasTest
             state.testPublished = value.payload.testPublished
         },
+        setJobApplicantsLoadError(state, value) {
+            state.jobApplicantsLoadError = value.payload
+        },
         setJobAnalytics(state, value) {
             state.jobAnalytics = value.payload
         },
+        setJobAnalyticsLoadError(state, value) {
+            state.jobAnalyticsLoadError = value.payload
+        },
         setRecruiterOverview(state, value) {
             state.recruiterOverview = value.payload
+        },
+        setRecruiterOverviewLoadError(state, value) {
+            state.recruiterOverviewLoadError = value.payload
         },
         // Hire/Reject updates the one row in place sir — same pattern as an optimistic-ish
         // local patch after a successful PATCH, no full refetch needed
@@ -107,6 +126,9 @@ const jobSlice = createSlice({
         setMyApplications(state, value) {
             state.myApplications = value.payload
         },
+        setMyApplicationsLoadError(state, value) {
+            state.myApplicationsLoadError = value.payload
+        },
         setSavedJobs(state, value) {
             state.savedJobs = value.payload
             state.savedJobIds = value.payload.map((job) => job._id)
@@ -133,11 +155,15 @@ const jobSlice = createSlice({
 
 export const {
     setMyJobs,
+    setMyJobsLoadError,
     removeMyJob,
     setCurrentJob,
     setJobApplicants,
+    setJobApplicantsLoadError,
     setJobAnalytics,
+    setJobAnalyticsLoadError,
     setRecruiterOverview,
+    setRecruiterOverviewLoadError,
     patchJobApplicant,
     patchJobApplicantShortlist,
     patchJobApplicantNotes,
@@ -145,6 +171,7 @@ export const {
     setPublicJobs,
     setCurrentPublicJob,
     setMyApplications,
+    setMyApplicationsLoadError,
     setSavedJobs,
     patchSavedJobId,
     setLoading,

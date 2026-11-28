@@ -19,12 +19,20 @@ const AttemptDetail = () => {
   const { attemptId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { currentAttemptDetail: attempt, loading } = useSelector((state) => state.test)
+  const { currentAttemptDetail: attempt, loading, attemptDetailLoadError: loadError } = useSelector((state) => state.test)
 
   useEffect(() => {
     dispatch(GetAttemptDetail(attemptId, token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId])
+
+  if (loadError) {
+    return (
+      <RecruiterLayout>
+        <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load this attempt, please try again.</p>
+      </RecruiterLayout>
+    )
+  }
 
   if (loading || !attempt) {
     return (

@@ -250,9 +250,11 @@ export function GetUsers(token, page = 1, search = "", role = "") {
 
             dispatch(setUsers(response.data.users))
             dispatch(setUsersPagination(response.data.pagination))
+            dispatch(setFetchError({ key: 'users', failed: false }))
         } catch (error) {
             logApiError("Error fetching the users", error)
             toast.error(error?.response?.data?.message || "Could not load the users")
+            dispatch(setFetchError({ key: 'users', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -538,8 +540,10 @@ export function GetPayments(token, page = 1, status = "") {
             }
 
             dispatch(setPayments(response.data))
+            dispatch(setFetchError({ key: 'payments', failed: false }))
         } catch (error) {
             logApiError("Error fetching the payments", error)
+            dispatch(setFetchError({ key: 'payments', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -594,8 +598,10 @@ export function GetAuditLogs(token, page = 1, action = "", search = "") {
 
             dispatch(setAuditLogs(response.data.logs))
             dispatch(setAuditLogsPagination(response.data.pagination))
+            dispatch(setFetchError({ key: 'auditLogs', failed: false }))
         } catch (error) {
             logApiError("Error fetching the audit logs", error)
+            dispatch(setFetchError({ key: 'auditLogs', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -630,8 +636,10 @@ export function GetAnnouncements(token) {
             }
 
             dispatch(setAnnouncements(response.data.announcements))
+            dispatch(setFetchError({ key: 'announcements', failed: false }))
         } catch (error) {
             logApiError("Error fetching the announcements", error)
+            dispatch(setFetchError({ key: 'announcements', failed: true }))
         }
     }
 }
@@ -745,8 +753,10 @@ export function GetSettings(token) {
             }
 
             dispatch(setSettings(response.data.settings))
+            dispatch(setFetchError({ key: 'settings', failed: false }))
         } catch (error) {
             logApiError("Error fetching the settings", error)
+            dispatch(setFetchError({ key: 'settings', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -794,8 +804,10 @@ export function GetTestimonials(token, status = "") {
             }
 
             dispatch(setTestimonials(response.data.testimonials))
+            dispatch(setFetchError({ key: 'testimonials', failed: false }))
         } catch (error) {
             logApiError("Error fetching the testimonials", error)
+            dispatch(setFetchError({ key: 'testimonials', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -864,8 +876,10 @@ export function GetReports(token, type = "", status = "") {
             }
 
             dispatch(setReports(response.data.reports))
+            dispatch(setFetchError({ key: 'reports', failed: false }))
         } catch (error) {
             logApiError("Error fetching the reports", error)
+            dispatch(setFetchError({ key: 'reports', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }
@@ -956,9 +970,11 @@ export function GetRecruiterDataHealth(token) {
             }
 
             dispatch(setRecruiterDataHealth(response.data.health))
+            dispatch(setFetchError({ key: 'recruiterDataHealth', failed: false }))
         } catch (error) {
             logApiError("Error fetching recruiter data health", error)
             toast.error(error?.response?.data?.message || "Could not load recruiter data health")
+            dispatch(setFetchError({ key: 'recruiterDataHealth', failed: true }))
         } finally {
             dispatch(setLoading(false))
         }

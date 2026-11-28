@@ -76,7 +76,7 @@ const JobApplicantsList = () => {
   const { jobId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { jobApplicants, jobHasTest, testPublished, loading } = useSelector((state) => state.job)
+  const { jobApplicants, jobHasTest, testPublished, loading, jobApplicantsLoadError: loadError } = useSelector((state) => state.job)
   const { isLocked } = useRecruiterLock()
   const [selected, setSelected] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
@@ -276,6 +276,10 @@ const JobApplicantsList = () => {
 
       {loading ? (
         <Loading text="Loading applicants..." />
+      ) : loadError ? (
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <p className="text-richblack-300 text-sm">Could not load the applicants, please try again.</p>
+        </div>
       ) : jobApplicants.length === 0 ? (
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
           <p className="text-richblack-300 text-sm">No one has applied to this job yet.</p>

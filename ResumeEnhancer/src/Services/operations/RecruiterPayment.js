@@ -24,7 +24,10 @@ export function GetAllRecruiterPlans() {
             return response.data.plans
         } catch (error) {
             logApiError("Error fetching the recruiter plans", error)
-            return []
+            // null (not []) sir, per 2026-11-27 audit — matches the project-wide convention of
+            // returning null on failure so callers can tell "fetch failed" apart from "genuinely
+            // zero plans", which `[]` on both can't distinguish
+            return null
         }
     }
 }

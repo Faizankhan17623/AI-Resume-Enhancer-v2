@@ -35,7 +35,7 @@ const Payments = () => {
   const [page, setPage] = useState(1)
   const dispatch = useDispatch()
   const { token, user: me } = useSelector((state) => state.auth)
-  const { payments, loading } = useSelector((state) => state.admin)
+  const { payments, loading, fetchErrors } = useSelector((state) => state.admin)
   const [refundingId, setRefundingId] = useState(null)
   const isAdmin = me?.role === 'Admin'
 
@@ -203,7 +203,9 @@ const Payments = () => {
                   )}
                 </div>
               ))}
-              {(payments?.payments || []).length === 0 && (
+              {fetchErrors.payments ? (
+                <p className="text-sm text-richblack-300 py-10 text-center">Could not load payments, please try again.</p>
+              ) : (payments?.payments || []).length === 0 && (
                 <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
               )}
             </div>
@@ -257,7 +259,9 @@ const Payments = () => {
                   ))}
                 </tbody>
               </table>
-              {(payments?.payments || []).length === 0 && (
+              {fetchErrors.payments ? (
+                <p className="text-sm text-richblack-300 py-10 text-center">Could not load payments, please try again.</p>
+              ) : (payments?.payments || []).length === 0 && (
                 <p className="text-sm text-richblack-300 py-10 text-center">No payments found for this filter sir.</p>
               )}
             </div>

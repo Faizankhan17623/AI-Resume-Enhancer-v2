@@ -59,7 +59,11 @@ const Leaderboard = () => {
   const { token } = useSelector((state) => state.auth)
   // own loading flag per board sir, per 2026-11-15 audit — see reviewSlice.js's own comment on
   // why these three can no longer share one flag between them
-  const { leaderboard, weeklyReviewsLeaderboard, streaksLeaderboard, leaderboardLoading, weeklyReviewsLoading, streaksLoading } = useSelector((state) => state.review)
+  const {
+    leaderboard, weeklyReviewsLeaderboard, streaksLeaderboard,
+    leaderboardLoading, weeklyReviewsLoading, streaksLoading,
+    leaderboardLoadError, weeklyReviewsLoadError, streaksLoadError,
+  } = useSelector((state) => state.review)
   const rowsRef = useRef(null)
 
   useEffect(() => {
@@ -80,10 +84,16 @@ const Leaderboard = () => {
     weeklyReviews: weeklyReviewsLoading,
     streaks: streaksLoading,
   }
+  const boardLoadError = {
+    scores: leaderboardLoadError,
+    weeklyReviews: weeklyReviewsLoadError,
+    streaks: streaksLoadError,
+  }
 
   const board = BOARDS.find((b) => b.id === activeBoard)
   const rows = boardData[activeBoard]
   const loading = boardLoading[activeBoard]
+  const loadError = boardLoadError[activeBoard]
 
   const switchBoard = (id) => {
     if (id === activeBoard) return
@@ -136,6 +146,10 @@ const Leaderboard = () => {
 
         {loading ? (
           <Loading text="Loading the leaderboard..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-10 text-center">
+            <p className="text-richblack-300 text-sm">Could not load this board, please try again.</p>
+          </div>
         ) : rows.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-10 text-center">
             <p className="text-richblack-300 text-sm">{board.emptyText}</p>

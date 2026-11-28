@@ -42,7 +42,7 @@ const Audit = () => {
   const [exporting, setExporting] = useState(false)
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { auditLogs, auditLogsPagination, loading } = useSelector((state) => state.admin)
+  const { auditLogs, auditLogsPagination, loading, fetchErrors } = useSelector((state) => state.admin)
 
   useEffect(() => {
     dispatch(GetAuditLogs(token, page, actionFilter, search))
@@ -138,6 +138,10 @@ const Audit = () => {
 
         {loading && auditLogs.length === 0 ? (
           <Loading text="Loading the audit trail..." />
+        ) : fetchErrors.auditLogs ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-300 text-sm">Could not load the audit trail, please try again.</p>
+          </div>
         ) : auditLogs.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-300 text-sm">

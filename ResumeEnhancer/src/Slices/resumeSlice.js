@@ -3,6 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     // the saved resume library sir
     resumes: [],
+    // a failed fetch used to leave `resumes` at its empty initial value with no signal sir
+    loadError: false,
     loading: false,
     saving: false,
 };
@@ -14,6 +16,9 @@ const resumeSlice = createSlice({
         setResumes(state, value) {
             state.resumes = value.payload
         },
+        setLoadError(state, value) {
+            state.loadError = value.payload
+        },
         setLoading(state, value) {
             state.loading = value.payload
         },
@@ -23,5 +28,5 @@ const resumeSlice = createSlice({
     }
 })
 
-export const { setResumes, setLoading, setSaving } = resumeSlice.actions
+export const { setResumes, setLoadError, setLoading, setSaving } = resumeSlice.actions
 export default resumeSlice.reducer

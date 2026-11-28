@@ -16,7 +16,7 @@ import { utcDateToIstDisplay } from '../../utils/istTime'
 const RecruiterDataHealth = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { recruiterDataHealth: health, loading } = useSelector((state) => state.admin)
+  const { recruiterDataHealth: health, loading, fetchErrors } = useSelector((state) => state.admin)
   const [closingId, setClosingId] = useState(null)
 
   useEffect(() => {
@@ -39,7 +39,9 @@ const RecruiterDataHealth = () => {
           <FaHeartbeat className="text-yellow-50" /> Recruiter data health
         </h2>
 
-        {loading || !health ? (
+        {fetchErrors.recruiterDataHealth ? (
+          <p className="text-sm text-richblack-400">Could not load recruiter data health, please try again.</p>
+        ) : loading || !health ? (
           <Loading text="Checking recruiter data health..." />
         ) : (
           <>

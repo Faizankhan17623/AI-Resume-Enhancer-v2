@@ -29,7 +29,7 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => i)
 const Settings = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { settings, loading } = useSelector((state) => state.admin)
+  const { settings, loading, fetchErrors } = useSelector((state) => state.admin)
   const [noteDrafts, setNoteDrafts] = useState({})
   const [savedFlash, setSavedFlash] = useState({})
   // disable-confirmation state sir — only set while turning a flag ON->OFF, requires reason + future IST time
@@ -116,6 +116,8 @@ const Settings = () => {
             across every card, not just the one that changed */}
         {loading && !settings.length ? (
           <Loading text="Loading settings..." />
+        ) : fetchErrors.settings ? (
+          <p className="text-sm text-richblack-300 py-6 text-center">Could not load the feature flags, please try again.</p>
         ) : (
           <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">
             {settings.map((setting) => {

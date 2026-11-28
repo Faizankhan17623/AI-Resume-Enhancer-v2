@@ -2,8 +2,9 @@ import toast from "react-hot-toast";
 import { apiConnector, axiosinstance } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
 import {
-    setReview, setReviewId, setFormattingCheck, setShareState, setAllReviews, setProgress, setLoading,
+    setReview, setSingleReviewLoadError, setReviewId, setFormattingCheck, setShareState, setAllReviews, setReviewsLoadError, setProgress, setLoading,
     setGrammar, setGrammarChecking, setStreak, setLeaderboard, setWeeklyReviewsLeaderboard, setStreaksLeaderboard,
+    setLeaderboardLoadError, setWeeklyReviewsLoadError, setStreaksLoadError,
     setLeaderboardLoading, setWeeklyReviewsLoading, setStreaksLoading
 } from '../../Slices/reviewSlice.js'
 import { AtsReview, ReviewHistory, GrammarCheckApi, StreakApi, LeaderboardApi } from '../Apis/ReviewApi.js'
@@ -144,8 +145,10 @@ export function GetAllReviews(token) {
             }
 
             dispatch(setAllReviews(response.data.reviews))
+            dispatch(setReviewsLoadError(false))
         } catch (error) {
             logApiError("Error fetching the reviews", error)
+            dispatch(setReviewsLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -190,9 +193,11 @@ export function GetSingleReview(reviewId, token) {
                 shareId: response.data.review.shareId,
                 shareAudience: response.data.review.shareAudience
             }))
+            dispatch(setSingleReviewLoadError(false))
         } catch (error) {
             logApiError("Error fetching the review", error)
             toast.error(error?.response?.data?.message || "Could not load the review")
+            dispatch(setSingleReviewLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }
@@ -307,9 +312,11 @@ export function GetLeaderboard(token) {
             }
 
             dispatch(setLeaderboard(response.data.leaderboard))
+            dispatch(setLeaderboardLoadError(false))
         } catch (error) {
             logApiError("Error fetching the leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the leaderboard")
+            dispatch(setLeaderboardLoadError(true))
         } finally {
             dispatch(setLeaderboardLoading(false))
         }
@@ -330,9 +337,11 @@ export function GetWeeklyReviewsLeaderboard(token) {
             }
 
             dispatch(setWeeklyReviewsLeaderboard(response.data.leaderboard))
+            dispatch(setWeeklyReviewsLoadError(false))
         } catch (error) {
             logApiError("Error fetching the weekly reviews leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the weekly leaderboard")
+            dispatch(setWeeklyReviewsLoadError(true))
         } finally {
             dispatch(setWeeklyReviewsLoading(false))
         }
@@ -353,9 +362,11 @@ export function GetStreaksLeaderboard(token) {
             }
 
             dispatch(setStreaksLeaderboard(response.data.leaderboard))
+            dispatch(setStreaksLoadError(false))
         } catch (error) {
             logApiError("Error fetching the streaks leaderboard", error)
             toast.error(error?.response?.data?.message || "Could not load the streaks leaderboard")
+            dispatch(setStreaksLoadError(true))
         } finally {
             dispatch(setStreaksLoading(false))
         }

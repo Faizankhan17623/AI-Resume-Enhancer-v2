@@ -18,7 +18,7 @@ const scoreColor = (score) =>
 const History = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { allReviews, loading } = useSelector((state) => state.review)
+  const { allReviews, loading, loadError } = useSelector((state) => state.review)
 
   useEffect(() => {
     dispatch(GetAllReviews(token))
@@ -43,6 +43,10 @@ const History = () => {
 
         {loading ? (
           <Loading text="Loading your history..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your review history, please try again.</p>
+          </div>
         ) : allReviews.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <p className="text-richblack-200 mb-6">No reviews yet sir — your first honest ATS score is waiting.</p>

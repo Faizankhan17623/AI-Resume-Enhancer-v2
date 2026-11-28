@@ -53,7 +53,7 @@ const Reports = () => {
   const [rowBusy, setRowBusy] = useState(false)
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { reports, loading } = useSelector((state) => state.admin)
+  const { reports, loading, fetchErrors } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
 
   useEffect(() => {
@@ -141,6 +141,8 @@ const Reports = () => {
         <div className="space-y-3">
           {switchingFilter || (loading && reports.length === 0) ? (
             <Loading text="Loading reports..." />
+          ) : fetchErrors.reports ? (
+            <p className="text-sm text-richblack-300 py-6 text-center">Could not load reports, please try again.</p>
           ) : reports.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing here sir.</p>
           ) : (

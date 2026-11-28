@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setResumes, setLoading, setSaving } from '../../Slices/resumeSlice.js'
+import { setResumes, setLoadError, setLoading, setSaving } from '../../Slices/resumeSlice.js'
 import { ResumeData } from '../Apis/ResumeApi.js'
 
 const { save, all, update, remove } = ResumeData
@@ -49,8 +49,10 @@ export function GetResumes(token) {
             }
 
             dispatch(setResumes(response.data.resumes))
+            dispatch(setLoadError(false))
         } catch (error) {
             logApiError("Error fetching your resumes", error)
+            dispatch(setLoadError(true))
         } finally {
             dispatch(setLoading(false))
         }

@@ -47,12 +47,26 @@ const UsageBar = ({ label, used, limit }) => {
 // Recruiter referrals — see controllers/user.js's grantReferralBonus)
 const ReferralCard = ({ token }) => {
   const [stats, setStats] = useState(null)
+  const [loadError, setLoadError] = useState(false)
   const [dashboardOpen, setDashboardOpen] = useState(false)
 
   useEffect(() => {
-    GetReferralStats(token)().then(setStats)
+    // a failed fetch used to leave `stats` null forever, which the guard below treated
+    // identically to "nothing to show" — the whole card silently vanished with no indication
+    // anything had gone wrong sir
+    GetReferralStats(token)().then((result) => {
+      if (result) { setStats(result); setLoadError(false) } else { setLoadError(true) }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-6">
+        <p className="text-sm text-richblack-300">Could not load your referral stats, please try again.</p>
+      </div>
+    )
+  }
 
   if (!stats) return null
 

@@ -179,7 +179,7 @@ const MockInterview = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token, user } = useSelector((state) => state.auth)
-  const { allSessions, currentSession, loading, scoring } = useSelector((state) => state.mockInterview)
+  const { allSessions, sessionsLoadError, currentSession, loading, scoring } = useSelector((state) => state.mockInterview)
   const [deleting, setDeleting] = useState(false)
 
   const isProMax = user?.SubType === 'ProMax'
@@ -295,7 +295,11 @@ const MockInterview = () => {
 
         {/* Left - session list sidebar sir */}
         <div style={{ width: listWidth }} className="shrink-0 border-r border-richblack-700 flex flex-col relative">
-          {allSessions.length === 0 ? (
+          {sessionsLoadError ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+              <p className="text-xs text-richblack-400">Could not load your sessions, please try again.</p>
+            </div>
+          ) : allSessions.length === 0 ? (
             // nothing to list yet sir — one centered block (button + message) filling the pane,
             // instead of the button pinned at top with the message floating below it
             <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">

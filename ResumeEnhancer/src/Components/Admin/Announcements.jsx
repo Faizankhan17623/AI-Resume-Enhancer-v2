@@ -95,7 +95,7 @@ const Announcements = () => {
   const [publishLabel, setPublishLabel] = useState('Publishing...')
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { announcements } = useSelector((state) => state.admin)
+  const { announcements, fetchErrors } = useSelector((state) => state.admin)
   const isAdmin = user?.role === 'Admin'
 
   useEffect(() => {
@@ -254,7 +254,9 @@ const Announcements = () => {
           {/* initial={false} sir — animate only the very first mount; without it, toggling
               or editing one announcement re-renders the list from Redux and restages the
               fade-in across every card, not just the one that changed */}
-          {announcements.length === 0 ? (
+          {fetchErrors.announcements ? (
+            <p className="text-sm text-richblack-300 py-6 text-center">Could not load announcements, please try again.</p>
+          ) : announcements.length === 0 ? (
             <p className="text-sm text-richblack-300 py-6 text-center">Nothing broadcast yet sir.</p>
           ) : (
             <motion.div variants={staggerContainer(0.05)} initial={false} animate="show" className="space-y-3">

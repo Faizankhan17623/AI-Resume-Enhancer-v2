@@ -27,7 +27,7 @@ const COACH_PROMPTS = [
 const DashboardHome = () => {
   const dispatch = useDispatch()
   const { token, user } = useSelector((state) => state.auth)
-  const { progress, allReviews } = useSelector((state) => state.review)
+  const { progress, allReviews, loadError: reviewsLoadError } = useSelector((state) => state.review)
   const { profile } = useSelector((state) => state.profile)
 
   useEffect(() => {
@@ -333,7 +333,9 @@ const DashboardHome = () => {
               <h2 className="font-display text-lg text-richblack-5">Recent reviews</h2>
               <Link to="/Dashboard/History" className="text-xs font-semibold text-yellow-50 hover:underline">View all</Link>
             </div>
-            {allReviews.length === 0 ? (
+            {reviewsLoadError ? (
+              <p className="text-richblack-300 text-sm py-10 text-center">Could not load your recent reviews, please try again.</p>
+            ) : allReviews.length === 0 ? (
               <p className="text-richblack-300 text-sm py-10 text-center">No reviews yet — your first one is a click away.</p>
             ) : (
               <div className="divide-y divide-richblack-700">

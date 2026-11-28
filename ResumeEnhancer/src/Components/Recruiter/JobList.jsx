@@ -21,7 +21,7 @@ const statusBadge = {
 const JobList = () => {
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { myJobs, loading } = useSelector((state) => state.job)
+  const { myJobs, loading, myJobsLoadError: loadError } = useSelector((state) => state.job)
   const { isLocked } = useRecruiterLock()
   const [closingExpired, setClosingExpired] = useState(false)
 
@@ -66,6 +66,10 @@ const JobList = () => {
 
       {loading ? (
         <Loading text="Loading your jobs..." />
+      ) : loadError ? (
+        <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+          <p className="text-richblack-200">Could not load your jobs, please try again.</p>
+        </div>
       ) : myJobs.length === 0 ? (
         <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
           <p className="text-richblack-100 mb-2 font-semibold">No jobs yet</p>

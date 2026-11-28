@@ -81,7 +81,7 @@ const BuiltResumes = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { token } = useSelector((state) => state.auth)
-  const { resumes, loading } = useSelector((state) => state.builtResume)
+  const { resumes, loading, loadError } = useSelector((state) => state.builtResume)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
@@ -202,6 +202,10 @@ const BuiltResumes = () => {
 
         {loading ? (
           <Loading text="Loading your resumes..." />
+        ) : loadError ? (
+          <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center">
+            <p className="text-richblack-200">Could not load your built resumes, please try again.</p>
+          </div>
         ) : resumes.length === 0 ? (
           <div className="rounded-xl bg-richblack-800 shadow-md shadow-richblack-900/10 p-16 text-center flex flex-col items-center">
             <FaLayerGroup className="text-3xl text-richblack-400 mx-auto mb-4" />

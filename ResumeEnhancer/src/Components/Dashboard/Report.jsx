@@ -116,7 +116,7 @@ const Report = () => {
   const { reviewId } = useParams()
   const dispatch = useDispatch()
   const { token } = useSelector((state) => state.auth)
-  const { review, loading, isPublic, shareId, shareAudience, formattingCheck } = useSelector((state) => state.review)
+  const { review, loading, singleReviewLoadError, isPublic, shareId, shareAudience, formattingCheck } = useSelector((state) => state.review)
   const shareUrl = shareId ? `${window.location.origin}/Shared/${shareId}` : null
   const [downloadingPdf, setDownloadingPdf] = useState(false)
 
@@ -154,6 +154,14 @@ const Report = () => {
     dispatch(GetSingleReview(reviewId, token))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewId])
+
+  if (singleReviewLoadError) {
+    return (
+      <DashboardLayout title="Review">
+        <p className="text-sm text-richblack-400 px-4 lg:px-6 pt-4">Could not load this review, please try again.</p>
+      </DashboardLayout>
+    )
+  }
 
   if (loading || !review) {
     return (

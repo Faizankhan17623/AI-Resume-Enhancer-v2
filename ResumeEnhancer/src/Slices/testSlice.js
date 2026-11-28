@@ -7,6 +7,9 @@ const initialState = {
     currentTest: null,
     testAttempts: [],
     currentAttemptDetail: null,
+    // a failed fetch used to leave `currentAttemptDetail` null forever, which AttemptDetail.jsx's
+    // own `loading || !attempt` guard rendered as an endless loading spinner instead of an error
+    attemptDetailLoadError: false,
     loading: false,
 };
 
@@ -26,11 +29,14 @@ const testSlice = createSlice({
         setCurrentAttemptDetail(state, value) {
             state.currentAttemptDetail = value.payload
         },
+        setAttemptDetailLoadError(state, value) {
+            state.attemptDetailLoadError = value.payload
+        },
         setLoading(state, value) {
             state.loading = value.payload
         },
     }
 })
 
-export const { setMyTests, setCurrentTest, setTestAttempts, setCurrentAttemptDetail, setLoading } = testSlice.actions
+export const { setMyTests, setCurrentTest, setTestAttempts, setCurrentAttemptDetail, setAttemptDetailLoadError, setLoading } = testSlice.actions
 export default testSlice.reducer
