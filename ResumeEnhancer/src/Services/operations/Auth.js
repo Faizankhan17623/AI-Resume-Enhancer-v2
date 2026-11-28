@@ -1,7 +1,7 @@
 import toast from "react-hot-toast";
 import { apiConnector } from '../apiConnector.js'
 import { logApiError } from '../logApiError.js'
-import { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } from '../../Slices/authSlice.js'
+import { setUser, setLoading, setToken, setLogin, setSignupData, setOtpSentAt, setLogoutStatus } from '../../Slices/authSlice.js'
 import { CreateUser, SendOtp, Login, Logout, Password, Account, DeviceAlert } from '../Apis/UserApi.js'
 import { getClientHints } from '../../utils/clientHints.js'
 import { rememberLoginMethod } from '../../utils/lastLoginMethod.js'
@@ -46,6 +46,9 @@ export function SendTheOtp(email, navigate, onStatus) {
                 throw new Error(response.data.message)
             }
 
+            // the real moment THIS code's 60s TTL started sir — OTP.jsx computes its countdown
+            // from this instead of always assuming a fresh minute on mount
+            dispatch(setOtpSentAt(Date.now()))
             onStatus?.('success', 'OTP sent to your email')
             // brief pause sir — same as LoginUser, long enough for the checkmark to register
             setTimeout(() => { if (navigate) navigate("/Verify-Otp") }, 900)

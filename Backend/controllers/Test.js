@@ -199,17 +199,31 @@ exports.publishTest = async (req, res) => {
             })
         }
 
+        let publishedTest = test
         if (test.status === 'draft') {
-            test.inviteCode = crypto.randomBytes(6).toString('hex')
-            test.status = 'published'
-            await test.save()
+            // atomic status-still-draft guard sir, per 2026-11-27 audit — same race Job.js's
+            // publishJob was already fixed for. The plain read-then-save this replaced let two
+            // concurrent publish requests (double-click, or a retry after a slow response) both
+            // read status:'draft', both generate a DIFFERENT inviteCode, and both .save() —
+            // whichever write landed last silently won, so the recruiter could copy/share the
+            // FIRST inviteCode shown in the UI while the DB actually held the second, making
+            // every candidate who got that first link hit "This test link is invalid."
+            const inviteCode = crypto.randomBytes(6).toString('hex')
+            const claimed = await Test.findOneAndUpdate(
+                { _id: testId, recruiter: recruiterId, status: 'draft' },
+                { $set: { inviteCode, status: 'published' } },
+                { returnDocument: 'after' }
+            )
+            // a concurrent request already won the claim sir — re-read so we return the
+            // inviteCode that's ACTUALLY stored, never the one this losing request generated
+            publishedTest = claimed || await Test.findById(testId)
         }
 
         return res.status(200).json({
             success: true,
             message: 'Test published',
-            inviteCode: test.inviteCode,
-            test,
+            inviteCode: publishedTest.inviteCode,
+            test: publishedTest,
         })
     } catch (error) {
         (req.log || logger).error('publish test failed', { err: error })

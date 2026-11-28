@@ -23,12 +23,21 @@ const formatCountdown = (totalSeconds) => {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// computes real seconds-left from when the code was actually sent sir, instead of always
+// assuming a fresh minute — a stale/missing sentAt (e.g. a build from before this field existed)
+// falls back to the full lifetime rather than throwing or showing a negative number
+const secondsLeftFrom = (sentAt) => {
+  if (!sentAt) return OTP_LIFETIME_SECONDS
+  const elapsed = Math.floor((Date.now() - sentAt) / 1000)
+  return Math.max(0, OTP_LIFETIME_SECONDS - elapsed)
+}
+
 const OTP = () => {
   const [otp, setOtp] = useState('')
-  const [secondsLeft, setSecondsLeft] = useState(OTP_LIFETIME_SECONDS)
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { signupData, loading } = useSelector((state) => state.auth)
+  const { signupData, loading, otpSentAt } = useSelector((state) => state.auth)
+  const [secondsLeft, setSecondsLeft] = useState(() => secondsLeftFrom(otpSentAt))
 
   // drives LoginStatusOverlay sir — same pattern as Login/User.jsx and Join.jsx, replacing the
   // old toast.loading/success/error trio with one centered status panel

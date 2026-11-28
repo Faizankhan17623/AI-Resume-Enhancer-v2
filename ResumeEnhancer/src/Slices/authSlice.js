@@ -31,6 +31,10 @@ const initialState = {
     loading: false,
     // the email waiting on the OTP screen sir
     signupData: null,
+    // when the CURRENT otp was actually sent (Date.now(), ms) sir — lets OTP.jsx compute its
+    // countdown from real elapsed time instead of always starting at a fresh 60s on mount, which
+    // used to lie to a user who navigated away and came back after the code already expired
+    otpSentAt: null,
     // drives one shared LoginStatusOverlay mounted once at the app root (App.jsx) sir, instead
     // of each of the SIX logout call sites (Navbar, Account, RecruiterLayout, DashboardLayout
     // x4) managing their own local overlay state — Redux is the one place all of them can
@@ -75,11 +79,14 @@ const authSlice = createSlice({
         setSignupData(state, value) {
             state.signupData = value.payload
         },
+        setOtpSentAt(state, value) {
+            state.otpSentAt = value.payload
+        },
         setLogoutStatus(state, value) {
             state.logoutStatus = value.payload
         }
     }
 })
 
-export const { setUser, setLoading, setToken, setLogin, setSignupData, setLogoutStatus } = authSlice.actions
+export const { setUser, setLoading, setToken, setLogin, setSignupData, setOtpSentAt, setLogoutStatus } = authSlice.actions
 export default authSlice.reducer

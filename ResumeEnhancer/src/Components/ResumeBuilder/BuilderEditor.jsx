@@ -123,6 +123,19 @@ const BuilderEditor = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // warns before a hard refresh/tab close/crash sir — the unmount flush above only runs on
+  // in-app React Router navigation, it does nothing for these, so up to 1.5s of edits could be
+  // silently lost with zero warning. Only warns while a save is genuinely still pending.
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!pendingSaveData.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
   const patch = (partial) => {
     const next = { ...current, ...partial }
     dispatch(patchCurrentResume(partial))

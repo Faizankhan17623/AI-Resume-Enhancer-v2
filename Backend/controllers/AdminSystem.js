@@ -1078,8 +1078,12 @@ exports.getGlobalSearch = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .limit(8),
             // a payment doesn't store the buyer's email itself sir, so a search like
-            // "faizan@" only turns up payments via this separate user lookup
-            User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }, { number: regex }] }).select('_id'),
+            // "faizan@" only turns up payments via this separate user lookup — role:{$ne:'Admin'}
+            // added per 2026-11-27 audit, matching userFilter above: without it, this query had
+            // no Admin exclusion at all, so a Support search for an Admin's name/email still
+            // leaked that Admin's orderId/paymentId/amount/plan through the payments half of the
+            // response even though the users half correctly hid them
+            User.find({ role: { $ne: 'Admin' }, $or: [{ email: regex }, { firstName: regex }, { lastName: regex }, { number: regex }] }).select('_id'),
         ])
 
         const payments = await Payment.find({

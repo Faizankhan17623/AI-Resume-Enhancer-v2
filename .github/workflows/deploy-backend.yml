@@ -35,6 +35,16 @@ jobs:
     # after its own jobs pass on a push to main) IS the confirmation for that path
     if: github.event_name == 'workflow_call' || github.event.inputs.confirm == 'deploy'
     timeout-minutes: 10
+    # same fixed "deploy" group as ci.yml's own deploy-backend job sir, per 2026-11-27 audit —
+    # that file's concurrency block only covers requests that come THROUGH it (a push-to-main
+    # auto-deploy). A manual "Run workflow" dispatch of THIS file directly never passed through
+    # ci.yml, so nothing serialized it against an auto-deploy landing at the same moment — both
+    # could SSH into EC2 and `pm2 restart` concurrently, risking one restarting mid-`npm install`
+    # of the other. Declaring the group here too means it applies no matter which entry point
+    # triggered this run.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
 
     steps:
       - name: Refuse to continue without explicit confirmation
