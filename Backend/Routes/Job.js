@@ -13,6 +13,7 @@ const {
     bulkApplicationOutcomeSchema,
     updateInterviewEligibilitySchema,
     sendJobInviteSchema,
+    jobIdParamSchema,
 } = require('../Validation/schemas.js')
 const {
     createJob,
@@ -74,42 +75,42 @@ route.post('/jobs', Auth, isRecruiter, isApprovedRecruiter, validate({ body: cre
 route.get('/jobs/mine', Auth, isRecruiter, isApprovedRecruiter, listMyJobs)
 route.post('/jobs/close-expired', Auth, isRecruiter, isApprovedRecruiter, closeExpiredJobsForRecruiter)
 route.get('/jobs/analytics-overview', Auth, isRecruiter, isApprovedRecruiter, getRecruiterOverviewAnalytics)
-route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, getJobApplicants)
-route.post('/jobs/:jobId/applicants/bulk-invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkInviteApplicantsSchema }), bulkInviteApplicantsToTest)
-route.patch('/jobs/:jobId/applicants/bulk-status', Auth, isRecruiter, isApprovedRecruiter, validate({ body: bulkApplicationOutcomeSchema }), bulkSetApplicationOutcome)
-route.get('/jobs/:jobId/analytics', Auth, isRecruiter, isApprovedRecruiter, getJobAnalytics)
-route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, publishJob)
-route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, closeJob)
-route.delete('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, deleteJob)
-route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateJobSchema }), updateJob)
+route.get('/jobs/:jobId/applicants', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), getJobApplicants)
+route.post('/jobs/:jobId/applicants/bulk-invite', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema, body: bulkInviteApplicantsSchema }), bulkInviteApplicantsToTest)
+route.patch('/jobs/:jobId/applicants/bulk-status', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema, body: bulkApplicationOutcomeSchema }), bulkSetApplicationOutcome)
+route.get('/jobs/:jobId/analytics', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), getJobAnalytics)
+route.post('/jobs/:jobId/publish', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), publishJob)
+route.post('/jobs/:jobId/close', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), closeJob)
+route.delete('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), deleteJob)
+route.patch('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema, body: updateJobSchema }), updateJob)
 // works regardless of draft/published status sir — see controllers/Job.js's own comment on why
 // this can't just be folded into updateJob above
-route.patch('/jobs/:jobId/interview-eligibility', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateInterviewEligibilitySchema }), updateInterviewEligibilityThreshold)
+route.patch('/jobs/:jobId/interview-eligibility', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema, body: updateInterviewEligibilitySchema }), updateInterviewEligibilityThreshold)
 // candidate's saved jobs sir — MUST be declared before 'GET /jobs/:jobId' below, otherwise
 // Express matches :jobId='saved' first and this route is silently unreachable (verified: Express
 // matches path patterns in REGISTRATION order regardless of role-check middleware differences)
 route.get('/jobs/saved', Auth, isUser, listSavedJobs)
-route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, getJob)
+route.get('/jobs/:jobId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), getJob)
 
-route.patch('/jobs/:jobId/save', Auth, isUser, toggleSavedJob)
+route.patch('/jobs/:jobId/save', Auth, isUser, validate({ params: jobIdParamSchema }), toggleSavedJob)
 
 // invite-only job invites sir — recruiter-managed, see Models/Job.js's visibility field and
 // controllers/JobInvite.js. Declared before '/jobs/:jobId' above already covers these since
 // they're all sub-paths of a specific :jobId, so no route-order conflict.
-route.post('/jobs/:jobId/invite', Auth, isRecruiter, isApprovedRecruiter, validate({ body: sendJobInviteSchema }), sendJobInvite)
-route.get('/jobs/:jobId/invites', Auth, isRecruiter, isApprovedRecruiter, listJobInvites)
+route.post('/jobs/:jobId/invite', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema, body: sendJobInviteSchema }), sendJobInvite)
+route.get('/jobs/:jobId/invites', Auth, isRecruiter, isApprovedRecruiter, validate({ params: jobIdParamSchema }), listJobInvites)
 
 // public — no auth required
 route.get('/public/jobs', listPublicJobs)
 route.get('/public/jobs/invite/:token', getJobInviteByToken)
-route.get('/public/jobs/:jobId', getPublicJob)
+route.get('/public/jobs/:jobId', validate({ params: jobIdParamSchema }), getPublicJob)
 
 // candidate side
 // grammarCheckLimiter sir, per 2026-11-15 audit — applyToJob does a PDF parse + Cloudinary
 // upload + AI fit-score call per request, a heavier cost profile than grammar-check's own PDF
 // parse alone, so it reuses that same tight 10/min fail-closed limiter rather than relying on
 // the loose app-wide globalLimiter alone
-route.post('/jobs/:jobId/apply', Auth, isUser, grammarCheckLimiter, parseMultipartJson, validate({ body: applyToJobSchema }), applyToJob)
+route.post('/jobs/:jobId/apply', Auth, isUser, grammarCheckLimiter, parseMultipartJson, validate({ params: jobIdParamSchema, body: applyToJobSchema }), applyToJob)
 route.get('/job-applications/mine', Auth, isUser, listMyApplications)
 route.post('/job-applications/:applicationId/invite', Auth, isRecruiter, isApprovedRecruiter, inviteApplicantToTest)
 route.patch('/job-applications/:applicationId/shortlist', Auth, isRecruiter, isApprovedRecruiter, toggleShortlist)

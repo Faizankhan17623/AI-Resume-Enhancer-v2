@@ -7,6 +7,9 @@ const {
     createTestSchema,
     updateTestSchema,
     submitAnswersSchema,
+    testIdParamSchema,
+    attemptIdParamSchema,
+    inviteCodeParamSchema,
 } = require('../Validation/schemas.js')
 const {
     createTest,
@@ -32,10 +35,10 @@ const {
 // cleared them (see Middlewares/Auth.js). A locked (pending/rejected) Recruiter 403s here.
 route.post('/tests', Auth, isRecruiter, isApprovedRecruiter, validate({ body: createTestSchema }), createTest)
 route.get('/tests', Auth, isRecruiter, isApprovedRecruiter, listMyTests)
-route.get('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, getTest)
-route.patch('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, validate({ body: updateTestSchema }), updateTest)
-route.post('/tests/:testId/publish', Auth, isRecruiter, isApprovedRecruiter, publishTest)
-route.get('/tests/:testId/attempts', Auth, isRecruiter, isApprovedRecruiter, getTestAttempts)
+route.get('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: testIdParamSchema }), getTest)
+route.patch('/tests/:testId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: testIdParamSchema, body: updateTestSchema }), updateTest)
+route.post('/tests/:testId/publish', Auth, isRecruiter, isApprovedRecruiter, validate({ params: testIdParamSchema }), publishTest)
+route.get('/tests/:testId/attempts', Auth, isRecruiter, isApprovedRecruiter, validate({ params: testIdParamSchema }), getTestAttempts)
 
 // candidate attempt flow
 // speed-probe MUST be registered BEFORE '/test-attempts/:attemptId' below sir — found live via
@@ -51,11 +54,11 @@ route.get('/tests/:testId/attempts', Auth, isRecruiter, isApprovedRecruiter, get
 // path, ':attemptId' only ever matches one segment - registering it here too just keeps every
 // GET /test-attempts/* route grouped together.)
 route.get('/test-attempts/speed-probe', Auth, isUser, speedProbeLimiter, speedProbe)
-route.get('/test-attempts/preview/:inviteCode', Auth, isUser, previewTest)
-route.get('/test-attempts/:attemptId', Auth, isRecruiter, isApprovedRecruiter, getAttemptDetail)
-route.post('/test-attempts/start/:inviteCode', Auth, isUser, startAttempt)
-route.post('/test-attempts/:attemptId/answers', Auth, isUser, validate({ body: submitAnswersSchema }), submitAnswers)
+route.get('/test-attempts/preview/:inviteCode', Auth, isUser, validate({ params: inviteCodeParamSchema }), previewTest)
+route.get('/test-attempts/:attemptId', Auth, isRecruiter, isApprovedRecruiter, validate({ params: attemptIdParamSchema }), getAttemptDetail)
+route.post('/test-attempts/start/:inviteCode', Auth, isUser, validate({ params: inviteCodeParamSchema }), startAttempt)
+route.post('/test-attempts/:attemptId/answers', Auth, isUser, validate({ params: attemptIdParamSchema, body: submitAnswersSchema }), submitAnswers)
 // multipart upload (snapshot image) sir — no JSON body schema to validate, controller checks the file itself
-route.post('/test-attempts/:attemptId/violations', Auth, isUser, violationLimiter, logViolation)
+route.post('/test-attempts/:attemptId/violations', Auth, isUser, violationLimiter, validate({ params: attemptIdParamSchema }), logViolation)
 
 module.exports = route
