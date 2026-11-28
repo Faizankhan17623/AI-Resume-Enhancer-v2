@@ -16,6 +16,8 @@ const {
     updateUserPlanSchema,
     rejectRecruiterApplicationSchema,
     refundPaymentSchema,
+    createAnnouncementSchema,
+    updateAnnouncementSchema,
 } = require('../Validation/schemas.js')
 const {
     getDashboardStats,
@@ -136,8 +138,8 @@ route.get('/admin/my-activity', Auth, isSupport, adminReadLimiter, getMyActivity
 route.get('/admin/credit-grants', Auth, isAdmin, adminReadLimiter, getCreditGrants)
 route.get('/admin/settings', Auth, isAdmin, adminReadLimiter, getSettings)
 route.patch('/admin/settings/:key', Auth, isAdmin, adminWriteLimiter, upsertSetting)
-route.post('/admin/announcements', Auth, isAdmin, adminWriteLimiter, createAnnouncement)
-route.patch('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, updateAnnouncement)
+route.post('/admin/announcements', Auth, isAdmin, adminWriteLimiter, validate({ body: createAnnouncementSchema }), createAnnouncement)
+route.patch('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, validate({ body: updateAnnouncementSchema }), updateAnnouncement)
 route.delete('/admin/announcements/:announcementId', Auth, isAdmin, adminWriteLimiter, deleteAnnouncement)
 
 // ---------- public sir — the frontend banner for every visitor, no login needed ----------

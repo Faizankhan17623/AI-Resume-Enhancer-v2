@@ -52,4 +52,5 @@ module.exports = {
     ...require('./Testimonial'),
     ...require('./Resume'),
     ...require('./Application'),
+    ...require('./Announcement'),
 }

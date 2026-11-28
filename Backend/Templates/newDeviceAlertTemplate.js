@@ -4,9 +4,12 @@ const { escapeHtml } = require('../utils/escapeHtml')
 exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, when, clientHints }, confirmUrl, denyUrl) => {
   // clientHints sir — genuinely untrusted, browser-self-reported data (see
   // services/deviceAlertService.js's own comment on why this is advisory-only), escaped like any
-  // other user-controllable string going into this email. browserLabel/osLabel/location/ip are
-  // NOT escaped here — those are server-derived (User-Agent header regex match, ip-lookup
-  // response, the connection's own IP), not free-form client input.
+  // other user-controllable string going into this email. browserLabel/osLabel/ip are NOT
+  // escaped here — those are server-derived (User-Agent header regex match, the connection's own
+  // IP), not free-form client input. location WAS in that same bucket until the 2026-11-27 audit
+  // pointed out it's actually third-party data (geo.ipify.org's response), not something this
+  // server computes from a fixed enum — a corrupted/malicious geo API response could otherwise
+  // inject HTML into this security-sensitive email, so it's escaped below like clientHints is.
   const hintLine = clientHints
     ? [escapeHtml(clientHints.brand), escapeHtml(clientHints.model), escapeHtml(clientHints.platform)].filter(Boolean).join(' · ')
     : null
@@ -73,7 +76,7 @@ exports.newDeviceAlertTemplate = (name, { browserLabel, osLabel, location, ip, w
                   ${hintLine ? `<tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Reported by device</td>
                       <td style="padding:4px 0;font-size:13px;color:#9CA3AF;text-align:right;">${hintLine}</td></tr>` : ''}
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Location</td>
-                      <td style="padding:4px 0;font-size:13px;color:#F9FAFB;text-align:right;">${location || 'Unknown'}</td></tr>
+                      <td style="padding:4px 0;font-size:13px;color:#F9FAFB;text-align:right;">${escapeHtml(location) || 'Unknown'}</td></tr>
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">IP address</td>
                       <td style="padding:4px 0;font-size:13px;color:#F9FAFB;text-align:right;">${ip || 'Unknown'}</td></tr>
                   <tr><td style="padding:4px 0;font-size:13px;color:#6B7280;">Time</td>
