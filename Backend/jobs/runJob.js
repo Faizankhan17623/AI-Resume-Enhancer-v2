@@ -88,14 +88,28 @@ const main = async () => {
 
     await connectDB()
 
-    const ran = await runWithLease(name, leaseMs, task)
+    // runWithLease now THROWS on a genuine task failure rather than returning false for it too
+    // sir, per 2026-11-27 audit — it used to return the exact same false for "the task threw" as
+    // for "another instance holds the lease, nothing to do here", so this runner's own exit code
+    // could never distinguish a real failure from a harmless skip, and always exited 0 either
+    // way. The header comment above ("Exits 0 on success, 1 on failure") was therefore false
+    // until now: a task that started silently throwing every run would never turn an Actions run
+    // red. The try/catch below is what actually makes that comment true.
+    let ran
+    try {
+        ran = await runWithLease(name, leaseMs, task)
+    } catch (err) {
+        logger.error('job failed', { job: name, err })
+        await mongoose.connection.close()
+        process.exit(1)
+    }
 
     if (ran) {
         logger.info('job finished', { job: name, ms: Date.now() - startedAt })
     } else {
-        // not necessarily an error sir: either another process held the lease, or the task threw
-        // and runWithLease already logged it
-        logger.info('job skipped or failed, see previous log lines', { job: name })
+        // genuinely benign sir — no DB connection yet, or another instance holds the lease. A
+        // real task failure above already exited 1 before reaching here.
+        logger.info('job skipped, lease held elsewhere or no DB connection', { job: name })
     }
 
     await mongoose.connection.close()

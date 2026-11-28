@@ -41,6 +41,15 @@ const INSTANCE_ID = `${process.env.HOSTNAME || 'local'}-${process.pid}`
 /**
  * Runs `task` only if this instance wins the lease for `jobName`.
  *
+ * Returns true on a genuine successful run, false when this instance simply didn't get to run
+ * (no DB connection, or another instance holds the lease) — both are normal, expected outcomes,
+ * never logged as an error by the caller. On a real task failure, re-throws instead of returning
+ * false, per 2026-11-27 audit: those two "didn't run" cases used to be returned as the exact same
+ * false as "the task actually threw", so runJob.js (the GitHub Actions failover entry point)
+ * could never tell a real failure apart from a harmless skip, and always exited 0 either way —
+ * a job that started silently throwing every time (e.g. AccountPurgeCron hitting a broken query)
+ * would never turn an Actions run red.
+ *
  * @param {string} jobName        unique name for the scheduled job
  * @param {number} leaseMs        how long the lease is held; must exceed the task's runtime
  * @param {() => Promise<void>} task
@@ -86,7 +95,7 @@ const runWithLease = async (jobName, leaseMs, task) => {
         return true
     } catch (err) {
         logger.error('scheduled job failed', { err, jobName })
-        return false
+        throw err
     } finally {
         // release early so a job that finishes fast doesn't block the next tick sir. If the
         // process dies before reaching this, the lease simply expires on its own.
