@@ -442,17 +442,31 @@ exports.updateUserRole = async (req, res) => {
             })
         }
 
+        // atomic still-a-plain-User claim sir, per 2026-11-27 audit — same race class already
+        // fixed on Job.js's publishJob/Test.js's publishTest. The plain read-then-save this
+        // replaced let two concurrent requests (double-click, or a second admin acting on the
+        // same account) both read role:'User', both pass the check above, and both .save() — no
+        // 409 to either admin, no warning that someone else already acted.
         const oldRole = user.role
-        user.role = role
-        await user.save()
+        const claimed = await User.findOneAndUpdate(
+            { _id: userId, role: 'User' },
+            { $set: { role } },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({
+                success: false,
+                message: 'This account was already updated by another request',
+            })
+        }
 
-        logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role })
-        await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
+        logAction(adminId, 'ROLE_CHANGE', claimed, { from: oldRole, to: role })
+        await sendSupportPromotionEmailIfNeeded(claimed, oldRole, role)
 
         return res.status(200).json({
             success: true,
-            message: `${user.email} is now a Support member`,
-            user
+            message: `${claimed.email} is now a Support member`,
+            user: claimed
         })
     } catch (error) {
         (req.log || logger).error('update user role failed', { err: error })
@@ -499,18 +513,27 @@ exports.bulkUpdateUserRole = async (req, res) => {
         const skipped = []
 
         // only a plain User can be promoted sir — anything else in the batch (an existing
-        // Support/Recruiter/Admin id) is skipped, not a hard failure, same treatment as before
+        // Support/Recruiter/Admin id) is skipped, not a hard failure, same treatment as before.
+        // atomic claim sir, per 2026-11-27 audit — same race bulkSetApplicationOutcome was
+        // already fixed for: the old plain .save() let a concurrent single-update request on one
+        // of these same rows win silently, with no 409 to either caller.
         for (const user of users) {
             if (user.role !== 'User') {
                 skipped.push(user.email)
                 continue
             }
-            const oldRole = user.role
-            user.role = role
-            await user.save()
-            logAction(adminId, 'ROLE_CHANGE', user, { from: oldRole, to: role, bulk: true })
-            await sendSupportPromotionEmailIfNeeded(user, oldRole, role)
-            updated.push(user.email)
+            const claimed = await User.findOneAndUpdate(
+                { _id: user._id, role: 'User' },
+                { $set: { role } },
+                { returnDocument: 'after' }
+            )
+            if (!claimed) {
+                skipped.push(user.email)
+                continue
+            }
+            logAction(adminId, 'ROLE_CHANGE', claimed, { from: 'User', to: role, bulk: true })
+            await sendSupportPromotionEmailIfNeeded(claimed, 'User', role)
+            updated.push(claimed.email)
         }
 
         return res.status(200).json({
@@ -576,24 +599,41 @@ exports.approveRecruiterApplication = async (req, res) => {
             })
         }
 
+        // atomic still-pending claim sir, per 2026-11-27 audit — same race as updateUserRole's
+        // own fix above. The plain read-then-save this replaced let two admins (or one admin
+        // double-clicking) both read status:'pending', both pass the check, and whichever
+        // .save() landed last silently won, with no 409 to either admin.
         const oldRole = user.role
-        user.role = 'Recruiter'
-        user.recruiterApplication.status = 'approved'
-        user.recruiterApplication.reviewedBy = adminId
-        user.recruiterApplication.reviewedAt = new Date()
-        user.recruiterApplication.rejectionReason = undefined
-        await user.save()
+        const claimed = await User.findOneAndUpdate(
+            { _id: userId, 'recruiterApplication.status': 'pending' },
+            {
+                $set: {
+                    role: 'Recruiter',
+                    'recruiterApplication.status': 'approved',
+                    'recruiterApplication.reviewedBy': adminId,
+                    'recruiterApplication.reviewedAt': new Date(),
+                },
+                $unset: { 'recruiterApplication.rejectionReason': '' },
+            },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({
+                success: false,
+                message: 'This application was already reviewed by another request',
+            })
+        }
 
-        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', user, {
+        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', claimed, {
             decision: 'approved',
-            companyName: user.recruiterApplication.companyName,
+            companyName: claimed.recruiterApplication.companyName,
             roleChange: { from: oldRole, to: 'Recruiter' },
         })
 
         return res.status(200).json({
             success: true,
-            message: `${user.email} is now a Recruiter`,
-            user,
+            message: `${claimed.email} is now a Recruiter`,
+            user: claimed,
         })
     } catch (error) {
         (req.log || logger).error('approve recruiter application failed', { err: error })
@@ -634,22 +674,37 @@ exports.rejectRecruiterApplication = async (req, res) => {
             })
         }
 
-        user.recruiterApplication.status = 'rejected'
-        user.recruiterApplication.reviewedBy = adminId
-        user.recruiterApplication.reviewedAt = new Date()
-        user.recruiterApplication.rejectionReason = reason || ''
-        await user.save()
+        // atomic still-pending claim sir, per 2026-11-27 audit — same race as
+        // approveRecruiterApplication's own fix above.
+        const claimed = await User.findOneAndUpdate(
+            { _id: userId, 'recruiterApplication.status': 'pending' },
+            {
+                $set: {
+                    'recruiterApplication.status': 'rejected',
+                    'recruiterApplication.reviewedBy': adminId,
+                    'recruiterApplication.reviewedAt': new Date(),
+                    'recruiterApplication.rejectionReason': reason || '',
+                },
+            },
+            { returnDocument: 'after' }
+        )
+        if (!claimed) {
+            return res.status(409).json({
+                success: false,
+                message: 'This application was already reviewed by another request',
+            })
+        }
 
-        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', user, {
+        logAction(adminId, 'RECRUITER_APPLICATION_REVIEW', claimed, {
             decision: 'rejected',
-            companyName: user.recruiterApplication.companyName,
+            companyName: claimed.recruiterApplication.companyName,
             reason: reason || '',
         })
 
         return res.status(200).json({
             success: true,
-            message: `${user.email}'s recruiter application was rejected`,
-            user,
+            message: `${claimed.email}'s recruiter application was rejected`,
+            user: claimed,
         })
     } catch (error) {
         (req.log || logger).error('reject recruiter application failed', { err: error })
